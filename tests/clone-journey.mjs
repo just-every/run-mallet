@@ -1,0 +1,15 @@
+import {execFileSync,spawn} from 'node:child_process'
+import {mkdtemp,readFile,rm} from 'node:fs/promises'
+import {tmpdir} from 'node:os'
+import {join,resolve} from 'node:path'
+import {createRequire} from 'node:module'
+import {browserJourney} from './browser-journey.mjs'
+const require=createRequire(import.meta.url),launcher=require.resolve('@runeditrun/rer/internal/global/rer.mjs'),directory=await mkdtemp(join(tmpdir(),'mallet-clone-')),checkout=join(directory,'app')
+let log=''
+const invoke=args=>new Promise((resolve,reject)=>{const child=spawn(process.execPath,[launcher,...args],{env:{...process.env,RER_BROWSER:'none'},stdio:['ignore','pipe','pipe']});child.stdout.on('data',x=>{log+=x});child.stderr.on('data',x=>{log+=x});child.on('error',reject);child.on('exit',code=>code===0?resolve():reject(new Error(`Fresh-clone command failed (exit ${code}); private launcher log withheld.`)))})
+try {
+ execFileSync('git',['clone','--quiet','--no-local',resolve('.'),checkout],{stdio:'pipe'})
+ await invoke(['dev','--cwd',checkout,'--detach'])
+ const open=await readFile(join(checkout,'.rer/local/open-url'),'utf8')
+ await browserJourney(open.trim(),{directory:process.env.MALLET_SCREENSHOTS??'.cache/clone-browser',fixtures:join(checkout,'tests/fixtures/repairshopr')})
+}finally{await invoke(['dev','--cwd',checkout,'--stop']).catch(()=>{});await rm(directory,{recursive:true,force:true})}

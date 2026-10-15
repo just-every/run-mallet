@@ -1,0 +1,39 @@
+{
+  "customers": [
+    {
+      "id": 101,
+      "firstname": "Avery",
+      "lastname": "Example",
+      "fullname": "Avery Example",
+      "business_name": null,
+      "email": "avery@example.test",
+      "phone": "0000000000",
+      "mobile": null,
+      "created_at": "2024-01-02T10:00:00.000Z",
+      "updated_at": "2024-01-03T10:00:00.000Z",
+      "notes": "Synthetic fixture: customer notes stay unmapped.",
+      "properties": {
+        "Customer Class": "Synthetic trade"
+      },
+      "online_profile_url": null,
+      "contacts": []
+    },
+    {
+      "id": 102,
+      "firstname": "Jordan",
+      "lastname": "Example",
+      "fullname": "Jordan Example",
+      "business_name": "Example Workshop",
+      "email": "workshop@example.test",
+      "phone": null,
+      "properties": {},
+      "contacts": []
+    }
+  ],
+  "meta": {
+    "total_pages": 1,
+    "total_entries": 2,
+    "per_page": 100,
+    "page": 1
+  }
+}

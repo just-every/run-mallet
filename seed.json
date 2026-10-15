@@ -1,0 +1,98 @@
+{
+  "id": "mallet",
+  "name": "mallet",
+  "version": "0.1.0",
+  "maturity": "first-release-candidate; independent stranger and hosted acceptance pending",
+  "category": "status",
+  "spine": {
+    "id": "foundation",
+    "record": "No domain record selected"
+  },
+  "description": "Owner-run Australian workshop repair jobs: assets, bay bookings, exact-revision partial customer authorisation, authorised parts and labour, saved invoice CSV and visit history.",
+  "capabilities": [
+    {
+      "id": "http-dispatch",
+      "clauses": [
+        "HTTP-001",
+        "WORKSHOP-001",
+        "ESTIMATE-001",
+        "WORK-001",
+        "INVOICE-001",
+        "AGENT-001",
+        "IMPORT-001",
+        "DATA-001",
+        "PIER-001"
+      ]
+    }
+  ],
+  "nonGoals": [
+    "Payments or automatic accounting posting/Xero import",
+    "Supplier ordering networks or stock mutations",
+    "Vehicle-registry lookups, OEM repair data or warranty claims",
+    "Automatic repair-estimate email delivery or customer signing portal",
+    "Importing historical repair jobs, invoices or authorisations",
+    "Erasure of assets with visits in the first release",
+    "Brand site, custom domain or additional provider integrations"
+  ],
+  "externals": [
+    {
+      "id": "cloudflare",
+      "required": true,
+      "why": "Worker hosting",
+      "data": [
+        "HTTP requests"
+      ],
+      "adapters": []
+    }
+  ],
+  "env": [],
+  "deploy": {
+    "healthPath": "/health",
+    "publicPaths": [
+      "/",
+      "/health",
+      "/signin"
+    ],
+    "notes": "Native owner sessions guard /app; unknown paths return real 404s; development and demo mail is suppressed."
+  },
+  "extensionPoints": {
+    "contributions": [],
+    "policies": [],
+    "events": [],
+    "slots": [],
+    "adapters": []
+  },
+  "limits": {
+    "status": "unmeasured"
+  },
+  "accessibility": {
+    "level": "WCAG 2.2 AA",
+    "status": "target; unaudited"
+  },
+  "operatingCost": {
+    "status": "unmeasured"
+  },
+  "composition": {
+    "base": "base",
+    "family": "workshop",
+    "edition": "mallet",
+    "modules": [
+      "delivery-producer",
+      "job-queue",
+      "release",
+      "deploy-kit",
+      "container",
+      "demo-host",
+      "demo",
+      "integrations",
+      "mail",
+      "ai",
+      "portability",
+      "d1-transport",
+      "erasure",
+      "dependencies",
+      "operator-auth",
+      "owner-claim"
+    ]
+  }
+}

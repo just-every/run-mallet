@@ -1,0 +1,12 @@
+{
+  "assets": [
+    {
+      "id": 204,
+      "name": "Example orphan asset",
+      "customer_id": 999,
+      "created_at": "2024-02-05T00:00:00.000Z",
+      "asset_serial": "EXAMPLE-ORPHAN-204",
+      "properties": {}
+    }
+  ]
+}

@@ -1,0 +1,100 @@
+import { workshop } from './workshop'
+import { estimates } from './estimates'
+import { invoices } from './invoices'
+
+export type Row = { id: string; version: number; [key: string]: any }
+export type Actor = { id: string; name: string; role: 'owner' | 'admin' | 'member' | 'agent' }
+export type State = { version: number; records: Record<string, Row[]> }
+export type Context = { s: State; actor: Actor; now: string }
+export type Handler = (c: Context, command: string, p: any) => any
+type Statement = { bind(...values: any[]): Statement; all(): Promise<any> }
+export type Database = { prepare(sql: string): Statement; batch(statements: Statement[]): Promise<any[]> }
+export class MalletError extends Error {
+  constructor(public code: string, message: string, public status = 409, public details: any = null) { super(message); this.name = 'MalletError' }
+}
+export function fail(code: string, message: string, details: any = null, status = 409): never { throw new MalletError(code, message, status, details) }
+export function object(value: any, label = 'payload'): Record<string, any> {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) fail('INPUT', `${label} must be an object.`, null, 400)
+  return value
+}
+export function text(value: unknown, label: string, max = 200, optional = false): string {
+  if (optional && (value === undefined || value === null || value === '')) return ''
+  if (typeof value !== 'string' || !value.trim() || value.length > max || /[\u0000-\u0008\u000b\u000c\u000e-\u001f]/.test(value)) fail('INPUT', `${label} must contain 1–${max} characters.`, null, 400)
+  return value.trim()
+}
+export function integer(value: unknown, label: string, min = 0, max = 1_000_000_000): number {
+  if (typeof value !== 'number' || !Number.isSafeInteger(value) || value < min || value > max) fail('INPUT', `${label} must be an integer from ${min} to ${max}.`, null, 400)
+  return value
+}
+export function choice<T extends string>(value: unknown, allowed: readonly T[], label: string): T {
+  if (!allowed.includes(value as T)) fail('INPUT', `Choose ${label}: ${allowed.join(', ')}.`, null, 400)
+  return value as T
+}
+export const rows = (s: State, kind: string): Row[] => s.records[kind] ?? (s.records[kind] = [])
+export function find(s: State, kind: string, id: unknown): Row {
+  const found = rows(s, kind).find(row => row.id === text(id, `${kind}Id`))
+  if (!found) fail('NOT_FOUND', `That ${kind} does not exist.`, null, 404)
+  return found
+}
+export function expectVersion(row: Row, version: unknown) {
+  integer(version, 'version', 1, Number.MAX_SAFE_INTEGER)
+  if (row.version !== version) fail('VERSION', 'This record changed. Refresh before continuing.', { id: row.id, current: row.version })
+}
+export const who = (c: Context) => ({ id: c.actor.id, name: c.actor.name, role: c.actor.role })
+export function put(s: State, kind: string, value: Record<string, any>): Row {
+  const row = { ...value, id: crypto.randomUUID(), version: 1 } as Row
+  rows(s, kind).push(row)
+  return row
+}
+export function bump(s: State, kind: string, row: Row, changes: Record<string, any>): Row {
+  const next = { ...row, ...changes, id: row.id, version: row.version + 1 }
+  rows(s, kind)[rows(s, kind).findIndex(x => x.id === row.id)] = next
+  return next
+}
+export function event(c: Context, kind: string, jobId: string | null, subjectId: string, data: any) {
+  return put(c.s, 'event', { kind, jobId, assetId: jobId ? find(c.s, 'job', jobId).assetId : kind.startsWith('asset.') ? subjectId : null, subjectId, at: c.now, actor: who(c), data })
+}
+export function selfApproval(c: Context, preparedBy: { id: string; role: string }) {
+  if (preparedBy.role === 'agent' && preparedBy.id === c.actor.id) fail('SELF_APPROVAL', 'Another person must decide work prepared by this agent identity.')
+}
+export function approval(c: Context, kind: string, row: Row, revision: number, preparedBy: any) {
+  return put(c.s, 'approval', { subjectKind: kind, subjectId: row.id, revision, subjectVersion: row.version, preparedBy, approvedBy: who(c), decision: 'approved', at: c.now })
+}
+const agentCommands = new Set(['estimate.prepare', 'estimate.revise', 'invoice.prepare', 'dispatch.prepare'])
+const commands = new Set(['asset.create', 'asset.update', 'job.book', 'job.complete', 'work.record', 'estimate.prepare', 'estimate.revise', 'estimate.approve', 'estimate.markSent', 'estimate.authorise', 'invoice.prepare', 'invoice.approve', 'invoice.export', 'dispatch.prepare', 'dispatch.approve'])
+export function reduce(s: State, actor: Actor, command: string, payload: any, now = new Date().toISOString()): any {
+  object(actor, 'actor'); text(actor.id, 'actor.id'); text(actor.name, 'actor.name'); choice(actor.role, ['owner', 'admin', 'member', 'agent'], 'role')
+  if (!commands.has(command)) fail('COMMAND', 'Unknown Mallet command.', null, 400)
+  if (actor.role === 'agent' && !agentCommands.has(command) || actor.role === 'member' && command !== 'work.record') fail('FORBIDDEN', 'This role cannot perform that command.', null, 403)
+  const c = { s, actor, now }, p = object(payload)
+  for (const handler of [workshop, estimates, invoices]) {
+    const result = handler(c, command, p)
+    if (result !== undefined) return result
+  }
+  return fail('COMMAND', 'Unknown Mallet command.', null, 400)
+}
+export async function load(db: Database): Promise<State> {
+  const [meta, values] = await db.batch([db.prepare('SELECT version FROM mallet_meta WHERE id=1'), db.prepare('SELECT kind,value FROM mallet_records ORDER BY kind,id')])
+  const version = meta.results?.[0]?.version
+  if (!Number.isSafeInteger(version)) fail('STORAGE', 'Mallet migrations have not been applied.', null, 503)
+  const s: State = { version, records: {} }
+  for (const value of values.results ?? []) rows(s, value.kind).push(JSON.parse(value.value))
+  return s
+}
+export async function execute(db: Database, actor: Actor, command: string, payload: any, authority?: { sql: string; params: any[] }): Promise<any> {
+  const s = await load(db), before = new Map<string, string>()
+  for (const [kind, values] of Object.entries(s.records)) for (const row of values) before.set(`${kind}:${row.id}`, JSON.stringify(row))
+  const result = reduce(s, actor, command, payload)
+  const statements = [db.prepare('INSERT INTO mallet_assert(ok) SELECT CASE WHEN version=? THEN 1 ELSE 0 END FROM mallet_meta WHERE id=1').bind(s.version)]
+  if (authority) statements.push(db.prepare(`INSERT INTO mallet_assert(ok) SELECT CASE WHEN (${authority.sql}) THEN 1 ELSE 0 END`).bind(...authority.params))
+  for (const [kind, values] of Object.entries(s.records)) for (const row of values) {
+    const value = JSON.stringify(row)
+    if (before.get(`${kind}:${row.id}`) !== value) statements.push(db.prepare('INSERT INTO mallet_records(kind,id,revision,value) VALUES(?,?,?,?) ON CONFLICT(kind,id) DO UPDATE SET revision=excluded.revision,value=excluded.value').bind(kind, row.id, row.version, value))
+  }
+  statements.push(db.prepare('DELETE FROM mallet_assert'))
+  try { await db.batch(statements) } catch (error) {
+    if (/CHECK constraint failed.*(?:mallet_assert|ok)/i.test(String(error))) fail('CONCURRENT_CHANGE', 'Data or session authority changed. Refresh before continuing.')
+    throw error
+  }
+  return result
+}

@@ -1,0 +1,123 @@
+# Workshop commands and access
+
+Use the real app origin. `GET /api/mallet/state` returns `{actor,version,records}`. The top-level `version` is the store version; commands below use the relevant **record's** `version`. Read current records after each write: commands can update related records too. A version conflict requires a refresh and review of the changed record.
+
+Send commands as JSON:
+
+```http
+POST /api/mallet/commands
+Content-Type: application/json
+Authorization: Bearer <private-preparation-key>
+
+{"command":"invoice.prepare","input":{"jobId":"<completed-job-id>","version":7}}
+```
+
+The placeholders are not usable credentials or record IDs. Successful commands return their result as JSON. Errors return `{error,message,details?}` with an appropriate 4xx/5xx status. Mallet JSON bodies are limited to 1 MiB. Do not blindly repeat a failed financial decision; refresh its state first. Invoice export specifically returns its saved journal entry on a valid repeated request.
+
+## Authentication and permissions
+
+Native owner/admin sessions manage the repair workflow. Cookie-authenticated mutations require the exact app `Origin` and valid session; cross-site requests are refused. Do not bypass Base's CSRF protections. An agent uses only `Authorization: Bearer …`, never fabricated `actor` or role fields. Bearer requests must still address the correct app host and cannot be cross-site browser requests.
+
+| Actor | Allowed work |
+| --- | --- |
+| Owner/admin | Workshop commands, agent-key create/revoke, invoice downloads, snapshot import preview/apply/journal/undo. |
+| Member | Read assigned jobs, their assets/estimates/events; `work.record` on an assigned job. Assignment is by operator ID. |
+| Agent key | Read workshop state; only the four preparation commands below. |
+| Owner only | Native backup/restore and unused-asset erasure. |
+
+A preparation key can see workshop/customer state, so treat it as private customer-data access. Keys expire 30 days after creation. The key is invalid if revoked, expired, or its creating owner/admin becomes inactive or changes operator version/role. Current session/key authority is checked again at mutation time.
+
+Create keys from `/app/data`, or with an owner/admin native session:
+
+```json
+{"command":"agent.create","input":{"label":"Workshop assistant"}}
+```
+
+The response includes `{id,label,token,expiresAt}`; `expiresAt` is epoch milliseconds. Copy `token` once into private agent configuration. The UI never shows it again. Revoke with `{"command":"agent.revoke","input":{"id":"<key-id>"}}`. An agent key cannot create or revoke keys.
+
+## Four agent preparation commands
+
+| Command | Required input | Result and constraints |
+| --- | --- | --- |
+| `estimate.prepare` | `jobId`, job `version`, `lines`; optional `notes` | Draft estimate revision 1 on an open job with no estimate. Also updates the job. |
+| `estimate.revise` | `estimateId`, estimate `version`, current `revision`, replacement `lines`; optional `notes` | Appends a draft revision; earlier approval does not approve it. Authorised estimates are frozen. |
+| `dispatch.prepare` | `jobId`, job `version`, `bayId`, `technicianId`, `startAt`, `endAt`, `reason` | Pending proposal with observed conflicts. A person's approval checks current conflicts and job version again. |
+| `invoice.prepare` | `jobId`, completed job `version` | Draft invoice from authorised actual work, once per job. Do not supply lines or totals. |
+
+Example estimate input:
+
+```json
+{
+  "command": "estimate.prepare",
+  "input": {
+    "jobId": "<job-id>",
+    "version": 1,
+    "lines": [
+      {"kind":"part","description":"Oil filter","quantity":1,"unitCents":2500,"gst":true},
+      {"kind":"labour","description":"Service labour","quantity":0.5,"unitCents":12000,"gst":true}
+    ],
+    "notes": "Review both lines before sharing."
+  }
+}
+```
+
+Each estimate has 1–100 lines. A line uses `kind:"part"|"labour"`, `description`, positive numeric `quantity` with up to three decimal places, and non-negative integer `unitCents` in AUD **excluding GST**. `gst` defaults to true and means 10% GST; false means zero GST. The server calculates rounded integer-cent amounts and totals. Optional `id` must be unique within the revision; otherwise IDs are generated. Only parts may carry optional `pierItemId`. A reference does not allocate stock.
+
+Times must include a timezone, for example `2026-10-19T09:00:00+10:00`. A booking/dispatch interval ends after it starts and lasts no more than seven days. `technicianId` must be the member's actual operator ID for that member to see and record work; a display label will not grant that access.
+
+Agents are denied `estimate.approve`, `estimate.markSent`, `estimate.authorise`, `dispatch.approve`, `invoice.approve`, `invoice.export`, `work.record`, `job.book`, `job.complete`, asset changes, import, portability and people/key management. The person reviews prepared work in the job UI; approvals and events retain the preparer, decision-maker, exact revision/version and timestamp.
+
+## Human command reference
+
+These require an owner/admin native session unless marked otherwise. `version` always names the target record described in the row.
+
+| Command | Input |
+| --- | --- |
+| `asset.create` | `customerName`, optional `customerEmail`, `label`, unique `identifier`. |
+| `asset.update` | `assetId`, asset `version`, same asset fields. |
+| `job.book` | `assetId`, asset `version`, `title`, optional `notes`, `bayId`, `technicianId`, `startAt`, `endAt`. |
+| `estimate.approve` | `estimateId`, estimate `version`, exact current `revision`. |
+| `estimate.markSent` | `estimateId`, estimate `version`, `revision`, `method`, optional `note`. Method: `email`, `printed`, `phone`, `in person`, `manual share`. Records manual sharing; no email is delivered or confirmed. |
+| `estimate.authorise` | `estimateId`, estimate `version`, `revision`, nonempty unique `lineIds`, `customerName`, `method`, `evidence`. Method: `signed`, `email reply`, `phone`, `in person`. Must follow approval and sharing of this revision. Staff attest to external evidence. |
+| `dispatch.approve` | `proposalId`, proposal `version`. Refuses stale jobs, current resource conflicts, completed jobs or jobs with actual work. |
+| `work.record` | `jobId`, job `version`, authorised `lineId`, numeric `quantity`, optional `note`. Also allowed for its assigned member. Cumulative quantity cannot exceed authorisation. |
+| `job.complete` | `jobId`, job `version`, optional `note`. Requires actual work. |
+| `invoice.approve` | `invoiceId`, invoice `version`, optional exact invoice `revision`. |
+| `invoice.export` | `invoiceId`, invoice `version`. First export requires approval. A repeat accepts the current version or the version immediately before first export and returns the saved entry. |
+| `asset.erase` | **Owner only:** `assetId`, `confirm:"ERASE"`. Refuses assets with visits. |
+
+Invoices use recorded authorised quantities and the frozen estimate prices. No arbitrary prices or totals may be injected at invoice preparation. The saved export has `format:"mallet-invoice-csv"`; download it as owner/admin at `GET /api/mallet/exports/<export-id>`. This generic CSV is not guaranteed to match Xero's import schema. Asset event history is available at `GET /api/mallet/assets/<asset-id>/history.csv` within the caller's visible state.
+
+## Snapshot move-in API
+
+All routes require an owner/admin native session and same-origin mutation checks. These are separate endpoints, not preparation-key commands. Read [MOVE-IN.md](MOVE-IN.md) before supplying RepairShopr customer/asset snapshots.
+
+| Method and path | Input / result |
+| --- | --- |
+| `POST /api/mallet/imports/preview` | `{customers,assets}` → dry-run plan, `fingerprint`, counts, diagnostics and source links. No writes. |
+| `POST /api/mallet/imports/apply` | `{customers,assets,fingerprint}` using the identical reviewed snapshots → journal job/progress. Resolve error diagnostics before applying. Repeat identical approved input to continue a bounded apply. |
+| `POST /api/mallet/imports/resume` | `{id}` → continue the retained approved plan without uploading snapshots again. |
+| `GET /api/mallet/imports/journal?id=<id>` | Retained job, full plan, originals and mapped/source links. |
+| `POST /api/mallet/imports/undo` | `{id}` → undo; refuses changed assets or those with later visits. |
+
+The browser path is `/app/move-in`: preview, explicitly approve the fingerprint, apply and retain the journal ID. These imports move customers/assets only, not source jobs or authorisations.
+
+## Backup and restore
+
+The owner uses `/app/data` → Download workshop backup, or native `rer export` / `rer import` described in the [README](../README.md). Backups exclude identity and keys. Restore requires an empty product destination with a fresh owner/configuration. When importing an archive that predates erasure, pass a later erasure archive using `--journal`.
+
+Mallet mounts the full Base handler with its [archive policy](../src/mallet/archive-policy.mjs). All routes below require the owner's native session; mutation requests include the matching `Origin`. The transfer job is scoped to the owner who created it.
+
+| Method and path | Operation |
+| --- | --- |
+| `POST /api/portability/exports` | Create export job with `{}`. Returns `{id}`. |
+| `GET /api/portability/exports/<id>` | Read status. |
+| `POST /api/portability/exports/<id>/advance` | Advance bounded export work; body follows the Base protocol (`expectedPart`, `maxParts`). |
+| `GET /api/portability/exports/<id>/download` | Download completed archive as NDJSON. |
+| `POST /api/portability/imports` | Create import with `{manifest,confirmed:true}` from an archive. |
+| `PUT /api/portability/imports/<id>/parts/<index>` | Upload the archive's numbered part using the Base protocol. |
+| `POST /api/portability/imports/<id>/finalize` | Finalize the staged import using Base's validated protocol. |
+| `GET /api/portability/imports/<id>` | Read import status. |
+| `POST /api/portability/exports/<id>/abort` or `POST /api/portability/imports/<id>/abort` | Abort a transfer. |
+
+Use the pinned Base transfer client/CLI for manifest and part construction; arbitrary workshop JSON is not a portability archive. A backup after erasure is the journal required to keep an older restore from reviving erased information. Erasure is restricted to unused assets in this release; visit-bearing assets remain retained.
