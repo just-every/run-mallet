@@ -6,26 +6,13 @@ Mallet runs on your own computer with one command, `rer dev`. You need no accoun
 - Node 22 or later and pnpm 10.12.4. `rer` picks the exact Node version Mallet declares and fetches a checked copy if yours differs; it never changes your global Node.
 - Git, to get the code.
 
-## Install rer
-
-`rer` is the Run Edit Run command that installs, starts and stops Mallet. Install it once per computer:
-
-```sh
-curl -fsSL https://runeditrun.com/install.sh | sh
-export PATH="$HOME/.local/bin:$PATH"
-```
-
-The second line makes `rer` available in the shell you have open. You can also install it with `npm install -g @runeditrun/rer`.
-
 ## Get Mallet and start it
 
 ```sh
-git clone https://github.com/just-every/run-mallet.git
-cd run-mallet
-rer dev
+npx -y @runeditrun/rer dev just-every/run-mallet
 ```
 
-`rer dev` installs everything Mallet needs, makes you the owner and starts the app. The first launch takes a few minutes. If it is interrupted, run the same command again: it carries on from where it stopped.
+That one line installs `rer`, the Run Edit Run command that installs, starts and stops Mallet, then clones Mallet and starts it. To start it again later, run `cd run-mallet && rer dev`. `rer dev` installs everything Mallet needs, makes you the owner and starts the app. The first launch takes a few minutes. If it is interrupted, run the same command again: it carries on from where it stopped.
 
 When it is ready it prints three lines:
 

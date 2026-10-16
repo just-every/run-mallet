@@ -3,7 +3,7 @@
     {
       "title": "Start here",
       "pages": [
-        { "slug": "getting-started", "title": "Get started", "file": "getting-started.md", "summary": "Install rer, get Mallet and start it on your own computer, then finish setup as the owner." },
+        { "slug": "getting-started", "title": "Get started", "file": "getting-started.md", "summary": "Get Mallet and start it on your own computer with one line, then finish setup as the owner." },
         { "slug": "deploy", "title": "Run it in your own Cloudflare account", "file": "deploy.md", "summary": "Put the same app in your own Cloudflare account when you want it on every bench and phone." }
       ]
     },

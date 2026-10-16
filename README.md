@@ -6,17 +6,13 @@ See what it does before installing anything: the public run page is [https://run
 
 ## Start from a fresh clone
 
-Install the `rer` launcher once if it is missing:
+Run one line to install the `rer` launcher if it is missing, clone Mallet and start it:
 
 ```sh
-npx -y @runeditrun/rer@0.2.26 cli install
-export PATH="$HOME/.local/bin:$PATH"
-git clone https://github.com/just-every/run-mallet.git
-cd run-mallet
-rer dev
+npx -y @runeditrun/rer dev just-every/run-mallet
 ```
 
-If you already have `rer`, start at `git clone`. This checkout pins `@runeditrun/rer` **0.2.26**, Node 22.20.0 and pnpm 10.12.4. The launcher uses the checkout's pinned package and selects its Node runtime. `rer dev` installs dependencies, sets up a local owner and starts the real app automatically. First launch can take several minutes; if interrupted, the same command resumes.
+To start it again later, run `cd run-mallet && rer dev`. This checkout pins `@runeditrun/rer` **0.2.26**, Node 22.20.0 and pnpm 10.12.4. The launcher uses the checkout's pinned package and selects its Node runtime. `rer dev` installs dependencies, sets up a local owner and starts the real app automatically. First launch can take several minutes; if interrupted, the same command resumes.
 
 Open the printed `RER_OPEN` link on this computer. It signs you in as the local owner. **The link is a credential: keep it private.** Finish the first-run form at `/setup`, then open `/app`. `RER_READY` is the listener address. Development and demo email is suppressed; no mailbox delivery is needed for this local journey. There are no shared owner credentials to copy.
 
