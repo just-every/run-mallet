@@ -3,37 +3,41 @@ export const e=(v:unknown):string=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&a
 export const money=(cents:number)=>new Intl.NumberFormat('en-AU',{style:'currency',currency:'AUD'}).format((cents??0)/100)
 export const hidden=(name:string,value:unknown)=>`<input type="hidden" name="${e(name)}" value="${e(value)}">`
 export const field=(label:string,name:string,type='text',value:unknown='',extra='')=>`<label>${e(label)}<input name="${e(name)}" type="${type}" value="${e(value)}" ${extra}></label>`
+export const select=(label:string,name:string,options:[string,string][],selected='')=>`<label>${e(label)}<select name="${e(name)}">${options.map(([value,text])=>`<option value="${e(value)}"${value===selected?' selected':''}>${e(text)}</option>`).join('')}</select></label>`
 export const area=(label:string,name:string,value='',extra='')=>`<label>${e(label)}<textarea name="${e(name)}" ${extra}>${e(value)}</textarea></label>`
 export const form=(command:string,content:string,button:string,values:Record<string,unknown>={},kind='')=>`<form method="post" action="/app/actions"${kind?` class="${kind}"`:''}>${hidden('command',command)}${Object.entries(values).map(([k,v])=>hidden(k,v)).join('')}${content}<button>${e(button)}</button></form>`
 // A card: its title (with an optional status pill or step figure beside it) and content.
-export const box=(title:string,content:string,{pill='',step='',extra=''}:{pill?:string,step?:string|number,extra?:string}={})=>`<section class="card${extra?` ${extra}`:''}">${pill?'<div class="card-head">':''}<h2>${step!==''?`<span class="step">${e(step)}.</span> `:''}${e(title)}</h2>${pill}${pill?'</div>':''}${content}</section>`
+export const box=(title:string,content:string,{pill='',step='',extra='',id=''}:{pill?:string,step?:string|number,extra?:string,id?:string}={})=>`<section${id?` id="${e(id)}"`:''} class="card${extra?` ${extra}`:''}">${pill?'<div class="card-head">':''}<h2>${step!==''?`<span class="step">${e(step)}.</span> `:''}${e(title)}</h2>${pill}${pill?'</div>':''}${content}</section>`
+// Technicians are stored as operator IDs; show the operator's name (free text from older bookings is shown as typed, and an operator who is gone is not shown as an ID).
+export type Names=Record<string,string>
+export const person=(names:Names,id:unknown)=>names[String(id)]??(/^[0-9a-f]{8}-[0-9a-f]{4}-/i.test(String(id))?'Former team member':String(id??''))
 export const badge=(value:unknown)=>`<span class="pill">${e(value)}</span>`
 export const rows=(state:any,kind:string):any[]=>state.records[kind]??[]
 // A list row whose whole area is one link; the chevron shows on phones.
 export const linkRow=(href:string,title:string,meta:string,pill='')=>`<li><a class="row" href="${e(href)}"><span class="row-title"><span class="row-name">${e(title)}</span>${pill}</span><span class="row-meta">${meta}</span></a></li>`
 export const join=(...parts:unknown[])=>parts.filter(part=>part!==undefined&&part!==null&&part!=='').map(e).join(' · ')
 
-// Times are stored as UTC ISO strings. The page shows them as "19 Oct, 9:00 – 10:00" in the browser's own timezone
+// Times are stored as UTC ISO strings. The page shows them as "19 Oct, 9:00 – 10:00 AEDT" in the browser's own timezone
 // (the script below rewrites each [data-at]); without JavaScript the server's UTC rendering stays, marked UTC.
 type Show='time'|'date'|'date-year'
 const stamp=(at:string,until:string|undefined,show:string,timeZone?:string)=>{
  const parts=(d:Date,o:Intl.DateTimeFormatOptions)=>Object.fromEntries(new Intl.DateTimeFormat('en-AU',{...o,timeZone}).formatToParts(d).map(x=>[x.type,x.value]))
  const day=(d:Date)=>{const x=parts(d,{day:'numeric',month:'short'});return x.day+' '+x.month}
  const time=(d:Date)=>{const x=parts(d,{hour:'numeric',minute:'2-digit',hourCycle:'h23'});return Number(x.hour)+':'+x.minute}
- const a=new Date(at)
+ const a=new Date(at),zone=()=>' '+parts(a,{timeZoneName:'short',hour:'numeric'}).timeZoneName
  if(show==='date-year'){const x=parts(a,{day:'numeric',month:'short',year:'numeric'});return x.day+' '+x.month+' '+x.year}
  let text=show==='date'?day(a):day(a)+', '+time(a)
  if(until){const b=new Date(until);text+=' – '+(day(b)===day(a)?time(b):day(b)+', '+time(b))}
- return text
+ return show==='date'?text:text+zone()
 }
 export function when(at:unknown,until?:unknown,show:Show='time') {
  if(typeof at!=='string'||!Number.isFinite(Date.parse(at)))return e(at)
  const end=typeof until==='string'&&Number.isFinite(Date.parse(until))?until:undefined
- return `<time datetime="${e(at)}" title="${e(end?`${at} – ${end}`:at)}" data-at="${e(at)}"${end?` data-until="${e(end)}"`:''} data-show="${show}">${e(stamp(at,end,show,'UTC'))} UTC</time>`
+ return `<time datetime="${e(at)}" title="${e(end?`${at} – ${end}`:at)}" data-at="${e(at)}"${end?` data-until="${e(end)}"`:''} data-show="${show}">${e(stamp(at,end,show,'UTC'))}</time>`
 }
 // The same format as stamp(), in the browser's timezone. Plain source (not stamp.toString()): bundlers may wrap functions.
 const LOCAL_TIMES="(()=>{const parts=(d,o)=>Object.fromEntries(new Intl.DateTimeFormat('en-AU',o).formatToParts(d).map(x=>[x.type,x.value])),day=d=>{const x=parts(d,{day:'numeric',month:'short'});return x.day+' '+x.month},time=d=>{const x=parts(d,{hour:'numeric',minute:'2-digit',hourCycle:'h23'});return Number(x.hour)+':'+x.minute};"
- +"for(const el of document.querySelectorAll('[data-at]')){const a=new Date(el.dataset.at),u=el.dataset.until,show=el.dataset.show;let text;if(show==='date-year'){const x=parts(a,{day:'numeric',month:'short',year:'numeric'});text=x.day+' '+x.month+' '+x.year}else{text=show==='date'?day(a):day(a)+', '+time(a);if(u){const b=new Date(u);text+=' – '+(day(b)===day(a)?time(b):day(b)+', '+time(b))}}el.textContent=text}})()"
+ +"for(const el of document.querySelectorAll('[data-at]')){const a=new Date(el.dataset.at),u=el.dataset.until,show=el.dataset.show;let text;if(show==='date-year'){const x=parts(a,{day:'numeric',month:'short',year:'numeric'});text=x.day+' '+x.month+' '+x.year}else{text=show==='date'?day(a):day(a)+', '+time(a);if(u){const b=new Date(u);text+=' – '+(day(b)===day(a)?time(b):day(b)+', '+time(b))}if(show!=='date')text+=' '+parts(a,{timeZoneName:'short',hour:'numeric'}).timeZoneName}el.textContent=text}})()"
 const digest=async(text:string)=>btoa(String.fromCharCode(...new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(text)))))
 let scriptHash:Promise<string>|undefined
 

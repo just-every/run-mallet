@@ -22,6 +22,11 @@ test('booking rejects bay and technician collisions and keeps every asset visit'
  const input={assetId:asset.id,version:(await current()).version,title:'Second visit',bayId:'Bay 1',technicianId:'Jordan',startAt:job.startAt,endAt:job.endAt}
  assert.equal((await h.command('job.book',input,{status:409})).error,'DISPATCH_CONFLICT')
  await h.command('job.book',{...input,bayId:'Bay 2',technicianId:'Alex'},{status:409})
+ const post=(path,fields)=>h.mf.dispatchFetch(h.origin+path,{method:'POST',redirect:'manual',headers:{origin:h.origin,host:new URL(h.origin).host,'content-type':'application/x-www-form-urlencoded',cookie:h.owner},body:new URLSearchParams(fields).toString()})
+ assert.equal((await post('/setup',{confirm:'yes'})).status,303)
+ const refused=await post('/app/actions',{command:'job.book',...input}),html=await refused.text()
+ assert.equal(refused.status,409);assert.ok(html.includes(`/app/jobs/${job.id}`),'links the clashing visit');assert.ok(html.includes('Back to the booking form')&&html.includes('title=Second+visit'));assert.ok(!html.includes('DISPATCH_CONFLICT'))
+ assert.match(await (await h.request(`/app/assets/${asset.id}`)).text(),/<select name="technicianId"/)
  await h.command('job.book',{...input,startAt:'2026-10-20T09:00:00+10:00',endAt:'2026-10-20T10:00:00+10:00'})
  const history=await h.request(`/api/mallet/assets/${asset.id}/history.csv`)
  assert.equal(history.status,200);assert.match(await history.text(),/Second visit|job.book/)

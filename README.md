@@ -2,6 +2,8 @@
 
 Mallet runs the repair bench for a small Australian mechanic, bicycle or device shop: customer assets, bay bookings, estimates, recorded customer authorisation, parts and labour, and one saved invoice export per visit. The asset keeps its visit history. You run the app and hold its data in your own account.
 
+See what it does before installing anything: the public run page is [https://run-mallet.com/run](https://run-mallet.com/run). It shows how to install and run Mallet; there is no shared hosted workshop, because Mallet runs on your own computer or account. After `rer dev`, the same page is also served locally at `/run` on the `RER_SITE` address.
+
 ## Start from a fresh clone
 
 Install the `rer` launcher once if it is missing:
@@ -24,12 +26,12 @@ Stop with `rer dev --stop` or Ctrl-C. For a deliberate installation with your ow
 
 The owner guides live in [`docs/`](docs/) as Markdown, listed in [`docs/site.json`](docs/site.json): [getting started](docs/getting-started.md), [completing a repair](docs/complete-a-repair.md), [bookings and history](docs/bookings-and-history.md), [people and agent keys](docs/people-and-agents.md), [move-in](docs/move-in.md), [backup and restore](docs/backup-and-restore.md) and [deploying](docs/deploy.md).
 
-`rer build --site` builds Mallet's public run site into `dist/site`: the homepage, the Run page at `/run` and those docs at `/docs`, as static pages with no script on the homepage and nothing loaded from another origin. `rer dev` also serves it, printed as `RER_SITE`. Its source is `src/site/`; the domain it publishes to is in `deploy-site.json`, and `.github/workflows/run-site.yml` deploys it only when the repository variable `RUN_SITE_DEPLOY` is `true`. The run site is live at [https://run-mallet.com](https://run-mallet.com), and its run page is [https://run-mallet.com/run](https://run-mallet.com/run). To see the same page from a local checkout, use the local `/run` page on the `RER_SITE` address printed by `rer dev`.
+`rer build --site` builds Mallet's public run site into `dist/site`: the homepage, the Run page at `/run` and those docs at `/docs`, as static pages with no script on the homepage and nothing loaded from another origin. `rer dev` also serves it, printed as `RER_SITE`. Its source is `src/site/`; the domain it publishes to is in `deploy-site.json`, and `.github/workflows/run-site.yml` deploys it only when the repository variable `RUN_SITE_DEPLOY` is `true`. The run site is live at [https://run-mallet.com](https://run-mallet.com), and its run page is [https://run-mallet.com/run](https://run-mallet.com/run) (public). The same page from a local checkout is the local `/run` page on the `RER_SITE` address printed by `rer dev` (this computer only).
 
 ## Complete a repair
 
 1. In the workshop, use **Add a customer's asset**. Enter the customer, vehicle/device label and unique registration or serial. Open the saved asset.
-2. Use **Book in a visit**. Enter the request, bay, technician, start and end. Use ISO timestamps with an explicit timezone, for example `2026-10-19T09:00:00+10:00` and `2026-10-19T10:00:00+10:00`. Times are stored as UTC. Overlapping bookings for either the bay or technician are refused. When assigning a member, enter their **operator ID**, obtained from `/auth/operators` or `GET /auth/session`, rather than their display name.
+2. Use **Book in a visit**. Enter the request and bay, choose the technician from the list of the workshop's people, and enter the start and end as ISO timestamps with a UTC offset, for example `2026-10-19T09:00:00+11:00` and `2026-10-19T10:00:00+11:00` (Sydney and Melbourne use +11:00 from October to April, Brisbane +10:00). Times are stored as UTC and shown in your browser's timezone with its name, such as `19 Oct, 9:00 – 10:00 AEDT`. Overlapping bookings for either the bay or technician are refused: Mallet names each clashing visit, links to it and returns you to the booking form with your entries restored. The technician is saved as the person's operator ID, so a member sees their jobs; the API takes that ID (from `/auth/operators` or `GET /auth/session`) rather than a display name.
 3. Open the job and **Prepare estimate** with parts and labour. The form has one part and one labour line; the API supports 1–100 lines. Prices are AUD excluding GST, with 10% Australian GST shown separately. The form taxes both lines; API lines can explicitly use `gst:false`.
 4. Review and **Approve estimate**. Open the printable estimate and share it yourself. Use **Record estimate shared** to record the method and reference. Choosing email records your manual handoff; Mallet does not send the estimate or confirm delivery.
 5. Select the lines the customer actually authorised, enter their name, method and evidence, and **Record customer authorisation**. Staff record signed, phone, email-reply or in-person evidence; this is not a customer signing portal. Unselected lines are declined. Approval and authorisation name the exact revision. A revision before authorisation needs fresh approval and sharing; an authorised estimate is frozen. Book a new visit for additional work.
@@ -58,16 +60,25 @@ rer dev --stop
 rer export --output exports/workshop.rer
 ```
 
-Keep the archive private. To restore on another machine, clone this repository, use `rer dev` to finish setup for a fresh owner, stop it, then import into its empty product store:
+Keep the archive private. A browser download lands outside the checkout and readable by other users, but `rer import` accepts only a regular file you own with mode 0600, addressed by a path inside the checkout. Move the download into `exports/` and make it private first:
 
 ```sh
+mkdir -p exports
+mv ~/Downloads/workshop.rer exports/workshop.rer
+chmod 600 exports/workshop.rer
+```
+
+To restore on another machine, clone this repository, use `rer dev` to finish setup for a fresh owner, stop it, then import into its empty product store:
+
+```sh
+rer dev --stop
 rer import --input exports/workshop.rer --yes
 rer dev
 ```
 
-A populated destination is refused. Backups cover workshop records, approvals, invoices and retained import originals, excluding identity, sessions, agent keys and private settings. The destination claims its own owner and needs its own configuration. The policy is [src/mallet/archive-policy.mjs](src/mallet/archive-policy.mjs); the full owner-only Base export/import HTTP handler is mounted at `/api/portability/*`. [docs/agent-commands.md](docs/agent-commands.md#backup-and-restore) lists that protocol.
+A populated destination is refused. Use relative paths like `exports/workshop.rer` for `--input` and `--journal`: an absolute `--journal`, or any path with `..`, stops with `Path must be a contained checkout path without traversal`, and that message does not say which argument it refers to; a file that is not 0600 stops with `Input must be an owned regular private file (0600)`. Backups cover workshop records, approvals, invoices and retained import originals, excluding identity, sessions, agent keys and private settings. The destination claims its own owner and needs its own configuration. The policy is [src/mallet/archive-policy.mjs](src/mallet/archive-policy.mjs); the full owner-only Base export/import HTTP handler is mounted at `/api/portability/*`. [docs/agent-commands.md](docs/agent-commands.md#backup-and-restore) lists that protocol.
 
-The owner can open an **unused** asset and type `ERASE` to erase it and affected imported personal data. Assets with visits retain their service and financial records in this release. After erasure, save a fresh backup as the later erasure journal. When restoring an older archive, supply it with `rer import --input exports/older.rer --journal exports/after-erasure.rer --yes` so erased data is not revived. Keep this later journal with older archives.
+The owner can open an **unused** asset and type `ERASE` to erase it and affected imported personal data. Assets with visits retain their service and financial records in this release. An older backup still holds what you erased, so Mallet refuses to restore it. After erasing, download a fresh backup and restore from that one. Restoring an older backup together with the later one as its journal, `rer import --input exports/older.rer --journal exports/after-erasure.rer --yes`, exits 4 with `restore_refused` and reason `erasure_epoch` and restores nothing; the same older backup without `--journal` would be accepted and bring the erased data back, so do not import it. Keep only backups made after the latest erasure.
 
 ## Deploy in your own account
 

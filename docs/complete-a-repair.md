@@ -17,10 +17,10 @@ Press **Add asset**. Mallet opens the asset's page.
 On the asset's page, use **Book in a visit**:
 
 - **Repair request**: what the customer asked for, such as `Oil service`.
-- **Bay** and **Technician**.
+- **Bay**, and the **Technician**, chosen from the workshop's people.
 - **Start (with timezone)** and **End (with timezone)**, written like `2026-10-19T09:00:00+11:00`.
 
-Press **Book visit**. Mallet refuses the booking if it overlaps another open job in the same bay or with the same technician, and lists the overlapping job. [Bookings and service history](/docs/bookings-and-history) has more on times and technicians.
+Press **Book visit**. Mallet refuses the booking if it overlaps another open job in the same bay or with the same technician, and shows each overlapping job with a link and a way back to the booking form. [Bookings and service history](/docs/bookings-and-history) has more on times and technicians.
 
 ## 3. Prepare the estimate
 

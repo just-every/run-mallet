@@ -31,7 +31,7 @@ export async function browserJourney(openUrl,{directory='.cache/browser',fixture
   await click('Add asset');const assetUrl=page.url();await shot('02-asset')
   await page.getByLabel('Repair request').fill('Brake pads and safety inspection')
   await page.getByLabel('Bay',{exact:true}).fill('Bay 2')
-  await page.getByLabel('Technician',{exact:true}).fill('Alex Nguyen')
+  await page.locator('select[name=technicianId]').selectOption({index:0})
   await page.getByLabel('Start (with timezone)').fill('2026-10-19T09:00:00+10:00')
   await page.getByLabel('End (with timezone)').fill('2026-10-19T11:00:00+10:00')
   await click('Book visit');const jobUrl=page.url();await shot('03-booked')
