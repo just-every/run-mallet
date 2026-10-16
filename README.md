@@ -24,7 +24,7 @@ Stop with `rer dev --stop` or Ctrl-C. For a deliberate installation with your ow
 
 The owner guides live in [`docs/`](docs/) as Markdown, listed in [`docs/site.json`](docs/site.json): [getting started](docs/getting-started.md), [completing a repair](docs/complete-a-repair.md), [bookings and history](docs/bookings-and-history.md), [people and agent keys](docs/people-and-agents.md), [move-in](docs/move-in.md), [backup and restore](docs/backup-and-restore.md) and [deploying](docs/deploy.md).
 
-`rer build --site` builds Mallet's public run site into `dist/site`: the homepage, the Run page at `/run` and those docs at `/docs`, as static pages with no script on the homepage and nothing loaded from another origin. `rer dev` also serves it, printed as `RER_SITE`. Its source is `src/site/`; the domain it will publish to is in `deploy-site.json`, and `.github/workflows/run-site.yml` deploys it only when the repository variable `RUN_SITE_DEPLOY` is `true`. Until the run site has its domain, start from this README.
+`rer build --site` builds Mallet's public run site into `dist/site`: the homepage, the Run page at `/run` and those docs at `/docs`, as static pages with no script on the homepage and nothing loaded from another origin. `rer dev` also serves it, printed as `RER_SITE`. Its source is `src/site/`; the domain it publishes to is in `deploy-site.json`, and `.github/workflows/run-site.yml` deploys it only when the repository variable `RUN_SITE_DEPLOY` is `true`. The run site is live at [https://run-mallet.com](https://run-mallet.com), and its run page is [https://run-mallet.com/run](https://run-mallet.com/run). To see the same page from a local checkout, use the local `/run` page on the `RER_SITE` address printed by `rer dev`.
 
 ## Complete a repair
 
