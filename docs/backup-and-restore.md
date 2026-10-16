@@ -8,7 +8,13 @@ Keep backups private. They contain your customers' names and contact details.
 
 ## Download a backup
 
-The owner can download one at any time from **Data & access**: press **Download workshop backup**. You get `workshop.rer`.
+The owner can download one at any time from **Data & access**: press **Download workshop backup**. You get `workshop.rer`. Your browser saves it outside the `run-mallet` folder, readable by other users. Before you can import it, move it into the folder's `exports/` directory and make it private:
+
+```sh
+mkdir -p exports
+mv ~/Downloads/workshop.rer exports/workshop.rer
+chmod 600 exports/workshop.rer
+```
 
 Or, from the `run-mallet` folder, stop Mallet and export with `rer`:
 
@@ -30,6 +36,8 @@ rer import --input exports/workshop.rer --yes
 rer dev
 ```
 
+`rer import` has two path rules. The file must be a regular file you own with mode 0600, or it stops with `Input must be an owned regular private file (0600)`. Use paths inside the `run-mallet` folder, such as `exports/workshop.rer`, for `--input` and `--journal`: an absolute `--journal`, or any path containing `..`, stops with `Path must be a contained checkout path without traversal`, which does not say which argument it means.
+
 Mallet refuses to import into an installation that already has workshop records. Moved-in records stay usable by the new owner, including their journals and undo.
 
 ## Erase an unused asset
@@ -38,10 +46,14 @@ The owner can erase an asset that has never had a visit, for example one added b
 
 An asset with visits keeps its service and financial history.
 
-## Keep erasure in older backups
+## Backups made before an erasure
 
-An older backup still contains what you erased. After erasing, download a fresh backup and keep it as the erasure journal. When you restore an older backup, pass that journal so erased data does not come back:
+An older backup still contains what you erased, so Mallet will not restore it. After erasing, download a fresh backup and restore from that one: it holds everything the workshop kept, without the erased asset.
+
+If you try the older backup with the later one as its erasure journal, the import stops and restores nothing:
 
 ```sh
 rer import --input exports/older.rer --journal exports/after-erasure.rer --yes
 ```
+
+It exits with code 4 and reports `restore_refused` with the reason `erasure_epoch`. That is the safeguard working. Importing the same older backup without `--journal` is accepted and would bring the erased data back, so keep only backups made after your latest erasure.

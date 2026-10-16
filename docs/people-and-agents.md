@@ -23,7 +23,7 @@ Invitations use Base's sign-in service, which Mallet includes. With an owner or 
 
 These requests need your signed-in session and the app's exact address as their `Origin`, the same protection every Mallet form has. Invitations are emailed, so they need mail configured; while Mallet runs on your computer, mail is not sent. **Data & access** shows your own operator ID.
 
-To assign a job to a member, enter their operator ID as the job's **Technician**. They then see that job and can record its work.
+To assign a job to a member, choose them as the visit's **Technician** in **Book in a visit**: the list shows everyone invited or active. They then see that job and can record its work. Over the API, `technicianId` is their operator ID.
 
 ## Agent keys
 

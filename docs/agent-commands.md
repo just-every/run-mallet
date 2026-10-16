@@ -102,7 +102,7 @@ The browser path is `/app/move-in`: preview, explicitly approve the fingerprint,
 
 ## Backup and restore
 
-The owner uses `/app/data` → Download workshop backup, or native `rer export` / `rer import` described in [Back up, restore and erase](/docs/backup-and-restore). Backups exclude identity and keys. Restore requires an empty product destination with a fresh owner/configuration. When importing an archive that predates erasure, pass a later erasure archive using `--journal`.
+The owner uses `/app/data` → Download workshop backup, or native `rer export` / `rer import` described in [Back up, restore and erase](/docs/backup-and-restore). Backups exclude identity and keys. Restore requires an empty product destination with a fresh owner/configuration. An archive that predates an erasure is refused (`restore_refused`, reason `erasure_epoch`), with or without `--journal`: restore a backup made after the erasure. Local `--input` and `--journal` files must be owner-only (0600) paths inside the checkout, such as `exports/workshop.rer`.
 
 Mallet mounts the full Base handler with its [archive policy](https://github.com/just-every/run-mallet/blob/main/src/mallet/archive-policy.mjs). All routes below require the owner's native session; mutation requests include the matching `Origin`. The transfer job is scoped to the owner who created it.
 
@@ -118,4 +118,4 @@ Mallet mounts the full Base handler with its [archive policy](https://github.com
 | `GET /api/portability/imports/<id>` | Read import status. |
 | `POST /api/portability/exports/<id>/abort` or `POST /api/portability/imports/<id>/abort` | Abort a transfer. |
 
-Use the pinned Base transfer client/CLI for manifest and part construction; arbitrary workshop JSON is not a portability archive. A backup after erasure is the journal required to keep an older restore from reviving erased information. Erasure is restricted to unused assets in this release; visit-bearing assets remain retained.
+Use the pinned Base transfer client/CLI for manifest and part construction; arbitrary workshop JSON is not a portability archive. A backup made after an erasure is the one to restore: an older archive, even with that later backup as `--journal`, is refused so erased information is not revived. Erasure is restricted to unused assets in this release; visit-bearing assets remain retained.
