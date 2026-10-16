@@ -6,7 +6,8 @@ import {identity,originGuard,human,agentKey,HttpError,type Actor} from './auth'
 import {execute,load,MalletError,type State} from './model'
 import {assetHistoryCsv} from './workshop'
 import {catalogue} from './pier'
-import {page,e,rows,money,when} from './ui/common'
+import {page,e,rows,money,when,type Names} from './ui/common'
+import {conflictPage} from './ui/conflict'
 import {workshop,assetPage} from './ui/workshop'
 import {jobPage} from './ui/job'
 import {moveIn,importPreview,importJournal,dataPage} from './ui/data'
@@ -36,6 +37,11 @@ function visible(s:State,actor:Actor):State {
  const jobs=rows(s,'job').filter(j=>j.technicianId===actor.id),ids=new Set(jobs.map(j=>j.id)),assets=new Set(jobs.map(j=>j.assetId))
  return {version:s.version,records:{job:jobs,asset:rows(s,'asset').filter(a=>assets.has(a.id)).map(a=>({...a,visits:a.visits.filter((id:string)=>ids.has(id))})),estimate:rows(s,'estimate').filter(x=>ids.has(x.jobId)),event:rows(s,'event').filter(x=>ids.has(x.jobId))}}
 }
+async function operators(db:D1Database) {
+ const people=(await db.prepare("SELECT id,display_name AS name,role,status FROM oa_operators WHERE status IN ('active','invited') ORDER BY created_at,id").all<{id:string,name:string,role:string,status:string}>()).results
+ return {list:people,names:Object.fromEntries(people.map(o=>[o.id,o.name])) as Names}
+}
+const bookingFields=['title','bayId','technicianId','startAt','endAt']
 function formInput(data:FormData) {
  const input:any=Object.fromEntries(data)
  for(const name of ['version','revision','quantity'])if(input[name]!==undefined)input[name]=Number(input[name])
@@ -48,7 +54,7 @@ export async function malletResponse(request:Request,original:Bindings):Promise<
  const url=new URL(request.url),path=url.pathname
  if(path!=='/app' && !path.startsWith('/app/') && !path.startsWith('/api/mallet/') && !path.startsWith('/api/portability/'))return null
  const env=runtimeBindings(original),isApi=path.startsWith('/api/')
- let actor:Actor|undefined
+ let actor:Actor|undefined,submitted:any
  try {
   const auth=await identity(request,env);actor=auth.actor;originGuard(request,env,auth.bearer)
   if(!['GET','POST','PUT','HEAD'].includes(request.method))throw new HttpError(405,'method_not_allowed')
@@ -75,6 +81,7 @@ export async function malletResponse(request:Request,original:Bindings):Promise<
   }
   if((path==='/api/mallet/commands'||path==='/app/actions') && request.method==='POST') {
    const data=path==='/app/actions'?formInput(await nativeForm(request)):await body(request),command=String(data.command),input=data.input??data
+   submitted={command,input}
    let result:any
    if(command.startsWith('agent.')) result=await agentKey(env.DB,actor,auth.authority,command,input)
    else if(command==='asset.erase') {
@@ -106,12 +113,13 @@ export async function malletResponse(request:Request,original:Bindings):Promise<
   if(exportMatch){if(!human(actor))throw new HttpError(403,'manager_required');const x=rows(state,'export').find(x=>x.id===exportMatch[1]);if(!x)throw new HttpError(404,'not_found');return csv(x.csv,'mallet-invoice')}
   const historyMatch=path.match(/^\/api\/mallet\/assets\/([^/]+)\/history.csv$/)
   if(historyMatch)return csv(assetHistoryCsv(state,historyMatch[1]),'mallet-service-history')
-  if(path==='/app')return page('Workshop',workshop(state,actor),actor)
+  if(path==='/app')return page('Workshop',workshop(state,actor,(await operators(env.DB)).names),actor)
   if(path==='/app/move-in')return page('Move into Mallet',moveIn(actor),actor,200,'move-in')
   if(path==='/app/data'){if(!human(actor))throw new HttpError(403,'manager_required');const keys=await env.DB.prepare('SELECT id,label,expires_at,revoked_at FROM mallet_agent_keys ORDER BY created_at DESC').all();return page('Data & access',dataPage(actor,keys.results),actor,200,'data')}
   if(path==='/app/backup')throw new HttpError(405,'post_required')
   const asset=path.match(/^\/app\/assets\/([^/]+)$/),job=path.match(/^\/app\/jobs\/([^/]+)$/)
-  const view=asset?assetPage(state,asset[1],actor):job?jobPage(state,job[1],actor):null
+  const people=asset||job?await operators(env.DB):undefined
+  const view=asset?assetPage(state,asset[1],actor,people!.names,people!.list,Object.fromEntries(bookingFields.filter(k=>url.searchParams.has(k)).map(k=>[k,url.searchParams.get(k)!.slice(0,200)]))):job?jobPage(state,job[1],actor,people!.names):null
   if(view)return page(view.title,view.body,actor)
   const print=path.match(/^\/app\/estimates\/([^/]+)\/print$/)
   if(print){const estimate=rows(state,'estimate').find(x=>x.id===print[1]);if(!estimate)throw new HttpError(404,'not_found');const rev=estimate.revisions.at(-1);return page('Repair estimate',`<section class="card print-sheet"><p class="sub">Revision ${e(rev.n)} · ${e(estimate.status)}</p><ul class="list">${rev.lines.map((l:any)=>`<li class="plain"><span class="row-name">${e(l.description)}</span><span class="row-meta">${e(l.quantity)} × ${money(l.unitCents)} excluding GST</span></li>`).join('')}</ul><p class="totals"><span>Subtotal ${money(rev.totals.subtotalCents)} · GST ${money(rev.totals.gstCents)}</span><strong>Total ${money(rev.totals.totalCents)}</strong></p><p>Tell the shop exactly which lines you authorise. The shop records your decision and its evidence against this revision.</p></section>`,actor)}
@@ -121,6 +129,12 @@ export async function malletResponse(request:Request,original:Bindings):Promise<
   const known=error instanceof HttpError || error instanceof MalletError || typeof error?.code==='string' || !!kitCode,status=known?(error.status??409):500,code=error.code??kitCode??'operation_failed'
   if(isApi)return json({error:code,message:known?error.message:'The operation failed.',details:error instanceof MalletError?error.details:undefined},status)
   if(status===401)return redirect('/signin?returnTo='+encodeURIComponent(path))
+  const clashes=error instanceof MalletError&&error.code==='DISPATCH_CONFLICT'?error.details?.conflicts:null
+  if(Array.isArray(clashes)&&submitted) {
+   const {command,input}=submitted,names=(await operators(env.DB)).names
+   const back=command==='job.book'?{href:`/app/assets/${encodeURIComponent(String(input.assetId))}?${new URLSearchParams(bookingFields.filter(k=>typeof input[k]==='string').map(k=>[k,input[k]]))}#book`,label:'Back to the booking form'}:{href:`/app/jobs/${encodeURIComponent(String(rows(await load(env.DB),'proposal').find(p=>p.id===input.proposalId)?.jobId))}`,label:'Back to the job'}
+   return page('Booking conflict',conflictPage(clashes,names,back),actor,status)
+  }
   return page('Could not complete that action',`<section class="card"><p role="alert">${e(known?error.message:'The operation failed. Check the input and try again.')}</p>${error instanceof MalletError&&error.details?`<pre>${e(JSON.stringify(error.details,null,2))}</pre>`:''}<p class="card-foot"><a href="${e(path.startsWith('/app/actions')?'/app':path)}">Return to workshop</a></p></section>`,actor,status,path.startsWith('/app/move-in')?'move-in':path==='/app/data'?'data':'workshop')
  }
 }
