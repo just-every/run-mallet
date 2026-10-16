@@ -1,0 +1,37 @@
+/* Mallet's look on Base's own no-JavaScript pages (sign-in, /setup, sign-in settings, confirmations), linked by
+   src/base/font-head.ts. Those pages keep their markup and hashed styles; html.rer-themed outranks their rules.
+   Workshop red appears only as the mark's outline, the focus ring and a ticked box. */
+@import url('/brand/tokens.css');
+html.rer-themed{background:var(--rer-page)}
+html.rer-themed body{position:relative;min-height:100vh;margin:0;padding:clamp(150px,22vh,220px) 16px 64px;background:var(--rer-page);color:var(--rer-text);font:400 17px/1.55 var(--rer-font-body);-webkit-font-smoothing:antialiased}
+html.rer-themed body::before{content:"";position:absolute;inset:0 0 auto;height:150px;background:var(--mallet-dots) 6px 6px/24px 24px;-webkit-mask-image:linear-gradient(#000 55%,transparent);mask-image:linear-gradient(#000 55%,transparent);pointer-events:none}
+html.rer-themed main{position:relative;box-sizing:border-box;width:100%;max-width:560px;margin:0 auto;padding:44px 48px 48px;border:0;border-radius:var(--rer-radius);background:var(--rer-surface);box-shadow:var(--mallet-shadow)}
+html.rer-themed h1{margin:0 0 18px;font:800 44px/1.05 var(--rer-font-heading);letter-spacing:-.015em;color:var(--rer-text)}
+html.rer-themed h2{font:700 22px/1.2 var(--rer-font-heading)}
+html.rer-themed p{color:var(--rer-muted);font-size:17px}
+html.rer-themed .brand,html.rer-themed .rer-brand{display:flex;align-items:center;gap:12px;margin:0 0 28px;color:var(--rer-text);font:800 26px/1 var(--rer-font-heading);letter-spacing:-.01em}
+html.rer-themed .brand::before,html.rer-themed .rer-brand::before{width:36px;height:36px}
+html.rer-themed label{display:grid;gap:6px;margin:0 0 8px;color:var(--rer-text);font-size:15px;font-weight:600}
+html.rer-themed input:not([type=checkbox]):not([type=hidden]){box-sizing:border-box;width:100%;min-height:48px;margin:0 0 20px;padding:0 14px;border:1px solid var(--mallet-input);border-radius:var(--mallet-input-radius);background:var(--rer-surface);color:var(--rer-text);font:400 16px/1.4 var(--rer-font-body)}
+html.rer-themed button,html.rer-themed .action{display:flex;align-items:center;justify-content:center;width:100%;min-height:52px;padding:0 24px;border:1.5px solid var(--rer-accent);border-radius:var(--mallet-pill);background:var(--rer-accent);color:var(--rer-accent-text);font:600 17px/1 var(--rer-font-body);text-decoration:none;cursor:pointer}
+html.rer-themed button:hover,html.rer-themed .action:hover{box-shadow:none;background:#3a332c}
+html.rer-themed button.secondary{background:transparent;color:var(--rer-text);border-color:var(--rer-text)}
+html.rer-themed :focus-visible{outline:2px solid var(--rer-focus);outline-offset:3px}
+html.rer-themed .secondary-link a,html.rer-themed a{color:var(--rer-link);text-decoration-thickness:1px;text-underline-offset:3px}
+/* First run: the owner as ruled rows, then the red-ticked confirmation. */
+html.rer-themed dl{display:grid;grid-template-columns:120px minmax(0,1fr);gap:0;margin:8px 0 24px;border-top:1px solid var(--mallet-rule)}
+html.rer-themed dt,html.rer-themed dd{margin:0;padding:14px 0;border-bottom:1px solid var(--mallet-rule)}
+html.rer-themed dt{color:var(--rer-text);font-weight:700}
+html.rer-themed dd{color:var(--rer-text);overflow-wrap:anywhere}
+html.rer-themed label:has(input[type=checkbox]),html.rer-themed .check{display:flex;align-items:center;gap:14px;margin:0;font-size:16px;font-weight:500}
+html.rer-themed .check{margin:0 0 24px}
+html.rer-themed input[type=checkbox]{appearance:none;flex:none;width:22px;height:22px;margin:0;padding:0;border:1.5px solid var(--rer-text);border-radius:3px;background:var(--rer-surface);cursor:pointer}
+html.rer-themed input[type=checkbox]:checked{border-color:var(--mallet-red);background:var(--mallet-red) url('/brand/tick.svg') center/20px no-repeat}
+html.rer-themed form p{margin:0 0 24px}
+@media (max-width:600px){
+ html.rer-themed body{padding:140px 16px 40px}
+ html.rer-themed body::before{height:130px}
+ html.rer-themed main{padding:32px 24px 28px}
+ html.rer-themed h1{font-size:34px}
+ html.rer-themed dl{grid-template-columns:96px minmax(0,1fr)}
+}

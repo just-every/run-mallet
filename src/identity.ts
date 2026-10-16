@@ -9,7 +9,7 @@ export const identity: EditionIdentity = {
   product: branding.name,
   deployment: branding.name,
   purpose: '{deployment} keeps your workshop’s repair jobs, customer authorisations and service history in your account.',
-  tagline: 'Book in, authorise, repair and hand over.',
+  tagline: 'Book it in, record the customer’s yes on each line, and hand over with one invoice. 100% free and open source.',
   signInPath: '/signin',
   // The run site `rer deploy --site` publishes (deploy-site.json).
   runSite: `https://${site.domain}`,
@@ -18,6 +18,5 @@ export const identity: EditionIdentity = {
   theme: '/rer-theme.css',
   mark: '/brand/mark.svg',
   band: '/brand/band.svg',
-  fonts: '/fonts/fonts.css',
   accentColor: branding.primaryColor,
 }

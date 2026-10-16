@@ -1,0 +1,34 @@
+{
+  "sections": [
+    {
+      "title": "Start here",
+      "pages": [
+        { "slug": "getting-started", "title": "Get started", "file": "getting-started.md", "summary": "Install rer, get Mallet and start it on your own computer, then finish setup as the owner." },
+        { "slug": "deploy", "title": "Run it in your own Cloudflare account", "file": "deploy.md", "summary": "Put the same app in your own Cloudflare account when you want it on every bench and phone." }
+      ]
+    },
+    {
+      "title": "Daily work",
+      "pages": [
+        { "slug": "complete-a-repair", "title": "Complete a repair", "file": "complete-a-repair.md", "summary": "Book the asset in, price it, record the customer's yes on each line, record the work and hand over with one invoice." },
+        { "slug": "bookings-and-history", "title": "Bookings and service history", "file": "bookings-and-history.md", "summary": "Times, bays and technicians, the statuses a visit moves through, and the history every asset keeps." },
+        { "slug": "people-and-agents", "title": "People, roles and agent keys", "file": "people-and-agents.md", "summary": "Owner, admin and member roles, inviting your team, and the preparation keys agents use." }
+      ]
+    },
+    {
+      "title": "Your data",
+      "pages": [
+        { "slug": "move-in", "title": "Move in from RepairShopr", "file": "move-in.md", "summary": "Preview your RepairShopr customers and assets, apply exactly the plan you reviewed, and undo it if you need to." },
+        { "slug": "backup-and-restore", "title": "Back up, restore and erase", "file": "backup-and-restore.md", "summary": "Download a backup of the whole workshop, restore it on another computer, and erase an unused asset." }
+      ]
+    },
+    {
+      "title": "Reference",
+      "pages": [
+        { "slug": "agent-commands", "title": "Commands and API", "file": "agent-commands.md", "summary": "Every workshop command, who may send it, and the move-in and backup endpoints." },
+        { "slug": "move-in-internals", "title": "Move-in internals", "file": "move-in-internals.md", "summary": "How the move-in kit is wired into Mallet's records, journal and backups." },
+        { "slug": "limits", "title": "What Mallet does not do", "file": "limits.md", "summary": "The messages, payments, lookups and integrations Mallet leaves out, stated plainly." }
+      ]
+    }
+  ]
+}

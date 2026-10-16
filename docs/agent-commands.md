@@ -1,5 +1,3 @@
-# Workshop commands and access
-
 Use the real app origin. `GET /api/mallet/state` returns `{actor,version,records}`. The top-level `version` is the store version; commands below use the relevant **record's** `version`. Read current records after each write: commands can update related records too. A version conflict requires a refresh and review of the changed record.
 
 Send commands as JSON:
@@ -90,7 +88,7 @@ Invoices use recorded authorised quantities and the frozen estimate prices. No a
 
 ## Snapshot move-in API
 
-All routes require an owner/admin native session and same-origin mutation checks. These are separate endpoints, not preparation-key commands. Read [MOVE-IN.md](MOVE-IN.md) before supplying RepairShopr customer/asset snapshots.
+All routes require an owner/admin native session and same-origin mutation checks. These are separate endpoints, not preparation-key commands. Read [Move in from RepairShopr](/docs/move-in) before supplying RepairShopr customer/asset snapshots.
 
 | Method and path | Input / result |
 | --- | --- |
@@ -104,9 +102,9 @@ The browser path is `/app/move-in`: preview, explicitly approve the fingerprint,
 
 ## Backup and restore
 
-The owner uses `/app/data` → Download workshop backup, or native `rer export` / `rer import` described in the [README](../README.md). Backups exclude identity and keys. Restore requires an empty product destination with a fresh owner/configuration. When importing an archive that predates erasure, pass a later erasure archive using `--journal`.
+The owner uses `/app/data` → Download workshop backup, or native `rer export` / `rer import` described in [Back up, restore and erase](/docs/backup-and-restore). Backups exclude identity and keys. Restore requires an empty product destination with a fresh owner/configuration. When importing an archive that predates erasure, pass a later erasure archive using `--journal`.
 
-Mallet mounts the full Base handler with its [archive policy](../src/mallet/archive-policy.mjs). All routes below require the owner's native session; mutation requests include the matching `Origin`. The transfer job is scoped to the owner who created it.
+Mallet mounts the full Base handler with its [archive policy](https://github.com/just-every/run-mallet/blob/main/src/mallet/archive-policy.mjs). All routes below require the owner's native session; mutation requests include the matching `Origin`. The transfer job is scoped to the owner who created it.
 
 | Method and path | Operation |
 | --- | --- |

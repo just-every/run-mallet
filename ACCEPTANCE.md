@@ -6,4 +6,4 @@ An agent prepares estimates, dispatch plans and invoice drafts; a person approve
 A shop previews RepairShopr customer and asset snapshots with the Base import kit, applies the reviewed fingerprint, reads its retained journal and undoes untouched imported records.
 The owner backs up and restores workshop data into an empty installation and erases an unused asset without reviving erased data from an older backup; assets with visits are retained.
 
-Not needed: brand/site/domain work, extra providers, payments, supplier stock networks, registry lookups, OEM data or warranty claims. Passing evidence must distinguish local checks from hosted deployment and the independent stranger journey.
+Not needed: a registered run-site domain or live run-site deploy, extra providers, payments, supplier stock networks, registry lookups, OEM data or warranty claims. Passing evidence must distinguish local checks from hosted deployment and the independent stranger journey.

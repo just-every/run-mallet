@@ -1,6 +1,6 @@
 # Source provenance
 
-Mallet was composed from the generated Base foundation and converted to the pinned `@runeditrun/rer` **0.2.22** package. The Base source pin is [`c7cb0613120074c5ffca63f610533802afbda6bd`](https://github.com/runeditrun/base/tree/c7cb0613120074c5ffca63f610533802afbda6bd). The foundation supplies native owner/operator auth, Worker/D1 runtime, setup, owner-account deployment, portability and erasure/import infrastructure. Mallet supplies the workshop records, repair workflow, forms and policy. Foundation scaffolding alone is not product acceptance.
+Mallet was composed from the generated Base foundation at [`c7cb0613120074c5ffca63f610533802afbda6bd`](https://github.com/runeditrun/base/tree/c7cb0613120074c5ffca63f610533802afbda6bd) and converted to the `@runeditrun/rer` package. It now pins `@runeditrun/rer` **0.2.26**; its shared runtime in `src/base/` matches Base [`913926d5425ad95321fb22f95ee8f4c4cd7b552f`](https://github.com/runeditrun/base/tree/913926d5425ad95321fb22f95ee8f4c4cd7b552f/foundation/runtime). The foundation supplies native owner/operator auth, Worker/D1 runtime, setup, owner-account deployment, portability and erasure/import infrastructure. Mallet supplies the workshop records, repair workflow, forms and policy. Foundation scaffolding alone is not product acceptance.
 
 The workshop direction and sibling references come from the dated **16 October 2026, FOURTH-TEN section 4** decision. The implementation uses these sources as patterns; their presence is not a claim of interchangeable APIs or a verbatim fork of each module.
 
@@ -14,6 +14,6 @@ The workshop direction and sibling references come from the dated **16 October 2
 | Pier | [`catalogue.ts`, `6397c1dc15232a83e0c770f8b67c1fe74c5c3dd5`](https://github.com/just-every/run-pier/blob/6397c1dc15232a83e0c770f8b67c1fe74c5c3dd5/src/pier/catalogue.ts) | Optional external parts catalogue, without forking inventory. |
 | Barrow | [`pier.ts`, `576c6dce7939aea2f1c4874ec6395cc7cb2e8405`](https://github.com/just-every/run-barrow/blob/576c6dce7939aea2f1c4874ec6395cc7cb2e8405/src/barrow/pier.ts) | Read-only connection pattern for an owner-run Pier. |
 
-RepairShopr snapshot mapping is documented in [MOVE-IN.md](MOVE-IN.md). Mallet's policy and import adapter live in `src/mallet/archive-policy.mjs` and `src/mallet/imports/`; native Base services own the underlying journal, transfer and erasure machinery. Base's sharded CI template supplies the foundation workflow; a template is not evidence of Mallet release acceptance.
+RepairShopr snapshot mapping is documented in [move-in.md](move-in.md) and [move-in-internals.md](move-in-internals.md). Mallet's policy and import adapter live in `src/mallet/archive-policy.mjs` and `src/mallet/imports/`; native Base services own the underlying journal, transfer and erasure machinery. Base's sharded CI template supplies the foundation workflow; a template is not evidence of Mallet release acceptance.
 
 Market comparisons, name checks and private build/review evidence stay in the parent evidence workspace. This public repository does not need a copied market-research directory or pricing claims.

@@ -32,7 +32,7 @@
     "Automatic repair-estimate email delivery or customer signing portal",
     "Importing historical repair jobs, invoices or authorisations",
     "Erasure of assets with visits in the first release",
-    "Brand site, custom domain or additional provider integrations"
+    "A live run-site deploy, custom domain or additional provider integrations"
   ],
   "externals": [
     {

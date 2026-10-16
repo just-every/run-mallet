@@ -1,17 +1,48 @@
-import { fontHead } from '../../base/font-head'
-import { themeFrame } from '../../base/theme-frame'
-import branding from '../../branding.json'
 import type { Actor } from '../auth'
 export const e=(v:unknown):string=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]!))
 export const money=(cents:number)=>new Intl.NumberFormat('en-AU',{style:'currency',currency:'AUD'}).format((cents??0)/100)
 export const hidden=(name:string,value:unknown)=>`<input type="hidden" name="${e(name)}" value="${e(value)}">`
 export const field=(label:string,name:string,type='text',value:unknown='',extra='')=>`<label>${e(label)}<input name="${e(name)}" type="${type}" value="${e(value)}" ${extra}></label>`
 export const area=(label:string,name:string,value='',extra='')=>`<label>${e(label)}<textarea name="${e(name)}" ${extra}>${e(value)}</textarea></label>`
-export const form=(command:string,content:string,button:string,values:Record<string,unknown>={})=>`<form method="post" action="/app/actions">${hidden('command',command)}${Object.entries(values).map(([k,v])=>hidden(k,v)).join('')}${content}<button>${e(button)}</button></form>`
-export const box=(title:string,content:string)=>`<section class="card"><h2>${e(title)}</h2>${content}</section>`
-export const badge=(value:unknown)=>`<span class="badge">${e(value)}</span>`
+export const form=(command:string,content:string,button:string,values:Record<string,unknown>={},kind='')=>`<form method="post" action="/app/actions"${kind?` class="${kind}"`:''}>${hidden('command',command)}${Object.entries(values).map(([k,v])=>hidden(k,v)).join('')}${content}<button>${e(button)}</button></form>`
+// A card: its title (with an optional status pill or step figure beside it) and content.
+export const box=(title:string,content:string,{pill='',step='',extra=''}:{pill?:string,step?:string|number,extra?:string}={})=>`<section class="card${extra?` ${extra}`:''}">${pill?'<div class="card-head">':''}<h2>${step!==''?`<span class="step">${e(step)}.</span> `:''}${e(title)}</h2>${pill}${pill?'</div>':''}${content}</section>`
+export const badge=(value:unknown)=>`<span class="pill">${e(value)}</span>`
 export const rows=(state:any,kind:string):any[]=>state.records[kind]??[]
-export async function page(title:string,body:string,actor?:Actor,status=200) {
- const frame=await themeFrame({href:'/rer-theme.css',productName:branding.name,accentColor:branding.primaryColor})
- return new Response(`<!doctype html><html lang="en"${frame.htmlClass}><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${e(title)} · Mallet</title>${fontHead}${frame.head}<link rel="stylesheet" href="/mallet.css"></head><body><main class="workshop">${frame.brand}<header><div><p class="eyebrow">WORKSHOP REPAIR JOBS</p><h1>${e(title)}</h1></div>${actor?`<p>${e(actor.name)} · ${e(actor.role)}</p>`:''}</header>${actor?'<nav aria-label="Main"><a href="/app">Workshop</a><a href="/app/move-in">Move in</a><a href="/app/data">Data & access</a><a href="/auth/settings/identity">Sign-in settings</a></nav>':''}${body}</main></body></html>`,{status,headers:{'content-type':'text/html; charset=utf-8','cache-control':'no-store','referrer-policy':'strict-origin','x-content-type-options':'nosniff','content-security-policy':`default-src 'none'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'; ${frame.policy}`}})
+// A list row whose whole area is one link; the chevron shows on phones.
+export const linkRow=(href:string,title:string,meta:string,pill='')=>`<li><a class="row" href="${e(href)}"><span class="row-title"><span class="row-name">${e(title)}</span>${pill}</span><span class="row-meta">${meta}</span></a></li>`
+export const join=(...parts:unknown[])=>parts.filter(part=>part!==undefined&&part!==null&&part!=='').map(e).join(' · ')
+
+// Times are stored as UTC ISO strings. The page shows them as "19 Oct, 9:00 – 10:00" in the browser's own timezone
+// (the script below rewrites each [data-at]); without JavaScript the server's UTC rendering stays, marked UTC.
+type Show='time'|'date'|'date-year'
+const stamp=(at:string,until:string|undefined,show:string,timeZone?:string)=>{
+ const parts=(d:Date,o:Intl.DateTimeFormatOptions)=>Object.fromEntries(new Intl.DateTimeFormat('en-AU',{...o,timeZone}).formatToParts(d).map(x=>[x.type,x.value]))
+ const day=(d:Date)=>{const x=parts(d,{day:'numeric',month:'short'});return x.day+' '+x.month}
+ const time=(d:Date)=>{const x=parts(d,{hour:'numeric',minute:'2-digit',hourCycle:'h23'});return Number(x.hour)+':'+x.minute}
+ const a=new Date(at)
+ if(show==='date-year'){const x=parts(a,{day:'numeric',month:'short',year:'numeric'});return x.day+' '+x.month+' '+x.year}
+ let text=show==='date'?day(a):day(a)+', '+time(a)
+ if(until){const b=new Date(until);text+=' – '+(day(b)===day(a)?time(b):day(b)+', '+time(b))}
+ return text
+}
+export function when(at:unknown,until?:unknown,show:Show='time') {
+ if(typeof at!=='string'||!Number.isFinite(Date.parse(at)))return e(at)
+ const end=typeof until==='string'&&Number.isFinite(Date.parse(until))?until:undefined
+ return `<time datetime="${e(at)}" title="${e(end?`${at} – ${end}`:at)}" data-at="${e(at)}"${end?` data-until="${e(end)}"`:''} data-show="${show}">${e(stamp(at,end,show,'UTC'))} UTC</time>`
+}
+// The same format as stamp(), in the browser's timezone. Plain source (not stamp.toString()): bundlers may wrap functions.
+const LOCAL_TIMES="(()=>{const parts=(d,o)=>Object.fromEntries(new Intl.DateTimeFormat('en-AU',o).formatToParts(d).map(x=>[x.type,x.value])),day=d=>{const x=parts(d,{day:'numeric',month:'short'});return x.day+' '+x.month},time=d=>{const x=parts(d,{hour:'numeric',minute:'2-digit',hourCycle:'h23'});return Number(x.hour)+':'+x.minute};"
+ +"for(const el of document.querySelectorAll('[data-at]')){const a=new Date(el.dataset.at),u=el.dataset.until,show=el.dataset.show;let text;if(show==='date-year'){const x=parts(a,{day:'numeric',month:'short',year:'numeric'});text=x.day+' '+x.month+' '+x.year}else{text=show==='date'?day(a):day(a)+', '+time(a);if(u){const b=new Date(u);text+=' – '+(day(b)===day(a)?time(b):day(b)+', '+time(b))}}el.textContent=text}})()"
+const digest=async(text:string)=>btoa(String.fromCharCode(...new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(text)))))
+let scriptHash:Promise<string>|undefined
+
+export type Section='workshop'|'move-in'|'data'
+const tabs:[Section|'settings',string,string][]=[['workshop','/app','Workshop'],['move-in','/app/move-in','Move in'],['data','/app/data','Data & access'],['settings','/auth/settings/identity','Sign-in settings']]
+
+export async function page(title:string,body:string,actor?:Actor,status=200,section:Section='workshop') {
+ scriptHash??=digest(LOCAL_TIMES)
+ const nav=actor?`<nav class="tabs" aria-label="Main">${tabs.map(([id,href,label])=>`<a href="${href}"${id===section?' aria-current="page"':''}>${e(label)}</a>`).join('')}</nav>`:''
+ const bar=`<header class="bar"><div class="bar-in"><a class="brand" href="/app"><img src="/brand/mark.svg" alt="" width="32" height="32"><span>Mallet</span></a>${actor?`<p class="who">${e(actor.name)} · ${e(actor.role)}</p>`:''}${nav}</div></header>`
+ return new Response(`<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${e(title)} · Mallet</title><link rel="icon" href="/brand/mark.svg"><link rel="preload" href="/fonts/sofia-sans/sofia-sans-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin><link rel="preload" href="/fonts/sofia-sans/sofia-sans-semi-condensed-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin><link rel="stylesheet" href="/rer-theme.css"><link rel="stylesheet" href="/brand/tokens.css"><link rel="stylesheet" href="/mallet.css"></head><body class="mallet">${bar}<main class="workshop"><header class="title"><p class="eyebrow">WORKSHOP REPAIR JOBS</p><h1>${e(title)}</h1></header>${body}</main><script>${LOCAL_TIMES}</script></body></html>`,{status,headers:{'content-type':'text/html; charset=utf-8','cache-control':'no-store','referrer-policy':'strict-origin','x-content-type-options':'nosniff','content-security-policy':`default-src 'none'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'; style-src 'self'; font-src 'self'; img-src 'self'; script-src 'sha256-${await scriptHash}'`}})
 }

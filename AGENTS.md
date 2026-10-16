@@ -132,5 +132,5 @@ applied migration history; choose any integration method and verify the result.
 Roll useful implementations and tests into shared source where that supports
 their maintenance.
 
-Pinned reference: https://github.com/runeditrun/base/blob/c7cb0613120074c5ffca63f610533802afbda6bd/TANSTACK-START-MIGRATION.md
-Native-session/runtime evidence: https://github.com/runeditrun/base/tree/c7cb0613120074c5ffca63f610533802afbda6bd/default-seed
+Pinned reference: https://github.com/runeditrun/base/blob/913926d5425ad95321fb22f95ee8f4c4cd7b552f/TANSTACK-START-MIGRATION.md
+Native-session/runtime evidence: https://github.com/runeditrun/base/tree/913926d5425ad95321fb22f95ee8f4c4cd7b552f/default-seed
