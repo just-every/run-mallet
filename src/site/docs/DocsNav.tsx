@@ -11,6 +11,7 @@ export function DocsNav({ current }: { current?: string }) {
           <ul>{section.pages.map(page => <li key={page.slug}><a href={`/docs/${page.slug}`} aria-current={page.slug === current ? 'page' : undefined}>{page.title}</a></li>)}</ul>
         </div>
       ))}
+      <a className="docs-nav-home" href="/contract">Contract</a>
     </nav>
   )
 }
