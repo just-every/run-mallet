@@ -12,11 +12,11 @@ Run one line to install the `rer` launcher if it is missing, clone Mallet and st
 npx -y @runeditrun/rer dev just-every/run-mallet
 ```
 
-To start it again later, run `cd run-mallet && rer dev`. This checkout pins `@runeditrun/rer` **0.2.26**, Node 22.20.0 and pnpm 10.12.4. The launcher uses the checkout's pinned package and selects its Node runtime. `rer dev` installs dependencies, sets up a local owner and starts the real app automatically. First launch can take several minutes; if interrupted, the same command resumes.
+Without Node, `curl -fsSL https://runeditrun.com/install.sh | sh -s -- dev just-every/run-mallet` does the same. To start it again later, run `cd run-mallet && rer dev`. This checkout pins `@runeditrun/rer` **0.2.26**, Node 22.20.0 and pnpm 10.12.4. The launcher uses the checkout's pinned package and selects its Node runtime. `rer dev` installs dependencies, sets up a local owner and starts the real app automatically. First launch can take several minutes; if interrupted, the same command resumes.
 
 Open the printed `RER_OPEN` link on this computer. It signs you in as the local owner. **The link is a credential: keep it private.** Finish the first-run form at `/setup`, then open `/app`. `RER_READY` is the listener address. Development and demo email is suppressed; no mailbox delivery is needed for this local journey. There are no shared owner credentials to copy.
 
-Stop with `rer dev --stop` or Ctrl-C. For a deliberate installation with your own owner mailbox, use `rer install`, then `rer setup` and its prompts, then `rer dev`. [RUN-LOCALLY.md](RUN-LOCALLY.md) describes private answers, runtime selection and recovery; `rer describe` shows supported commands.
+Stop with `rer dev --stop` or Ctrl-C. For a deliberate installation with your own owner mailbox, run `npx -y @runeditrun/rer install just-every/run-mallet`, then `rer setup` and its prompts from the checkout, then `rer dev`. [RUN-LOCALLY.md](RUN-LOCALLY.md) describes private answers, runtime selection and recovery; `rer describe` shows supported commands.
 
 ## Docs and the run site
 
@@ -64,7 +64,7 @@ mv ~/Downloads/workshop.rer exports/workshop.rer
 chmod 600 exports/workshop.rer
 ```
 
-To restore on another machine, clone this repository, use `rer dev` to finish setup for a fresh owner, stop it, then import into its empty product store:
+To restore on another machine, start it with `npx -y @runeditrun/rer dev just-every/run-mallet` to finish setup for a fresh owner, stop it, then import into its empty product store:
 
 ```sh
 rer dev --stop

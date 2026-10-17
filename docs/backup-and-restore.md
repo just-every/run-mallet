@@ -27,8 +27,8 @@ rer export --output exports/workshop.rer
 
 Restore goes into an empty installation, so nothing already there is overwritten.
 
-1. On the new computer, install rer and get Mallet, as in [Get started](/docs/getting-started).
-2. Run `rer dev` once, finish setup as the new owner, then stop it with `rer dev --stop`.
+1. On the new computer, get Mallet with the one line in [Get started](/docs/getting-started), `npx -y @runeditrun/rer dev just-every/run-mallet`.
+2. That line starts Mallet: finish setup as the new owner, then stop it with `rer dev --stop`.
 3. Import the backup and start again:
 
 ```sh

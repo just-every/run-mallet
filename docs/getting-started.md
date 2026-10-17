@@ -3,7 +3,7 @@ Mallet runs on your own computer with one command, `rer dev`. You need no accoun
 ## What you need
 
 - macOS, Linux, or Windows with WSL2.
-- Node 22 or later and pnpm 10.12.4. `rer` picks the exact Node version Mallet declares and fetches a checked copy if yours differs; it never changes your global Node.
+- Nothing to install first. `rer` picks the exact Node version Mallet declares and fetches a checked copy if yours differs; it never changes your global Node.
 - Git, to get the code.
 
 ## Get Mallet and start it
@@ -12,7 +12,7 @@ Mallet runs on your own computer with one command, `rer dev`. You need no accoun
 npx -y @runeditrun/rer dev just-every/run-mallet
 ```
 
-That one line installs `rer`, the Run Edit Run command that installs, starts and stops Mallet, then clones Mallet and starts it. To start it again later, run `cd run-mallet && rer dev`. `rer dev` installs everything Mallet needs, makes you the owner and starts the app. The first launch takes a few minutes. If it is interrupted, run the same command again: it carries on from where it stopped.
+That one line installs `rer`, the Run Edit Run command that installs, starts and stops Mallet, then clones Mallet and starts it. Without Node, `curl -fsSL https://runeditrun.com/install.sh | sh -s -- dev just-every/run-mallet` does the same. To start it again later, run `cd run-mallet && rer dev`. `rer dev` installs everything Mallet needs, makes you the owner and starts the app. The first launch takes a few minutes. If it is interrupted, run the same command again: it carries on from where it stopped.
 
 When it is ready it prints three lines:
 
