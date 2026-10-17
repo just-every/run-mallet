@@ -1,0 +1,9 @@
+{
+  "version": 1,
+  "domain": "run-mallet.com",
+  "name": "Mallet",
+  "ownerEmail": "dana@corellamechanical.example",
+  "settings": {
+    "MAIL_FROM": "workshop@corellamechanical.example"
+  }
+}

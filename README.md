@@ -12,7 +12,7 @@ Run one line to install the `rer` launcher if it is missing, clone Mallet and st
 npx -y @runeditrun/rer dev just-every/run-mallet
 ```
 
-Without Node, `curl -fsSL https://runeditrun.com/install.sh | sh -s -- dev just-every/run-mallet` does the same. To start it again later, run `cd run-mallet && rer dev`. This checkout pins `@runeditrun/rer` **0.2.26**, Node 22.20.0 and pnpm 10.12.4. The launcher uses the checkout's pinned package and selects its Node runtime. `rer dev` installs dependencies, sets up a local owner and starts the real app automatically. First launch can take several minutes; if interrupted, the same command resumes.
+Without Node, `curl -fsSL https://runeditrun.com/install.sh | sh -s -- dev just-every/run-mallet` does the same. To start it again later, run `cd run-mallet && rer dev`. This checkout pins `@runeditrun/rer` **0.2.50**, Node 22.20.0 and pnpm 10.12.4. The launcher uses the checkout's pinned package and selects its Node runtime. `rer dev` installs dependencies, sets up a local owner and starts the real app automatically. First launch can take several minutes; if interrupted, the same command resumes.
 
 Open the printed `RER_OPEN` link on this computer. It signs you in as the local owner. **The link is a credential: keep it private.** Finish the first-run form at `/setup`, then open `/app`. `RER_READY` is the listener address. Development and demo email is suppressed; no mailbox delivery is needed for this local journey. There are no shared owner credentials to copy.
 

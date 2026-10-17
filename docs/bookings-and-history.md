@@ -25,6 +25,8 @@ The asset's page lists **Every visit** with its status:
 | `completed` | The repair is done and ready to invoice. |
 | `invoiced` | The invoice has been exported. |
 
+The workshop's **Repair jobs** list shows open jobs first, earliest start first, each with its estimate or invoice stage beside its status (for example `estimate sent` while you wait for the customer). Invoiced visits follow, most recent first.
+
 Booking another visit keeps the earlier ones. **Download service history CSV** downloads the asset's whole history: every visit and every recorded step.
 
 ## Dispatch changes
