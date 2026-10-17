@@ -1,0 +1,7 @@
+{
+  "schema": 1,
+  "projectId": "just-every/run-mallet",
+  "name": "mallet",
+  "sourceRepository": "https://github.com/just-every/run-mallet",
+  "license": "MIT"
+}
