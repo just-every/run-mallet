@@ -3,9 +3,9 @@
    owner-picked image; at 390 the columns stack and a chosen repair order opens as a sheet above the board. */
 
 /* Bays. */
-.bays{display:grid;grid-template-columns:repeat(auto-fit,minmax(112px,1fr));gap:8px;margin-bottom:14px}
-.bay{display:grid;align-content:start;gap:1px;min-height:86px;padding:11px 12px 12px;background:var(--card);border:1px solid var(--line);border-radius:10px;color:var(--text);font-size:13px;line-height:1.4;text-decoration:none!important}
-.bay strong{color:var(--ink);font-size:14px}
+.bays{display:grid;grid-template-columns:repeat(auto-fit,minmax(112px,1fr));gap:6px;margin-bottom:16px}
+.bay{display:grid;align-content:start;gap:1px;min-height:88px;padding:11px 18px 9px;background:color-mix(in srgb,var(--page-alt) 60%,var(--card));border:1px solid var(--line);border-radius:7px;color:var(--text);font-size:12px;line-height:1.4;text-decoration:none!important}
+.bay strong{color:var(--ink);font-size:13px}
 .bay .muted{font-size:12px}
 a.bay:hover{border-color:color-mix(in srgb,var(--cyan) 50%,white)}
 .bay progress{width:100%;height:6px;margin-top:6px;border:0;border-radius:4px;background:var(--chip);-webkit-appearance:none;appearance:none;overflow:hidden}
@@ -14,33 +14,34 @@ a.bay:hover{border-color:color-mix(in srgb,var(--cyan) 50%,white)}
 .bay progress::-moz-progress-bar{background:var(--cyan);border-radius:4px}
 
 /* The agent's strip: what it prepared and what waits for a person. */
-.advisor{display:flex;align-items:center;gap:14px;min-height:54px;margin-bottom:14px;padding:9px 12px 9px 18px;border:1px solid color-mix(in srgb,var(--cyan) 18%,var(--line));border-radius:12px;background:color-mix(in srgb,var(--cyan-soft) 40%,var(--card));color:var(--body);font-size:14px}
+.advisor{display:flex;align-items:center;gap:14px;min-height:50px;margin-bottom:12px;padding:9px 12px 9px 18px;border:0;border-radius:12px;background:color-mix(in srgb,var(--cyan-soft) 40%,var(--card));color:var(--body);font-size:13px}
 .advisor .spark{width:24px;height:24px;color:var(--cyan-deep);stroke-width:2}
 .advisor>p:first-of-type{flex:1 1 auto;min-width:0}
 .advisor strong{color:var(--ink)}
-.approval{display:flex;align-items:center;gap:8px;padding:6px 6px 6px 18px;border-left:1px solid var(--line-strong);color:var(--ink);font-size:13px;font-weight:700;white-space:nowrap}
+.approval{display:flex;align-items:center;gap:8px;padding:6px 10px;border-left:0;color:var(--ink);font-size:12px;font-weight:600;white-space:nowrap}
 .dot{display:inline-block;flex:none;width:10px;height:10px;border-radius:50%;background:var(--amber)}
 .app .advisor .button{min-height:36px;padding:0 18px;border-radius:999px}
 
 /* Columns and cards. */
-.board{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px;scroll-margin-top:80px}
-.column{min-width:0;padding:6px 6px 10px;border-radius:12px;background:color-mix(in srgb,var(--cyan-soft) 30%,var(--page-alt))}
-.column h2{display:flex;align-items:center;gap:8px;padding:8px 6px 10px;color:var(--ink);font:700 15px/1.2 var(--font-display);letter-spacing:-.02em}
-.column h2 span{padding:1px 7px;border-radius:999px;background:var(--card);color:var(--steel);font:600 12px/1.5 var(--font-body)}
-.column.ready{background:color-mix(in srgb,var(--green-soft) 55%,var(--page-alt))}
+.board{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px;scroll-margin-top:80px}
+.column{min-width:0;padding:6px 6px 10px;border-radius:10px;background:color-mix(in srgb,var(--cyan-soft) 30%,var(--page-alt))}
+.column h2{display:flex;align-items:center;gap:6px;padding:8px 6px 12px;color:var(--ink);font:700 14px/1.2 var(--font-display);letter-spacing:-.02em}
+.column h2 span{padding:1px 5px;border-radius:999px;background:color-mix(in srgb,var(--cyan-soft) 65%,var(--card));color:var(--steel);font:600 12px/1.5 var(--font-body)}
+.column.ready{background:color-mix(in srgb,var(--green-soft) 24%,var(--page-alt))}
 .column.ready h2{color:var(--green-ink)}
 .column-empty{padding:6px 6px 2px;color:var(--faint);font-size:12px}
-.app .ro{display:grid;gap:1px;margin-bottom:7px;padding:11px 11px 12px;background:var(--card);border:1px solid var(--line);border-radius:10px;box-shadow:0 1px 2px rgba(34,6,31,.04);color:var(--body);font-size:12.5px;line-height:1.4;text-decoration:none;overflow-wrap:anywhere}
+.app .ro{display:grid;gap:1px;margin-bottom:7px;padding:12px 11px;background:var(--card);border:1px solid var(--line);border-radius:10px;box-shadow:none;color:var(--body);font-size:12.5px;line-height:1.4;text-decoration:none;overflow-wrap:anywhere}
 .app .ro:hover{border-color:color-mix(in srgb,var(--cyan) 45%,white)}
-.app .ro.selected{border:2px solid var(--cyan);padding:10px 10px 11px;box-shadow:0 0 0 3px color-mix(in srgb,var(--cyan) 14%,transparent)}
+.app .ro.selected{border:2px solid var(--cyan);padding:11px 10px;box-shadow:none}
 .ro-head{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:0 6px;margin-bottom:3px}
 .ro-head strong{color:var(--ink);font-size:13px;line-height:1.3;letter-spacing:-.01em;white-space:nowrap}
 .ro-head time{color:var(--muted);font-size:11px;white-space:nowrap}
-.ro-vehicle{margin-bottom:3px;color:var(--ink);font-weight:600;line-height:1.3}
+.ro-vehicle{margin-bottom:3px;color:var(--ink);font-weight:400;line-height:1.35}
 .ro-title{color:var(--text)}
 .ro .tech{margin:6px 0 7px;font-size:12px;white-space:normal}
 .ro .avatar{width:22px;height:22px;font-size:11px}
-.ro .pill{justify-self:start;font-size:11.5px}
+.ro .pill{justify-self:start;font-size:11.5px;font-weight:400}
+.ro.selected .ro-vehicle{font-weight:600}
 .app .more{display:inline-block;padding:4px 6px 0;color:var(--cyan-deep);font-size:12.5px;font-weight:600;text-decoration:none}
 
 /* Under the board: recent activity across the shop. */
@@ -52,9 +53,9 @@ a.bay:hover{border-color:color-mix(in srgb,var(--cyan) 50%,white)}
 .activity{padding:14px 18px;background:var(--card);border:1px solid var(--line);border-radius:12px}
 
 /* The selected repair order. */
-.detail{align-self:stretch;min-height:calc(100vh - 68px);padding:22px 22px 28px;background:var(--card);border-left:1px solid var(--line);scroll-margin-top:80px}
+.detail{align-self:stretch;min-height:calc(100vh - 68px);padding:20px 21px 28px;background:var(--card);border-left:1px solid var(--line);scroll-margin-top:80px}
 .detail-title{display:flex;align-items:flex-start;gap:12px}
-.detail-title h2{flex:1;font-size:26px;line-height:1.12;font-weight:900;letter-spacing:-.035em}
+.detail-title h2{flex:1;font-size:25px;line-height:1.12;font-weight:900;letter-spacing:-.035em}
 .app .close{display:inline-flex;align-items:center;justify-content:center;flex:none;width:32px;height:32px;margin:-2px -6px 0 0;border-radius:8px;color:var(--muted)}
 .app .close:hover{background:var(--chip);color:var(--ink)}
 .detail-pill{margin-top:8px}
@@ -62,7 +63,7 @@ a.bay:hover{border-color:color-mix(in srgb,var(--cyan) 50%,white)}
 .contact{display:flex;flex-wrap:wrap;gap:6px 18px;margin-top:8px!important;color:var(--body);font-size:13px}
 .contact span{display:inline-flex;align-items:center;gap:7px;min-width:0;overflow-wrap:anywhere}
 .contact .icon{width:16px;height:16px;color:var(--muted)}
-.tabs{display:flex;gap:22px;margin:16px -22px 0;padding:0 22px;border-bottom:1px solid var(--line);font-size:13px}
+.tabs{display:flex;gap:22px;margin:16px -21px 0;padding:0 21px;border-bottom:1px solid var(--line);font-size:13px}
 .app .tabs a{position:relative;padding:6px 0 11px;color:var(--steel);text-decoration:none}
 .app .tabs a[aria-current=page]{color:var(--cyan-deep);font-weight:700}
 .tabs a[aria-current=page]::after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:3px;border-radius:2px;background:var(--cyan)}
@@ -73,9 +74,9 @@ a.bay:hover{border-color:color-mix(in srgb,var(--cyan) 50%,white)}
 .worksection>h3:first-child,.decision>h3:first-child,.recent>h3:first-child{margin-top:0}
 .section-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px}
 .section-head h3{margin:0!important}
-.workrow{display:grid;grid-template-columns:20px minmax(0,1fr) auto;gap:10px;margin-bottom:10px;font-size:13px;line-height:1.4}
+.workrow{display:grid;grid-template-columns:20px minmax(0,1fr) auto;gap:10px;margin-bottom:9px;font-size:12px;line-height:1.4}
 .workrow p{display:grid;min-width:0;color:var(--text)}
-.workrow small{color:var(--muted);font-size:12px}
+.workrow small{color:var(--muted);font-size:11px}
 .workrow .amount{color:var(--ink);font-weight:600;white-space:nowrap}
 .mark{width:18px;height:18px;margin-top:1px;border-radius:50%}
 .mark.yes{background:var(--green) url('/brand/tick.svg') center/14px no-repeat}
@@ -107,10 +108,11 @@ a.bay:hover{border-color:color-mix(in srgb,var(--cyan) 50%,white)}
 .empty-board p{color:var(--body)}
 .empty-board+.activity{max-width:560px;margin:0 auto}
 
-@media (max-width:1280px){
+@media (min-width:1181px) and (max-width:1360px){
  .board{grid-template-columns:repeat(3,minmax(0,1fr))}
 }
 @media (max-width:1180px){
+ .board{grid-template-columns:repeat(3,minmax(0,1fr))}
  .detail{min-height:0;margin:0 24px 32px;border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow)}
 }
 @media (max-width:760px){
@@ -122,9 +124,9 @@ a.bay:hover{border-color:color-mix(in srgb,var(--cyan) 50%,white)}
  .app .advisor .button{margin-left:auto}
  .board{grid-template-columns:minmax(0,1fr);gap:10px}
  .layout{display:flex;flex-direction:column}
- .layout>.main{order:1}
+ .layout>.main{order:1;width:100%}
  .detail{order:2;margin:0 16px 28px;padding:18px 16px 22px}
- .detail.picked{order:0;margin:0;border-width:0 0 1px;border-radius:0 0 20px 20px;box-shadow:0 18px 40px -18px rgba(34,40,71,.35)}
+ .detail.picked{order:0;margin:0;border-width:0 0 1px;border-radius:0 0 20px 20px;box-shadow:var(--shadow)}
  .tabs{margin:14px -16px 0;padding:0 16px;gap:18px}
  .detail-title h2{font-size:24px}
  .actions{grid-template-columns:minmax(0,1fr)}
