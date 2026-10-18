@@ -1,6 +1,7 @@
 import { workshop } from './workshop'
 import { estimates } from './estimates'
 import { invoices } from './invoices'
+import { tax, migrateSalesTax } from './tax'
 
 export type Row = { id: string; version: number; [key: string]: any }
 export type Actor = { id: string; name: string; role: 'owner' | 'admin' | 'member' | 'agent' }
@@ -61,28 +62,30 @@ export function approval(c: Context, kind: string, row: Row, revision: number, p
   return put(c.s, 'approval', { subjectKind: kind, subjectId: row.id, revision, subjectVersion: row.version, preparedBy, approvedBy: who(c), decision: 'approved', at: c.now })
 }
 const agentCommands = new Set(['estimate.prepare', 'estimate.revise', 'invoice.prepare', 'dispatch.prepare'])
-const commands = new Set(['asset.create', 'asset.update', 'job.book', 'job.complete', 'work.record', 'estimate.prepare', 'estimate.revise', 'estimate.approve', 'estimate.markSent', 'estimate.authorise', 'invoice.prepare', 'invoice.approve', 'invoice.export', 'dispatch.prepare', 'dispatch.approve'])
+const commands = new Set(['tax.configure', 'asset.create', 'asset.update', 'job.book', 'job.complete', 'work.record', 'estimate.prepare', 'estimate.revise', 'estimate.approve', 'estimate.markSent', 'estimate.authorise', 'invoice.prepare', 'invoice.approve', 'invoice.export', 'dispatch.prepare', 'dispatch.approve'])
 export function reduce(s: State, actor: Actor, command: string, payload: any, now = new Date().toISOString()): any {
   object(actor, 'actor'); text(actor.id, 'actor.id'); text(actor.name, 'actor.name'); choice(actor.role, ['owner', 'admin', 'member', 'agent'], 'role')
   if (!commands.has(command)) fail('COMMAND', 'Unknown Mallet command.', null, 400)
   if (actor.role === 'agent' && !agentCommands.has(command) || actor.role === 'member' && command !== 'work.record') fail('FORBIDDEN', 'This role cannot perform that command.', null, 403)
+  migrateSalesTax(s)
   const c = { s, actor, now }, p = object(payload)
-  for (const handler of [workshop, estimates, invoices]) {
+  for (const handler of [tax, workshop, estimates, invoices]) {
     const result = handler(c, command, p)
     if (result !== undefined) return result
   }
   return fail('COMMAND', 'Unknown Mallet command.', null, 400)
 }
-export async function load(db: Database): Promise<State> {
+export async function load(db: Database, normalize = true): Promise<State> {
   const [meta, values] = await db.batch([db.prepare('SELECT version FROM mallet_meta WHERE id=1'), db.prepare('SELECT kind,value FROM mallet_records ORDER BY kind,id')])
   const version = meta.results?.[0]?.version
   if (!Number.isSafeInteger(version)) fail('STORAGE', 'Mallet migrations have not been applied.', null, 503)
   const s: State = { version, records: {} }
   for (const value of values.results ?? []) rows(s, value.kind).push(JSON.parse(value.value))
+  if (normalize) migrateSalesTax(s)
   return s
 }
 export async function execute(db: Database, actor: Actor, command: string, payload: any, authority?: { sql: string; params: any[] }): Promise<any> {
-  const s = await load(db), before = new Map<string, string>()
+  const s = await load(db, false), before = new Map<string, string>()
   for (const [kind, values] of Object.entries(s.records)) for (const row of values) before.set(`${kind}:${row.id}`, JSON.stringify(row))
   const result = reduce(s, actor, command, payload)
   const statements = [db.prepare('INSERT INTO mallet_assert(ok) SELECT CASE WHEN version=? THEN 1 ELSE 0 END FROM mallet_meta WHERE id=1').bind(s.version)]

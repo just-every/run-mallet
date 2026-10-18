@@ -1,6 +1,6 @@
 A repair in Mallet follows the job across the counter: book the asset in, price it, record exactly what the customer said yes to, record the work, and hand over with one invoice. Each step is a button on the job's page, and each one is recorded with who did it and when.
 
-The example below uses a 2017 Toyota Corolla in for an oil service.
+The example below uses a 2017 Toyota Corolla in for an oil service. Prices and invoices are in USD. Before the first estimate, enter your shop's sales tax rate during setup or open **Sales tax** at `/app/tax`. Parts start taxable and labor exempt; choose the treatment that applies to your shop. Mallet does not look up state or county rates.
 
 ## 1. Add the customer's asset
 
@@ -30,7 +30,7 @@ The job's page opens with **Estimate & customer authorization**. **Prepare estim
 - **Labor description**, **Labor hours** and **Labor rate (per hour, before tax)**.
 - **Notes**, if you want them.
 
-Prices are entered before tax. Mallet adds a flat 10% tax to each line and shows it separately; it does not yet look up your state and county sales tax rate. Estimates with more lines (up to 100) come through the command API, usually from an agent; see [People, roles and agent keys](/docs/people-and-agents).
+Prices are entered before sales tax in USD. Mallet applies your configured rate to the taxable categories and shows sales tax separately. Each line's subtotal and tax round to cents before the totals are added. The estimate revision saves its rate and tax treatment, so changing the shop's settings later leaves it and its resulting invoice unchanged. Estimates with more lines (up to 100) come through the command API, usually from an agent; see [People, roles and agent keys](/docs/people-and-agents).
 
 ## 4. Approve and share it
 
@@ -62,11 +62,11 @@ When the job is ready to hand over, press **Complete repair**.
 
 Under **Handover invoice**:
 
-1. **Prepare invoice** builds it from the recorded work at the authorized prices. Nobody types in a total.
+1. **Prepare invoice** builds it from the recorded work at the authorized prices and frozen sales tax rate. Nobody types in a total.
 2. **Approve invoice** approves that exact invoice.
 3. **Export invoice once** saves the invoice as a CSV, numbered like `M-000001`.
 
-**Download saved invoice CSV** gives you that saved file, every time. The CSV keeps Mallet's original export format: its unit price, subtotal, tax and total columns are named `UnitAUD`, `SubtotalAUD`, `GSTAUD` and `TotalAUD`, and its currency column reads `AUD`, whatever currency you priced in. It is a plain Mallet CSV, not an import for any particular accounting product, so map it in your own accounting workflow.
+**Download saved invoice CSV** gives you that saved file, every time. The unit price, subtotal, sales tax and total columns are named `UnitUSD`, `SubtotalUSD`, `SalesTaxUSD` and `TotalUSD`, and its `Currency` column reads `USD`. It is a plain Mallet CSV, not an import for any particular accounting product, so map it in your own accounting workflow.
 
 ## 8. Hand over
 

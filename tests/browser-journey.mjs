@@ -5,13 +5,13 @@ import {join} from 'node:path'
 
 export async function browserJourney(openUrl,{directory='.cache/browser',fixtures='tests/fixtures/repairshopr'}={}) {
  await mkdir(directory,{recursive:true})
- const browser=await chromium.launch({headless:true,args:['--disable-gpu']})
+ const browser=await chromium.launch({headless:true,args:['--use-mock-keychain','--password-store=basic']})
  let stage='open app'
  try {
   const page=await browser.newPage({viewport:{width:1440,height:1000}})
   await page.goto(openUrl)
   await page.waitForURL(url=>['/setup','/app'].includes(url.pathname))
-  if(new URL(page.url()).pathname==='/setup') {await page.getByRole('checkbox').check();await page.getByRole('button',{name:'Finish setup'}).click()}
+  if(new URL(page.url()).pathname==='/setup') {await page.getByLabel('Sales tax rate (%)').fill('10');await page.getByLabel('Labor is taxable').check();await page.getByRole('checkbox',{name:'I confirm this owner account is ready to use.'}).check();await page.getByRole('button',{name:'Finish setup'}).click()}
   await page.waitForURL('**/app')
   const origin=new URL(page.url()).origin
   const shot=async name=>{
