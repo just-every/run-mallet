@@ -19,7 +19,10 @@ body.app{margin:0;min-height:100vh;background:color-mix(in srgb,var(--page-alt) 
 
 /* Rail and top bar. */
 .shell{display:grid;grid-template-columns:200px minmax(0,1fr);min-height:100vh;background:linear-gradient(to right,color-mix(in srgb,var(--cyan-soft) 28%,var(--page-alt)) 199px,var(--line) 199px 200px,transparent 200px)}
-.shell.bare{grid-template-columns:minmax(0,1fr)}
+.app .shell.bare{display:block;padding:clamp(56px,12vh,120px) 16px 64px;background:radial-gradient(90% 60% at 50% -10%,color-mix(in srgb,var(--cyan-soft) 70%,transparent),transparent 70%),var(--page-alt)}
+.bare .main{max-width:520px;margin:0 auto;padding:0}
+.bare .brand{margin:0 0 22px;padding:0}
+.bare .heading h1{font-size:34px}
 .rail{position:sticky;top:0;align-self:start;height:100vh;display:flex;flex-direction:column;gap:30px;padding:18px 12px 28px;background:transparent}
 .app .brand{display:flex;align-items:center;gap:10px;padding:0 6px;color:var(--ink);text-decoration:none;font:900 22px/1 var(--font-display);letter-spacing:var(--display-tracking);white-space:nowrap}
 .brand img{display:block;width:34px;height:34px;flex:none}
@@ -86,7 +89,7 @@ body.app{margin:0;min-height:100vh;background:color-mix(in srgb,var(--page-alt) 
 /* 1181-1535: the pick's density at a narrower window. A slimmer rail and panel leave each of the six columns room
    for a one-line name, vehicle and chip. */
 @media (min-width:1181px) and (max-width:1535px){
- .shell{grid-template-columns:180px minmax(0,1fr);background:linear-gradient(to right,color-mix(in srgb,var(--cyan-soft) 28%,var(--page-alt)) 179px,var(--line) 179px 180px,transparent 180px)}
+ .shell:not(.bare){grid-template-columns:180px minmax(0,1fr);background:linear-gradient(to right,color-mix(in srgb,var(--cyan-soft) 28%,var(--page-alt)) 179px,var(--line) 179px 180px,transparent 180px)}
  .rail{padding:18px 8px 28px}
  .app .brand{gap:8px;padding:0 2px;font-size:20px}
  .brand img{width:32px;height:32px}
@@ -100,7 +103,7 @@ body.app{margin:0;min-height:100vh;background:color-mix(in srgb,var(--page-alt) 
 }
 @media (max-width:760px){
  body.app{font-size:14px}
- .shell{display:block;background:none}
+ .shell:not(.bare){display:block;background:none}
  .rail{position:static;height:auto;gap:12px;padding:14px 16px 10px;background:color-mix(in srgb,var(--cyan-soft) 28%,var(--page-alt));border-bottom:1px solid var(--line)}
  .app .brand{padding:0;font-size:24px}
  .brand img{width:34px;height:34px}
