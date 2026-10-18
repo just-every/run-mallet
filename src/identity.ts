@@ -8,8 +8,8 @@ import site from '../deploy-site.json'
 export const identity: EditionIdentity = {
   product: branding.name,
   deployment: branding.name,
-  purpose: '{deployment} keeps your workshop’s repair jobs, customer authorisations and service history in your account.',
-  tagline: 'Book it in, record the customer’s yes on each line, and hand over with one invoice. 100% free and open source.',
+  purpose: '{deployment} keeps your shop’s repair orders, customer approvals and service history in your account.',
+  tagline: 'Free, open source shop management for independent repair shops. Full bays, cars out on time.',
   signInPath: '/signin',
   // The run site `rer deploy --site` publishes (deploy-site.json).
   runSite: `https://${site.domain}`,

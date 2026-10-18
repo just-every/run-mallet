@@ -8,7 +8,7 @@ In **Workshop**, fill in **Add a customer’s asset**:
 
 - **Customer name** and **Customer email**.
 - **Vehicle or device**: what it is, such as `2017 Toyota Corolla`, `2019 Trek FX 3` or `iPhone 13`.
-- **Registration or serial**: the rego, frame number or serial. It must be unique in your register.
+- **Plate, VIN or serial**: the license plate, VIN, frame number or serial. It must be unique in your register.
 
 Press **Add asset**. Mallet opens the asset's page.
 
@@ -18,19 +18,19 @@ On the asset's page, use **Book in a visit**:
 
 - **Repair request**: what the customer asked for, such as `Oil service`.
 - **Bay**, and the **Technician**, chosen from the workshop's people.
-- **Start (with timezone)** and **End (with timezone)**, written like `2026-10-19T09:00:00+11:00`.
+- **Start (with timezone)** and **End (with timezone)**, written like `2026-10-19T09:00:00-04:00` (9 am Eastern daylight time).
 
 Press **Book visit**. Mallet refuses the booking if it overlaps another open job in the same bay or with the same technician, and shows each overlapping job with a link and a way back to the booking form. [Bookings and service history](/docs/bookings-and-history) has more on times and technicians.
 
 ## 3. Prepare the estimate
 
-The job's page opens with **Estimate & customer authorisation**. **Prepare estimate** takes one part line and one labour line:
+The job's page opens with **Estimate & customer authorization**. **Prepare estimate** takes one part line and one labor line:
 
-- **Part description**, **Part quantity** and **Part unit price (AUD, excluding GST)**.
-- **Labour description**, **Labour hours** and **Labour rate (AUD/hour, excluding GST)**.
+- **Part description**, **Part quantity** and **Part unit price (before tax)**.
+- **Labor description**, **Labor hours** and **Labor rate (per hour, before tax)**.
 - **Notes**, if you want them.
 
-Prices are in Australian dollars excluding GST. Mallet adds 10% GST and shows it separately. Estimates with more lines (up to 100) come through the command API, usually from an agent; see [People, roles and agent keys](/docs/people-and-agents).
+Prices are entered before tax. Mallet adds a flat 10% tax to each line and shows it separately; it does not yet look up your state and county sales tax rate. Estimates with more lines (up to 100) come through the command API, usually from an agent; see [People, roles and agent keys](/docs/people-and-agents).
 
 ## 4. Approve and share it
 
@@ -46,15 +46,15 @@ If the job changes before the customer answers, use **Prepare a revised estimate
 
 When the customer answers, tick exactly the lines they said yes to. Unticked lines are declined. Then fill in:
 
-- **Customer who authorised**.
-- **Authorisation method**: in person, phone, email reply or signed.
-- **Authorisation evidence / reference**: what they said and where, such as `Called 9:40, yes to oil and service`.
+- **Customer who authorized**.
+- **Authorization method**: in person, phone, email reply or signed.
+- **Authorization evidence / reference**: what they said and where, such as `Called 9:40, yes to oil and service`.
 
-Press **Record customer authorisation**. The estimate table now shows each line as **Authorised** or **Declined**, and the authorised total including GST. The authorised estimate is frozen; extra work is a new visit.
+Press **Record customer authorization**. The estimate table now shows each line as **Authorized** or **Declined**, and the authorized total including tax. The authorized estimate is frozen; extra work is a new visit.
 
 ## 6. Record the work and complete the repair
 
-Under **Parts & labour**, pick an **Authorised item**, enter the **Quantity used / hours worked** and an optional **Work note**, and press **Record parts or labour**. You can only record work against authorised lines, and never more than was authorised.
+Under **Parts & labor**, pick an **Authorized item**, enter the **Quantity used / hours worked** and an optional **Work note**, and press **Record parts or labor**. You can only record work against authorized lines, and never more than was authorized.
 
 When the job is ready to hand over, press **Complete repair**.
 
@@ -62,11 +62,11 @@ When the job is ready to hand over, press **Complete repair**.
 
 Under **Handover invoice**:
 
-1. **Prepare invoice** builds it from the recorded work at the authorised prices. Nobody types in a total.
+1. **Prepare invoice** builds it from the recorded work at the authorized prices. Nobody types in a total.
 2. **Approve invoice** approves that exact invoice.
 3. **Export invoice once** saves the invoice as a CSV, numbered like `M-000001`.
 
-**Download saved invoice CSV** gives you that saved file, every time. The CSV has AUD unit prices, subtotal, GST and total columns. It is a plain Mallet CSV, not an import for any particular accounting product, so map it in your own accounting workflow.
+**Download saved invoice CSV** gives you that saved file, every time. The CSV keeps Mallet's original export format: its unit price, subtotal, tax and total columns are named `UnitAUD`, `SubtotalAUD`, `GSTAUD` and `TotalAUD`, and its currency column reads `AUD`, whatever currency you priced in. It is a plain Mallet CSV, not an import for any particular accounting product, so map it in your own accounting workflow.
 
 ## 8. Hand over
 

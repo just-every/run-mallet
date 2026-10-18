@@ -2,7 +2,7 @@ Your workshop lives with you, so the backups are yours too. Mallet makes one fil
 
 ## What a backup holds
 
-A backup holds your workshop records: assets, jobs, estimates and their frozen approvals, authorisations, recorded work, invoices and their saved CSVs, and the original files from any move-in. It leaves out sign-in identities, sessions, agent keys and private settings: the installation you restore into has its own owner and its own keys.
+A backup holds your workshop records: assets, jobs, estimates and their frozen approvals, authorizations, recorded work, invoices and their saved CSVs, and the original files from any move-in. It leaves out sign-in identities, sessions, agent keys and private settings: the installation you restore into has its own owner and its own keys.
 
 Keep backups private. They contain your customers' names and contact details.
 

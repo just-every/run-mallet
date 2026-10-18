@@ -1,0 +1,46 @@
+/* The run site's frame: page, header lockup, footer strip, the plum Run pill and the cyan-underlined text links.
+   Tokens and faces come from /site/tokens.css. */
+*,*::before,*::after{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%;scroll-padding-top:24px}
+body{margin:0;background:var(--page);color:var(--text);font:400 17px/1.55 var(--font-body);-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;overflow-x:clip;font-feature-settings:'cv11','ss01'}
+h1,h2,h3,h4,p,dl,dd,figure,ul,ol{margin:0}
+ul,ol{padding:0;list-style:none}
+h1,h2,h3,h4{color:var(--ink);text-wrap:balance}
+p{text-wrap:pretty}
+a{color:inherit}
+:focus-visible{outline:3px solid var(--cyan);outline-offset:3px;border-radius:6px}
+img,svg{display:block}
+.site-wrap{width:100%;max-width:calc(var(--wrap) + 2 * var(--gutter));margin:0 auto;padding:0 var(--gutter)}
+
+.site-bar-in{display:flex;align-items:center;justify-content:space-between;gap:24px;min-height:80px;border-bottom:1px solid var(--line-strong)}
+.lockup{display:inline-flex;align-items:center;gap:12px;color:var(--ink);text-decoration:none;font:800 26px/1 var(--font-display);letter-spacing:-.02em}
+.lockup img{width:40px;height:40px}
+.site-bar nav,.site-foot nav{display:flex;align-items:center;gap:36px}
+.site-bar nav a,.site-foot nav a{color:var(--text);text-decoration:none;font-size:17px;font-weight:450}
+.site-bar nav a:hover,.site-foot nav a:hover,.site-bar nav a[aria-current=page]{color:var(--ink);text-decoration:underline;text-decoration-color:var(--cyan);text-decoration-thickness:2px;text-underline-offset:6px}
+
+.site-foot{background:var(--page)}
+.site-foot-in{display:flex;align-items:center;justify-content:space-between;gap:16px 32px;min-height:100px;flex-wrap:wrap}
+.site-foot-brand{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.site-foot-brand img{width:36px;height:36px}
+.site-foot-name{color:var(--ink);font:800 24px/1 var(--font-display);letter-spacing:-.02em}
+.site-foot-line{margin-left:10px;color:var(--muted);font-size:17px}
+
+.actions{display:flex;flex-wrap:wrap;align-items:center;gap:16px 44px}
+.run-pill{display:inline-flex;align-items:center;justify-content:center;gap:10px;min-height:64px;padding:0 56px;border-radius:999px;background:var(--ink);color:#fff;text-decoration:none;font:650 22px/1 var(--font-body);letter-spacing:-.01em;box-shadow:0 14px 26px -16px rgba(34,6,31,.7)}
+.run-pill:hover{background:#3d1438}
+.text-link{color:var(--ink);font-size:20px;font-weight:550;text-decoration:none;padding-bottom:6px;background:linear-gradient(var(--cyan),var(--cyan)) left bottom/100% 3px no-repeat}
+.text-link:hover{background-size:100% 5px}
+
+@media (max-width:760px){
+  body{font-size:16px}
+  .site-bar-in{min-height:64px}
+  .lockup{font-size:22px;gap:10px}.lockup img{width:34px;height:34px}
+  .site-bar nav{gap:22px}.site-bar nav a{font-size:16px}
+  .site-foot-in{padding-block:24px;align-items:flex-start;flex-direction:column}
+  .site-foot-line{margin-left:0;flex-basis:100%;font-size:15px}
+  .site-foot nav{gap:24px}.site-foot nav a{font-size:16px}
+  .actions{gap:14px 28px}
+  .run-pill{min-height:56px;padding:0 34px;font-size:19px}
+  .text-link{font-size:18px}
+}

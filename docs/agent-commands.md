@@ -38,9 +38,9 @@ The response includes `{id,label,token,expiresAt}`; `expiresAt` is epoch millise
 | Command | Required input | Result and constraints |
 | --- | --- | --- |
 | `estimate.prepare` | `jobId`, job `version`, `lines`; optional `notes` | Draft estimate revision 1 on an open job with no estimate. Also updates the job. |
-| `estimate.revise` | `estimateId`, estimate `version`, current `revision`, replacement `lines`; optional `notes` | Appends a draft revision; earlier approval does not approve it. Authorised estimates are frozen. |
+| `estimate.revise` | `estimateId`, estimate `version`, current `revision`, replacement `lines`; optional `notes` | Appends a draft revision; earlier approval does not approve it. Authorized estimates are frozen. |
 | `dispatch.prepare` | `jobId`, job `version`, `bayId`, `technicianId`, `startAt`, `endAt`, `reason` | Pending proposal with observed conflicts. A person's approval checks current conflicts and job version again. |
-| `invoice.prepare` | `jobId`, completed job `version` | Draft invoice from authorised actual work, once per job. Do not supply lines or totals. |
+| `invoice.prepare` | `jobId`, completed job `version` | Draft invoice from authorized actual work, once per job. Do not supply lines or totals. |
 
 Example estimate input:
 
@@ -52,16 +52,16 @@ Example estimate input:
     "version": 1,
     "lines": [
       {"kind":"part","description":"Oil filter","quantity":1,"unitCents":2500,"gst":true},
-      {"kind":"labour","description":"Service labour","quantity":0.5,"unitCents":12000,"gst":true}
+      {"kind":"labour","description":"Service labor","quantity":0.5,"unitCents":12000,"gst":true}
     ],
     "notes": "Review both lines before sharing."
   }
 }
 ```
 
-Each estimate has 1–100 lines. A line uses `kind:"part"|"labour"`, `description`, positive numeric `quantity` with up to three decimal places, and non-negative integer `unitCents` in AUD **excluding GST**. `gst` defaults to true and means 10% GST; false means zero GST. The server calculates rounded integer-cent amounts and totals. Optional `id` must be unique within the revision; otherwise IDs are generated. Only parts may carry optional `pierItemId`. A reference does not allocate stock.
+Each estimate has 1–100 lines. A line uses `kind:"part"|"labour"`, `description`, positive numeric `quantity` with up to three decimal places, and non-negative integer `unitCents` **before tax**. `gst` (the field keeps its original name) defaults to true and adds 10% tax; false means no tax. The server calculates rounded integer-cent amounts and totals. Optional `id` must be unique within the revision; otherwise IDs are generated. Only parts may carry optional `pierItemId`. A reference does not allocate stock.
 
-Times must include a timezone, for example `2026-10-19T09:00:00+10:00`. A booking/dispatch interval ends after it starts and lasts no more than seven days. `technicianId` must be the member's actual operator ID for that member to see and record work; a display label will not grant that access.
+Times must include a timezone, for example `2026-10-19T09:00:00-04:00`. A booking/dispatch interval ends after it starts and lasts no more than seven days. `technicianId` must be the member's actual operator ID for that member to see and record work; a display label will not grant that access.
 
 Agents are denied `estimate.approve`, `estimate.markSent`, `estimate.authorise`, `dispatch.approve`, `invoice.approve`, `invoice.export`, `work.record`, `job.book`, `job.complete`, asset changes, import, portability and people/key management. The person reviews prepared work in the job UI; approvals and events retain the preparer, decision-maker, exact revision/version and timestamp.
 
@@ -78,13 +78,13 @@ These require an owner/admin native session unless marked otherwise. `version` a
 | `estimate.markSent` | `estimateId`, estimate `version`, `revision`, `method`, optional `note`. Method: `email`, `printed`, `phone`, `in person`, `manual share`. Records manual sharing; no email is delivered or confirmed. |
 | `estimate.authorise` | `estimateId`, estimate `version`, `revision`, nonempty unique `lineIds`, `customerName`, `method`, `evidence`. Method: `signed`, `email reply`, `phone`, `in person`. Must follow approval and sharing of this revision. Staff attest to external evidence. |
 | `dispatch.approve` | `proposalId`, proposal `version`. Refuses stale jobs, current resource conflicts, completed jobs or jobs with actual work. |
-| `work.record` | `jobId`, job `version`, authorised `lineId`, numeric `quantity`, optional `note`. Also allowed for its assigned member. Cumulative quantity cannot exceed authorisation. |
+| `work.record` | `jobId`, job `version`, authorized `lineId`, numeric `quantity`, optional `note`. Also allowed for its assigned member. Cumulative quantity cannot exceed authorization. |
 | `job.complete` | `jobId`, job `version`, optional `note`. Requires actual work. |
 | `invoice.approve` | `invoiceId`, invoice `version`, optional exact invoice `revision`. |
 | `invoice.export` | `invoiceId`, invoice `version`. First export requires approval. A repeat accepts the current version or the version immediately before first export and returns the saved entry. |
 | `asset.erase` | **Owner only:** `assetId`, `confirm:"ERASE"`. Refuses assets with visits. |
 
-Invoices use recorded authorised quantities and the frozen estimate prices. No arbitrary prices or totals may be injected at invoice preparation. The saved export has `format:"mallet-invoice-csv"`; download it as owner/admin at `GET /api/mallet/exports/<export-id>`. This generic CSV is not guaranteed to match Xero's import schema. Asset event history is available at `GET /api/mallet/assets/<asset-id>/history.csv` within the caller's visible state.
+Invoices use recorded authorized quantities and the frozen estimate prices. No arbitrary prices or totals may be injected at invoice preparation. The saved export has `format:"mallet-invoice-csv"`; download it as owner/admin at `GET /api/mallet/exports/<export-id>`. This generic CSV is not guaranteed to match Xero's import schema. Asset event history is available at `GET /api/mallet/assets/<asset-id>/history.csv` within the caller's visible state.
 
 ## Snapshot move-in API
 
@@ -98,7 +98,7 @@ All routes require an owner/admin native session and same-origin mutation checks
 | `GET /api/mallet/imports/journal?id=<id>` | Retained job, full plan, originals and mapped/source links. |
 | `POST /api/mallet/imports/undo` | `{id}` → undo; refuses changed assets or those with later visits. |
 
-The browser path is `/app/move-in`: preview, explicitly approve the fingerprint, apply and retain the journal ID. These imports move customers/assets only, not source jobs or authorisations.
+The browser path is `/app/move-in`: preview, explicitly approve the fingerprint, apply and retain the journal ID. These imports move customers/assets only, not source jobs or authorizations.
 
 ## Backup and restore
 

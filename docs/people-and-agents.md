@@ -6,7 +6,7 @@ Mallet has three roles for people and one kind of key for agents. People decide;
 | --- | --- |
 | Owner | Everything an admin can, plus download backups, restore and erase unused assets. |
 | Admin | Manage jobs, approve estimates, dispatch plans and invoices, export invoices, move data in and manage agent keys. |
-| Member | See the jobs assigned to them, with their assets and estimates, and record parts and labour on those jobs. |
+| Member | See the jobs assigned to them, with their assets and estimates, and record parts and labor on those jobs. |
 
 Members cannot approve prices or export invoices.
 
@@ -33,7 +33,7 @@ A preparation key:
 
 - can read the workshop, including customer details, so keep it private;
 - can prepare estimates, estimate revisions, dispatch plans and invoice drafts;
-- cannot approve, share, record a customer's authorisation, record work, export, move data in, back up, restore or erase;
+- cannot approve, share, record a customer's authorization, record work, export, move data in, back up, restore or erase;
 - expires after 30 days, and stops working at once when you press **Revoke key** or when the person who created it loses their role.
 
 Everything an agent prepares waits for a person. The approval record names who prepared it and who approved it, and the exact revision they approved.

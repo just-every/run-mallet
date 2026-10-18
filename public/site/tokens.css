@@ -1,0 +1,52 @@
+/* Mallet's run-site tokens and faces, defined once. Every run-site page links this file: the homepage, the docs, and
+   Base's /run and not-found pages (with /site/run.css on top). The look is the approved desk page: white and pale
+   cool blue-grey sections, plum-black ink, electric cyan, one deep plum band. Faces: public/fonts/README.md. */
+@font-face{font-family:'Inter Tight';font-style:normal;font-weight:100 900;font-display:swap;src:url('/fonts/inter-tight/inter-tight-latin-wght-normal.woff2') format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2190-2199,U+2212,U+2215,U+FEFF,U+FFFD}
+@font-face{font-family:'Inter Tight';font-style:normal;font-weight:100 900;font-display:swap;src:url('/fonts/inter-tight/inter-tight-latin-ext-wght-normal.woff2') format('woff2');unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF}
+@font-face{font-family:'Inter';font-style:normal;font-weight:100 900;font-display:swap;src:url('/fonts/inter/inter-latin-wght-normal.woff2') format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2190-2199,U+2212,U+2215,U+FEFF,U+FFFD}
+@font-face{font-family:'Inter';font-style:normal;font-weight:100 900;font-display:swap;src:url('/fonts/inter/inter-latin-ext-wght-normal.woff2') format('woff2');unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF}
+@font-face{font-family:'JetBrains Mono';font-style:normal;font-weight:100 800;font-display:swap;src:url('/fonts/jetbrains-mono/jetbrains-mono-latin-wght-normal.woff2') format('woff2')}
+
+:root{
+  --ink:#22061f;
+  --ink-soft:#3a2338;
+  --text:#2c2a3a;
+  --body:#4a5066;
+  --muted:#6b6f80;
+  --faint:#8d91a0;
+  --page:#ffffff;
+  --page-alt:#f3f7fa;
+  --card:#ffffff;
+  --line:#e4e9ef;
+  --line-strong:#d3dae3;
+  --chip:#eef1f5;
+  --cyan:#0bb3f9;
+  --cyan-deep:#0a86c2;
+  --cyan-soft:#d8f2fe;
+  --cyan-ink:#06506f;
+  --plum:#2a0a2b;
+  --plum-line:#4a2a4b;
+  --plum-text:#d9cdd9;
+  --green:#12924f;
+  --green-ink:#0b7a3e;
+  --green-soft:#e3f5e9;
+  --red:#e0383b;
+  --red-soft:#fde8e8;
+  --amber:#f6b40e;
+  --amber-soft:#fff3cf;
+  --amber-ink:#7a5200;
+  --violet-soft:#ece9f8;
+  --violet-ink:#5b4fb0;
+  --steel:#2f4a78;
+  --font-display:'Inter Tight','Inter','Helvetica Neue',Arial,sans-serif;
+  --font-body:'Inter','Helvetica Neue',Arial,sans-serif;
+  --font-mono:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --wrap:1296px;
+  --gutter:72px;
+  --radius:18px;
+  --radius-sm:12px;
+  --shadow:0 1px 2px rgba(34,6,31,.05),0 12px 32px -10px rgba(34,40,71,.16);
+  --shadow-lift:0 2px 4px rgba(34,6,31,.06),0 28px 60px -18px rgba(34,40,71,.28);
+  --section-y:112px;
+}
+@media (max-width:760px){:root{--gutter:16px;--section-y:64px;--radius:16px}}

@@ -2,7 +2,7 @@ Every vehicle, bicycle or device in Mallet keeps all of its visits. Bookings are
 
 ## Times
 
-Booking times are written with their timezone, for example `2026-10-19T09:00:00+11:00` for 9 am in Sydney during daylight saving, or `2026-10-19T09:00:00+08:00` in Perth. Mallet stores the exact moment and shows it in your browser's own timezone, with the timezone's name, as `19 Oct, 9:00 – 10:00 AEDT`. Sydney and Melbourne use `+11:00` from October to April and `+10:00` the rest of the year; Brisbane uses `+10:00` all year.
+Booking times are written with their UTC offset, for example `2026-10-19T09:00:00-04:00` for 9 am in Columbus, Ohio, during daylight saving time, or `2026-10-19T09:00:00-07:00` in Los Angeles. Mallet stores the exact moment and shows it in your browser's own timezone, with the timezone's name, as `Oct 19, 9:00 am – 10:00 am EDT`. Eastern time is `-04:00` from March to early November and `-05:00` the rest of the year; Arizona stays on `-07:00` all year.
 
 A booking must end after it starts and last no more than seven days.
 
@@ -21,7 +21,7 @@ The asset's page lists **Every visit** with its status:
 | Status | Meaning |
 | --- | --- |
 | `booked` | Booked in, not started. |
-| `working` | Parts or labour have been recorded. |
+| `working` | Parts or labor have been recorded. |
 | `completed` | The repair is done and ready to invoice. |
 | `invoiced` | The invoice has been exported. |
 

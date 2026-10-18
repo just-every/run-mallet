@@ -3,22 +3,32 @@ Mallet runs on your own computer with one command, `rer dev`. You need no accoun
 ## What you need
 
 - macOS, Linux, or Windows with WSL2.
-- Nothing to install first. `rer` picks the exact Node version Mallet declares and fetches a checked copy if yours differs; it never changes your global Node.
+- Nothing else to install first. `rer` picks the exact Node version Mallet declares and fetches a checked copy if yours differs; it never changes your global Node.
 - Git, to get the code.
 
 ## Get Mallet and start it
 
+These are the two lines the [Run page](https://run-mallet.com/run) shows. First install `rer`, the Run Edit Run command that installs, starts and stops Mallet. It brings its own Node when you have no Node 22 or later:
+
 ```sh
-npx -y @runeditrun/rer dev just-every/run-mallet
+curl -fsSL https://runeditrun.com/install.sh | sh
 ```
 
-That one line installs `rer`, the Run Edit Run command that installs, starts and stops Mallet, then clones Mallet and starts it. Without Node, `curl -fsSL https://runeditrun.com/install.sh | sh -s -- dev just-every/run-mallet` does the same. To start it again later, run `cd run-mallet && rer dev`. `rer dev` installs everything Mallet needs, makes you the owner and starts the app. The first launch takes a few minutes. If it is interrupted, run the same command again: it carries on from where it stopped.
+If the installer ends with a line to run, run it: it puts `rer` on your PATH. Then get Mallet and start it:
+
+```sh
+rer dev just-every/run-mallet
+```
+
+Already have Node 22 or later? `npx -y @runeditrun/rer dev just-every/run-mallet` does both steps in one line.
+
+`rer dev` clones Mallet into a `run-mallet` folder, installs everything it needs, makes you the owner and starts the app. To start it again later, run `cd run-mallet && rer dev`. The first launch takes a few minutes. If it is interrupted, run the same command again: it carries on from where it stopped.
 
 When it is ready it prints three lines:
 
 | Line | What it is |
 | --- | --- |
-| `RER_READY` | The address the app listens on, such as `http://127.0.0.1:8787`. |
+| `RER_READY` | The address the app listens on, on this computer only. |
 | `RER_SIGNED_IN` | The owner it signed you in as. |
 | `RER_OPEN` | A link that opens Mallet signed in as you. |
 
