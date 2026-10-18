@@ -51,19 +51,21 @@ Example estimate input:
     "jobId": "<job-id>",
     "version": 1,
     "lines": [
-      {"kind":"part","description":"Oil filter","quantity":1,"unitCents":2500,"gst":true},
-      {"kind":"labour","description":"Service labor","quantity":0.5,"unitCents":12000,"gst":true}
+      {"kind":"part","description":"Oil filter","quantity":1,"unitCents":2500},
+      {"kind":"labor","description":"Service labor","quantity":0.5,"unitCents":12000}
     ],
     "notes": "Review both lines before sharing."
   }
 }
 ```
 
-Each estimate has 1–100 lines. A line uses `kind:"part"|"labour"`, `description`, positive numeric `quantity` with up to three decimal places, and non-negative integer `unitCents` **before tax**. `gst` (the field keeps its original name) defaults to true and adds 10% tax; false means no tax. The server calculates rounded integer-cent amounts and totals. Optional `id` must be unique within the revision; otherwise IDs are generated. Only parts may carry optional `pierItemId`. A reference does not allocate stock.
+Each estimate has 1–100 lines. A line uses `kind:"part"|"labor"` (`labour` is accepted for legacy callers), `description`, positive numeric `quantity` with up to three decimal places, and non-negative integer `unitCents` **before tax, in USD**. Do not send a `gst` flag or a per-line tax override: the shop's parts/labor settings determine whether each line is taxable. The server rounds each line's subtotal and sales tax to integer cents, then sums the rounded lines. Optional `id` must be unique within the revision; otherwise IDs are generated. Only parts may carry optional `pierItemId`. A reference does not allocate stock.
+
+Before preparing estimates, the owner configures the shop's sales tax rate and taxable categories in `/setup` or `/app/tax`. Parts default to taxable and labor to exempt; the owner must enter the actual rate. Mallet does not look up jurisdiction rates. Each estimate revision saves the rate and tax treatment used to price it; later settings changes do not reprice that revision or its resulting invoice. Agents can read the saved shop configuration at `records.taxSettings[0]` in workshop state, but cannot change it.
 
 Times must include a timezone, for example `2026-10-19T09:00:00-04:00`. A booking/dispatch interval ends after it starts and lasts no more than seven days. `technicianId` must be the member's actual operator ID for that member to see and record work; a display label will not grant that access.
 
-Agents are denied `estimate.approve`, `estimate.markSent`, `estimate.authorise`, `dispatch.approve`, `invoice.approve`, `invoice.export`, `work.record`, `job.book`, `job.complete`, asset changes, import, portability and people/key management. The person reviews prepared work in the job UI; approvals and events retain the preparer, decision-maker, exact revision/version and timestamp.
+Agents are denied `tax.configure`, `estimate.approve`, `estimate.markSent`, `estimate.authorise`, `dispatch.approve`, `invoice.approve`, `invoice.export`, `work.record`, `job.book`, `job.complete`, asset changes, import, portability and people/key management. The person reviews prepared work in the job UI; approvals and events retain the preparer, decision-maker, exact revision/version and timestamp.
 
 ## Human command reference
 
@@ -71,6 +73,7 @@ These require an owner/admin native session unless marked otherwise. `version` a
 
 | Command | Input |
 | --- | --- |
+| `tax.configure` | `ratePercent` (number), `partsTaxable` (boolean), `laborTaxable` (boolean). Sets the shop sales tax configuration for future estimate revisions. |
 | `asset.create` | `customerName`, optional `customerEmail`, `label`, unique `identifier`. |
 | `asset.update` | `assetId`, asset `version`, same asset fields. |
 | `job.book` | `assetId`, asset `version`, `title`, optional `notes`, `bayId`, `technicianId`, `startAt`, `endAt`. |
@@ -84,7 +87,7 @@ These require an owner/admin native session unless marked otherwise. `version` a
 | `invoice.export` | `invoiceId`, invoice `version`. First export requires approval. A repeat accepts the current version or the version immediately before first export and returns the saved entry. |
 | `asset.erase` | **Owner only:** `assetId`, `confirm:"ERASE"`. Refuses assets with visits. |
 
-Invoices use recorded authorized quantities and the frozen estimate prices. No arbitrary prices or totals may be injected at invoice preparation. The saved export has `format:"mallet-invoice-csv"`; download it as owner/admin at `GET /api/mallet/exports/<export-id>`. This generic CSV is not guaranteed to match Xero's import schema. Asset event history is available at `GET /api/mallet/assets/<asset-id>/history.csv` within the caller's visible state.
+Invoices use recorded authorized quantities and the frozen estimate prices and sales tax rate. No arbitrary prices or totals may be injected at invoice preparation. The saved export has `format:"mallet-invoice-csv"`; download it as owner/admin at `GET /api/mallet/exports/<export-id>`. Its money columns are `UnitUSD`, `SubtotalUSD`, `SalesTaxUSD` and `TotalUSD`, and `Currency` is `USD`. This generic CSV is not guaranteed to match Xero's import schema. Asset event history is available at `GET /api/mallet/assets/<asset-id>/history.csv` within the caller's visible state.
 
 ## Snapshot move-in API
 

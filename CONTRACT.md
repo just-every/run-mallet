@@ -18,12 +18,12 @@ Neighbouring products stay separate: [Pier](https://github.com/just-every/run-pi
 
 ## Operating rules
 
-- US-first defaults are USD, US contact/address formats, miles with explicit alternative units, jurisdiction-specific parts/labour tax and each shop’s US timezone/DST. Existing AUD/GST records remain historical data with their original basis; they never silently become dollars of another currency.
+- US-first defaults are USD, US contact/address formats, miles with explicit alternative units, jurisdiction-specific parts/labour tax and each shop’s US timezone/DST. Existing records migrate to the US product’s USD labels without changing recorded cent amounts or their frozen tax basis. An unknown shop sales tax rate must be entered before new estimates.
 - Estimates, consent, orders and money name exact inputs and versions. A price, part, scope or recipient change invalidates the affected approval. Accepted work is never retrospectively broadened.
 - Customer viewing, message delivery, order proposal, bank screenshot and a model’s inference are not approval, supplier acknowledgement, settled payment or physical receipt. Their actual human/provider evidence is retained separately.
 - Every scheduled/agent action has a visible policy, owner, outcome and recovery path. Replays and restarts cannot double-charge, double-order or send obsolete approvals. Draft-only authority remains draft-only.
 - Every server door enforces current role and installation/location/customer boundaries. Secrets stay private; product records, source evidence, audit and exportable history stay under the shop owner’s custody.
-- Existing clause IDs are retained. Their narrow exact-decision, immutable-export and custody guarantees underpin the target; AUD-only invoicing, register-only migration and read-only catalogue access describe current gaps, not limits on the destination.
+- Existing clause IDs are retained. Their narrow exact-decision, immutable-export and custody guarantees underpin the target; register-only migration and read-only catalogue access describe current gaps, not limits on the destination.
 
 ## Published workshop guarantees
 
@@ -35,7 +35,7 @@ Neighbouring products stay separate: [Pier](https://github.com/just-every/run-pi
 
 - **WORK-001 — Authorised actuals.** Parts and labour actuals use only lines and quantities within the person-approved, customer-authorised revision. A member records work only on assigned jobs; completion requires recorded work. Additional scope never inherits consent from a previous decision. **Acceptance evidence:** As an assigned member record an authorised line; refuse another job, an unapproved line and excess quantity, then complete and inspect actor and revision evidence.
 
-- **INVOICE-001 — One saved export.** An invoice freezes authorised prices and actual quantities after completion and requires a person to approve before export. Repeated export retrieves the same saved invoice and journal entry. Existing AUD/GST exports remain legible immutable history; INV-001 and TAX-001 replace their format for new US business, without rewriting old totals. **Acceptance evidence:** Complete authorised work, prepare and approve the invoice through the app, export twice with current and preceding versions, and compare saved identity, lines, totals and approval history.
+- **INVOICE-001 — One saved export.** An invoice freezes authorised prices and actual quantities after completion and requires a person to approve before export. Repeated export retrieves the same saved invoice and journal entry. Saved exports use USD unit, subtotal, sales tax and total columns. Migration preserves original cent amounts, export identities and approvals while updating legacy labels; subsequent downloads return the same saved export. **Acceptance evidence:** Complete authorised work, prepare and approve the invoice through the app, export twice with current and preceding versions, and compare saved identity, lines, totals and approval history.
 
 - **AGENT-001 — Prepare, then person decides.** Expiring revocable bearer keys read state and invoke only estimate.prepare, estimate.revise, dispatch.prepare and invoice.prepare. They cannot approve, share, authorise, export, erase or manage access. Preparation and decisions retain actor, timestamp and exact revision; authority is rechecked at write time. Broader service-advisor actions require separate policy-scoped permissions under ADV-008. **Acceptance evidence:** Issue a preparation key through the owner door, prepare a draft, refuse each decision command, approve as a person and revoke the key; old key and concurrent revoked authority cannot write.
 
@@ -161,7 +161,7 @@ Neighbouring products stay separate: [Pier](https://github.com/just-every/run-pi
 
 ### US invoicing, payments and accounting
 
-- **INV-001 — USD invoices and customer delivery.** Issue numbered USD invoices and printable/PDF receipts from authorised actuals, including customer/vehicle/mileage, sold labour, parts, sublet, discounts, fees, tax, deposits and warranty terms; deliver by email/text and retain exact issued versions and legacy AUD/GST history. **Acceptance evidence:** Finish a mixed US repair, issue and deliver the invoice, reopen a legacy export and verify each currency and total; corrected invoices reference their original.
+- **INV-001 — USD invoices and customer delivery.** Issue numbered USD invoices and printable/PDF receipts from authorised actuals, including customer/vehicle/mileage, sold labour, parts, sublet, discounts, fees, tax, deposits and warranty terms; deliver by email/text and retain exact issued versions and legacy history with original cent amounts and tax basis. **Acceptance evidence:** Finish a mixed US repair, issue and deliver the invoice, reopen a legacy export and verify each currency and total; corrected invoices reference their original.
 
 - **TAX-001 — US parts and labour sales tax.** Configure location/jurisdiction rates and effective dates, separate parts/labour/sublet/fee taxability and rounding, tax-inclusive/exclusive pricing and exemptions; optionally calculate through Avalara or TaxJar and retain provider evidence. Corrections reverse the original tax basis. **Acceptance evidence:** Invoice taxable parts and exempt labour in two configured US jurisdictions, then refund one part; compare tax cents, rule versions and tax-provider responses.
 
@@ -353,11 +353,77 @@ The first buyer is US independent auto repair. Tire, fleet, bicycle, device, mai
 
 ## Research and source formats
 
-Scope authority is the owner-approved 16 October auto-shop category; the 16 October inventory supplies additional bench capabilities and integrations. Code was rechecked against current main after the inventory audit; subsequent changes improved operator-ID booking, conflict presentation and timezone display without implementing the missing provider workflows. No desk-built homepage CLAIMS.md was supplied for this seed in this round.
+Scope authority is the owner-approved 16 October auto-shop category; the 16 October inventory supplies additional bench capabilities and integrations. Code was rechecked against current main after the inventory audit; subsequent changes improved operator-ID booking, conflict presentation and timezone display without implementing the missing provider workflows. The homepage claims table above follows the desk-built homepage's claims truth table (18 October 2026).
 
 Migration formats are grounded in [Tekmetric customer CSV](https://support.tekmetric.com/hc/en-us/articles/360041832613-Export-Submit-Customer-List), [Tekmetric API](https://api.tekmetric.com/), [Shopmonkey XLS reports](https://support.shopmonkey.io/hc/en-us/articles/38744034895892-Export-Shop-Data), [Shopmonkey XLSX templates](https://support.shopmonkey.io/hc/en-us/articles/38745362848276-Import-Shop-Data-with-Import-Templates), [Shopmonkey API](https://shopmonkey.dev/), [Manager SE Followup.csv](https://kb.mitchell1.com/articles/id-321/), [Manager SE backup capture](https://support.tekmetric.com/hc/en-us/articles/4406023720343-How-to-Pull-Mitchell-1-Data), [Shop-Ware AR CSV](https://shop-ware.com/filter-faster-with-efficient-auto-repair-invoice-software/) and [AutoLeap’s customer-export statement](https://autoleap.com/comparisons/autoleap-vs-invomax/), [RepairDesk ticket XLS](https://help.repairdesk.co/portal/en/kb/articles/how-can-i-export-repair-tickets-to-excel-format) and [Orderry Excel reports](https://help.orderry.com/en/articles/9134557-reports-general-information). Shop-Ware and AutoLeap complete-history/media formats require an actual authorised vendor delivery and schema discovery; neither is asserted to offer a universal self-service full-history CSV/API. Older-system formats similarly require validation of the owner-supplied archive, rather than an invented universal schema.
 
 The wider category is evidenced by [Tekmetric shop management](https://www.tekmetric.com/feature/shop-management), [its DVI](https://www.tekmetric.com/feature/digital-vehicle-inspection), [Shopmonkey’s integrations](https://support.shopmonkey.io/hc/en-us/articles/38743737653908-Getting-Started-Integrations-with-Shopmonkey), [Manager SE](https://mitchell1.com/manager-se/), [Shop-Ware partners](https://shop-ware.com/partners/) and [AutoLeap integrations](https://autoleap.com/partners/integrations/). Named target providers are delivery requirements, not claims of existing Mallet partnership or live production access.
+
+## Homepage claims
+
+Every capability claim on the approved homepage (`src/site/landing/`, checked against br's claims truth table of 18 October 2026, rows 1–59 in page order) maps to the clauses that promise it, or to the code that backs it when no clause applies. A claim's status is `done` when every mapped clause is done, `missing` when every one is missing, and `partial` otherwise, from the status table below. The sample shop, people, vehicles and figures in the drawings (Buckeye Auto Repair, RO 4127, Ohio's 7.5% sales tax) are illustrations, not claims. 59 claims: 5 done, 21 partial, 33 missing.
+
+| # | Section | Claim | Clause(s) | Status |
+| --- | --- | --- | --- | --- |
+| 1 | Hero | "Mallet checks cars in by VIN" | INTAKE-003, VEH-001 | missing |
+| 2 | Hero | "texts photo inspections for line-by-line approval" | DVI-002, DVI-003, MSG-001, EST-003, ESTIMATE-001 | partial |
+| 3 | Hero | "orders parts" | BUY-002 | missing |
+| 4 | Hero | "runs the technician board" | FLOW-001 | partial |
+| 5 | Hero | "takes payment" | PAY-003 | missing |
+| 6 | Hero | "brings customers back" | AUTO-003, AUTO-004, ADV-005 | missing |
+| 7 | Hero | "100% free, open source" | code: `LICENSE` (MIT) | done |
+| 8 | Hero | "alternative to Tekmetric, Shopmonkey and Mitchell 1 Manager SE" | MOVE-001, MOVE-002, MOVE-003 | missing |
+| 9 | Hero card | RO 4127 · VIN decoded · 62,100 mi | VEH-001, VEH-002 | missing |
+| 10 | Hero card | Inspection · 2 red, 3 yellow · texted to Dana Brooks | DVI-001, DVI-003, MSG-001 | missing |
+| 11 | Hero card | Front brakes approved · cabin filter declined → due at 67,000 mi | ESTIMATE-001, EST-005 | partial |
+| 12 | Hero card | Pads backordered at Worldpac → PartsTech +$8.40 · Dana re-approved 10:05 | ADV-004, BUY-003, BUY-005, ESTIMATE-001 | partial |
+| 13 | Hero card | Bay 3 · Luis Romero · 2.4 hrs sold · promise 5:00 pm · ready 4:10 | WORKSHOP-001, FLOW-001, FLOW-002 | partial |
+| 14 | Hero card | Paid by text · $531.70 incl. 7.5% tax | PAY-003, TAX-001 | partial |
+| 15 | 02 Day | Six-stop day timeline with "Promise 5:00 pm · kept" | WORKSHOP-001, FLOW-002 | partial |
+| 16 | 03 Check-in | "Dana checks in from her phone at the drop box" | INTAKE-003 | missing |
+| 17 | 03 Check-in | "Mallet decodes the VIN" | VEH-001 | missing |
+| 18 | 03 Check-in | "has the repair order ready when Kayla opens it" | INTAKE-003 | missing |
+| 19 | 03 Check-in | RO card: mileage in, last visit, "6 visits · 5 imported from Tekmetric" | WORKSHOP-001, VEH-002, MOVE-001 | partial |
+| 20 | 04 Inspect | "Luis inspects 39 points on a tablet" | DVI-001 | missing |
+| 21 | 04 Inspect | "Every red and yellow item carries a measurement and a photo" | DVI-001, DVI-002 | missing |
+| 22 | 04 Inspect | Inspection texted, "Delivered 9:12 · opened 9:19" | DVI-003, MSG-001 | missing |
+| 23 | 05 Approve | "The agent prices what Luis found" | ADV-001, AGENT-001 | partial |
+| 24 | 05 Approve | MOTOR labor times (1.6 + 0.8 hrs) | GUIDE-001 | missing |
+| 25 | 05 Approve | "Checked by Kayla Ortiz" before it goes out | ESTIMATE-001, AGENT-001 | done |
+| 26 | 05 Approve | "Dana says yes to the brakes and not now to the filter" (on her phone, signed) | ESTIMATE-001, EST-003 | partial |
+| 27 | 05 Approve | Declined work kept with photo and price, due at 67,000 mi | EST-005 | missing |
+| 28 | 06 Parts | "The agent finds pads in stock nearby" | ADV-004, BUY-002, BUY-003 | missing |
+| 29 | 06 Parts | "reprices the line" | ESTIMATE-001, AGENT-001 | done |
+| 30 | 06 Parts | "checks Bay 3’s afternoon" | AGENT-001, FLOW-002 | partial |
+| 31 | 06 Parts | "Dana re-approves by text" | EST-003, MSG-001, ESTIMATE-001 | partial |
+| 32 | 06 Parts | Worldpac backorder, Morse Rd supplier via PartsTech, order approved, pads scanned to RO 4127 | BUY-002, BUY-003, BUY-005, PART-006 | missing |
+| 33 | 06 Parts | "Customer promise changed: no" | FLOW-002 | partial |
+| 34 | 07 Board | "Every car’s stage, promise and clock, live" | FLOW-001, FLOW-002, TIME-001 | partial |
+| 35 | 07 Board | "Technicians start and stop jobs from the bay" | WORK-001, TIME-001 | partial |
+| 36 | 07 Board | Waiting parts: promise moved, customer told | PART-006, FLOW-002 | partial |
+| 37 | 07 Board | Agent "Next blocker" | ADV-003 | partial |
+| 38 | 07 Board | "clocked in 7:28 am · 6.1 hrs sold today" | TIME-001 | partial |
+| 39 | 08 Pickup | Quality check: road test, pedal, lug torque, signed | QUALITY-001 | missing |
+| 40 | 08 Pickup | "Dana gets a ready text with her balance and pays from her phone" (Apple Pay) | PAY-003, MSG-001 | missing |
+| 41 | 08 Pickup | Invoice 10418 from labor and parts, sales tax 7.5% | INVOICE-001, TAX-001 | partial |
+| 42 | 08 Pickup | "QuickBooks has it a minute later" | BOOKS-001 | missing |
+| 43 | 08 Pickup | Collected 4:30 pm, miles out, keys returned | RETURN-001, VEH-002 | missing |
+| 44 | 09 Interlude | Reminder on Priya's phone: "Timing belt due at 105,000 mi", $780.00, Book | AUTO-004, ADV-005, MSG-001, BOOK-001 | missing |
+| 45 | 10 Follow-up | "The agent tracks declined work and service intervals by mileage" | ADV-005, AUTO-003, AUTO-004 | missing |
+| 46 | 10 Follow-up | "refreshes each price" | ADV-005 | missing |
+| 47 | 10 Follow-up | "drafts the text for Kayla to send" | ADV-002, MSG-001, MSG-004 | missing |
+| 48 | 10 Follow-up | Text failed on a landline, sent by email | MSG-001, MSG-002 | missing |
+| 49 | 10 Follow-up | Reminders stopped for a sold vehicle | AUTO-003 | missing |
+| 50 | 11 Week | Emailed weekly report: car count, ARO, sales, on promise | REPORT-001, REPORT-004, REPORT-006 | missing |
+| 51 | 11 Week | Technician sold, clocked and efficiency | REPORT-003 | missing |
+| 52 | 11 Week | "Every number opens the repair orders behind it" | REPORT-001 | missing |
+| 53 | 12 Moving in | "31,906 Tekmetric repair orders, all searchable" | MOVE-001 | missing |
+| 54 | 12 Moving in | "Customers, vehicles, history, canned jobs and open work come across before cutover" | MOVE-001, MOVE-012, MOVE-013 | missing |
+| 55 | 12 Moving in | Reviewed import (preview, apply what was reviewed) | MOVE-010, IMPORT-001 | partial |
+| 56 | 12 Moving in | Shadow compare RO 3987 and cutover | MOVE-012 | missing |
+| 57 | 12 Moving in | "Run it yourself with one line" (`npx -y @runeditrun/rer dev just-every/run-mallet`) | OPS-001 | partial |
+| 58 | 13 Closing | "100% free and open source. MIT licensed." | code: `LICENSE` (MIT) | done |
+| 59 | Footer | "Free, open source shop management" | code: `LICENSE` (MIT) | done |
 
 ## Status
 
@@ -398,7 +464,7 @@ Judged from the code and tests at commit `88562eb529abd66394171d97778854c4a94fa4
 | `QUALITY-001` | Completion tests and return clearance | target | missing |  | Completion currently requires actual work only; no test checklist, quality gate or clearance evidence. |
 | `DIAG-002` | Specialist diagnostics connections | target | missing |  | No scan-tool, PhoneCheck or Blackbelt360 adapters or result ingestion. |
 | `DIAG-003` | OEM service information and recall context | target | missing |  | No automotive technical-data, TSB, recall or maintenance-schedule integration. |
-| `EST-001` | Parts and labour pricing | target | partial | `src/mallet/money.ts`; `src/mallet/estimates.ts`; `src/mallet/invoices.ts`; `tests/mallet.test.mjs` | Revisioned part/labour lines flow to invoices, but prices/tax are AUD/GST; no cost, fee, discount or rate profiles. |
+| `EST-001` | Parts and labour pricing | target | partial | `src/mallet/money.ts`; `src/mallet/estimates.ts`; `src/mallet/invoices.ts`; `tests/mallet.test.mjs` | Revisioned USD part/labor lines use shop sales tax settings and frozen per-line tax snapshots through authorized actuals and invoices; no cost, fee, discount or rate profiles. |
 | `EST-002` | Canned jobs and pricing matrices | target | missing |  | No packages, pricing matrices, minimum-charge policies or override rules. |
 | `EST-003` | Customer approval and decline by link | target | partial | `src/mallet/estimates.ts`; `tests/mallet.test.mjs` | Staff-recorded manual partial authorisation exists; no delivered link, customer decision endpoint, full decline or signature artifact. |
 | `EST-004` | Supplemental approval on the same repair | target | partial | `src/mallet/estimates.ts`; `tests/mallet.test.mjs` | Pre-authorisation revisioning exists; accepted estimates freeze and additional work currently requires a new visit. |
@@ -431,8 +497,8 @@ Judged from the code and tests at commit `88562eb529abd66394171d97778854c4a94fa4
 | `BUY-006` | Supplier and warranty compensation reconciliation | target | missing |  | No supplier invoice or warranty-labour matching, remittance or exception workflow. |
 | `BUY-007` | MobileSentrix US parts | target | missing |  | No MobileSentrix connection or supplier cart/receipt handoff. |
 | `BUY-008` | Injured Gadgets order sync | target | missing |  | No Injured Gadgets OrderSync importer, POs or receiving integration. |
-| `INV-001` | USD invoices and customer delivery | target | partial | `src/mallet/invoices.ts`; `src/mallet/ui/job.ts`; `tests/mallet.test.mjs` | Approved immutable invoice/CSV core ships; no USD settings, numbered correction documents, PDF or customer delivery. |
-| `TAX-001` | US parts and labour sales tax | target | partial | `src/mallet/money.ts`; `tests/mallet.test.mjs` | Integer-cent GST calculation and per-line taxable flags exist; no US rates/classes, jurisdiction rules or tax-provider adapter. |
+| `INV-001` | USD invoices and customer delivery | target | partial | `src/mallet/invoices.ts`; `src/mallet/ui/job.ts`; `tests/mallet.test.mjs` | Approved USD invoices and CSV use configured shop sales tax and frozen authorized actuals; migrated history preserves recorded cents. No numbered correction documents, PDF or customer delivery. |
+| `TAX-001` | US parts and labour sales tax | target | partial | `src/mallet/tax.ts`; `src/mallet/money.ts`; `src/mallet/setup.ts`; `migrations/core/0018_sales_tax.sql`; `tests/sales-tax.test.mjs` | Owner-entered combined rate, separate parts/labor taxability, USD, half-up cent rounding per line and frozen estimate/invoice tax ship. Dana’s 7.5% repair totals $531.70; migration preserves historical cents and prompts for an unknown rate. No multiple jurisdictions/effective dates, sublet/fee classes, tax-inclusive pricing, exemptions, refunds or tax-provider adapter. |
 | `TAX-002` | Exemptions and shop fees | target | missing |  | No certificate custody, expiry, configurable fees/surcharges or US tax reporting. |
 | `PAY-001` | Stripe card and ACH collection | target | missing |  | No Stripe account connection, checkout, Terminal, ACH or settlement reconciliation. |
 | `PAY-002` | Square counter and online payments | target | missing |  | No Square account, terminal, payment-link or webhook adapter. |

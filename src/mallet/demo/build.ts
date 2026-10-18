@@ -21,11 +21,14 @@ export function buildWorkshop(now: Date, ownerId: string) {
   const run = (who: Who, command: string, payload: any, at: number) => reduce(s, actors[who], command, payload, clock.iso(at))
   const get = (kind: string, id: string) => rows(s, kind).find(row => row.id === id) as Row
   const at = ([day, time]: [number, string]) => clock.ms(day, time)
-  const lines = (list: Line[]) => list.map(([kind, description, quantity, dollars]) => ({ kind, description, quantity, unitCents: Math.round(dollars * 100), gst: true }))
+  const lines = (list: Line[]) => list.map(([kind, description, quantity, dollars]) => ({ kind, description, quantity, unitCents: Math.round(dollars * 100) }))
 
   // Every asset is registered at the counter shortly before its first booking.
   const visits = [...history].sort((a, b) => a.day - b.day || a.start.localeCompare(b.start)).concat(current)
   const booked = (v: Visit, i: number) => clock.ms(v.day - (v.bookedAhead ?? 3), `09:${String((i * 7) % 50).padStart(2, '0')}`)
+  // The sample shop explicitly chooses Franklin County's 7.5% sales tax on parts and labor.
+  // Configure it before any estimate so sample financial records freeze it.
+  run('kayla', 'tax.configure', { ratePercent: 7.5, partsTaxable: true, laborTaxable: true }, Math.min(...visits.map(booked)) - HOUR)
   const assetIds = new Map<string, string>()
   const firstBooking = (key: string) => Math.min(...visits.flatMap((v, i) => v.asset === key ? [booked(v, i)] : []), clock.ms(-2, '16:20'))
   for (const [key, customerName, customerEmail, label, identifier] of [...assets].sort((a, b) => firstBooking(a[0]) - firstBooking(b[0]))) {

@@ -14,6 +14,7 @@ const symbols:Record<string,string>={
  car:'<path d="M4.5 11 7 5.5h10l2.5 5.5 2 1.8V19h-3.5v-2h-12v2H2.5v-6.2Z"/><path d="M6.5 11h11M6.5 14.3h1.5M16 14.3h1.5"/>',
  mail:'<rect x="2.5" y="5" width="19" height="14" rx="2"/><path d="m3.5 6.5 8.5 6.5 8.5-6.5"/>',
  alert:'<path d="M12 3 2.5 20h19Z"/><path d="M12 10v4.5M12 17.2v.3"/>',
+ percent:'<circle cx="7" cy="7" r="2.5"/><circle cx="17" cy="17" r="2.5"/><path d="M19 5 5 19"/>',
  close:'<path d="M6 6l12 12M18 6 6 18"/>',
 }
 export const ICONS=`<svg class="sprite" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><defs>${Object.entries(symbols).map(([id,body])=>`<symbol id="i-${id}" viewBox="0 0 24 24">${body}</symbol>`).join('')}</defs></svg>`

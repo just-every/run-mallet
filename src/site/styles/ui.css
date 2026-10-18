@@ -5,7 +5,7 @@
 .section-head{display:grid;gap:20px;align-content:start}
 .section-head.center{justify-items:center;text-align:center}
 .eyebrow{color:var(--cyan-deep);font:750 15px/1.2 var(--font-body);letter-spacing:.2em;text-transform:uppercase}
-.section-head h2{font:900 clamp(40px,5.3vw,78px)/1 var(--font-display);letter-spacing:-.04em}
+.section-head h2{font:900 clamp(38px,5.08vw,75px)/1 var(--font-display);letter-spacing:-.022em}
 .lead{color:var(--body);font-size:clamp(18px,1.75vw,25px);line-height:1.42;max-width:34em}
 .section-head.center .lead{max-width:46em}
 br.wide{display:none}

@@ -1,5 +1,5 @@
 export const e=(v:unknown):string=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]!))
-export const money=(cents:number)=>new Intl.NumberFormat('en-US',{style:'currency',currency:'AUD',currencyDisplay:'narrowSymbol'}).format((cents??0)/100)
+export const money=(cents:number)=>new Intl.NumberFormat('en-US',{style:'currency',currency:'USD',currencyDisplay:'narrowSymbol'}).format((cents??0)/100)
 export const hidden=(name:string,value:unknown)=>`<input type="hidden" name="${e(name)}" value="${e(value)}">`
 export const field=(label:string,name:string,type='text',value:unknown='',extra='')=>`<label>${e(label)}<input name="${e(name)}" type="${type}" value="${e(value)}" ${extra}></label>`
 export const select=(label:string,name:string,options:[string,string][],selected='')=>`<label>${e(label)}<select name="${e(name)}">${options.map(([value,text])=>`<option value="${e(value)}"${value===selected?' selected':''}>${e(text)}</option>`).join('')}</select></label>`

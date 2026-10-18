@@ -4,14 +4,14 @@ import type { Actor } from '../auth'
 import {e,initials,when,LOCAL_TIMES} from './common'
 import {ICONS,icon} from './icons'
 
-export type Section='board'|'jobs'|'customers'|'approvals'|'move-in'|'data'
+export type Section='board'|'jobs'|'customers'|'approvals'|'move-in'|'data'|'tax'
 // Figures beside a section's name, when the page knows them.
 export type Counts=Partial<Record<Section,number>>
 export type Frame={section?:Section,counts?:Counts,subtitle?:string,aside?:string,heading?:boolean}
 
 const sections:[Section|'settings',string,string,string][]=[
  ['board','/app','Board','board'],['jobs','/app/jobs','Repair orders','document'],['customers','/app/customers','Customers','people'],['approvals','/app/approvals','Approvals','check'],
- ['move-in','/app/move-in','Move in','box'],['data','/app/data','Data & access','key'],['settings','/auth/settings/identity','Sign-in settings','gear'],
+ ['move-in','/app/move-in','Move in','box'],['data','/app/data','Data & access','key'],['tax','/app/tax','Shop tax','percent'],['settings','/auth/settings/identity','Sign-in settings','gear'],
 ]
 const roles:Record<string,string>={owner:'Owner',admin:'Service advisor',member:'Technician',agent:'Agent'}
 

@@ -1,7 +1,7 @@
 import { rejectedResponse } from './base/rejected-response'
 import { createDependencies } from './modules/dependencies/index.mjs'
 import { createIdpOwnerClaimHandler, createOwnerClaimHandler } from './modules/owner-claim/index.mjs'
-import { firstRunResponse } from './base/setup'
+import { firstRunResponse } from './mallet/setup'
 import { fontDocumentResponse } from './base/font-response'
 import { createOperatorAuth, createAuthHandler, createSignInHandler, type AuthConfig } from './modules/operator-auth/index.mjs'
 import { operatorMail } from './mail.server.mjs'

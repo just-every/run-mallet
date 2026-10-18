@@ -19,7 +19,7 @@ export function DocsIndex() {
           <section key={section.title} className="docs-group" aria-labelledby={`group-${section.pages[0].slug}`}>
             <h2 id={`group-${section.pages[0].slug}`}>{section.title}</h2>
             <ul className="docs-cards">
-              {section.pages.map(page => (
+              {section.pages.filter(page => page.card).map(page => (
                 <li key={page.slug}><a className="docs-card" href={`/docs/${page.slug}`}><span className="docs-card-title">{page.title}</span><span className="docs-card-summary">{page.summary}</span></a></li>
               ))}
             </ul>

@@ -32,7 +32,7 @@
 .ro-card{padding:28px 30px 12px;margin-top:32px}
 .ro-card header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
 .ro-card .chip{white-space:nowrap}
-.ro-card h3{font-size:31px;font-weight:900;letter-spacing:-.03em}
+.ro-card h3{font-size:31px;font-weight:900;letter-spacing:-.022em}
 .checkin-phone .phone-title{font-size:24px}
 .vin{display:flex;align-items:center;gap:12px 14px;flex-wrap:wrap;margin:16px 0 18px;color:var(--muted);font:500 15.5px/1.3 var(--font-mono)}
 .ro-card .chip{font-size:14px;padding:6px 12px}
@@ -47,7 +47,7 @@
 .inspect{grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:40px;align-items:start}
 .inspect .section-head{padding-top:120px}
 .inspect .lead{max-width:400px}
-.inspect h2{font-size:clamp(40px,5.2vw,78px)}
+.inspect h2{font-size:clamp(38px,4.98vw,75px)}
 .inspect-stage{position:relative;padding-bottom:40px}
 .dvi .tablet-screen{padding:28px 0 6px 34px}
 .dvi-title{color:var(--ink);font:800 29px/1.15 var(--font-display);letter-spacing:-.02em;padding-right:24px}
@@ -83,7 +83,7 @@
 .approve-total strong{color:var(--ink);font:800 21px/1.2 var(--font-display)}
 .approve-signed{margin-top:18px;color:var(--muted);font-size:14px}
 .declined{padding:28px 30px}
-.declined h3{font-size:28px;font-weight:900;letter-spacing:-.03em;margin-bottom:18px}
+.declined h3{font-size:28px;font-weight:900;letter-spacing:-.022em;margin-bottom:18px}
 .declined .rows>div{padding:18px 0;font-size:19px}
 .declined .pill{margin:8px 0 14px}
 .declined-kept{padding-top:16px;border-top:1px solid var(--line);color:var(--muted);font-size:17px}

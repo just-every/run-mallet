@@ -23,7 +23,7 @@ test('booking rejects bay and technician collisions and keeps every asset visit'
  assert.equal((await h.command('job.book',input,{status:409})).error,'DISPATCH_CONFLICT')
  await h.command('job.book',{...input,bayId:'Bay 2',technicianId:'Alex'},{status:409})
  const post=(path,fields)=>h.mf.dispatchFetch(h.origin+path,{method:'POST',redirect:'manual',headers:{origin:h.origin,host:new URL(h.origin).host,'content-type':'application/x-www-form-urlencoded',cookie:h.owner},body:new URLSearchParams(fields).toString()})
- assert.equal((await post('/setup',{confirm:'yes'})).status,303)
+ assert.equal((await post('/setup',{confirm:'yes',ratePercent:'10',partsTaxable:'yes',laborTaxable:'yes'})).status,303)
  const refused=await post('/app/actions',{command:'job.book',...input}),html=await refused.text()
  assert.equal(refused.status,409);assert.ok(html.includes(`/app/jobs/${job.id}`),'links the clashing visit');assert.ok(html.includes('Back to the booking form')&&html.includes('title=Second+visit'));assert.ok(!html.includes('DISPATCH_CONFLICT'))
  assert.match(await (await h.request(`/app/assets/${asset.id}`)).text(),/<select name="technicianId"/)
