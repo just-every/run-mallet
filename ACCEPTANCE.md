@@ -6,23 +6,23 @@ Run the complete US repair: vehicle identification and inspection → priced est
 
 ## Published workshop guarantees
 
-**HTTP-001 — Private app boundary.** Status: **done**. Request private pages, state, commands and exports signed out, as another role, after revocation and cross-origin; require refusal without writes, then succeed with the authorised session. Evidence: `src/mallet/http.ts`; `src/mallet/auth.ts`; `tests/mallet.test.mjs`.
+**HTTP-001 — Private app boundary.** Status: **done**. Request private pages, state, commands and exports signed out, as another role, after revocation and cross-origin; require refusal without writes, then succeed with the authorized session. Evidence: `src/mallet/http.ts`; `src/mallet/auth.ts`; `tests/mallet.test.mjs`.
 
 **WORKSHOP-001 — Register and visits.** Status: **done**. Register an asset through the counter form, book repeat visits and try overlapping bay and technician bookings through the command API; inspect the conflict and complete service history. Evidence: `src/mallet/workshop.ts`; `tests/mallet.test.mjs`; `tests/browser-journey.mjs`.
 
-**ESTIMATE-001 — Exact decision.** Status: **done**. Prepare and revise through the API, refuse stale approval, record a printed handoff and partial customer authorisation, then refuse unapproved quantities and changes to accepted lines. Evidence: `src/mallet/estimates.ts`; `tests/mallet.test.mjs`; `tests/browser-journey.mjs`.
+**ESTIMATE-001 — Exact decision.** Status: **done**. Prepare and revise through the API, refuse stale approval, record a printed handoff and partial customer authorization, then refuse unapproved quantities and changes to accepted lines. Evidence: `src/mallet/estimates.ts`; `tests/mallet.test.mjs`; `tests/browser-journey.mjs`.
 
-**WORK-001 — Authorised actuals.** Status: **done**. As an assigned member record an authorised line; refuse another job, an unapproved line and excess quantity, then complete and inspect actor and revision evidence. Evidence: `src/mallet/workshop.ts`; `src/mallet/model.ts`; `tests/mallet.test.mjs`.
+**WORK-001 — Authorized actuals.** Status: **done**. As an assigned member record an authorized line; refuse another job, an unapproved line and excess quantity, then complete and inspect actor and revision evidence. Evidence: `src/mallet/workshop.ts`; `src/mallet/model.ts`; `tests/mallet.test.mjs`.
 
-**INVOICE-001 — One saved export.** Status: **done**. Complete authorised work, prepare and approve the invoice through the app, export twice with current and preceding versions, and compare saved identity, lines, totals and approval history. Evidence: `src/mallet/invoices.ts`; `tests/mallet.test.mjs`; `tests/browser-journey.mjs`.
+**INVOICE-001 — One saved export.** Status: **done**. Complete authorized work, prepare and approve the invoice through the app, export twice with current and preceding versions, and compare saved identity, lines, totals and approval history. Evidence: `src/mallet/invoices.ts`; `tests/mallet.test.mjs`; `tests/browser-journey.mjs`.
 
 **AGENT-001 — Prepare, then person decides.** Status: **done**. Issue a preparation key through the owner door, prepare a draft, refuse each decision command, approve as a person and revoke the key; old key and concurrent revoked authority cannot write. Evidence: `src/mallet/auth.ts`; `src/mallet/model.ts`; `tests/mallet.test.mjs`.
 
 **IMPORT-001 — Reviewed register move.** Status: **done**. Upload customers and customer-assets API snapshots, preview and apply the fingerprint, replay, resume and undo; inspect originals and journal, and prove an asset used by a new visit survives undo. Evidence: `src/mallet/imports/service.ts`; `src/mallet/imports/snapshots.ts`; `tests/mallet.test.mjs`.
 
-**DATA-001 — Custody and erasure.** Status: **done**. Export populated records through portability routes, restore to an empty fresh installation and compare history; reject populated restore, unauthorised erase and pre-erasure archives; restore a post-erasure backup. Evidence: `src/mallet/archive-policy.mjs`; `src/mallet/imports/portability.ts`; `src/mallet/imports/erasure.ts`; `tests/mallet.test.mjs`.
+**DATA-001 — Custody and erasure.** Status: **done**. Export populated records through portability routes, restore to an empty fresh installation and compare history; reject populated restore, unauthorized erase and pre-erasure archives; restore a post-erasure backup. Evidence: `src/mallet/archive-policy.mjs`; `src/mallet/imports/portability.ts`; `src/mallet/imports/erasure.ts`; `tests/mallet.test.mjs`.
 
-**PIER-001 — Read only.** Status: **partial**. Connect a real Pier installation, open the catalogue and compare SKU/name/unit with source; revoke access and show a recoverable error while source stock remains unchanged. Evidence: `src/mallet/pier.ts`; `src/mallet/http.ts`. Gap: Read-only adapter exists; no exercising integration journey with Pier or proven provider credential rotation.
+**PIER-001 — Read only.** Status: **partial**. Connect a real Pier installation, open the catalog and compare SKU/name/unit with source; revoke access and show a recoverable error while source stock remains unchanged. Evidence: `src/mallet/pier.ts`; `src/mallet/http.ts`. Gap: Read-only adapter exists; no exercising integration journey with Pier or proven provider credential rotation.
 
 ## Customers, vehicles and intake
 
@@ -38,7 +38,7 @@ Run the complete US repair: vehicle identification and inspection → priced est
 
 **INTAKE-002 — Custom forms and signed shop terms.** Status: **missing**. Publish two intake templates, change shop terms after an intake and retrieve its original signed version; a customer completes required fields by phone and receives a copy. Gap: No custom forms, signed terms, signatures or copy delivery.
 
-**INTAKE-003 — Counter and after-hours check-in.** Status: **missing**. Submit an after-hours check-in, review it at the counter, match an existing vehicle and authorise the diagnostic fee; duplicate submission creates one intake and no automatic repair authorisation. Gap: No customer intake door, drop-box workflow or diagnostic-fee agreement.
+**INTAKE-003 — Counter and after-hours check-in.** Status: **missing**. Submit an after-hours check-in, review it at the counter, match an existing vehicle and authorize the diagnostic fee; duplicate submission creates one intake and no automatic repair authorization. Gap: No customer intake door, drop-box workflow or diagnostic-fee agreement.
 
 **BOOK-001 — Online appointment booking.** Status: **missing**. Embed a booking form, choose a service on a phone and contend for the last available bay; one confirmed appointment is sent and cancellation frees capacity. Gap: Only staff booking exists; no customer booking, availability rules or self-service cancellation.
 
@@ -64,59 +64,59 @@ Run the complete US repair: vehicle identification and inspection → priced est
 
 **DIAG-003 — OEM service information and recall context.** Status: **missing**. Look up the same VIN in each licensed connector, attach a cited procedure/TSB and recall reference to a job, and refuse a mismatched engine or expired entitlement. Gap: No automotive technical-data, TSB, recall or maintenance-schedule integration.
 
-## Estimates and customer authorisation
+## Estimates and customer authorization
 
-**EST-001 — Parts and labour pricing.** Status: **partial**. Prepare mixed labour/parts for a fleet rate, apply a discount and compare the accepted estimate with actuals and invoice cent totals. Evidence: `src/mallet/money.ts`; `src/mallet/estimates.ts`; `src/mallet/invoices.ts`; `tests/mallet.test.mjs`. Gap: Revisioned part/labour lines flow to invoices, but prices/tax are AUD/GST; no cost, fee, discount or rate profiles.
+**EST-001 — Parts and labor pricing.** Status: **partial**. Prepare mixed labor/parts for a fleet rate, apply a discount and compare the accepted estimate with actuals and invoice cent totals. Evidence: `src/mallet/money.ts`; `src/mallet/estimates.ts`; `src/mallet/invoices.ts`; `tests/mallet.test.mjs`. Gap: Revisioned part/labor lines flow to invoices, but prices/tax are AUD/GST; no cost, fee, discount or rate profiles.
 
 **EST-002 — Canned jobs and pricing matrices.** Status: **missing**. Create an oil-service package and cost matrix, add it from a finding, override one price as a manager, then change the matrix; the old estimate remains reproducible. Gap: No packages, pricing matrices, minimum-charge policies or override rules.
 
-**EST-003 — Customer approval and decline by link.** Status: **partial**. On a phone approve one line and decline another, replay the request and try an expired/stale link after a price change; exactly one valid decision is retained and staff can retrieve its signed receipt. Evidence: `src/mallet/estimates.ts`; `tests/mallet.test.mjs`. Gap: Staff-recorded manual partial authorisation exists; no delivered link, customer decision endpoint, full decline or signature artifact.
+**EST-003 — Customer approval and decline by link.** Status: **partial**. On a phone approve one line and decline another, replay the request and try an expired/stale link after a price change; exactly one valid decision is retained and staff can retrieve its signed receipt. Evidence: `src/mallet/estimates.ts`; `tests/mallet.test.mjs`. Gap: Staff-recorded manual partial authorization exists; no delivered link, customer decision endpoint, full decline or signature artifact.
 
-**EST-004 — Supplemental approval on the same repair.** Status: **partial**. Authorise brakes, start work, discover a rotor and send its supplement; decline it, then approve a new supplement and verify invoice quantities cannot cross authorised revisions. Evidence: `src/mallet/estimates.ts`; `tests/mallet.test.mjs`. Gap: Pre-authorisation revisioning exists; accepted estimates freeze and additional work currently requires a new visit.
+**EST-004 — Supplemental approval on the same repair.** Status: **partial**. Authorize brakes, start work, discover a rotor and send its supplement; decline it, then approve a new supplement and verify invoice quantities cannot cross authorized revisions. Evidence: `src/mallet/estimates.ts`; `tests/mallet.test.mjs`. Gap: Pre-authorization revisioning exists; accepted estimates freeze and additional work currently requires a new visit.
 
 **EST-005 — Declined work register.** Status: **missing**. Decline tires at 60,000 miles, open the next visit and turn the still-needed item into a repriced estimate with a new decision; history keeps both outcomes. Gap: No explicit decline record, reason, mileage trigger or carry-forward.
 
-**GUIDE-001 — MOTOR labour times.** Status: **missing**. Select a MOTOR operation, add a related operation with overlap and compare imported hours/provenance to the licensed source before approval. Gap: No MOTOR labour-guide adapter or overlap-time handling.
+**GUIDE-001 — MOTOR labor times.** Status: **missing**. Select a MOTOR operation, add a related operation with overlap and compare imported hours/provenance to the licensed source before approval. Gap: No MOTOR labor-guide adapter or overlap-time handling.
 
-**GUIDE-002 — ALLDATA labour and procedures.** Status: **missing**. Build a quote from a licensed ALLDATA vehicle lookup, compare its operation/time, then expire access and show the unresolved lookup without fabricated times. Gap: No ALLDATA integration or entitlement workflow.
+**GUIDE-002 — ALLDATA labor and procedures.** Status: **missing**. Build a quote from a licensed ALLDATA vehicle lookup, compare its operation/time, then expire access and show the unresolved lookup without fabricated times. Gap: No ALLDATA integration or entitlement workflow.
 
 **GUIDE-003 — ProDemand estimating and maintenance.** Status: **missing**. Select maintenance and repair operations from ProDemand on an RO, compare source hours and included work, and retain the reference on the approved estimate. Gap: No ProDemand adapter or licensed-data workflow.
 
-**EST-006 — Estimate expiry and approval chasing.** Status: **missing**. Send an estimate, advance a scheduled reminder, supersede it and approve the replacement; only the current undecided version is chased and failed delivery opens an adviser task. Gap: No estimate delivery, expiry, signature-request automation or chase queue.
+**EST-006 — Estimate expiry and approval chasing.** Status: **missing**. Send an estimate, advance a scheduled reminder, supersede it and approve the replacement; only the current undecided version is chased and failed delivery opens an advisor task. Gap: No estimate delivery, expiry, signature-request automation or chase queue.
 
 ## Workshop execution and technician work
 
-**FLOW-001 — Live repair and technician boards.** Status: **partial**. Move several realistic ROs through the board, filter one technician and overdue customer promise, and try to skip authorisation/quality gates. Evidence: `src/mallet/ui/workshop.ts`; `src/mallet/workshop.ts`; `tests/browser-journey.mjs`. Gap: Basic status badges, job lists and member visibility exist; no full stages, filters, priorities or blocker board.
+**FLOW-001 — Live repair and technician boards.** Status: **partial**. Move several realistic ROs through the board, filter one technician and overdue customer promise, and try to skip authorization/quality gates. Evidence: `src/mallet/ui/workshop.ts`; `src/mallet/workshop.ts`; `tests/browser-journey.mjs`. Gap: Basic status badges, job lists and member visibility exist; no full stages, filters, priorities or blocker board.
 
 **FLOW-002 — Promise times and capacity.** Status: **partial**. Delay a required part beyond a promised pickup, inspect the affected bay/technician plan and approve one revised promise; preserve original promise and customer notice receipt. Evidence: `src/mallet/workshop.ts`; `tests/mallet.test.mjs`. Gap: Start/end booking times and dispatch proposals exist; no promise, dependency model, overdue view or customer notice.
 
-**FLOW-003 — Rules-based routing and escalation.** Status: **missing**. Submit two repair types, run routing and advance a closed-day deadline; one assigned handler receives each case and an unacknowledged blocker escalates once. Gap: No automatic routing, skill rules, deadline scheduler or escalation acknowledgement.
+**FLOW-003 — Rules-based routing and escalation.** Status: **missing**. Submit two repair types, run routing and advance a closed-day deadline; one assigned handler receives each case and an unacknowledged blocker escalates once. Gap: No automatic routing, skill rules, deadline scheduler or escalation acknowledgment.
 
-**TIME-001 — Employee clock and job timers.** Status: **partial**. Clock in, run two jobs with a break, correct a missed stop with manager approval and compare attendance, actual and sold hours; a member cannot alter a colleague’s time. Evidence: `src/mallet/workshop.ts`; `src/mallet/ui/job.ts`. Gap: Actual labour quantities can be entered; no attendance clock, elapsed timer, breaks or corrections.
+**TIME-001 — Employee clock and job timers.** Status: **partial**. Clock in, run two jobs with a break, correct a missed stop with manager approval and compare attendance, actual and sold hours; a member cannot alter a colleague’s time. Evidence: `src/mallet/workshop.ts`; `src/mallet/ui/job.ts`. Gap: Actual labor quantities can be entered; no attendance clock, elapsed timer, breaks or corrections.
 
-**FLOW-004 — Technician collaboration and handoff.** Status: **partial**. Hand a diagnostic job to a specialist, mention an adviser, complete a dependent subtask and inspect both technicians’ time and handover receipt. Evidence: `src/mallet/model.ts`; `src/mallet/http.ts`; `tests/mallet.test.mjs`. Gap: Single-technician assignment isolation and notes exist; no teams, subtasks, mentions or handoff acknowledgement.
+**FLOW-004 — Technician collaboration and handoff.** Status: **partial**. Hand a diagnostic job to a specialist, mention an advisor, complete a dependent subtask and inspect both technicians’ time and handover receipt. Evidence: `src/mallet/model.ts`; `src/mallet/http.ts`; `tests/mallet.test.mjs`. Gap: Single-technician assignment isolation and notes exist; no teams, subtasks, mentions or handoff acknowledgment.
 
-**WARRANTY-001 — Warranty and comeback work.** Status: **missing**. Return with the same symptom within coverage, open a linked rework RO, approve no-charge labour and a supplier claim, then compare comeback cost and preserved original invoice. Gap: No warranty terms, comeback links, coverage decisions, claims or rework accounting.
+**WARRANTY-001 — Warranty and comeback work.** Status: **missing**. Return with the same symptom within coverage, open a linked rework RO, approve no-charge labor and a supplier claim, then compare comeback cost and preserved original invoice. Gap: No warranty terms, comeback links, coverage decisions, claims or rework accounting.
 
-**RETURN-001 — Paid and documented handover.** Status: **missing**. Try collection with a failed test and unpaid invoice, then settle through the processor and hand keys to an authorised delegate; inspect receipt and any override. Gap: No ready/collected custody, payment gate, delegate authority or handover receipt.
+**RETURN-001 — Paid and documented handover.** Status: **missing**. Try collection with a failed test and unpaid invoice, then settle through the processor and hand keys to an authorized delegate; inspect receipt and any override. Gap: No ready/collected custody, payment gate, delegate authority or handover receipt.
 
-**FLEET-001 — Fleet and commercial repair workflows.** Status: **missing**. A driver drops off a fleet van, the fleet manager approves against its PO, accounts receives a term invoice and a statement drills to that van’s downtime/cost. Gap: No fleet accounts, authoriser rules, credit terms, statements or downtime workflow.
+**FLEET-001 — Fleet and commercial repair workflows.** Status: **missing**. A driver drops off a fleet van, the fleet manager approves against its PO, accounts receives a term invoice and a statement drills to that van’s downtime/cost. Gap: No fleet accounts, authorizer rules, credit terms, statements or downtime workflow.
 
 ## Parts, inventory and purchasing
 
-**PART-001 — Shop parts catalogue and traceability.** Status: **partial**. Receive two lots of the same SKU, install one and search the supplier lot; only affected ROs and vehicles appear. Evidence: `src/mallet/pier.ts`; `src/mallet/money.ts`. Gap: Pier SKU/name/unit lookup and part item IDs exist; no fitment, costs, lot/serial inventory or supplier provenance.
+**PART-001 — Shop parts catalog and traceability.** Status: **partial**. Receive two lots of the same SKU, install one and search the supplier lot; only affected ROs and vehicles appear. Evidence: `src/mallet/pier.ts`; `src/mallet/money.ts`. Gap: Pier SKU/name/unit lookup and part item IDs exist; no fitment, costs, lot/serial inventory or supplier provenance.
 
 **PART-002 — Barcode receiving and stock counts.** Status: **missing**. Scan a shipment and bins, count a shortage and approve its adjustment; stock ledger and receiving/variance reports reconcile. Gap: No barcode stock ledger, bins, receiving counts, cycle counts or adjustments.
 
-**PART-003 — Repair reservations and consumption.** Status: **partial**. Reserve the last item for one RO, refuse a competing reservation, consume it and cancel another job; retry a Pier movement and prove source and repair ledger agree once. Evidence: `src/mallet/workshop.ts`; `src/mallet/invoices.ts`; `src/mallet/pier.ts`. Gap: Authorised part quantities bill at estimate prices; no reservation, stock movement, cost allocation or Pier write adapter.
+**PART-003 — Repair reservations and consumption.** Status: **partial**. Reserve the last item for one RO, refuse a competing reservation, consume it and cancel another job; retry a Pier movement and prove source and repair ledger agree once. Evidence: `src/mallet/workshop.ts`; `src/mallet/invoices.ts`; `src/mallet/pier.ts`. Gap: Authorized part quantities bill at estimate prices; no reservation, stock movement, cost allocation or Pier write adapter.
 
 **BUY-001 — Purchase orders and goods receipts.** Status: **missing**. Approve a two-line PO, receive one line and part of another, retain the backorder and match a changed supplier bill as an exception. Gap: No purchase orders, approvals, goods receipts, backorders or three-way matching.
 
-**BUY-002 — Supplier stock and approved ordering.** Status: **missing**. Compare two suppliers, approve a cart, replay a timed-out submission and process a rejected substitution; one acknowledged order is linked to the repair. Gap: No supplier comparison, cart approval, order submission or acknowledgement state.
+**BUY-002 — Supplier stock and approved ordering.** Status: **missing**. Compare two suppliers, approve a cart, replay a timed-out submission and process a rejected substitution; one acknowledged order is linked to the repair. Gap: No supplier comparison, cart approval, order submission or acknowledgment state.
 
-**BUY-003 — PartsTech catalogue and orders.** Status: **missing**. Search a licensed PartsTech test account for a VIN-specific part, approve an order, receive its acknowledgement and partial receipt and show its linked RO cost. Gap: No PartsTech adapter, credential onboarding or supplier-event mapping.
+**BUY-003 — PartsTech catalog and orders.** Status: **missing**. Search a licensed PartsTech test account for a VIN-specific part, approve an order, receive its acknowledgment and partial receipt and show its linked RO cost. Gap: No PartsTech adapter, credential onboarding or supplier-event mapping.
 
-**BUY-004 — Nexpart catalogue and orders.** Status: **missing**. Find and order a part through an authorised Nexpart connection, simulate an unavailable line and compare acknowledgement and returned credit with the RO. Gap: No Nexpart connection or distributor onboarding.
+**BUY-004 — Nexpart catalog and orders.** Status: **missing**. Find and order a part through an authorized Nexpart connection, simulate an unavailable line and compare acknowledgment and returned credit with the RO. Gap: No Nexpart connection or distributor onboarding.
 
 **BUY-005 — Worldpac sourcing and orders.** Status: **missing**. Select a Worldpac part, approve the order, receive a delayed shipment and process a return/credit without losing original cost or promised ETA. Gap: No Worldpac or speedDIAL integration; supplier approval/access work remains required.
 
@@ -130,17 +130,17 @@ Run the complete US repair: vehicle identification and inspection → priced est
 
 **PART-008 — Inter-store transfers.** Status: **missing**. Transfer a serialized part between shops, receive one unit short and inspect sending, in-transit and receiving balances plus approved correction. Gap: No locations, inter-store transfer ledger or in-transit custody.
 
-**BUY-006 — Supplier and warranty compensation reconciliation.** Status: **missing**. Process a short delivery, changed supplier price and underpaid warranty labour claim; reviewed adjustments reconcile to the BOOKS-003 bill and vendor-credit postings in the connected ledger and to RO margin. Gap: No supplier invoice or warranty-labour matching, remittance or exception workflow.
+**BUY-006 — Supplier and warranty compensation reconciliation.** Status: **missing**. Process a short delivery, changed supplier price and underpaid warranty labor claim; reviewed adjustments reconcile to the BOOKS-003 bill and vendor-credit postings in the connected ledger and to RO margin. Gap: No supplier invoice or warranty-labor matching, remittance or exception workflow.
 
 **BUY-007 — MobileSentrix US parts.** Status: **missing**. Choose a compatible phone part, approve a MobileSentrix cart, complete supplier checkout and receive the actual shipment into the linked ticket. Gap: No MobileSentrix connection or supplier cart/receipt handoff.
 
-**BUY-008 — Injured Gadgets order sync.** Status: **missing**. Capture an actual authorised supplier order, preview mapping, import twice and partially receive it; one PO and correct remaining balance exist. Gap: No Injured Gadgets OrderSync importer, POs or receiving integration.
+**BUY-008 — Injured Gadgets order sync.** Status: **missing**. Capture an actual authorized supplier order, preview mapping, import twice and partially receive it; one PO and correct remaining balance exist. Gap: No Injured Gadgets OrderSync importer, POs or receiving integration.
 
 ## US invoicing, payments and accounting
 
 **INV-001 — USD invoices and customer delivery.** Status: **partial**. Finish a mixed US repair, issue and deliver the invoice, reopen a legacy export and verify each currency and total; corrected invoices reference their original. Evidence: `src/mallet/invoices.ts`; `src/mallet/ui/job.ts`; `tests/mallet.test.mjs`. Gap: Approved immutable invoice/CSV core ships; no USD settings, numbered correction documents, PDF or customer delivery.
 
-**TAX-001 — US parts and labour sales tax.** Status: **partial**. Invoice taxable parts and exempt labour in two configured US jurisdictions, then refund one part; compare tax cents, rule versions and tax-provider responses. Evidence: `src/mallet/money.ts`; `tests/mallet.test.mjs`. Gap: Integer-cent GST calculation and per-line taxable flags exist; no US rates/classes, jurisdiction rules or tax-provider adapter.
+**TAX-001 — US parts and labor sales tax.** Status: **partial**. Invoice taxable parts and exempt labor in two configured US jurisdictions, then refund one part; compare tax cents, rule versions and tax-provider responses. Evidence: `src/mallet/money.ts`; `tests/mallet.test.mjs`. Gap: Integer-cent GST calculation and per-line taxable flags exist; no US rates/classes, jurisdiction rules or tax-provider adapter.
 
 **TAX-002 — Exemptions and shop fees.** Status: **missing**. Apply a fleet exemption and capped supplies fee, expire the certificate and refund a taxed line; invoice disclosures and jurisdiction tax report match the recorded rules. Gap: No certificate custody, expiry, configurable fees/surcharges or US tax reporting.
 
@@ -166,7 +166,7 @@ Run the complete US repair: vehicle identification and inspection → priced est
 
 **BOOKS-001 — QuickBooks Online two-way sync.** Status: **missing**. Post a paid RO to a QBO sandbox, edit a permitted payment there, import it, then replay webhooks and break an account mapping; each side reconciles and the broken item stays visible. Receive a PO with a supplier invoice number, return one of its lines and pay a sublet; the sandbox shows one bill, one vendor credit and one fee expense, each linked to its Mallet source record, and replaying every job and webhook creates no duplicate. Gap: No QuickBooks Online OAuth, mapping, invoice/payment sync or reconciliation.
 
-**BOOKS-002 — Xero two-way sync.** Status: **missing**. Send a mixed-tax invoice and refund to a Xero demo organisation, record a payment there and reconcile it in Mallet; revoked access queues an actionable exception. Receive a PO and return one line; the organisation shows one supplier bill and one credit note linked to their Mallet source records, and replay posts neither twice. Gap: No Xero connection or two-way accounting workflow.
+**BOOKS-002 — Xero two-way sync.** Status: **missing**. Send a mixed-tax invoice and refund to a Xero demo organization, record a payment there and reconcile it in Mallet; revoked access queues an actionable exception. Receive a PO and return one line; the organization shows one supplier bill and one credit note linked to their Mallet source records, and replay posts neither twice. Gap: No Xero connection or two-way accounting workflow.
 
 **BOOKS-003 — Cost and cash postings to the books.** Status: **missing**. In a QBO sandbox and a Xero demo company, receive a two-line PO with a supplier invoice number, return one line with a core credit, pay a sublet, settle a card payment and its payout, record a drawer paid-out and transfer stock between two locations. Each system shows the bill, vendor credit, sublet bill, fee expense, payout transfer and journal entries, each opening its Mallet source record. Switch fees to daily summary and post a second day, then replay every job and webhook: no entry appears twice, and the period gross profit in the books equals REPORT-002. Gap: No accounting connection or posting of supplier bills, vendor credits, sublet cost, processor fees, payouts, drawer movements or inventory journals.
 
@@ -180,13 +180,13 @@ Run the complete US repair: vehicle identification and inspection → priced est
 
 **MSG-002 — Gmail repair conversations.** Status: **missing**. Send an estimate from a Google test mailbox, reply from the customer and revoke OAuth; the reply appears once on the RO and later delivery has an actionable error. Gap: No Gmail OAuth, ticket threading or repair mail delivery.
 
-**MSG-003 — Microsoft 365 Outlook conversations.** Status: **missing**. Send from a Microsoft 365 test mailbox, reply with an attachment and remove shared-mailbox authority; only authorised conversations appear and blocked sends are surfaced. Gap: No Microsoft Graph mailbox connection, reply sync or shared mailbox controls.
+**MSG-003 — Microsoft 365 Outlook conversations.** Status: **missing**. Send from a Microsoft 365 test mailbox, reply with an attachment and remove shared-mailbox authority; only authorized conversations appear and blocked sends are surfaced. Gap: No Microsoft Graph mailbox connection, reply sync or shared mailbox controls.
 
 **PORTAL-001 — Customer repair portal.** Status: **missing**. Sign in as a household and fleet payer, review two visits and pay one invoice; try another customer’s IDs and expired links and receive no private data. Gap: No customer-facing status/history portal, accounts or access-scoped repair links.
 
 **AUTO-001 — Appointment confirmation and reminders.** Status: **missing**. Book, reschedule and cancel appointments around a US DST change and run the scheduler; only current eligible reminders arrive, in the recipient’s allowed hours. Gap: No appointment scheduler, customer messaging or reminder delivery state.
 
-**AUTO-002 — Status and pickup notifications.** Status: **missing**. Advance an RO to waiting parts then ready, replay the event and let pickup lapse; each eligible notice sends once and the uncollected case reaches staff. Gap: No status/pickup outbox, delivery acknowledgements or uncollected-property queue.
+**AUTO-002 — Status and pickup notifications.** Status: **missing**. Advance an RO to waiting parts then ready, replay the event and let pickup lapse; each eligible notice sends once and the uncollected case reaches staff. Gap: No status/pickup outbox, delivery acknowledgments or uncollected-property queue.
 
 **AUTO-003 — Time and mileage service reminders.** Status: **missing**. Close a 60,000-mile service, advance time and add a later odometer reading; only genuinely due consented recommendations generate reminders and completed work suppresses them. Gap: No maintenance plans, service-due calculation or reminder automation.
 
@@ -202,9 +202,9 @@ Run the complete US repair: vehicle identification and inspection → priced est
 
 **REPORT-001 — ARO car count and sales funnel.** Status: **missing**. Complete/void/refund a known set of ROs, compare ARO/car count/close ratio with independent arithmetic and drill every component to the underlying record. Gap: No operational KPI reports, definitions, filters or drill-through.
 
-**REPORT-002 — Repair and parts profitability.** Status: **missing**. Receive a higher-cost part, finish a discounted repair and a comeback, then compare estimated/realised margins and source cost events. Gap: No cost ledger, loaded labour, gross-profit/margin reporting or warranty-cost adjustments.
+**REPORT-002 — Repair and parts profitability.** Status: **missing**. Receive a higher-cost part, finish a discounted repair and a comeback, then compare estimated/realized margins and source cost events. Gap: No cost ledger, loaded labor, gross-profit/margin reporting or warranty-cost adjustments.
 
-**REPORT-003 — Technician efficiency and productivity.** Status: **missing**. Clock two technicians through billable and rework jobs, adjust one timer and recompute the report from clock events; unauthorised staff cannot see payroll-sensitive rates. Gap: No clocks, efficiency/productivity reports or rate-sensitive reporting permissions.
+**REPORT-003 — Technician efficiency and productivity.** Status: **missing**. Clock two technicians through billable and rework jobs, adjust one timer and recompute the report from clock events; unauthorized staff cannot see payroll-sensitive rates. Gap: No clocks, efficiency/productivity reports or rate-sensitive reporting permissions.
 
 **REPORT-004 — Turnaround and customer promises.** Status: **missing**. Run repairs with controlled waits and a comeback, then drill the delay report and promised-versus-actual completion to the exact stage events. Gap: No stage timing, promise ledger, no-show/DVI or comeback analytics.
 
@@ -220,17 +220,17 @@ Run the complete US repair: vehicle identification and inspection → priced est
 
 **CAL-001 — Google Calendar scheduling.** Status: **missing**. Book and reschedule from Mallet and a Google test calendar, edit one recurring exception and revoke access; one linked event and an actionable conflict remain. Gap: No Google Calendar OAuth or event synchronization.
 
-**CAL-002 — Microsoft 365 Calendar scheduling.** Status: **missing**. Create an appointment, change its time in Microsoft 365 and replay notifications; conflict handling requires adviser resolution and only one event exists. Gap: No Microsoft 365 calendar adapter, mapping or conflict reconciliation.
+**CAL-002 — Microsoft 365 Calendar scheduling.** Status: **missing**. Create an appointment, change its time in Microsoft 365 and replay notifications; conflict handling requires advisor resolution and only one event exists. Gap: No Microsoft 365 calendar adapter, mapping or conflict reconciliation.
 
-**OEM-001 — Apple GSX authorised repairs.** Status: **missing**. Using approved OEM test access, validate serial entitlement, submit a reviewed repair/parts request and reconcile a rejected claim; no access is implied for an ineligible shop. Gap: No GSX integration, provider approval, warranty mappings or authorised repair submissions.
+**OEM-001 — Apple GSX authorized repairs.** Status: **missing**. Using approved OEM test access, validate serial entitlement, submit a reviewed repair/parts request and reconcile a rejected claim; no access is implied for an ineligible shop. Gap: No GSX integration, provider approval, warranty mappings or authorized repair submissions.
 
-**OEM-002 — Samsung GSPN authorised repairs.** Status: **missing**. Run a permitted GSPN test repair, obtain authorisation and parts status, then reconcile warranty compensation and a failed submission without duplicate claims. Gap: No GSPN connection, access agreements or warranty/parts/claim workflow.
+**OEM-002 — Samsung GSPN authorized repairs.** Status: **missing**. Run a permitted GSPN test repair, obtain authorization and parts status, then reconcile warranty compensation and a failed submission without duplicate claims. Gap: No GSPN connection, access agreements or warranty/parts/claim workflow.
 
 **SHIP-001 — ShipStation mail-in and return logistics.** Status: **missing**. Create a mail-in device repair, receive its tracked parcel, finish and pay the repair, print a return label and handle a delivery exception with preserved custody. Gap: No ShipStation adapter, shipping labels, tracking or mail-in custody.
 
-**STORE-001 — Shopify storefront connection.** Status: **missing**. Place a Shopify test accessory order and return it, then book a repair handoff; stock/credit reconcile without duplicate payments or unapproved labour. Gap: No Shopify store, order, availability or return adapter.
+**STORE-001 — Shopify storefront connection.** Status: **missing**. Place a Shopify test accessory order and return it, then book a repair handoff; stock/credit reconcile without duplicate payments or unapproved labor. Gap: No Shopify store, order, availability or return adapter.
 
-**STORE-002 — WooCommerce storefront connection.** Status: **missing**. Receive an authorised WooCommerce test order, replay its webhook and refund a line; one order, correct stock and provider-linked payment remain. Gap: No WooCommerce adapter or storefront/repair reconciliation.
+**STORE-002 — WooCommerce storefront connection.** Status: **missing**. Receive an authorized WooCommerce test order, replay its webhook and refund a line; one order, correct stock and provider-linked payment remain. Gap: No WooCommerce adapter or storefront/repair reconciliation.
 
 **API-001 — Documented shop API.** Status: **partial**. Using a scoped client follow a repair from intake through receipt, retry a write and page history; the client cannot approve or view money without its explicit capability. Evidence: `src/mallet/http.ts`; `src/mallet/model.ts`; `tests/mallet.test.mjs`. Gap: Authenticated state/command routes exist for current core; no complete resource API, scopes, pagination or idempotency contract for target resources.
 
@@ -242,21 +242,21 @@ Run the complete US repair: vehicle identification and inspection → priced est
 
 ## Move-in and continuity from incumbent systems
 
-**MOVE-001 — Tekmetric move-in.** Status: **missing**. Import a real owner-authorised source capture spanning paid/open ROs, declined work, deposits and inspection media; reconcile customer populations beyond filtered customer reports, counts, dollars and attachment access; reproduce three Smart Jobs and one matrix-priced part with the source totals and reconcile inventory per SKU and bin as MOVE-013 requires. Gap: Only RepairShopr register snapshots supported; no Tekmetric CSV/API/history/media importer or reconciled capture.
+**MOVE-001 — Tekmetric move-in.** Status: **missing**. Import a real owner-authorized source capture spanning paid/open ROs, declined work, deposits and inspection media; reconcile customer populations beyond filtered customer reports, counts, dollars and attachment access; reproduce three Smart Jobs and one matrix-priced part with the source totals and reconcile inventory per SKU and bin as MOVE-013 requires. Gap: Only RepairShopr register snapshots supported; no Tekmetric CSV/API/history/media importer or reconciled capture.
 
 **MOVE-002 — Shopmonkey move-in.** Status: **missing**. Import a Shopmonkey archive with fleets, line items, payments and media, review All Time/filter coverage and duplicate mappings, then reproduce a historical RO and opening AR with exact consent artifacts. Gap: No Shopmonkey XLS/XLSX/API importer or inspection/history capture.
 
-**MOVE-003 — Mitchell 1 Manager SE move-in.** Status: **missing**. Restore an authorised database copy into an isolated extraction tool, preview source counts and map customer/vehicle/RO IDs, invoices, recommendations, balances, canned jobs and inventory; open matching PDF/media evidence and reconcile an open RO at cutover. Gap: No Manager SE database extractor, Followup.csv/PDF importer or schema/media mapping.
+**MOVE-003 — Mitchell 1 Manager SE move-in.** Status: **missing**. Restore an authorized database copy into an isolated extraction tool, preview source counts and map customer/vehicle/RO IDs, invoices, recommendations, balances, canned jobs and inventory; open matching PDF/media evidence and reconcile an open RO at cutover. Gap: No Manager SE database extractor, Followup.csv/PDF importer or schema/media mapping.
 
 **MOVE-004 — Shop-Ware move-in.** Status: **missing**. Preview a real delivered archive with its manifest/sample validation, import all agreed records and media, and reconcile history, declined work, estimates, AR, canned-job totals and inventory per SKU and bin; unresolved vendor extraction remains an explicit blocking item. Gap: No Shop-Ware importer; complete vendor offboarding format/media access must be provisioned and validated.
 
-**MOVE-005 — AutoLeap move-in.** Status: **missing**. Obtain an authorised export/archive and sample manifest, validate format through preview, then reconcile vehicles, historical/open work, payments, declines, inspection evidence, canned-service totals and inventory per SKU and bin; every unavailable object has a visible extraction task. Gap: No AutoLeap importer; outbound archive schema and media delivery need provider discovery/provisioning, not a scope reduction.
+**MOVE-005 — AutoLeap move-in.** Status: **missing**. Obtain an authorized export/archive and sample manifest, validate format through preview, then reconcile vehicles, historical/open work, payments, declines, inspection evidence, canned-service totals and inventory per SKU and bin; every unavailable object has a visible extraction task. Gap: No AutoLeap importer; outbound archive schema and media delivery need provider discovery/provisioning, not a scope reduction.
 
 **MOVE-006 — RepairDesk move-in.** Status: **missing**. Preview supplied RepairDesk CSV/XLS files and media manifest, reject mismatched ticket references and reconcile a warranty comeback, serialized stock and partial-payment ticket. Gap: No RepairDesk CSV/XLS importer, media mapping or historic stock/financial reconciliation.
 
-**MOVE-007 — Orderry move-in.** Status: **missing**. Move an authorised Orderry dataset, compare a customer’s repeat work orders and inventory/open balance and inspect original estimate consent and attachment access. Gap: No Orderry spreadsheet/API/history importer or support-assisted capture workflow.
+**MOVE-007 — Orderry move-in.** Status: **missing**. Move an authorized Orderry dataset, compare a customer’s repeat work orders and inventory/open balance and inspect original estimate consent and attachment access. Gap: No Orderry spreadsheet/API/history importer or support-assisted capture workflow.
 
-**MOVE-008 — Fixably move-in.** Status: **missing**. Validate a real delivered capture’s schema/coverage, move repair history and warranty/parts costs, reconcile control totals and reauthorise the OEM account at destination. Gap: No Fixably importer; actual export schema/API entitlement and media coverage need provider provisioning.
+**MOVE-008 — Fixably move-in.** Status: **missing**. Validate a real delivered capture’s schema/coverage, move repair history and warranty/parts costs, reconcile control totals and reauthorize the OEM account at destination. Gap: No Fixably importer; actual export schema/API entitlement and media coverage need provider provisioning.
 
 **MOVE-009 — RepairShopr full repair history.** Status: **partial**. Import register plus historical/open tickets and invoices, reconcile serial/customer relationships and dollars and open a prior repair’s original decision/media; undo preserves native activity after cutover. Evidence: `src/mallet/imports/snapshots.ts`; `src/mallet/imports/service.ts`; `tests/mallet.test.mjs`. Gap: Customers/assets snapshot preview/apply/original custody ship; no repair, stock, finance, attachment or transcript history import.
 
@@ -266,17 +266,17 @@ Run the complete US repair: vehicle identification and inspection → priced est
 
 **MOVE-012 — Open work and controlled cutover.** Status: **missing**. Migrate an open approved RO and pending deposit, make one final source change, apply its reviewed delta and finish in Mallet; reconcile one invoice/payment/order/message owner across cutover. Gap: No shadow cutover, final-delta importer, open-repair adoption or external action fencing.
 
-**MOVE-013 — Shop setup and inventory move-in.** Status: **missing**. From an owner-authorised Tekmetric capture, then each other incumbent’s route, import setup and inventory. Reproduce three canned jobs (an oil service, front brakes and a diagnostic) and one matrix-priced part with the same line and grand totals as the source; reconcile on-hand quantity and extended cost per SKU and bin against the source inventory report; start a new estimate from an imported canned job and sell one stocked part from its imported bin, which decrements that bin. Gap: No setup or inventory importer; canned jobs, pricing matrices, labour rates, fees, inspection templates, vendors and stock do not yet exist as Mallet records.
+**MOVE-013 — Shop setup and inventory move-in.** Status: **missing**. From an owner-authorized Tekmetric capture, then each other incumbent’s route, import setup and inventory. Reproduce three canned jobs (an oil service, front brakes and a diagnostic) and one matrix-priced part with the same line and grand totals as the source; reconcile on-hand quantity and extended cost per SKU and bin against the source inventory report; start a new estimate from an imported canned job and sell one stocked part from its imported bin, which decrements that bin. Gap: No setup or inventory importer; canned jobs, pricing matrices, labor rates, fees, inspection templates, vendors and stock do not yet exist as Mallet records.
 
-## Tyres and broader automotive operations
+## Tires and broader automotive operations
 
-**TIRE-001 — Tire fitment pricing and sourcing.** Status: **missing**. Quote a correctly rated set using each supported authorised supplier connection, reject incompatible fitment, order/receive tires and reconcile fees and installed stock. Gap: No tire fitment/catalogues, TireHub/NAPA ProLink adapters or tire package/order workflow.
+**TIRE-001 — Tire fitment pricing and sourcing.** Status: **missing**. Quote a correctly rated set using each supported authorized supplier connection, reject incompatible fitment, order/receive tires and reconcile fees and installed stock. Gap: No tire fitment/catalogs, TireHub/NAPA ProLink adapters or tire package/order workflow.
 
 **TIRE-002 — DOT tire registration and traceability.** Status: **missing**. Scan an installed set’s TINs, submit a partner test registration once and run a lot/recall query; missing/invalid codes remain unresolved and never marked registered. Gap: No tire TIN ledger, registration partner onboarding or submission/recall traceability.
 
 ## Roles, security and operating guarantees
 
-**GOV-001 — Job-specific staff rights.** Status: **partial**. Exercise each role through page, form, API and downloads, exceed discount/refund/spend limits and access another location; require refusal without writes and verify authorised handoffs. Evidence: `src/mallet/auth.ts`; `src/mallet/model.ts`; `src/mallet/http.ts`; `tests/mallet.test.mjs`. Gap: Owner/admin/member/agent isolation ships; no adviser, manager, purchaser, cashier/accountant roles, limits or location/cost rights.
+**GOV-001 — Job-specific staff rights.** Status: **partial**. Exercise each role through page, form, API and downloads, exceed discount/refund/spend limits and access another location; require refusal without writes and verify authorized handoffs. Evidence: `src/mallet/auth.ts`; `src/mallet/model.ts`; `src/mallet/http.ts`; `tests/mallet.test.mjs`. Gap: Owner/admin/member/agent isolation ships; no advisor, manager, purchaser, cashier/accountant roles, limits or location/cost rights.
 
 **GOV-002 — Approvals audit and accountable changes.** Status: **partial**. Perform a discount override, stock correction, refund and agent proposal, revoke the actor and export audit; exact prior decisions remain attributable and secrets are absent. Evidence: `src/mallet/model.ts`; `src/mallet/estimates.ts`; `src/mallet/invoices.ts`; `tests/mallet.test.mjs`. Gap: Native events and exact approvals identify core actions; no complete target action coverage or searchable/exportable audit UI.
 
@@ -290,13 +290,17 @@ Run the complete US repair: vehicle identification and inspection → priced est
 
 **OPS-001 — Owner-run deployment and complete portability.** Status: **partial**. From a fresh checkout launch with rer dev, create a real repair, export, restore into an empty separately configured owner installation and finish it; verify record/media counts, fresh authority and rollback instructions. Evidence: `src/mallet/archive-policy.mjs`; `src/mallet/http.ts`; `tests/clone-journey.mjs`; `tests/mallet.test.mjs`. Gap: Base launch and core archive routes exist; target records/media, full invoiced-archive journey and operational update/recovery coverage remain incomplete.
 
-**OPS-002 — Fast counter work and dependable background jobs.** Status: **missing**. Load the declared dataset through the import door, drive 30 concurrent staff sessions in one shop and 300 across ten, and measure each stated p95 (search, board load and refresh, RO open, photo acknowledgement) from request logs. Stop the server with reminders and provider jobs due, restart it and show each runs exactly once within 5 minutes; inject a provider failure and replay it; inspect one visible outcome per business event and the backlog diagnostics. Gap: No declared-capacity dataset, p95 search/board/RO/photo measurements, durable follow-up jobs or restart-bounded background recovery for target workflows.
+**OPS-002 — Fast counter work and dependable background jobs.** Status: **missing**. Load the declared dataset through the import door, drive 30 concurrent staff sessions in one shop and 300 across ten, and measure each stated p95 (search, board load and refresh, RO open, photo acknowledgment) from request logs. Stop the server with reminders and provider jobs due, restart it and show each runs exactly once within 5 minutes; inject a provider failure and replay it; inspect one visible outcome per business event and the backlog diagnostics. Gap: No declared-capacity dataset, p95 search/board/RO/photo measurements, durable follow-up jobs or restart-bounded background recovery for target workflows.
+
+## Open source and installation
+
+**OPEN-001 — Free and open source under the MIT license, run by one command.** Status: **partial**. Read LICENSE and rer-project.json and find MIT; build the run site and read the command on /run; run `npx -y @runeditrun/rer dev just-every/run-mallet` in a clean directory and reach setup with an empty shop; inspect the installed source and app for Mallet license keys, fees, paid gates and upgrade prompts and find none. Evidence: `LICENSE`; `rer-project.json`; `src/site/run.json`; `README.md`. Gap: MIT licensing and the published one-command install exist; no cited journey runs that command through empty-shop setup or checks the installed source and app for Mallet license keys, fees, paid gates and upgrade prompts.
 
 ## Push further with a service-advisor agent
 
-**ADV-001 — Inspection evidence to priced estimate.** Status: **partial**. Give a real inspection with a contradictory DTC and two part choices to the agent; inspect citations, fitment, labour overlap and totals, reject a proposal and prove no customer message/order/work occurs. Evidence: `src/mallet/estimates.ts`; `src/mallet/model.ts`; `tests/mallet.test.mjs`. Gap: Scoped agents can prepare estimate revisions; no evidence interpretation, guide/supplier data, compatible stock pricing or integrated review packet.
+**ADV-001 — Inspection evidence to priced estimate.** Status: **partial**. Give a real inspection with a contradictory DTC and two part choices to the agent; inspect citations, fitment, labor overlap and totals, reject a proposal and prove no customer message/order/work occurs. Evidence: `src/mallet/estimates.ts`; `src/mallet/model.ts`; `tests/mallet.test.mjs`. Gap: Scoped agents can prepare estimate revisions; no evidence interpretation, guide/supplier data, compatible stock pricing or integrated review packet.
 
-**ADV-002 — Approved customer conversations.** Status: **missing**. Approve an exact estimate message, ask a factual question and then demand a discount/safety assurance; send only authorised facts, escalate the exceptions and keep line decisions unchanged until the customer signs. Gap: No repair conversational agent, delivered customer messages, approved reply policy or escalation handoff.
+**ADV-002 — Approved customer conversations.** Status: **missing**. Approve an exact estimate message, ask a factual question and then demand a discount/safety assurance; send only authorized facts, escalate the exceptions and keep line decisions unchanged until the customer signs. Gap: No repair conversational agent, delivered customer messages, approved reply policy or escalation handoff.
 
 **ADV-003 — Resolve the next repair blocker.** Status: **partial**. Stall three repairs on evidence, consent and a backorder; inspect distinct cited blockers, approve actions and follow their actual outcomes through to cleared work without falsely marking completion. Evidence: `src/mallet/workshop.ts`; `src/mallet/estimates.ts`; `tests/mallet.test.mjs`. Gap: Agent-prepared dispatch/estimate proposals with human approval ship; no continuous blocker analysis, ownership or action follow-through.
 
@@ -306,6 +310,6 @@ Run the complete US repair: vehicle identification and inspection → priced est
 
 **ADV-006 — Detect comeback and supplier quality patterns.** Status: **missing**. Record repeated failures from one lot and an unrelated symptom; inspect the cited cluster, reject a false association and approve a supplier claim without autonomous diagnosis or clearance. Gap: No quality-pattern agent, warranty/RMA evidence join or reviewed claim preparation.
 
-**ADV-007 — Reconcile repair pickup payment and profit.** Status: **partial**. Provide a completed repair with a missing cost and short settlement; review proposed correction and margin effect, approve it and verify actual provider/ledger outcome before the case closes. Evidence: `src/mallet/invoices.ts`; `tests/mallet.test.mjs`. Gap: Agent invoice preparation uses authorised actuals and human approval; no pickup, actual cost, processor/books comparison or correction follow-through.
+**ADV-007 — Reconcile repair pickup payment and profit.** Status: **partial**. Provide a completed repair with a missing cost and short settlement; review proposed correction and margin effect, approve it and verify actual provider/ledger outcome before the case closes. Evidence: `src/mallet/invoices.ts`; `tests/mallet.test.mjs`. Gap: Agent invoice preparation uses authorized actuals and human approval; no pickup, actual cost, processor/books comparison or correction follow-through.
 
-**ADV-008 — Bounded agent authority and receptionist handoff.** Status: **missing**. Let an explicitly authorised receptionist capture intake and reserve a slot, polish notes without changing measured facts, then revoke its grant before a queued send; no send/order/approval survives revocation or exceeds policy. Gap: No receptionist/note-polishing agent, policy-scoped expanded grants, proposal provenance or queued-action revocation.
+**ADV-008 — Bounded agent authority and receptionist handoff.** Status: **missing**. Let an explicitly authorized receptionist capture intake and reserve a slot, polish notes without changing measured facts, then revoke its grant before a queued send; no send/order/approval survives revocation or exceeds policy. Gap: No receptionist/note-polishing agent, policy-scoped expanded grants, proposal provenance or queued-action revocation.
