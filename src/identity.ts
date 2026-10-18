@@ -16,6 +16,8 @@ export const identity: EditionIdentity = {
   // An installed instance serves the Lobby at /.
   installedHome: 'lobby',
   theme: '/rer-theme.css',
+  // The faces and brand tokens, defined once for the site, the app and Base's pages.
+  fonts: '/site/tokens.css',
   mark: '/brand/mark.svg',
   band: '/brand/band.svg',
   accentColor: branding.primaryColor,

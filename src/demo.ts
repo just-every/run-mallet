@@ -1,5 +1,5 @@
-// Demo mode's sample workshop (Base DEMO.md): Corella Street Mechanical, a
-// four-bay Brisbane workshop with its team, customers' vehicles and ten weeks of
+// Demo mode's sample workshop (Base DEMO.md): Buckeye Auto Repair, a
+// six-bay shop in Columbus, Ohio, with its team, customers' vehicles and ten weeks of
 // visits around `now`. It runs once after the owner exists, never fetches, and
 // writes fixed ids that a repeat leaves unchanged.
 import type { Bindings } from './auth.server'

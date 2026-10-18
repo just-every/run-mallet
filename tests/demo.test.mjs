@@ -7,7 +7,7 @@ const count=(list,key)=>list.reduce((n,x)=>({...n,[x[key]]:(n[x[key]]??0)+1}),{}
 
 test('demo opens on a lived-in workshop whose prepared work a person can decide, and sends nothing',()=>run(async h=>{
  const s=await h.state()
- assert.equal(s.actor.name,'Dana Whitfield')
+ assert.equal(s.actor.name,'Kayla Ortiz')
  const jobs=s.records.job,estimates=s.records.estimate,status=count(jobs,'status')
  for(const state of ['booked','working','completed','invoiced'])assert.ok(status[state]>0,state)
  for(const state of ['draft','sent','authorised'])assert.ok(count(estimates,'status')[state]>0,state)
@@ -23,11 +23,11 @@ test('demo opens on a lived-in workshop whose prepared work a person can decide,
  const invoice=s.records.invoice.find(i=>i.status==='approved')
  assert.match((await h.command('invoice.export',{invoiceId:invoice.id,version:invoice.version})).csv,/Battery|battery/)
  // Inviting a technician is accepted, and nothing reaches the mail provider.
- const invited=await h.api('/auth/invite',{email:'jamie@corellamechanical.example',role:'member',displayName:'Jamie Cole',returnTo:'/app'},{status:202})
+ const invited=await h.api('/auth/invite',{email:'jamie@buckeyeauto.example',role:'member',displayName:'Jamie Cole',returnTo:'/app'},{status:202})
  assert.equal(invited.status,'accepted');assert.equal(h.messages.length,0)
  // A repeat seed writes nothing new.
  const again=await h.state();assert.equal(again.records.job.length,jobs.length)
  const page=await h.request('/app'),html=await page.text()
  assert.equal(page.status,200);assert.equal(html.match(/<[a-z]+[^>]*\sdata-rer-name[\s>=]/g).length,1);assert.ok(!html.includes('Demo Demo'))
- assert.match(html,/<title>Workshop · Mallet Demo<\/title>/)
+ assert.match(html,/<title>Shop Board · Mallet Demo<\/title>/)
 },demo))

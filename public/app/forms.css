@@ -1,0 +1,95 @@
+/* Lists, tables and forms on every app screen: hairline rows, thin quiet field borders with a cyan focus ring,
+   plum submit buttons. Tokens: /site/tokens.css. */
+
+/* Lists. */
+.list{list-style:none;margin:0;padding:0}
+.list li{min-width:0;overflow-wrap:anywhere}
+.list li+li{border-top:1px solid var(--line)}
+.app .row{display:grid;gap:3px;padding:12px 0;color:inherit;text-decoration:none}
+.row-title{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px}
+.row-name{color:var(--ink);font-size:15px;font-weight:600;line-height:1.35}
+.row .row-name{text-decoration:underline;text-decoration-color:color-mix(in srgb,var(--cyan) 60%,transparent);text-underline-offset:3px}
+.row:hover .row-name{text-decoration-thickness:2px}
+.row-meta{color:var(--muted);font-size:13px;line-height:1.45}
+.list .plain{display:grid;gap:2px;padding:10px 0}
+.plain .row-name{font-size:14px;font-weight:500}
+.list .split{grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:4px 16px}
+.split .row-meta{text-align:right}
+.events li{padding:8px 0}
+.revoked{color:var(--muted)}
+
+/* Tables: dense rows like the board's cards. */
+.table{overflow-x:auto}
+.app table{width:100%;border-collapse:collapse;font-size:14px}
+.app th{padding:10px 12px;border-bottom:1px solid var(--line-strong);color:var(--muted);font-size:12px;font-weight:600;text-align:left;white-space:nowrap}
+.app td{padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:top;color:var(--text)}
+.app tbody tr:last-child td{border-bottom:0}
+.app tbody tr:hover td{background:color-mix(in srgb,var(--cyan-soft) 22%,transparent)}
+.app td small{display:block;color:var(--muted);font-size:12px}
+.app td .strong,.app td a.strong{color:var(--ink);font-weight:600}
+.app .num{text-align:right;white-space:nowrap}
+.tech{display:inline-flex;align-items:center;gap:7px;color:var(--body);white-space:nowrap}
+.orders td:nth-child(4),.orders td:nth-child(6){white-space:nowrap}
+.scroll .app table,.scroll table{margin-top:2px}
+.scroll th:first-child,.scroll td:first-child{padding-left:0}
+.scroll th:last-child,.scroll td:last-child{padding-right:0}
+.choice{display:inline-flex;align-items:center;gap:8px;white-space:nowrap}
+.choice.no{color:var(--muted)}
+.tick{width:18px;height:18px;flex:none;border:1px solid var(--line-strong);border-radius:5px;background:var(--card)}
+.choice.yes .tick,.app input[type=checkbox]:checked{border-color:var(--green);background:var(--green) url('/brand/tick.svg') center/16px no-repeat}
+.total-line{margin-top:12px!important}
+
+/* Invoice. */
+.number{margin-bottom:6px!important;color:var(--ink);font:800 22px/1.2 var(--font-display);letter-spacing:-.02em}
+.totals{display:grid;gap:4px;margin:6px 0 12px!important;padding-top:12px;border-top:1px solid var(--line)}
+.totals span{color:var(--muted)}
+.totals strong{color:var(--ink);font:900 26px/1.15 var(--font-display);letter-spacing:-.03em}
+
+/* Forms: labels above thin, quiet fields; the focus ring is the one cyan. */
+.app form{display:grid;gap:14px;margin-top:14px}
+.app form+form,.app form+details,.app details+form{margin-top:20px;padding-top:20px;border-top:1px solid var(--line)}
+.app label{display:grid;gap:6px;color:var(--ink);font-size:13px;font-weight:600;line-height:1.35}
+.app input:not([type=checkbox]):not([type=hidden]),.app select,.app textarea{width:100%;min-height:42px;padding:0 12px;border:1px solid var(--line-strong);border-radius:9px;background:var(--card);color:var(--text);font:400 14px/1.4 var(--font-body);box-shadow:0 1px 1px rgba(34,6,31,.03)}
+.app input:hover:not([type=checkbox]):not([type=hidden]),.app select:hover,.app textarea:hover{border-color:color-mix(in srgb,var(--steel) 40%,white)}
+.app input:focus-visible:not([type=checkbox]),.app select:focus-visible,.app textarea:focus-visible{outline:2px solid color-mix(in srgb,var(--cyan) 55%,transparent);outline-offset:0;border-color:var(--cyan-deep);border-radius:9px}
+.app textarea{min-height:104px;padding:10px 12px;resize:vertical}
+/* Single-choice selects: Base #247's two-stroke chevron in the muted ink, 14px in from the border, 40px end padding. */
+.app select:not([multiple]):not([size]),.app select[size="1"]:not([multiple]){-webkit-appearance:none;appearance:none;padding-inline-end:40px;background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),linear-gradient(135deg,var(--muted) 50%,transparent 50%);background-position:right 20px center,right 14px center;background-size:6px 6px,6px 6px;background-repeat:no-repeat}
+.app ::placeholder{color:var(--faint)}
+.app .fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.checks{display:grid;gap:8px}
+.app .check{display:flex;align-items:center;gap:10px;font-size:14px;font-weight:500}
+.app input[type=checkbox]{appearance:none;width:18px;height:18px;flex:none;margin:0;border:1px solid color-mix(in srgb,var(--steel) 55%,white);border-radius:5px;background:var(--card);cursor:pointer}
+.app form>button{justify-self:start;min-height:42px;padding:0 20px}
+.app form.secondary{margin:0!important;padding:0!important;border:0!important}
+.app form.secondary>button{min-height:36px;padding:0 14px;background:var(--card);color:var(--ink);border-color:var(--line-strong)}
+.app form.danger>button{background:var(--card);color:color-mix(in srgb,var(--red) 75%,black);border-color:color-mix(in srgb,var(--red) 45%,white)}
+.app form.lead-action{margin-bottom:14px}
+.app details{margin-top:18px;border-top:1px solid var(--line);padding-top:2px}
+.app summary{padding:10px 0;color:var(--ink);font-weight:600;cursor:pointer}
+.app dl{display:grid;grid-template-columns:auto minmax(0,1fr);gap:4px 16px;margin:8px 0}
+.app dt{color:var(--muted)}
+.app dd{margin:0}
+
+@media (max-width:760px){
+ .app .row{grid-template-columns:minmax(0,1fr) 16px;align-items:center;column-gap:10px;min-height:44px}
+ .app .row::after{content:"";grid-column:2;grid-row:1/span 2;justify-self:center;width:8px;height:8px;border-top:1.5px solid var(--muted);border-right:1.5px solid var(--muted);transform:rotate(45deg)}
+ .row-title,.row-meta{grid-column:1}
+ .list .split{grid-template-columns:minmax(0,1fr)}
+ .split .row-meta{text-align:left}
+ .keys .split{grid-template-columns:minmax(0,1fr) auto}
+ .app .fields{grid-template-columns:minmax(0,1fr)}
+ .app form>button{justify-self:stretch;width:100%}
+ .app table,.app tbody{display:block}
+ .app thead{display:none}
+ .app tr{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px 12px;padding:12px 16px;border-bottom:1px solid var(--line)}
+ .app tbody tr:last-child{border-bottom:0}
+ .app td{display:block;min-width:0;padding:0;border:0;overflow-wrap:anywhere}
+ .app tbody tr:hover td{background:none}
+ .app td:first-child{grid-column:1/-1}
+ .app td[data-label]::before{content:attr(data-label);display:block;margin-bottom:1px;color:var(--muted);font-size:11px;font-weight:600}
+ .app td:first-child::before{display:none}
+ .app .num{text-align:left}
+ .tech{white-space:normal}
+ .scroll tr{padding:12px 0;grid-template-columns:minmax(0,.8fr) minmax(0,1fr) minmax(0,1.3fr)}
+}

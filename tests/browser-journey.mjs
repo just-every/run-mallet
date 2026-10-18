@@ -5,7 +5,7 @@ import {join} from 'node:path'
 
 export async function browserJourney(openUrl,{directory='.cache/browser',fixtures='tests/fixtures/repairshopr'}={}) {
  await mkdir(directory,{recursive:true})
- const browser=await chromium.launch({headless:true,args:['--disable-gpu']})
+ const browser=await chromium.launch({headless:true,args:['--disable-gpu','--use-mock-keychain','--password-store=basic']})
  let stage='open app'
  try {
   const page=await browser.newPage({viewport:{width:1440,height:1000}})
@@ -23,12 +23,13 @@ export async function browserJourney(openUrl,{directory='.cache/browser',fixture
    }
   }
   const click=async name=>{await page.getByRole('button',{name,exact:true}).click();await page.waitForLoadState('domcontentloaded')}
-  await shot('01-workshop')
+  await shot('01-board')
+  await page.getByRole('link',{name:'New repair order'}).first().click();await page.waitForURL(url=>url.pathname==='/app/customers')
   await page.getByLabel('Customer name',{exact:true}).fill('Northside Cycles')
   await page.getByLabel('Customer email').fill('service@northside.example')
   await page.getByLabel('Vehicle or device').fill('2019 Trek FX 3')
   await page.getByLabel('Plate, VIN or serial').fill('TREK-FX3-2019')
-  await click('Add asset');const assetUrl=page.url();await shot('02-asset')
+  await click('Add vehicle');const assetUrl=page.url();await shot('02-asset')
   await page.getByLabel('Repair request').fill('Brake pads and safety inspection')
   await page.getByLabel('Bay',{exact:true}).fill('Bay 2')
   await page.locator('select[name=technicianId]').selectOption({index:0})
@@ -85,14 +86,14 @@ export async function browserJourney(openUrl,{directory='.cache/browser',fixture
   assert.equal(await page.getByRole('heading',{name:'Agent key created'}).count(),1)
   await shot('21-key-created')
   await page.goto(origin+'/app/data');await click('Revoke key');await shot('21-key-revoked')
-  await page.goto(origin+'/app')
+  await page.goto(origin+'/app/customers')
   await page.getByLabel('Customer name',{exact:true}).fill('Unused intake')
   await page.getByLabel('Vehicle or device').fill('Unbooked inspection request')
   await page.getByLabel('Plate, VIN or serial').fill('UNUSED-INTAKE')
-  await click('Add asset');await shot('22-unused-asset')
+  await click('Add vehicle');await shot('22-unused-asset')
   await page.getByLabel('Type ERASE to confirm').fill('ERASE');await click('Erase unused asset')
   assert.equal(await page.getByRole('link',{name:'Unbooked inspection request'}).count(),0)
-  await shot('23-erased-workshop')
+  await shot('23-erased-register')
   console.log('Browser repair, partial authorisation, invoice, history, import/undo, backup, key revocation and erasure journey passed at 1440 and 390.')
  }catch(error){throw new Error(`Browser journey failed at ${stage}: ${String(error.message).replace(/https?:\/\/\S+/g,'[private URL]').slice(0,1200)}`)}finally{await browser.close()}
 }
