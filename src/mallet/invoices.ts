@@ -20,7 +20,7 @@ function suggested(c: Context, job: Row) {
   return { estimateId: estimate.id, estimateRevision: rev.n, estimateApproval: rev.approval, customerAuthorisation: structuredClone(estimate.authorisation), lines: priced, totals: totals(priced) }
 }
 const csvCell = (value: unknown) => { const raw = String(value ?? ''), safe = /^[=+\-@\t\r]/.test(raw) ? `'${raw}` : raw; return `"${safe.replace(/"/g, '""')}"` }
-export const exportColumns = ['InvoiceNumber', 'CustomerName', 'CustomerEmail', 'Asset', 'Identifier', 'JobId', 'EstimateRevision', 'Description', 'Kind', 'Quantity', 'UnitUSD', 'SubtotalUSD', 'SalesTaxUSD', 'TotalUSD', 'Currency']
+export const exportColumns = ['InvoiceNumber', 'CustomerName', 'CustomerEmail', 'Vehicle', 'Identifier', 'JobId', 'EstimateRevision', 'Description', 'Kind', 'Quantity', 'UnitUSD', 'SubtotalUSD', 'SalesTaxUSD', 'TotalUSD', 'Currency']
 const dollars = (value: number) => `${Math.floor(value / 100)}.${String(value % 100).padStart(2, '0')}`
 function csv(invoice: Row) {
   return [exportColumns, ...invoice.lines.map((line: Line) => [invoice.number, invoice.customer.customerName, invoice.customer.customerEmail, invoice.customer.label, invoice.customer.identifier, invoice.jobId, invoice.estimateRevision, line.description, line.kind, line.quantity, dollars(line.unitCents), dollars(line.subtotalCents), dollars(line.salesTaxCents), dollars(line.totalCents), 'USD'])].map(row => row.map(csvCell).join(',')).join('\r\n') + '\r\n'

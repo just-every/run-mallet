@@ -19,7 +19,7 @@
       "title": "Your data",
       "pages": [
         { "slug": "move-in", "title": "Move in from RepairShopr", "file": "move-in.md", "summary": "Preview your RepairShopr customers and assets, apply exactly the plan you reviewed, and undo it if you need to." },
-        { "slug": "backup-and-restore", "title": "Back up, restore and erase", "file": "backup-and-restore.md", "summary": "Download a backup of the whole workshop, restore it on another computer, and erase an unused asset." }
+        { "slug": "backup-and-restore", "title": "Back up, restore and erase", "file": "backup-and-restore.md", "summary": "Download a backup of the whole workshop, restore it on another computer, and erase an unused vehicle." }
       ]
     },
     {

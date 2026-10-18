@@ -40,11 +40,11 @@ rer dev
 
 Mallet refuses to import into an installation that already has workshop records. Moved-in records stay usable by the new owner, including their journals and undo.
 
-## Erase an unused asset
+## Erase an unused vehicle
 
-The owner can erase an asset that has never had a visit, for example one added by mistake or brought in by a move-in that a customer asked you to remove. Open the asset, type `ERASE` under **Erase unused asset** and press the button. Mallet removes the asset and the personal data imported with it.
+The owner can erase a vehicle that has never had a visit, for example one added by mistake or brought in by a move-in that a customer asked you to remove. Open the vehicle, type `ERASE` under **Erase unused vehicle** and press the button. Mallet removes the vehicle and the personal data imported with it.
 
-An asset with visits keeps its service and financial history.
+A vehicle with visits keeps its service and financial history.
 
 ## Backups made before an erasure
 

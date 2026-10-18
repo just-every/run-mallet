@@ -123,7 +123,7 @@ export async function malletResponse(request:Request,original:Bindings):Promise<
   const counts:Counts={board:waiting(state).total,jobs:rows(state,'job').filter(j=>repair(state,j).column).length},frame=(section:Section,more={})=>({section,counts,...more})
   if(path==='/app'){const board=shopBoard(state,actor,(await operators(env.DB)).names,url.searchParams.get('ro'));return page('Shop Board',taxNotice(state,actor)+board.body,actor,200,frame('board',{subtitle:board.subtitle,aside:board.aside}))}
   if(path==='/app/jobs')return page('Repair orders',repairOrders(state,(await operators(env.DB)).names),actor,200,frame('jobs',{subtitle:'Open repair orders by start time, then invoiced visits.'}))
-  if(path==='/app/customers')return page('Customers',customers(state,actor),actor,200,frame('customers',{subtitle:'Every customer’s vehicle, bicycle or device, and the visits it has had.'}))
+  if(path==='/app/customers')return page('Customers',customers(state,actor),actor,200,frame('customers',{subtitle:'Every customer’s vehicle and its visits.'}))
   if(path==='/app/approvals')return page('Approvals',approvals(state),actor,200,frame('approvals',{subtitle:'Every price, dispatch plan and invoice a person approved, at its exact revision.'}))
   if(path==='/app/tax'){if(!human(actor))throw new HttpError(403,'manager_required');return page('Shop sales tax',`<div class="narrow">${taxPage(state,url.searchParams.has('saved'))}</div>`,actor,200,frame('tax',{subtitle:'The sales tax rate Mallet applies to new estimates, in USD.'}))}
   if(path==='/app/move-in')return page('Move into Mallet',moveIn(actor),actor,200,frame('move-in'))

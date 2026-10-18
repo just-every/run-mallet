@@ -23,10 +23,10 @@
     },
     {
       "name": "PRIMARY_COLOR",
-      "label": "Brand colour",
+      "label": "Brand color",
       "kind": "colour",
       "required": true,
-      "default": "#1a1714",
+      "default": "#2a0a2b",
       "group": "application"
     },
     {

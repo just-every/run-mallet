@@ -41,7 +41,7 @@ a.bay:hover{border-color:color-mix(in srgb,var(--cyan) 50%,white)}
 .ro .tech{max-width:100%;margin:5px 0 6px;font-size:12px}
 .tech-name{min-width:0;overflow:hidden;text-overflow:ellipsis}
 .ro .avatar{width:22px;height:22px;font-size:11px}
-.ro .pill{display:block;justify-self:start;font-size:11.5px;font-weight:400;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ro .pill{display:block;justify-self:start;font-size:11.5px;font-weight:400}
 .ro.selected .ro-vehicle{font-weight:600}
 .app .more{display:inline-block;padding:4px 6px 0;color:var(--cyan-deep);font-size:12.5px;font-weight:600;text-decoration:none}
 

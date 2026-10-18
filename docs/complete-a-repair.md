@@ -1,20 +1,20 @@
-A repair in Mallet follows the job across the counter: book the asset in, price it, record exactly what the customer said yes to, record the work, and hand over with one invoice. Each step is a button on the job's page, and each one is recorded with who did it and when.
+A repair in Mallet follows the job across the counter: book the vehicle in, price it, record exactly what the customer said yes to, record the work, and hand over with one invoice. Each step is a button on the job's page, and each one is recorded with who did it and when.
 
 The example below uses a 2017 Toyota Corolla in for an oil service. Prices and invoices are in USD. Before the first estimate, enter your shop's sales tax rate during setup or open **Sales tax** at `/app/tax`. Parts start taxable and labor exempt; choose the treatment that applies to your shop. Mallet does not look up state or county rates.
 
-## 1. Add the customer's asset
+## 1. Add the customer's vehicle
 
-In **Workshop**, fill in **Add a customer’s asset**:
+In **Customers**, fill in **New repair order**:
 
 - **Customer name** and **Customer email**.
-- **Vehicle or device**: what it is, such as `2017 Toyota Corolla`, `2019 Trek FX 3` or `iPhone 13`.
-- **Plate, VIN or serial**: the license plate, VIN, frame number or serial. It must be unique in your register.
+- **Vehicle**: what it is, such as `2017 Toyota Corolla`.
+- **Plate or VIN**: the license plate or VIN. It must be unique in your register.
 
-Press **Add asset**. Mallet opens the asset's page.
+Press **Add vehicle**. Mallet opens the vehicle's page.
 
 ## 2. Book in a visit
 
-On the asset's page, use **Book in a visit**:
+On the vehicle's page, use **Book in a visit**:
 
 - **Repair request**: what the customer asked for, such as `Oil service`.
 - **Bay**, and the **Technician**, chosen from the workshop's people.

@@ -15,7 +15,7 @@ The source contract is RepairShopr's official [OpenAPI document](https://api-doc
 
 ## 1. Preview the move
 
-In Mallet, open **Move in** and paste the two responses into **Customers response JSON** and **Customer assets response JSON**. Press **Dry run — preview changes**.
+In Mallet, open **Move in** and paste the two responses into **Customers response JSON** and **Vehicles response JSON**. Press **Dry run — preview changes**.
 
 The dry run writes nothing. **Review this exact plan** shows how many source records were read, every asset that will be added with its customer, any rejected records, and notes on fields that do not map. It ends with a review fingerprint: a code that stands for exactly this plan.
 

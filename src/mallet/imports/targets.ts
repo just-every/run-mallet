@@ -22,7 +22,7 @@ function decode(row: NativeRow): TargetRow {
 function nativeVersion(row: TargetRow): number {
   const value = row.value as Record<string, Json>
   if (!value || value.id !== row.targetId || !Number.isSafeInteger(value.version) || (value.version as number) < 1)
-    reject('IMPORT_ASSET', 'An imported asset must have its native ID and numeric version.')
+    reject('IMPORT_ASSET', 'An imported vehicle must have its native ID and numeric version.')
   canonicalJson(value)
   return value.version as number
 }

@@ -16,7 +16,7 @@ async function prepare(db: D1Database, actor: ImportActor, input: SnapshotInput,
   for (const effect of plan.entries.flatMap(entry => entry.effects)) {
     const identifier = String((effect.value as Record<string, Json>).identifier).toLowerCase()
     if (native.some(row => row.targetId !== effect.targetId && String((row.value as Record<string, Json>).identifier).toLowerCase() === identifier))
-      reject('IMPORT_DUPLICATE_IDENTIFIER', 'A register asset already uses an imported identifier.')
+      reject('IMPORT_DUPLICATE_IDENTIFIER', 'A vehicle on file already uses an imported plate or VIN.')
   }
   await authorize(context.storage.database, actor, authority)
   return { plan, context }

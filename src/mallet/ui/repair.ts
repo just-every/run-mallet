@@ -16,6 +16,8 @@ function hours(job:any,estimate:any,rev:any) {
  return {sold,clocked}
 }
 export const clock=(hrs:number)=>`${Math.floor(hrs)}:${String(Math.round((hrs%1)*60)).padStart(2,'0')}`
+// "In bay 1 · 1:54/3.6 h": each half keeps its words together, so a narrow chip wraps only after the dot.
+const inBay=(bay:string,hours:string)=>[`In ${bay.replace(/^Bay\b/,'bay')||'the bay'}`,hours].filter(Boolean).map(s=>s.replace(/ /g,'\u00a0')).join('\u00a0· ')
 export const hrs=(value:number)=>`${Number(value.toFixed(2))} hr${value===1?'':'s'}`
 
 export function repair(state:any,job:any):Repair {
@@ -23,8 +25,8 @@ export function repair(state:any,job:any):Repair {
  const rev=estimate?.revisions?.at(-1),plans=rows(state,'proposal').filter(p=>p.jobId===job.id&&p.status==='pending'),{sold,clocked}=hours(job,estimate,rev)
  let column:Column|null=null,chip:[string,Tone]=['Booked','']
  if(job.status==='invoiced'){column=null;chip=['Invoiced','']}
- else if(job.status==='completed'){column='ready';chip=invoice?.status==='approved'?['Invoice approved','green']:invoice?['Invoice draft','amber']:['Ready to invoice','']}
- else if(job.status==='working'){column='bay';chip=[sold?`Clocked ${clock(clocked)}/${Number(sold.toFixed(2))} h`:'Work recorded','violet']}
+ else if(job.status==='completed'){column='ready';chip=invoice?.status==='approved'?['Ready for pickup','green']:invoice?['Invoice draft','amber']:['Ready to invoice','']}
+ else if(job.status==='working'){column='bay';chip=[inBay(job.bayId,sold?`${clock(clocked)}/${Number(sold.toFixed(2))} h`:''),'violet']}
  else if(estimate?.status==='authorised'){column='authorised';const n=estimate.authorisation.lineIds.length,of=rev.lines.length;chip=[n===of?(n===1?'Authorized':`All ${n} authorized`):`${n} of ${of} authorized`,'green']}
  else if(estimate?.status==='sent'){column='waiting';chip=[`Shared ${shared[estimate.sent.at(-1)?.method]??''}`.trim(),'amber']}
  else if(estimate){column='estimate';chip=estimate.status==='approved'?['Ready to share','cyan']:rev.preparedBy.role==='agent'?['Draft to approve','amber']:['Draft','']}

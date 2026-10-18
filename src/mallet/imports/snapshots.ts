@@ -32,7 +32,7 @@ function createdAt(value: Json | undefined): string {
   if (value === undefined || value === null || value === '') return missingCreatedAt
   if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?(?:Z|[+-]\d{2}:\d{2})$/.test(value) || !Number.isFinite(Date.parse(value))
       || new Date(`${value.slice(0, 10)}T00:00:00Z`).toISOString().slice(0, 10) !== value.slice(0, 10))
-    reject('IMPORT_DATE', 'Asset created_at must be an ISO date when supplied.', 400)
+    reject('IMPORT_DATE', 'Vehicle created_at must be an ISO date when supplied.', 400)
   return new Date(value).toISOString()
 }
 function customerName(customer: SnapshotObject): string {
@@ -71,9 +71,9 @@ export function snapshotSource(input: SnapshotInput): { source: SourceBundle; ma
   object(input, 'import input')
   const customers = snapshot(input.customers, 'customer', 'customers'), assets = snapshot(input.assets, 'asset', 'assets')
   const records = [...customers.records, ...assets.records]
-  if (!assets.records.length) reject('IMPORT_EMPTY', 'Supply at least one asset in the asset snapshot.', 400)
+  if (!assets.records.length) reject('IMPORT_EMPTY', 'Supply at least one vehicle in the vehicles response.', 400)
   if (records.length > snapshotLimits.records || customers.artifact.size + assets.artifact.size > snapshotLimits.bytes)
-    reject('IMPORT_LIMIT', `This kit accepts at most ${snapshotLimits.records} customer and asset records and ${snapshotLimits.bytes} bytes per review.`, 400)
+    reject('IMPORT_LIMIT', `This kit accepts at most ${snapshotLimits.records} customer and vehicle records and ${snapshotLimits.bytes} bytes per review.`, 400)
   const byCustomer = new Map<string, SnapshotObject>()
   const seen = new Set<string>()
   for (const record of records) {
@@ -84,8 +84,8 @@ export function snapshotSource(input: SnapshotInput): { source: SourceBundle; ma
   }
   const identifiers = new Set<string>()
   for (const record of assets.records) {
-    const serial = required(text((record.payload as SnapshotObject).asset_serial, 'asset serial', 100), 'Asset serial').toLowerCase()
-    if (identifiers.has(serial)) reject('IMPORT_DUPLICATE_IDENTIFIER', 'Two source assets use the same native identifier.', 400)
+    const serial = required(text((record.payload as SnapshotObject).asset_serial, 'vehicle plate or VIN', 100), 'Vehicle plate or VIN').toLowerCase()
+    if (identifiers.has(serial)) reject('IMPORT_DUPLICATE_IDENTIFIER', 'Two source vehicles use the same plate or VIN.', 400)
     identifiers.add(serial)
   }
   const diagnostics: SourceBundle['diagnostics'] = []
@@ -101,20 +101,20 @@ export function snapshotSource(input: SnapshotInput): { source: SourceBundle; ma
     map(record) {
       const payload = record.payload as SnapshotObject
       if (record.kind === 'customer') return { effects: [], unmapped: [
-        { reason: 'Customer source retained and linked to assets; this kit creates asset register entries only.' },
+        { reason: 'Customer source retained and linked to its vehicles; this kit adds vehicles to the register only.' },
         ...unmapped(payload, ['id', 'firstname', 'lastname', 'fullname', 'business_name', 'email']),
       ] }
-      const customerId = id(payload.customer_id, 'asset.customer_id')
+      const customerId = id(payload.customer_id, 'vehicle customer_id')
       const customer = byCustomer.get(customerId)
-      if (!customer) reject('IMPORT_ORPHAN_ASSET', `Asset ${record.sourceId} refers to customer ${customerId}, which is missing from the customer snapshot.`, 400)
-      if (payload.customer && object(payload.customer, 'asset.customer').id !== Number(customerId))
-        reject('IMPORT_CUSTOMER_LINK', 'An embedded customer disagrees with asset.customer_id.', 400)
+      if (!customer) reject('IMPORT_ORPHAN_ASSET', `Vehicle ${record.sourceId} refers to customer ${customerId}, which is missing from the customer snapshot.`, 400)
+      if (payload.customer && object(payload.customer, 'vehicle customer').id !== Number(customerId))
+        reject('IMPORT_CUSTOMER_LINK', 'An embedded customer disagrees with the vehicle’s customer_id.', 400)
       return {
         effects: [{ targetKind: 'asset', targetId: assetId(record.sourceId), value: {
           id: assetId(record.sourceId), version: 1,
           customerName: customerName(customer), customerEmail: customerEmail(customer.email),
-          label: required(text(payload.name, 'asset name', 200), 'Asset name'),
-          identifier: required(text(payload.asset_serial, 'asset serial', 100), 'Asset serial'), visits: [], createdAt: createdAt(payload.created_at),
+          label: required(text(payload.name, 'vehicle name', 200), 'Vehicle name'),
+          identifier: required(text(payload.asset_serial, 'vehicle plate or VIN', 100), 'Vehicle plate or VIN'), visits: [], createdAt: createdAt(payload.created_at),
         } }],
         unmapped: unmapped(payload, ['id', 'customer_id', 'name', 'asset_serial', 'created_at']),
       }
