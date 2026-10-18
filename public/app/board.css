@@ -25,22 +25,23 @@ a.bay:hover{border-color:color-mix(in srgb,var(--cyan) 50%,white)}
 /* Columns and cards. */
 .board{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px;scroll-margin-top:80px}
 .column{min-width:0;padding:6px 6px 10px;border-radius:10px;background:color-mix(in srgb,var(--cyan-soft) 30%,var(--page-alt))}
-.column h2{display:flex;align-items:center;gap:6px;padding:8px 6px 12px;color:var(--ink);font:700 14px/1.2 var(--font-display);letter-spacing:-.02em}
+.column h2{display:flex;align-items:center;gap:6px;padding:8px 4px 12px;color:var(--ink);font:700 14px/1.2 var(--font-display);letter-spacing:-.01em;white-space:nowrap}
 .column h2 span{padding:1px 5px;border-radius:999px;background:color-mix(in srgb,var(--cyan-soft) 65%,var(--card));color:var(--steel);font:600 12px/1.5 var(--font-body)}
 .column.ready{background:color-mix(in srgb,var(--green-soft) 24%,var(--page-alt))}
 .column.ready h2{color:var(--green-ink)}
 .column-empty{padding:6px 6px 2px;color:var(--faint);font-size:12px}
-.app .ro{display:grid;gap:1px;margin-bottom:7px;padding:12px 11px;background:var(--card);border:1px solid var(--line);border-radius:10px;box-shadow:none;color:var(--body);font-size:12.5px;line-height:1.4;text-decoration:none;overflow-wrap:anywhere}
+.app .ro{display:grid;gap:1px;margin-bottom:7px;padding:12px 11px;background:var(--card);border:1px solid var(--line);border-radius:10px;box-shadow:none;color:var(--body);font-size:12.5px;line-height:1.4;text-decoration:none;overflow-wrap:break-word}
 .app .ro:hover{border-color:color-mix(in srgb,var(--cyan) 45%,white)}
 .app .ro.selected{border:2px solid var(--cyan);padding:11px 10px;box-shadow:none}
 .ro-head{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:0 6px;margin-bottom:3px}
 .ro-head strong{color:var(--ink);font-size:13px;line-height:1.3;letter-spacing:-.01em;white-space:nowrap}
 .ro-head time{color:var(--muted);font-size:11px;white-space:nowrap}
-.ro-vehicle{margin-bottom:3px;color:var(--ink);font-weight:400;line-height:1.35}
-.ro-title{color:var(--text)}
-.ro .tech{margin:6px 0 7px;font-size:12px;white-space:normal}
+.ro-vehicle{margin-bottom:2px;color:var(--ink);font-weight:400;line-height:1.35}
+.ro-title{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;color:var(--text)}
+.ro .tech{max-width:100%;margin:5px 0 6px;font-size:12px}
+.tech-name{min-width:0;overflow:hidden;text-overflow:ellipsis}
 .ro .avatar{width:22px;height:22px;font-size:11px}
-.ro .pill{justify-self:start;font-size:11.5px;font-weight:400}
+.ro .pill{display:block;justify-self:start;font-size:11.5px;font-weight:400;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .ro.selected .ro-vehicle{font-weight:600}
 .app .more{display:inline-block;padding:4px 6px 0;color:var(--cyan-deep);font-size:12.5px;font-weight:600;text-decoration:none}
 
@@ -55,7 +56,7 @@ a.bay:hover{border-color:color-mix(in srgb,var(--cyan) 50%,white)}
 /* The selected repair order. */
 .detail{align-self:stretch;min-height:calc(100vh - 68px);padding:20px 21px 28px;background:var(--card);border-left:1px solid var(--line);scroll-margin-top:80px}
 .detail-title{display:flex;align-items:flex-start;gap:12px}
-.detail-title h2{flex:1;font-size:25px;line-height:1.12;font-weight:900;letter-spacing:-.035em}
+.detail-title h2{flex:1;font-size:25px;line-height:1.12;font-weight:900;letter-spacing:var(--display-tracking)}
 .app .close{display:inline-flex;align-items:center;justify-content:center;flex:none;width:32px;height:32px;margin:-2px -6px 0 0;border-radius:8px;color:var(--muted)}
 .app .close:hover{background:var(--chip);color:var(--ink)}
 .detail-pill{margin-top:8px}
@@ -96,9 +97,11 @@ a.bay:hover{border-color:color-mix(in srgb,var(--cyan) 50%,white)}
 .option strong{color:var(--ink);font-size:13px}
 .option.chosen strong{color:var(--cyan-ink)}
 .cost{color:var(--muted);text-align:right}
-.actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:14px 0 8px}
-.app .actions form{margin:0}
-.app .actions form>button,.app .actions .button{width:100%;min-height:44px;font-size:15px}
+/* The decision's two actions split the panel evenly, as the pick's Apply | Keep as is; a long label wraps inside its
+   button and never pushes the pair past the panel. */
+.actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:14px 0 8px}
+.app .actions form{min-width:0;margin:0}
+.app .actions form>button,.app .actions .button{width:100%;min-width:0;min-height:44px;padding:6px 10px;font-size:15px;line-height:1.2;white-space:normal;text-align:center}
 .recent{padding-top:14px;border-top:1px solid var(--line)}
 
 /* No open repair orders yet. */
@@ -108,6 +111,17 @@ a.bay:hover{border-color:color-mix(in srgb,var(--cyan) 50%,white)}
 .empty-board p{color:var(--body)}
 .empty-board+.activity{max-width:560px;margin:0 auto}
 
+@media (min-width:1181px) and (max-width:1535px){
+ .board{gap:5px}
+ .column{padding:5px 5px 9px}
+ .app .ro{padding:9px 8px 10px;font-size:12px}
+ .app .ro.selected{padding:8px 7px 9px}
+ .ro .avatar{width:20px;height:20px}
+ .ro .pill{padding:3px 7px;font-size:11px}
+ .detail{padding:20px 18px 28px}
+ .tabs{margin:16px -18px 0;padding:0 18px}
+ .app .actions form>button,.app .actions .button{font-size:14px}
+}
 @media (min-width:1181px) and (max-width:1360px){
  .board{grid-template-columns:repeat(3,minmax(0,1fr))}
 }

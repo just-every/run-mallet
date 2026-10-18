@@ -11,8 +11,8 @@ export type Repair={job:any,asset:any,estimate:any,rev:any,invoice:any,plans:any
 // Hours sold are the customer-authorized labor lines; hours clocked are the labor recorded against them.
 function hours(job:any,estimate:any,rev:any) {
  const ids=new Set<string>(estimate?.authorisation?.lineIds??[])
- const sold=(rev?.lines??[]).filter((l:any)=>l.kind==='labour'&&ids.has(l.id)).reduce((n:number,l:any)=>n+l.quantityMilli,0)/1000
- const clocked=(job.actuals??[]).filter((a:any)=>a.kind==='labour').reduce((n:number,a:any)=>n+a.quantityMilli,0)/1000
+ const sold=(rev?.lines??[]).filter((l:any)=>l.kind==='labor'&&ids.has(l.id)).reduce((n:number,l:any)=>n+l.quantityMilli,0)/1000
+ const clocked=(job.actuals??[]).filter((a:any)=>a.kind==='labor').reduce((n:number,a:any)=>n+a.quantityMilli,0)/1000
  return {sold,clocked}
 }
 export const clock=(hrs:number)=>`${Math.floor(hrs)}:${String(Math.round((hrs%1)*60)).padStart(2,'0')}`
@@ -23,13 +23,13 @@ export function repair(state:any,job:any):Repair {
  const rev=estimate?.revisions?.at(-1),plans=rows(state,'proposal').filter(p=>p.jobId===job.id&&p.status==='pending'),{sold,clocked}=hours(job,estimate,rev)
  let column:Column|null=null,chip:[string,Tone]=['Booked','']
  if(job.status==='invoiced'){column=null;chip=['Invoiced','']}
- else if(job.status==='completed'){column='ready';chip=invoice?.status==='approved'?['Invoice approved','green']:invoice?['Invoice draft','amber']:['Invoice not prepared','']}
- else if(job.status==='working'){column='bay';chip=[sold?`Clocked ${clock(clocked)} of ${hrs(sold)}`:'Work recorded','violet']}
- else if(estimate?.status==='authorised'){column='authorised';const n=estimate.authorisation.lineIds.length,of=rev.lines.length;chip=[n===of?`Authorized, ${n} line${n===1?'':'s'}`:`Authorized ${n} of ${of} lines`,'green']}
+ else if(job.status==='completed'){column='ready';chip=invoice?.status==='approved'?['Invoice approved','green']:invoice?['Invoice draft','amber']:['Ready to invoice','']}
+ else if(job.status==='working'){column='bay';chip=[sold?`Clocked ${clock(clocked)}/${Number(sold.toFixed(2))} h`:'Work recorded','violet']}
+ else if(estimate?.status==='authorised'){column='authorised';const n=estimate.authorisation.lineIds.length,of=rev.lines.length;chip=[n===of?(n===1?'Authorized':`All ${n} authorized`):`${n} of ${of} authorized`,'green']}
  else if(estimate?.status==='sent'){column='waiting';chip=[`Shared ${shared[estimate.sent.at(-1)?.method]??''}`.trim(),'amber']}
- else if(estimate){column='estimate';chip=estimate.status==='approved'?['Approved, not shared','cyan']:rev.preparedBy.role==='agent'?['Draft needs approval','amber']:['Draft','']}
+ else if(estimate){column='estimate';chip=estimate.status==='approved'?['Ready to share','cyan']:rev.preparedBy.role==='agent'?['Draft to approve','amber']:['Draft','']}
  else column='booked'
- if(plans.length&&column)chip=['Plan needs approval','amber']
+ if(plans.length&&column)chip=['Needs approval','amber']
  return {job,asset,estimate,rev,invoice,plans,column,chip,sold,clocked}
 }
 

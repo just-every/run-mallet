@@ -43,7 +43,7 @@
 .number{margin-bottom:6px!important;color:var(--ink);font:800 22px/1.2 var(--font-display);letter-spacing:-.02em}
 .totals{display:grid;gap:4px;margin:6px 0 12px!important;padding-top:12px;border-top:1px solid var(--line)}
 .totals span{color:var(--muted)}
-.totals strong{color:var(--ink);font:900 26px/1.15 var(--font-display);letter-spacing:-.03em}
+.totals strong{color:var(--ink);font:900 26px/1.15 var(--font-display);letter-spacing:var(--display-tracking)}
 
 /* Forms: labels above thin, quiet fields; the focus ring is the one cyan. */
 .app form{display:grid;gap:14px;margin-top:14px}

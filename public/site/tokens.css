@@ -40,6 +40,8 @@
   --steel:#2f4a78;
   --font-display:'Inter Tight','Inter','Helvetica Neue',Arial,sans-serif;
   --font-body:'Inter','Helvetica Neue',Arial,sans-serif;
+  /* Display tracking for Inter Tight headings: tight letters, clear word spaces (the homepage's value, 2ac7522). */
+  --display-tracking:-.022em;
   --font-mono:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
   --wrap:1296px;
   --gutter:72px;

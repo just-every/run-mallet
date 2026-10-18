@@ -5,18 +5,18 @@ import { current } from './estimates'
 /** Invoice preparation freezes precisely the authorised estimate prices and actual quantities. */
 function suggested(c: Context, job: Row) {
   const estimate = find(c.s, 'estimate', job.estimateId), rev = current(estimate)
-  if (!rev.approval || !estimate.authorisation || estimate.authorisation.revision !== rev.n) fail('NOT_AUTHORISED', 'This job needs an approved, customer authorised estimate.')
+  if (!rev.approval || !estimate.authorisation || estimate.authorisation.revision !== rev.n) fail('NOT_AUTHORISED', 'This job needs an approved, customer authorized estimate.')
   const priced: Line[] = []
   for (const line of rev.lines as Line[]) {
     const actuals = job.actuals.filter((a: any) => a.lineId === line.id)
     if (!actuals.length) continue
-    if (!estimate.authorisation.lineIds.includes(line.id) || actuals.some((a: any) => a.estimateId !== estimate.id || a.revision !== rev.n)) fail('WORK_AUTHORITY', 'Recorded work does not belong to the approved, authorised revision.')
+    if (!estimate.authorisation.lineIds.includes(line.id) || actuals.some((a: any) => a.estimateId !== estimate.id || a.revision !== rev.n)) fail('WORK_AUTHORITY', 'Recorded work does not belong to the approved, authorized revision.')
     const quantityMilli = actuals.reduce((sum: number, a: any) => sum + a.quantityMilli, 0)
-    if (!Number.isSafeInteger(quantityMilli) || quantityMilli <= 0 || quantityMilli > line.quantityMilli) fail('WORK_AUTHORITY', 'Recorded work exceeds the customer authorised quantity.')
+    if (!Number.isSafeInteger(quantityMilli) || quantityMilli <= 0 || quantityMilli > line.quantityMilli) fail('WORK_AUTHORITY', 'Recorded work exceeds the customer authorized quantity.')
     const billed = { ...line, quantityMilli, quantity: quantityMilli / 1000 }
     priced.push({ ...billed, ...price(billed) })
   }
-  if (!priced.length || job.actuals.some((a: any) => !priced.some(l => l.id === a.lineId))) fail('WORK_AUTHORITY', 'Every invoice line must come from authorised actual work.')
+  if (!priced.length || job.actuals.some((a: any) => !priced.some(l => l.id === a.lineId))) fail('WORK_AUTHORITY', 'Every invoice line must come from authorized actual work.')
   return { estimateId: estimate.id, estimateRevision: rev.n, estimateApproval: rev.approval, customerAuthorisation: structuredClone(estimate.authorisation), lines: priced, totals: totals(priced) }
 }
 const csvCell = (value: unknown) => { const raw = String(value ?? ''), safe = /^[=+\-@\t\r]/.test(raw) ? `'${raw}` : raw; return `"${safe.replace(/"/g, '""')}"` }
@@ -32,7 +32,7 @@ export const invoices: Handler = (c, command, p) => {
       expectVersion(job, p.version)
       if (job.status !== 'completed') fail('JOB_STATE', 'Complete the job before preparing its invoice.')
       if (job.invoiceId || rows(c.s, 'invoice').some(i => i.jobId === job.id)) fail('DUPLICATE', 'This job already has an immutable invoice.')
-      if ('lines' in p || 'totals' in p || 'totalCents' in p) fail('INPUT', 'Invoice prices and quantities come from authorised actual work.', null, 400)
+      if ('lines' in p || 'totals' in p || 'totalCents' in p) fail('INPUT', 'Invoice prices and quantities come from authorized actual work.', null, 400)
       const snapshot = suggested(c, job)
       const row = put(c.s, 'invoice', { ...snapshot, number: `M-${String(rows(c.s, 'invoice').length + 1).padStart(6, '0')}`, jobId: job.id, jobVersion: job.version, customer: structuredClone(job.asset), actuals: structuredClone(job.actuals), status: 'draft', revision: 1, preparedBy: who(c), preparedAt: c.now, approval: null, exportId: null })
       bump(c.s, 'job', job, { invoiceId: row.id })

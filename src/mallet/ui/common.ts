@@ -10,10 +10,15 @@ export const box=(title:string,content:string,{pill='',step='',extra='',id=''}:{
 // Technicians are stored as operator IDs; show the operator's name (free text from older bookings is shown as typed, and an operator who is gone is not shown as an ID).
 export type Names=Record<string,string>
 export const person=(names:Names,id:unknown)=>names[String(id)]??(/^[0-9a-f]{8}-[0-9a-f]{4}-/i.test(String(id))?'Former team member':String(id??''))
+// A text whose hyphenated words (CR-V, F-150, 45,000-mile) never break at the hyphen.
+export const nobr=(value:unknown)=>e(value).replace(/\S*-\S*/g,word=>`<span class="nobr">${word}</span>`)
+// How a person's role reads on screen.
+const roleNames:Record<string,string>={owner:'Owner',admin:'Service advisor',member:'Technician',agent:'Agent'}
+export const role=(value:unknown)=>roleNames[String(value)]??'Team member'
 export const initials=(name:string)=>name.split(/\s+/).filter(Boolean).slice(0,2).map(w=>w[0]!.toUpperCase()).join('')
 // A status pill; its tone picks one of the board's chip colours (cyan selection, amber waiting, green done, violet working).
 export type Tone=''|'cyan'|'amber'|'green'|'violet'|'red'
-export const badge=(value:unknown,tone:Tone='')=>`<span class="pill${tone?` ${tone}`:''}">${e(value)}</span>`
+export const badge=(value:unknown,tone:Tone='')=>`<span class="pill${tone?` ${tone}`:''}" title="${e(value)}">${e(value)}</span>`
 export const tones:Record<string,Tone>={booked:'',working:'violet',completed:'green',invoiced:'',draft:'amber',approved:'cyan',sent:'amber',authorised:'green',exported:''}
 const labels:Record<string,string>={booked:'Booked',working:'Working',completed:'Completed',invoiced:'Invoiced',draft:'Draft',approved:'Approved',sent:'Sent',authorised:'Authorized',exported:'Exported'}
 export const status=(value:string)=>badge(labels[value]??value,tones[value]??'')
@@ -25,8 +30,9 @@ export const join=(...parts:unknown[])=>parts.filter(part=>part!==undefined&&par
 // Times are stored as UTC ISO strings and shown in the browser's own timezone: the script below rewrites each [data-at]
 // with the same formats; without JavaScript the server's UTC rendering stays. Formats:
 // time "Oct 19, 9:00 am – 10:00 am EDT" · date "Oct 19" · date-year "Oct 19, 2026" · clock "9:12 am" ·
-// short "9:12 am" today, "Tue 10:30 am" within the week, else "Oct 27, 8:00 am" · today "Mon Oct 19, 2026 · 9:41 am".
-export type Show='time'|'date'|'date-year'|'clock'|'short'|'today'
+// short "9:12 am" today, "Tue Oct 20, 10:30 am" within a week either side, else "Oct 27, 8:00 am" · card "9:12 am" today,
+// else "Tue Oct 20" · today "Mon Oct 19, 2026 · 9:41 am". A weekday never shows without its date: a week apart they read alike.
+export type Show='time'|'date'|'date-year'|'clock'|'short'|'card'|'today'
 const stamp=(at:string,until:string|undefined,show:string,timeZone:string,now:Date)=>{
  const parts=(d:Date,o:Intl.DateTimeFormatOptions)=>Object.fromEntries(new Intl.DateTimeFormat('en-US',{...o,timeZone}).formatToParts(d).map(x=>[x.type,x.value]))
  const day=(d:Date)=>{const x=parts(d,{day:'numeric',month:'short',year:'numeric'});return x.month+' '+x.day}
@@ -37,7 +43,7 @@ const stamp=(at:string,until:string|undefined,show:string,timeZone:string,now:Da
  if(show==='date')return day(a)
  if(show==='clock')return time(a)
  if(show==='today'){const x=parts(a,{weekday:'short'});return x.weekday+' '+day(a)+', '+year(a)+' · '+time(a)}
- if(show==='short'){if(day(a)===day(now)&&year(a)===year(now))return time(a);if(Math.abs(a.getTime()-now.getTime())<6*864e5)return parts(a,{weekday:'short'}).weekday+' '+time(a);return day(a)+', '+time(a)}
+ if(show==='short'||show==='card'){if(day(a)===day(now)&&year(a)===year(now))return time(a);const wd=parts(a,{weekday:'short'}).weekday;if(show==='card')return wd+' '+day(a);if(Math.abs(a.getTime()-now.getTime())<6*864e5)return wd+' '+day(a)+', '+time(a);return day(a)+', '+time(a)}
  let text=day(a)+', '+time(a)
  if(until){const b=new Date(until);text+=' – '+(day(b)===day(a)?time(b):day(b)+', '+time(b))}
  return text+zone()
@@ -52,6 +58,6 @@ export const LOCAL_TIMES="(()=>{const now=new Date(),parts=(d,o)=>Object.fromEnt
  +"for(const el of document.querySelectorAll('[data-at]')){const a=new Date(el.dataset.at),u=el.dataset.until,show=el.dataset.show;let text;"
  +"if(show==='date-year')text=day(a)+', '+year(a);else if(show==='date')text=day(a);else if(show==='clock')text=time(a);"
  +"else if(show==='today')text=parts(a,{weekday:'short'}).weekday+' '+day(a)+', '+year(a)+' · '+time(a);"
- +"else if(show==='short')text=day(a)===day(now)&&year(a)===year(now)?time(a):Math.abs(a-now)<6*864e5?parts(a,{weekday:'short'}).weekday+' '+time(a):day(a)+', '+time(a);"
+ +"else if(show==='short'||show==='card'){const wd=parts(a,{weekday:'short'}).weekday;text=day(a)===day(now)&&year(a)===year(now)?time(a):show==='card'?wd+' '+day(a):Math.abs(a-now)<6*864e5?wd+' '+day(a)+', '+time(a):day(a)+', '+time(a)}"
  +"else{text=day(a)+', '+time(a);if(u){const b=new Date(u);text+=' – '+(day(b)===day(a)?time(b):day(b)+', '+time(b))}text+=' '+parts(a,{timeZoneName:'short',hour:'numeric'}).timeZoneName}"
  +"el.textContent=text}})()"

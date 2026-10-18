@@ -1,31 +1,30 @@
 // The app's frame on every screen: the left rail (car mark, sections, who is signed in), the top bar (today and
 // New repair order) and the page heading. Visual authority: the owner-picked Shop Board (desk 17 Oct).
 import type { Actor } from '../auth'
-import {e,initials,when,LOCAL_TIMES} from './common'
+import {e,initials,role,when,LOCAL_TIMES} from './common'
 import {ICONS,icon} from './icons'
 
 export type Section='board'|'jobs'|'customers'|'approvals'|'move-in'|'data'|'tax'
 // Figures beside a section's name, when the page knows them.
 export type Counts=Partial<Record<Section,number>>
-export type Frame={section?:Section,counts?:Counts,subtitle?:string,aside?:string,heading?:boolean}
+export type Frame={section?:Section|null,counts?:Counts,subtitle?:string,aside?:string,heading?:boolean}
 
 const sections:[Section|'settings',string,string,string][]=[
  ['board','/app','Board','board'],['jobs','/app/jobs','Repair orders','document'],['customers','/app/customers','Customers','people'],['approvals','/app/approvals','Approvals','check'],
  ['move-in','/app/move-in','Move in','box'],['data','/app/data','Data & access','key'],['tax','/app/tax','Shop tax','percent'],['settings','/auth/settings/identity','Sign-in settings','gear'],
 ]
-const roles:Record<string,string>={owner:'Owner',admin:'Service advisor',member:'Technician',agent:'Agent'}
 
 const digest=async(text:string)=>btoa(String.fromCharCode(...new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(text)))))
 let scriptHash:Promise<string>|undefined
 
-function rail(actor:Actor,current:Section,counts:Counts) {
+function rail(actor:Actor,current:Section|null,counts:Counts) {
  const links=sections.map(([id,href,label,glyph])=>`<a href="${href}"${id===current?' aria-current="page"':''}>${icon(glyph)}<span>${e(label)}</span>${counts[id as Section]?`<span class="count">${counts[id as Section]}</span>`:''}</a>`).join('')
- return `<aside class="rail"><a class="brand" href="/app"><img src="/brand/mark.svg" alt="" width="40" height="40"><span data-rer-name>Mallet</span></a><nav class="navlinks" aria-label="Main">${links}</nav><div class="profile"><span class="avatar" aria-hidden="true">${e(initials(actor.name))}</span><p><strong>${e(actor.name)}</strong><span>${e(roles[actor.role]??actor.role)}</span></p></div></aside>`
+ return `<aside class="rail"><a class="brand" href="/app"><img src="/brand/mark.svg" alt="" width="40" height="40"><span data-rer-name>Mallet</span></a><nav class="navlinks" aria-label="Main">${links}</nav><div class="profile"><span class="avatar" aria-hidden="true">${e(initials(actor.name))}</span><p><strong>${e(actor.name)}</strong><span>${e(role(actor.role))}</span></p></div></aside>`
 }
 
 export async function page(title:string,body:string,actor?:Actor,status=200,frame:Frame={}) {
  scriptHash??=digest(LOCAL_TIMES)
- const {section='board',counts={},subtitle='',aside='',heading=true}=frame
+ const {counts={},subtitle='',aside='',heading=true}=frame,section=frame.section===undefined?'board':frame.section
  const top=actor?`<header class="topbar"><p class="date">${when(new Date().toISOString(),undefined,'today')}</p>${actor.role==='member'?'':`<a class="button primary new" href="/app/customers#add">${icon('plus')}<span>New repair order</span></a>`}</header>`:''
  const head=heading?`<header class="heading"><h1>${e(title)}</h1>${subtitle?`<p>${subtitle}</p>`:''}</header>`:''
  const main=`<main class="main">${head}${body}</main>`

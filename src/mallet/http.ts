@@ -9,6 +9,7 @@ import {catalogue} from './pier'
 import {e,rows,money,when,status,type Names} from './ui/common'
 import {page,type Section,type Counts} from './ui/shell'
 import {conflictPage} from './ui/conflict'
+import {errorMessage,notFound,refused} from './ui/errors'
 import {repairOrders,customers,approvals,assetPage} from './ui/workshop'
 import {shopBoard} from './ui/board'
 import {repair,waiting} from './ui/repair'
@@ -124,7 +125,7 @@ export async function malletResponse(request:Request,original:Bindings):Promise<
   if(path==='/app/jobs')return page('Repair orders',repairOrders(state,(await operators(env.DB)).names),actor,200,frame('jobs',{subtitle:'Open repair orders by start time, then invoiced visits.'}))
   if(path==='/app/customers')return page('Customers',customers(state,actor),actor,200,frame('customers',{subtitle:'Every customer’s vehicle, bicycle or device, and the visits it has had.'}))
   if(path==='/app/approvals')return page('Approvals',approvals(state),actor,200,frame('approvals',{subtitle:'Every price, dispatch plan and invoice a person approved, at its exact revision.'}))
-  if(path==='/app/tax'){if(!human(actor))throw new HttpError(403,'manager_required');return page('Shop sales tax',taxPage(state,url.searchParams.has('saved')),actor,200,frame('tax',{subtitle:'The sales tax rate Mallet applies to new estimates, in USD.'}))}
+  if(path==='/app/tax'){if(!human(actor))throw new HttpError(403,'manager_required');return page('Shop sales tax',`<div class="narrow">${taxPage(state,url.searchParams.has('saved'))}</div>`,actor,200,frame('tax',{subtitle:'The sales tax rate Mallet applies to new estimates, in USD.'}))}
   if(path==='/app/move-in')return page('Move into Mallet',moveIn(actor),actor,200,frame('move-in'))
   if(path==='/app/data'){if(!human(actor))throw new HttpError(403,'manager_required');const keys=await env.DB.prepare('SELECT id,label,expires_at,revoked_at FROM mallet_agent_keys ORDER BY created_at DESC').all();return page('Data & access',dataPage(actor,keys.results),actor,200,frame('data'))}
   if(path==='/app/backup')throw new HttpError(405,'post_required')
@@ -146,6 +147,8 @@ export async function malletResponse(request:Request,original:Bindings):Promise<
    const back=command==='job.book'?{href:`/app/assets/${encodeURIComponent(String(input.assetId))}?${new URLSearchParams(bookingFields.filter(k=>typeof input[k]==='string').map(k=>[k,input[k]]))}#book`,label:'Back to the booking form'}:{href:`/app/jobs/${encodeURIComponent(String(rows(await load(env.DB),'proposal').find(p=>p.id===input.proposalId)?.jobId))}`,label:'Back to the job'}
    return page('Booking conflict',conflictPage(clashes,names,back),actor,status,{section:command==='job.book'?'customers':'jobs'})
   }
-  return page('Could not complete that action',`<section class="card"><p role="alert">${e(known?error.message:'The operation failed. Check the input and try again.')}</p>${error instanceof MalletError&&error.details?`<pre>${e(JSON.stringify(error.details,null,2))}</pre>`:''}<p class="card-foot"><a href="${e(path.startsWith('/app/actions')?'/app':path)}">Return to the board</a></p></section>`,actor,status,{section:path.startsWith('/app/move-in')?'move-in':path==='/app/data'?'data':'board'})
+  if(status===404&&code==='not_found')return page('Page not found',notFound(),actor,404,{section:null,heading:false})
+  const details=error instanceof MalletError&&error.details?`<pre>${e(JSON.stringify(error.details,null,2))}</pre>`:''
+  return page('Could not complete that action',refused(known?errorMessage(code,error.message):'The action could not be completed. Check what you entered and try again.',details,path.startsWith('/app/move-in')),actor,status,{section:path.startsWith('/app/move-in')?'move-in':path==='/app/data'?'data':path==='/app/tax'?'tax':path.startsWith('/app/actions')?'board':null})
  }
 }

@@ -3,7 +3,9 @@
    Every colour, face, radius and shadow is a token from /site/tokens.css, the brand's one definition. */
 *,*::before,*::after{box-sizing:border-box}
 html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
-body.app{margin:0;min-height:100vh;background:color-mix(in srgb,var(--page-alt) 45%,var(--card));color:var(--text);font:400 14px/1.5 var(--font-body);font-variant-numeric:tabular-nums;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+body.app{margin:0;min-height:100vh;background:color-mix(in srgb,var(--page-alt) 45%,var(--card));color:var(--text);font:400 14px/1.5 var(--font-body);-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+/* Tabular figures only where numbers line up (times, money, hours, counts): elsewhere Inter's tabular hyphen splits CR-V. */
+.app time,.app .num,.count,.cost,.amount,.totals,.total,.number,.bay .muted,.column h2 span{font-variant-numeric:tabular-nums}
 .app h1,.app h2,.app h3{margin:0;color:var(--ink);font-family:var(--font-display);text-wrap:balance}
 .app p{margin:0;text-wrap:pretty}
 .app a{color:var(--cyan-ink);text-decoration:underline;text-decoration-color:color-mix(in srgb,var(--cyan) 70%,transparent);text-decoration-thickness:1px;text-underline-offset:3px}
@@ -11,6 +13,7 @@ body.app{margin:0;min-height:100vh;background:color-mix(in srgb,var(--page-alt) 
 .app :focus-visible{outline:2px solid var(--cyan-deep);outline-offset:2px;border-radius:6px}
 .app code,.app .mono{font:500 .92em/1.4 var(--font-mono);overflow-wrap:anywhere}
 .app pre{margin:12px 0;padding:12px 14px;border-radius:10px;background:var(--page-alt);border:1px solid var(--line);font:500 12px/1.6 var(--font-mono);white-space:pre-wrap;overflow-wrap:anywhere}
+.nobr{white-space:nowrap}
 .sprite{position:absolute;width:0;height:0;overflow:hidden}
 .icon{width:20px;height:20px;flex:none;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
 
@@ -18,7 +21,7 @@ body.app{margin:0;min-height:100vh;background:color-mix(in srgb,var(--page-alt) 
 .shell{display:grid;grid-template-columns:200px minmax(0,1fr);min-height:100vh;background:linear-gradient(to right,color-mix(in srgb,var(--cyan-soft) 28%,var(--page-alt)) 199px,var(--line) 199px 200px,transparent 200px)}
 .shell.bare{grid-template-columns:minmax(0,1fr)}
 .rail{position:sticky;top:0;align-self:start;height:100vh;display:flex;flex-direction:column;gap:30px;padding:18px 12px 28px;background:transparent}
-.app .brand{display:flex;align-items:center;gap:10px;padding:0 6px;color:var(--ink);text-decoration:none;font:900 22px/1 var(--font-display);letter-spacing:-.045em;white-space:nowrap}
+.app .brand{display:flex;align-items:center;gap:10px;padding:0 6px;color:var(--ink);text-decoration:none;font:900 22px/1 var(--font-display);letter-spacing:var(--display-tracking);white-space:nowrap}
 .brand img{display:block;width:34px;height:34px;flex:none}
 .navlinks{display:grid;gap:8px}
 .app .navlinks a{display:flex;align-items:center;gap:10px;min-height:44px;padding:10px 10px;white-space:nowrap;border-radius:10px;color:var(--steel);text-decoration:none;font-size:14px;font-weight:500}
@@ -49,7 +52,7 @@ body.app{margin:0;min-height:100vh;background:color-mix(in srgb,var(--page-alt) 
 .layout{display:grid;grid-template-columns:minmax(0,1fr) 366px;align-items:start}
 .main{min-width:0;padding:20px 20px 34px}
 .heading{display:flex;align-items:baseline;flex-wrap:wrap;gap:6px 20px;margin-bottom:14px}
-.heading h1{font-size:42px;line-height:1.08;font-weight:900;letter-spacing:-.045em}
+.heading h1{font-size:42px;line-height:1.08;font-weight:900;letter-spacing:var(--display-tracking)}
 .heading p{color:var(--body);font-size:15px}
 .heading p a{color:var(--ink)}
 .card{min-width:0;padding:22px;background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow)}
@@ -62,6 +65,7 @@ body.app{margin:0;min-height:100vh;background:color-mix(in srgb,var(--page-alt) 
 .step{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;margin-right:10px;border-radius:50%;background:var(--plum);color:var(--card);font-size:12px;vertical-align:2px}
 .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;align-items:start}
 .grid.wide-left{grid-template-columns:minmax(0,1.6fr) minmax(0,1fr)}
+.narrow{max-width:640px}
 .col,.stack{display:grid;gap:18px;min-width:0}
 .main>.card+.card,.main>.grid+.card,.main>.card+.grid{margin-top:18px}
 .muted{color:var(--muted);font-size:13px}
@@ -79,6 +83,18 @@ body.app{margin:0;min-height:100vh;background:color-mix(in srgb,var(--page-alt) 
 .empty{display:grid;justify-items:center;gap:12px;padding:28px 8px 18px;text-align:center;color:var(--body)}
 .empty img{display:block;width:56px;height:56px}
 
+/* 1181-1535: the pick's density at a narrower window. A slimmer rail and panel leave each of the six columns room
+   for a one-line name, vehicle and chip. */
+@media (min-width:1181px) and (max-width:1535px){
+ .shell{grid-template-columns:180px minmax(0,1fr);background:linear-gradient(to right,color-mix(in srgb,var(--cyan-soft) 28%,var(--page-alt)) 179px,var(--line) 179px 180px,transparent 180px)}
+ .rail{padding:18px 8px 28px}
+ .app .brand{gap:8px;padding:0 2px;font-size:20px}
+ .brand img{width:32px;height:32px}
+ .navlinks{gap:6px}
+ .app .navlinks a{gap:9px;padding:10px 8px}
+ .layout{grid-template-columns:minmax(0,1fr) 328px}
+ .main{padding:20px 14px 34px}
+}
 @media (max-width:1180px){
  .layout{grid-template-columns:minmax(0,1fr)}
 }

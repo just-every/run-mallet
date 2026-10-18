@@ -85,13 +85,13 @@ export const workshop: Handler = (c, command, p) => {
     case 'work.record': {
       const job = openJob(c, p)
       if (c.actor.role === 'member' && job.technicianId !== c.actor.id) fail('FORBIDDEN', 'Technicians record work only on their assigned jobs.', null, 403)
-      if (!job.estimateId) fail('NOT_AUTHORISED', 'Approve and record customer authorisation before recording work.')
+      if (!job.estimateId) fail('NOT_AUTHORISED', 'Approve and record customer authorization before recording work.')
       const estimate = find(c.s, 'estimate', job.estimateId), rev = estimate.revisions.at(-1)
-      if (!estimate.authorisation || estimate.authorisation.revision !== rev.n || !rev.approval) fail('NOT_AUTHORISED', 'This estimate revision has not been authorised by the customer.')
+      if (!estimate.authorisation || estimate.authorisation.revision !== rev.n || !rev.approval) fail('NOT_AUTHORISED', 'This estimate revision has not been authorized by the customer.')
       const lineId = text(p.lineId, 'lineId'), line = rev.lines.find((l: Row) => l.id === lineId)
-      if (!line || !estimate.authorisation.lineIds.includes(lineId)) fail('NOT_AUTHORISED', 'The customer did not authorise this line.')
+      if (!line || !estimate.authorisation.lineIds.includes(lineId)) fail('NOT_AUTHORISED', 'The customer did not authorize this line.')
       const quantityMilli = quantity(p.quantity), used = job.actuals.filter((a: any) => a.lineId === lineId).reduce((n: number, a: any) => n + a.quantityMilli, 0)
-      if (used + quantityMilli > line.quantityMilli) fail('QUANTITY_EXCEEDED', 'Actual work cannot exceed the approved, customer authorised quantity.', { lineId, approvedQuantity: line.quantity, recordedQuantity: used / 1000, remainingQuantity: (line.quantityMilli - used) / 1000 })
+      if (used + quantityMilli > line.quantityMilli) fail('QUANTITY_EXCEEDED', 'Actual work cannot exceed the approved, customer authorized quantity.', { lineId, approvedQuantity: line.quantity, recordedQuantity: used / 1000, remainingQuantity: (line.quantityMilli - used) / 1000 })
       const actual = { id: crypto.randomUUID(), lineId, estimateId: estimate.id, revision: rev.n, kind: line.kind, quantityMilli, quantity: quantityMilli / 1000, note: text(p.note, 'note', 2000, true), by: who(c), at: c.now }
       const row = bump(c.s, 'job', job, { status: 'working', actuals: [...job.actuals, actual] })
       event(c, command, job.id, job.id, actual)
@@ -99,7 +99,7 @@ export const workshop: Handler = (c, command, p) => {
     }
     case 'job.complete': {
       const job = openJob(c, p)
-      if (!job.actuals.length) fail('NO_WORK', 'Record authorised parts or labour before completing this job.')
+      if (!job.actuals.length) fail('NO_WORK', 'Record authorized parts or labor before completing this job.')
       const row = bump(c.s, 'job', job, { status: 'completed', completedAt: c.now, completedBy: who(c), completionNote: text(p.note, 'note', 2000, true) })
       event(c, command, row.id, row.id, { note: row.completionNote })
       return row

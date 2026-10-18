@@ -27,7 +27,7 @@ export const estimates: Handler = (c, command, p) => {
     }
     case 'estimate.revise': {
       const { estimate, rev } = exact(c, p)
-      if (estimate.authorisation) fail('ESTIMATE_FROZEN', 'A customer authorised estimate is immutable. Book a new visit for additional work.')
+      if (estimate.authorisation) fail('ESTIMATE_FROZEN', 'A customer authorized estimate is immutable. Book a new visit for additional work.')
       const job = find(c.s, 'job', estimate.jobId)
       if (!['booked', 'working'].includes(job.status)) fail('JOB_STATE', 'Completed jobs cannot have new estimates.')
       const next = revision(c, p, rev.n + 1)
@@ -55,12 +55,12 @@ export const estimates: Handler = (c, command, p) => {
     }
     case 'estimate.authorise': {
       const { estimate, rev } = exact(c, p)
-      if (!rev.approval || estimate.status !== 'sent' || !estimate.sent.some((s: any) => s.revision === rev.n)) fail('NOT_SENT', 'Record sharing the approved exact estimate revision before customer authorisation.')
+      if (!rev.approval || estimate.status !== 'sent' || !estimate.sent.some((s: any) => s.revision === rev.n)) fail('NOT_SENT', 'Record sharing the approved exact estimate revision before customer authorization.')
       selfApproval(c, rev.preparedBy)
-      if (!Array.isArray(p.lineIds) || !p.lineIds.length || p.lineIds.length > rev.lines.length) fail('INPUT', 'Select at least one authorised estimate line.', null, 400)
+      if (!Array.isArray(p.lineIds) || !p.lineIds.length || p.lineIds.length > rev.lines.length) fail('INPUT', 'Select at least one authorized estimate line.', null, 400)
       const lineIds = p.lineIds.map((id: unknown) => text(id, 'lineId'))
-      if (new Set(lineIds).size !== lineIds.length || lineIds.some((id: string) => !rev.lines.some((l: Row) => l.id === id))) fail('INPUT', 'Authorised lines must be unique lines on this exact revision.', null, 400)
-      const authorisation = { revision: rev.n, lineIds, customerName: text(p.customerName, 'customerName'), method: choice(p.method, ['signed', 'email reply', 'phone', 'in person'] as const, 'authorisation method'), evidence: text(p.evidence, 'evidence', 4000), recordedBy: who(c), at: c.now, totals: totals(rev.lines.filter((l: Row) => lineIds.includes(l.id))) }
+      if (new Set(lineIds).size !== lineIds.length || lineIds.some((id: string) => !rev.lines.some((l: Row) => l.id === id))) fail('INPUT', 'Authorized lines must be unique lines on this exact revision.', null, 400)
+      const authorisation = { revision: rev.n, lineIds, customerName: text(p.customerName, 'customerName'), method: choice(p.method, ['signed', 'email reply', 'phone', 'in person'] as const, 'authorization method'), evidence: text(p.evidence, 'evidence', 4000), recordedBy: who(c), at: c.now, totals: totals(rev.lines.filter((l: Row) => lineIds.includes(l.id))) }
       const row = bump(c.s, 'estimate', estimate, { status: 'authorised', authorisation })
       event(c, command, row.jobId, row.id, authorisation)
       return row
