@@ -120,7 +120,7 @@ a.bay:hover{border-color:color-mix(in srgb,var(--cyan) 50%,white)}
  .ro .pill{padding:3px 7px;font-size:11px}
  .detail{padding:20px 18px 28px}
  .tabs{margin:16px -18px 0;padding:0 18px}
- .app .actions form>button,.app .actions .button{font-size:14px}
+ .app .actions form>button,.app .actions .button{padding:6px;font-size:14px}
 }
 @media (min-width:1181px) and (max-width:1360px){
  .board{grid-template-columns:repeat(3,minmax(0,1fr))}
