@@ -1,10 +1,11 @@
 import { approval, bump, choice, event, expectVersion, fail, find, integer, put, selfApproval, text, who, type Context, type Handler, type Row } from './model'
 import { lines, totals } from './money'
 import { openJob } from './workshop'
+import { configuredTax } from './tax'
 
 export const current = (estimate: Row) => estimate.revisions[estimate.revisions.length - 1]
 function revision(c: Context, p: any, n: number) {
-  const priced = lines(p.lines)
+  const priced = lines(p.lines, configuredTax(c.s))
   return { n, lines: priced, totals: totals(priced), notes: text(p.notes, 'notes', 4000, true), preparedBy: who(c), preparedAt: c.now, approval: null }
 }
 function exact(c: Context, p: any) {

@@ -9,7 +9,8 @@ Mallet runs the repair bench today, from booking to handover: the register, esti
 ## Money and accounting
 
 - Payments, card terminals, deposits and balances are not in this release.
-- Tax is a flat 10% on each taxable line, shown separately. State and county sales tax rates are not looked up yet.
+- Prices and invoices use USD. The owner enters the shop's sales tax percentage in setup or `/app/tax` and chooses whether parts and labor are taxable; parts default to taxable and labor to exempt. Mallet does not look up state or county rates.
+- Line subtotals and sales tax round to cents. Each estimate revision freezes its tax rate and treatment, and its invoice uses that saved rate even if the shop later changes its settings.
 - The invoice export is a plain Mallet CSV. It is not an import for QuickBooks Online or Xero, and Mallet does not post anything to your books yet.
 
 ## Parts and vehicles

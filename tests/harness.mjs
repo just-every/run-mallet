@@ -48,7 +48,8 @@ export async function booking(h,{asset,technicianId='Alex',startAt='2026-10-19T0
  return {asset,job:await h.command('job.book',{assetId:asset.id,version:asset.version,title:'Brake service',technicianId,bayId,startAt,endAt})}
 }
 export async function estimate(h,job,options={}) {
- return h.command('estimate.prepare',{jobId:job.id,version:job.version,lines:[{kind:'part',description:'Brake pads',quantity:2,unitCents:2500},{kind:'labour',description:'Replace and tune',quantity:1.5,unitCents:12000}]},options)
+ if((await h.state()).records.taxSettings?.[0]?.ratePercent==null)await h.command('tax.configure',{ratePercent:10,partsTaxable:true,laborTaxable:true})
+ return h.command('estimate.prepare',{jobId:job.id,version:job.version,lines:[{kind:'part',description:'Brake pads',quantity:2,unitCents:2500},{kind:'labor',description:'Replace and tune',quantity:1.5,unitCents:12000}]},options)
 }
 export async function authorise(h,q,lineIds=q.revisions[0].lines.map(l=>l.id)) {
  q=await h.command('estimate.approve',{estimateId:q.id,version:q.version,revision:1})

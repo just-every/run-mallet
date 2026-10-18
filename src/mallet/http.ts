@@ -10,6 +10,7 @@ import {page,e,rows,money,when,type Names} from './ui/common'
 import {conflictPage} from './ui/conflict'
 import {workshop,assetPage} from './ui/workshop'
 import {jobPage} from './ui/job'
+import {taxPage,taxNotice,invoiceTotals,lineTax} from './ui/tax'
 import {moveIn,importPreview,importJournal,dataPage} from './ui/data'
 import * as imports from './imports/index'
 const headers={'cache-control':'no-store','x-content-type-options':'nosniff','referrer-policy':'no-referrer'}
@@ -46,7 +47,8 @@ function formInput(data:FormData) {
  const input:any=Object.fromEntries(data)
  for(const name of ['version','revision','quantity'])if(input[name]!==undefined)input[name]=Number(input[name])
  if(data.has('lineIds') || input.command==='estimate.authorise')input.lineIds=data.getAll('lineIds')
- if(['estimate.prepare','estimate.revise'].includes(input.command))input.lines=['part','labour'].map(kind=>({kind,description:input[`${kind}Description`],quantity:Number(input[`${kind}Quantity`]),unitCents:Math.round(Number(input[`${kind}Price`])*100),gst:true}))
+ if(['estimate.prepare','estimate.revise'].includes(input.command))input.lines=['part','labor'].map(kind=>({kind,description:input[`${kind}Description`],quantity:Number(input[`${kind}Quantity`]),unitCents:Math.round(Number(input[`${kind}Price`])*100)}))
+ if(input.command==='tax.configure'){input.ratePercent=input.ratePercent===''?null:Number(input.ratePercent);input.partsTaxable=data.has('partsTaxable');input.laborTaxable=data.has('laborTaxable')}
  if(input.channel)input.method=input.channel
  return input
 }
@@ -94,6 +96,7 @@ export async function malletResponse(request:Request,original:Bindings):Promise<
    if(command==='agent.create')return page('Agent key created',`<section class="card"><p>Copy this key once into your agent’s private environment. It will not be shown again.</p><pre>${e(result.token)}</pre><p>Expires ${when(new Date(result.expiresAt).toISOString(),undefined,'date-year')}</p><p class="card-foot"><a href="/app/data">Return to access</a></p></section>`,actor,200,'data')
    if(command==='asset.erase')return redirect('/app')
    if(command==='agent.revoke')return redirect('/app/data')
+   if(command==='tax.configure')return redirect('/app/tax?saved=1')
    if(command==='asset.create')return redirect(`/app/assets/${result.id}`)
    const jobId=command==='job.book'?result.id:input.jobId??result.jobId??(command==='invoice.export'?rows(await load(env.DB),'invoice').find(i=>i.id===input.invoiceId)?.jobId:undefined)
    return redirect(jobId?`/app/jobs/${jobId}`:'/app')
@@ -113,7 +116,8 @@ export async function malletResponse(request:Request,original:Bindings):Promise<
   if(exportMatch){if(!human(actor))throw new HttpError(403,'manager_required');const x=rows(state,'export').find(x=>x.id===exportMatch[1]);if(!x)throw new HttpError(404,'not_found');return csv(x.csv,'mallet-invoice')}
   const historyMatch=path.match(/^\/api\/mallet\/assets\/([^/]+)\/history.csv$/)
   if(historyMatch)return csv(assetHistoryCsv(state,historyMatch[1]),'mallet-service-history')
-  if(path==='/app')return page('Workshop',workshop(state,actor,(await operators(env.DB)).names),actor)
+  if(path==='/app')return page('Workshop',taxNotice(state,actor)+workshop(state,actor,(await operators(env.DB)).names),actor)
+  if(path==='/app/tax'){if(!human(actor))throw new HttpError(403,'manager_required');return page('Shop sales tax',taxPage(state,url.searchParams.has('saved')),actor,200,'tax')}
   if(path==='/app/move-in')return page('Move into Mallet',moveIn(actor),actor,200,'move-in')
   if(path==='/app/data'){if(!human(actor))throw new HttpError(403,'manager_required');const keys=await env.DB.prepare('SELECT id,label,expires_at,revoked_at FROM mallet_agent_keys ORDER BY created_at DESC').all();return page('Data & access',dataPage(actor,keys.results),actor,200,'data')}
   if(path==='/app/backup')throw new HttpError(405,'post_required')
@@ -122,7 +126,7 @@ export async function malletResponse(request:Request,original:Bindings):Promise<
   const view=asset?assetPage(state,asset[1],actor,people!.names,people!.list,Object.fromEntries(bookingFields.filter(k=>url.searchParams.has(k)).map(k=>[k,url.searchParams.get(k)!.slice(0,200)]))):job?jobPage(state,job[1],actor,people!.names):null
   if(view)return page(view.title,view.body,actor)
   const print=path.match(/^\/app\/estimates\/([^/]+)\/print$/)
-  if(print){const estimate=rows(state,'estimate').find(x=>x.id===print[1]);if(!estimate)throw new HttpError(404,'not_found');const rev=estimate.revisions.at(-1);return page('Repair estimate',`<section class="card print-sheet"><p class="sub">Revision ${e(rev.n)} · ${e(estimate.status)}</p><ul class="list">${rev.lines.map((l:any)=>`<li class="plain"><span class="row-name">${e(l.description)}</span><span class="row-meta">${e(l.quantity)} × ${money(l.unitCents)} before tax</span></li>`).join('')}</ul><p class="totals"><span>Subtotal ${money(rev.totals.subtotalCents)} · Tax ${money(rev.totals.gstCents)}</span><strong>Total ${money(rev.totals.totalCents)}</strong></p><p>Tell the shop exactly which lines you authorize. The shop records your decision and its evidence against this revision.</p></section>`,actor)}
+  if(print){const estimate=rows(state,'estimate').find(x=>x.id===print[1]);if(!estimate)throw new HttpError(404,'not_found');const rev=estimate.revisions.at(-1);return page('Repair estimate',`<section class="card print-sheet"><p class="sub">Revision ${e(rev.n)} · ${e(estimate.status==='authorised'?'authorized':estimate.status)}</p><ul class="list">${rev.lines.map((l:any)=>`<li class="plain"><span class="row-name">${e(l.description)}</span><span class="row-meta">${e(l.quantity)} × ${money(l.unitCents)} before tax · ${lineTax(l)}</span></li>`).join('')}</ul>${invoiceTotals(rev.totals)}<p>Tell the shop exactly which lines you authorize. The shop records your decision and its evidence against this revision.</p></section>`,actor)}
   throw new HttpError(404,'not_found')
  } catch(error:any) {
   const kitCode=error instanceof Error && /^[A-Z][A-Z0-9_]{1,100}$/.test(error.message)?error.message:null

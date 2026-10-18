@@ -1,6 +1,6 @@
 import type { Actor } from '../auth'
 export const e=(v:unknown):string=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]!))
-export const money=(cents:number)=>new Intl.NumberFormat('en-US',{style:'currency',currency:'AUD',currencyDisplay:'narrowSymbol'}).format((cents??0)/100)
+export const money=(cents:number)=>new Intl.NumberFormat('en-US',{style:'currency',currency:'USD',currencyDisplay:'narrowSymbol'}).format((cents??0)/100)
 export const hidden=(name:string,value:unknown)=>`<input type="hidden" name="${e(name)}" value="${e(value)}">`
 export const field=(label:string,name:string,type='text',value:unknown='',extra='')=>`<label>${e(label)}<input name="${e(name)}" type="${type}" value="${e(value)}" ${extra}></label>`
 export const select=(label:string,name:string,options:[string,string][],selected='')=>`<label>${e(label)}<select name="${e(name)}">${options.map(([value,text])=>`<option value="${e(value)}"${value===selected?' selected':''}>${e(text)}</option>`).join('')}</select></label>`
@@ -11,7 +11,7 @@ export const box=(title:string,content:string,{pill='',step='',extra='',id=''}:{
 // Technicians are stored as operator IDs; show the operator's name (free text from older bookings is shown as typed, and an operator who is gone is not shown as an ID).
 export type Names=Record<string,string>
 export const person=(names:Names,id:unknown)=>names[String(id)]??(/^[0-9a-f]{8}-[0-9a-f]{4}-/i.test(String(id))?'Former team member':String(id??''))
-export const badge=(value:unknown)=>`<span class="pill">${e(value)}</span>`
+export const badge=(value:unknown)=>`<span class="pill">${e(value==='authorised'?'authorized':value)}</span>`
 export const rows=(state:any,kind:string):any[]=>state.records[kind]??[]
 // A list row whose whole area is one link; the chevron shows on phones.
 export const linkRow=(href:string,title:string,meta:string,pill='')=>`<li><a class="row" href="${e(href)}"><span class="row-title"><span class="row-name">${e(title)}</span>${pill}</span><span class="row-meta">${meta}</span></a></li>`
@@ -41,8 +41,8 @@ const LOCAL_TIMES="(()=>{const parts=(d,o)=>Object.fromEntries(new Intl.DateTime
 const digest=async(text:string)=>btoa(String.fromCharCode(...new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(text)))))
 let scriptHash:Promise<string>|undefined
 
-export type Section='workshop'|'move-in'|'data'
-const tabs:[Section|'settings',string,string][]=[['workshop','/app','Workshop'],['move-in','/app/move-in','Move in'],['data','/app/data','Data & access'],['settings','/auth/settings/identity','Sign-in settings']]
+export type Section='workshop'|'move-in'|'data'|'tax'
+const tabs:[Section|'settings',string,string][]=[['workshop','/app','Workshop'],['move-in','/app/move-in','Move in'],['data','/app/data','Data & access'],['tax','/app/tax','Shop tax'],['settings','/auth/settings/identity','Sign-in settings']]
 
 export async function page(title:string,body:string,actor?:Actor,status=200,section:Section='workshop') {
  scriptHash??=digest(LOCAL_TIMES)
