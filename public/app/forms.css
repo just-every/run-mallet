@@ -53,8 +53,10 @@
 .app input:hover:not([type=checkbox]):not([type=hidden]),.app select:hover,.app textarea:hover{border-color:color-mix(in srgb,var(--steel) 40%,white)}
 .app input:focus-visible:not([type=checkbox]),.app select:focus-visible,.app textarea:focus-visible{outline:2px solid color-mix(in srgb,var(--cyan) 55%,transparent);outline-offset:0;border-color:var(--cyan-deep);border-radius:9px}
 .app textarea{min-height:104px;padding:10px 12px;resize:vertical}
-/* Single-choice selects: Base #247's two-stroke chevron in the muted ink, 14px in from the border, 40px end padding. */
-.app select:not([multiple]):not([size]),.app select[size="1"]:not([multiple]){-webkit-appearance:none;appearance:none;padding-inline-end:40px;background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),linear-gradient(135deg,var(--muted) 50%,transparent 50%);background-position:right 20px center,right 14px center;background-size:6px 6px,6px 6px;background-repeat:no-repeat}
+/* Single-choice selects: Base #247's two-stroke chevron (foundation/runtime/select-style.ts) in the muted ink, 14px in
+   from the border with 40px end padding; it darkens to the ink on focus. Multi-selects and size>1 lists stay native. */
+.app select:not([multiple],[size]:not([size="1"])){--select-ink:var(--muted);-webkit-appearance:none;appearance:none;padding-inline-end:40px;text-overflow:ellipsis;background-image:linear-gradient(to top right,transparent calc(50% - 1.1px),var(--select-ink) calc(50% - .55px),var(--select-ink) calc(50% + .55px),transparent calc(50% + 1.1px)),linear-gradient(to top left,transparent calc(50% - 1.1px),var(--select-ink) calc(50% - .55px),var(--select-ink) calc(50% + .55px),transparent calc(50% + 1.1px));background-repeat:no-repeat;background-position:right 20px center,right 14px center;background-size:6px 6px}
+.app select:not([multiple],[size]:not([size="1"])):focus-visible{--select-ink:var(--ink)}
 .app ::placeholder{color:var(--faint)}
 .app .fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
 .checks{display:grid;gap:8px}
