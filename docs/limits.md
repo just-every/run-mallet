@@ -1,21 +1,21 @@
-Mallet does one job: the repair bench, from booking to handover. These are the things it leaves out, so you can decide what stays where it is.
+Mallet runs the repair bench today, from booking to handover: the register, estimates with each line's authorization, recorded work and one invoice. The homepage shows the whole shop Mallet is being built to run, and the [Mallet contract](https://run-mallet.com/contract) lists every part of it with its progress. Until a part lands, this is how this release handles it, so you can decide what stays where it is for now.
 
 ## Customers and messages
 
-- Mallet does not email or text customers. **Record estimate shared** records how you handed the estimate over.
-- There is no customer portal and no e-signature. Staff record what the customer authorized, how and the evidence.
-- No reminders, SMS or calendar sync.
+- Today Mallet does not email or text customers. **Record estimate shared** records how you handed the estimate over.
+- There is no customer portal or e-signature yet. Staff record what the customer authorized, how and the evidence.
+- Reminders, SMS and calendar sync are not in this release.
 
 ## Money and accounting
 
-- No payments, card terminals, deposits or balances.
-- Tax is a flat 10% on each taxable line, shown separately. State and county sales tax rates are not looked up.
-- The invoice export is a plain Mallet CSV. It is not an import for QuickBooks Online or Xero, and Mallet does not post anything to your books.
+- Payments, card terminals, deposits and balances are not in this release.
+- Tax is a flat 10% on each taxable line, shown separately. State and county sales tax rates are not looked up yet.
+- The invoice export is a plain Mallet CSV. It is not an import for QuickBooks Online or Xero, and Mallet does not post anything to your books yet.
 
 ## Parts and vehicles
 
-- No parts ordering, supplier networks or stock reservation. An optional read-only Pier catalog adapter (`GET /api/mallet/catalogue`) reads parts from your own Pier; it never reserves or orders them.
-- No VIN or plate decoding, OEM repair data, labor guides, warranty claims, inspection checklists or photos.
+- Parts ordering, supplier networks and stock reservation are not in this release. An optional read-only Pier catalog adapter (`GET /api/mallet/catalogue`) reads parts from your own Pier; it never reserves or orders them.
+- VIN and plate decoding, OEM repair data, labor guides, warranty claims, inspection checklists and photos are not in this release.
 
 ## Moving in
 

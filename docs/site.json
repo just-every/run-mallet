@@ -27,7 +27,7 @@
       "pages": [
         { "slug": "agent-commands", "title": "Commands and API", "file": "agent-commands.md", "summary": "Every workshop command, who may send it, and the move-in and backup endpoints." },
         { "slug": "move-in-internals", "title": "Move-in internals", "file": "move-in-internals.md", "summary": "How the move-in kit is wired into Mallet's records, journal and backups." },
-        { "slug": "limits", "title": "What Mallet does not do", "file": "limits.md", "summary": "The messages, payments, lookups and integrations Mallet leaves out, stated plainly." }
+        { "slug": "limits", "title": "Where Mallet is today", "file": "limits.md", "summary": "How this release handles messages, payments, parts and vehicles today, with the contract tracking the rest.", "card": false }
       ]
     }
   ]

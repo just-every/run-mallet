@@ -3,7 +3,8 @@ import { join } from 'node:path'
 import type { DocsSection } from '../types.ts'
 
 // docs/site.json lists the published pages in display order, grouped in sections. Each page names its slug, its title, its
-// Markdown file in docs/ and a one-sentence summary. This reads it and enforces the rules; every problem is listed at once.
+// Markdown file in docs/ and a one-sentence summary; `"card": false` keeps a page in the nav and reading order but off the
+// docs home's cards. This reads it and enforces the rules; every problem is listed at once.
 
 export const docsDirectory = 'docs'
 export const manifestPath = `${docsDirectory}/site.json`
@@ -35,7 +36,8 @@ export function readManifest(root: string): DocsSection[] {
         else if (!existsSync(path) || !statSync(path).isFile()) problems.push(`${where}: ${docsDirectory}/${file} does not exist`)
         if (files.has(file)) problems.push(`${where}: ${docsDirectory}/${file} is listed twice`)
         files.add(file)
-        return { slug, title: pageTitle, file, summary, section: title }
+        if (page.card !== undefined && typeof page.card !== 'boolean') problems.push(`${where}: card must be true or false`)
+        return { slug, title: pageTitle, file, summary, section: title, card: page.card !== false }
       }),
     }
   })

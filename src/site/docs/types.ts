@@ -3,8 +3,9 @@
 /** One h2 or h3 of a page, for "On this page". */
 export type DocsTocEntry = { depth: 2 | 3; id: string; text: string }
 
-/** One page as docs/site.json lists it, with the title of the section it sits in. */
-export type DocsPageMeta = { slug: string; title: string; file: string; summary: string; section: string }
+/** One page as docs/site.json lists it, with the title of the section it sits in; `card` is false for a page the docs
+    home does not list as a card. */
+export type DocsPageMeta = { slug: string; title: string; file: string; summary: string; section: string; card: boolean }
 
 export type DocsSection = { title: string; pages: DocsPageMeta[] }
 
