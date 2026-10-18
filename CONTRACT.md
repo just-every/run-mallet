@@ -408,7 +408,7 @@ Every capability claim on the approved homepage (`src/site/landing/`, checked ag
 | 41 | 08 Pickup | Invoice 10418 from labor and parts, sales tax 7.5% | INVOICE-001, TAX-001 | partial |
 | 42 | 08 Pickup | "QuickBooks has it a minute later" | BOOKS-001 | missing |
 | 43 | 08 Pickup | Collected 4:30 pm, miles out, keys returned | RETURN-001, VEH-002 | missing |
-| 44 | 09 Interlude | "21 cars out · 21 on promise" | REPORT-004 | missing |
+| 44 | 09 Interlude | Reminder on Priya's phone: "Timing belt due at 105,000 mi", $780.00, Book | AUTO-004, ADV-005, MSG-001, BOOK-001 | missing |
 | 45 | 10 Follow-up | "The agent tracks declined work and service intervals by mileage" | ADV-005, AUTO-003, AUTO-004 | missing |
 | 46 | 10 Follow-up | "refreshes each price" | ADV-005 | missing |
 | 47 | 10 Follow-up | "drafts the text for Kayla to send" | ADV-002, MSG-001, MSG-004 | missing |
