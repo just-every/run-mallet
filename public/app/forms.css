@@ -30,6 +30,7 @@
 .app .num{text-align:right;white-space:nowrap}
 .tech{display:inline-flex;align-items:center;gap:7px;color:var(--body);white-space:nowrap}
 .orders td:nth-child(4),.orders td:nth-child(6){white-space:nowrap}
+@media (min-width:1181px){.orders .pill{white-space:nowrap}}
 .scroll .app table,.scroll table{margin-top:2px}
 .scroll th:first-child,.scroll td:first-child{padding-left:0}
 .scroll th:last-child,.scroll td:last-child{padding-right:0}
