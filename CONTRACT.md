@@ -115,7 +115,7 @@ Neighboring products stay separate: [Pier](https://github.com/just-every/run-pie
 
 - **FLOW-003 — Rules-based routing and escalation.** Route intake by location, repair type, skill and priority; escalate unassigned, approval-waiting, parts-stalled or diagnostic exceptions to a named manager on shop-hour deadlines, with acknowledgment and resolution history. New product data inherits OPS-001 before shipping. **Acceptance evidence:** Submit two repair types, run routing and advance a closed-day deadline; one assigned handler receives each case and an unacknowledged blocker escalates once.
 
-- **TIME-001 — Employee clock and job timers.** Technicians clock in/out, break and start/pause/resume job labor from their assigned board; distinguish attendance, actual time, sold hours and nonbillable work, require reasons for corrections and handle concurrent timers by shop policy. New product data inherits OPS-001 before shipping. **Acceptance evidence:** Clock in, run two jobs with a break, correct a missed stop with manager approval and compare attendance, actual and sold hours; a member cannot alter a colleague’s time.
+- **TIME-001 — Employee clock and job timers.** Technicians clock in/out, break and start/pause/resume job labor from their assigned board; distinguish attendance, actual time, sold hours and nonbillable work, require reasons for corrections and handle concurrent timers by shop policy. Native staff clock only their own attendance and one job timer at a time; starting/resuming needs the current job assignment and an open attendance interval outside a break. Pause before starting a break or clocking out; end a break before clocking out. After reassignment, a technician can stop their already-running own timer, granting no new work authority. Billable, nonbillable and rework intervals remain separate from authorized sold labor hours and invoiced actual quantities; timers never create work authority or billing entries. Server UTC instants persist across requests; elapsed seconds retain milliseconds, attendance less breaks gives net attendance, and job seconds sum separately. Board clocks show elapsed timer time rounded to the nearest minute, with minute carry. Today’s sold hours use the UTC date of the recorded customer decision. Staff propose corrections only to their own stopped intervals with exact prior version, timezone-bearing start/end and a reason; owner/admin approve the exact immutable proposal and the owner acts for the missing manager. Approval rechecks versions, non-overlap and attendance bounds; all original intervals, proposals and deciding actors remain. Staff see only their own time, owner/admin read shop time, agents have no time access. OPS-001 archives retain exact histories under fresh native authority; historical identity never becomes self-service authority. New product data inherits OPS-001 before shipping. **Acceptance evidence:** Clock in, run two jobs with a break, correct a missed stop with manager approval and compare attendance, actual and sold hours; a member cannot alter a colleague’s time.
 
 - **FLOW-004 — Technician collaboration and handoff.** Assign multiple technicians and subtasks with private notes, mentions, attachments, dependencies and handover acknowledgment; preserve per-person work and prevent unassigned staff from changing restricted jobs. New product data inherits OPS-001 before shipping. **Acceptance evidence:** Hand a diagnostic job to a specialist, mention an advisor, complete a dependent subtask and inspect both technicians’ time and handover receipt.
 
@@ -365,7 +365,7 @@ The wider category is evidenced by [Tekmetric shop management](https://www.tekme
 
 ## Homepage claims
 
-Every capability claim on the approved homepage (`src/site/landing/`, checked against br's claims truth table of 18 October 2026, rows 1–59 in page order) maps to the named clauses that promise it. A claim's status is `done` when every mapped clause is done, `missing` when every one is missing, and `partial` otherwise, from the status table below. The sample shop, people, vehicles and figures in the drawings (Buckeye Auto Repair, RO 4127, Ohio's 7.5% sales tax) are illustrations, not claims. 59 claims: 11 done, 22 partial, 26 missing.
+Every capability claim on the approved homepage (`src/site/landing/`, checked against br's claims truth table of 18 October 2026, rows 1–59 in page order) maps to the named clauses that promise it. A claim's status is `done` when every mapped clause is done, `missing` when every one is missing, and `partial` otherwise, from the status table below. The sample shop, people, vehicles and figures in the drawings (Buckeye Auto Repair, RO 4127, Ohio's 7.5% sales tax) are illustrations, not claims. 59 claims: 13 done, 20 partial, 26 missing.
 
 | # | Section | Claim | Clause(s) | Status |
 | --- | --- | --- | --- | --- |
@@ -403,10 +403,10 @@ Every capability claim on the approved homepage (`src/site/landing/`, checked ag
 | 32 | 06 Parts | Worldpac backorder, Morse Rd supplier via PartsTech, order approved, pads scanned to RO 4127 | BUY-002, BUY-003, BUY-005, PART-006 | missing |
 | 33 | 06 Parts | "Customer promise changed: no" | FLOW-002 | partial |
 | 34 | 07 Board | "Every car’s stage, promise and clock, live" | FLOW-001, FLOW-002, TIME-001 | partial |
-| 35 | 07 Board | "Technicians start and stop jobs from the bay" | WORK-001, TIME-001 | partial |
+| 35 | 07 Board | "Technicians start and stop jobs from the bay" | WORK-001, TIME-001 | done |
 | 36 | 07 Board | Waiting parts: promise moved, customer told | PART-006, FLOW-002 | partial |
 | 37 | 07 Board | Agent "Next blocker" | ADV-003 | partial |
-| 38 | 07 Board | "clocked in 7:28 am · 6.1 hrs sold today" | TIME-001 | partial |
+| 38 | 07 Board | "clocked in 7:28 am · 6.1 hrs sold today" | TIME-001 | done |
 | 39 | 08 Pickup | Quality check: road test, pedal, lug torque, signed | QUALITY-001 | done |
 | 40 | 08 Pickup | "Dana gets a ready text with her balance and pays from her phone" (Apple Pay) | PAY-003, MSG-001 | missing |
 | 41 | 08 Pickup | Invoice 10418 from labor and parts, sales tax 7.5% | INVOICE-001, TAX-001 | partial |
@@ -438,8 +438,8 @@ OPEN-001 was added on 18 October 2026. Its 19 October acceptance now runs the pu
 | Clauses | Done | Partial | Missing | Total |
 | --- | ---: | ---: | ---: | ---: |
 | Published | 9 | 0 | 0 | 9 |
-| Target and push further | 10 | 26 | 95 | 131 |
-| All | 19 | 26 | 95 | 140 |
+| Target and push further | 11 | 25 | 95 | 131 |
+| All | 20 | 25 | 95 | 140 |
 
 | Clause | Title | Kind | Status | Evidence | Gap |
 | --- | --- | --- | --- | --- | --- |
@@ -482,7 +482,7 @@ OPEN-001 was added on 18 October 2026. Its 19 October acceptance now runs the pu
 | `FLOW-001` | Live repair and technician boards | target | partial | `src/mallet/ui/workshop.ts`; `src/mallet/workshop.ts`; `tests/browser-journey.mjs` | Basic status badges, job lists and member visibility exist; no full stages, filters, priorities or blocker board. |
 | `FLOW-002` | Promise times and capacity | target | partial | `src/mallet/workshop.ts`; `tests/mallet.test.mjs` | Start/end booking times and dispatch proposals exist; no promise, dependency model, overdue view or customer notice. |
 | `FLOW-003` | Rules-based routing and escalation | target | missing |  | No automatic routing, skill rules, deadline scheduler or escalation acknowledgment. |
-| `TIME-001` | Employee clock and job timers | target | partial | `src/mallet/workshop.ts`; `src/mallet/ui/job.ts` | Actual labor quantities can be entered; no attendance clock, elapsed timer, breaks or corrections. |
+| `TIME-001` | Employee clock and job timers | target | done | `src/mallet/time.ts`; `src/mallet/ui/time.ts`; `src/mallet/http.ts`; `tests/mallet.test.mjs`; `tests/support/time-journey.mjs`; `tests/time-browser.mjs` | Clause-named API/native 1440/390 and archive journeys assert attendance, breaks, two job timers, immutable approved corrections, elapsed/sold/nonbillable separation and access boundaries. |
 | `FLOW-004` | Technician collaboration and handoff | target | partial | `src/mallet/model.ts`; `src/mallet/http.ts`; `tests/mallet.test.mjs` | Single-technician assignment isolation and notes exist; no teams, subtasks, mentions or handoff acknowledgment. |
 | `WARRANTY-001` | Warranty and comeback work | target | missing |  | No warranty terms, comeback links, coverage decisions, claims or rework accounting. |
 | `RETURN-001` | Paid and documented handover | target | missing |  | No ready/collected custody, payment gate, delegate authority or handover receipt. |

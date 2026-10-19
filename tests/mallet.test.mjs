@@ -1,3 +1,5 @@
+import {timeBrowser} from './time-browser.mjs'
+import {timeJourney} from './support/time-journey.mjs'
 import {pricingBrowser} from './pricing-browser.mjs'
 import {pricingJourney} from './support/pricing-journey.mjs'
 import {inspectionJourney} from './support/inspection-journey.mjs'
@@ -227,3 +229,7 @@ test('DVI-001: native template/recipe/assignment and technician inspection at 14
 test('EST-002: cost-priced packages, finding overrides, immutable rules and fresh-owner recovery',()=>run(pricingJourney))
 
 test('EST-002: native matrix/package editors and reasoned override at 1440 and 390',pricingBrowser)
+
+test('TIME-001: two assigned job timers, breaks, approved corrections, isolation and recovery',()=>run(timeJourney))
+
+test('TIME-001: native clocks, reasoned correction decisions and actual board time at 1440/390',timeBrowser)
