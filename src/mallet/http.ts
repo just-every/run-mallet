@@ -1,5 +1,7 @@
 import {timePanel,timeFormInput} from './ui/time'
 import {scopedTime} from './time'
+import {period,technicianReport} from './reports/technicians'
+import {technicianReportPage} from './ui/reports'
 import {pricingFormInput,pricingOverrideInput} from './ui/pricing'
 import {inspectionFormInput} from './ui/inspections'
 import {inspectionRecordInput,inspectionPhotos} from './inspection-photo'
@@ -54,6 +56,7 @@ async function nativeForm(request:Request) {
 }
 function visible(s:State,actor:Actor):State {
  s=scopedTime(s,actor)
+ if(actor.role!=='owner'){const {payRate:_rates,...records}=s.records;s={...s,records}}
  if(actor.role==='agent')return withoutInspections(s)
  if(actor.role!=='member')return s
  const jobs=rows(s,'job').filter(j=>j.technicianId===actor.id),ids=new Set(jobs.map(j=>j.id)),assets=new Set(jobs.map(j=>j.assetId))
@@ -77,6 +80,7 @@ function formInput(data:FormData) {
  if(input.command==='tax.configure'){input.ratePercent=input.ratePercent===''?null:Number(input.ratePercent);input.partsTaxable=data.has('partsTaxable');input.laborTaxable=data.has('laborTaxable')}
  if(input.command==='decline.reprice')input.unitCents=Math.round(Number(input.unitCents)*100)
  if(input.channel)input.method=input.channel
+ if(input.command==='payRate.set'){input.centsPerHour=Math.round(Number(input.rate)*100);delete input.rate}
  return timeFormInput(data,pricingOverrideInput(data,pricingFormInput(data,inspectionFormInput(data,qualityFormInput(data,input)))))
 }
 export async function malletResponse(request:Request,original:Bindings):Promise<Response|null> {
@@ -131,6 +135,7 @@ export async function malletResponse(request:Request,original:Bindings):Promise<
    if(command==='agent.revoke')return redirect('/app/data')
    if(command==='tax.configure')return redirect('/app/tax?saved=1')
    if(command.startsWith('time.')&&!input.jobId)return redirect('/app/time')
+   if(command==='payRate.set')return redirect('/app/reports/technicians#tech-'+encodeURIComponent(input.technicianId))
    if(command==='asset.create')return redirect(`/app/assets/${result.id}`)
    const jobId=command==='job.book'?result.id:input.jobId??result.jobId??(command==='invoice.export'?rows(await load(env.DB),'invoice').find(i=>i.id===input.invoiceId)?.jobId:undefined)
    return redirect(jobId?`/app/jobs/${jobId}`:'/app')
@@ -152,8 +157,14 @@ export async function malletResponse(request:Request,original:Bindings):Promise<
   if(historyMatch)return csv(assetHistoryCsv(state,historyMatch[1]),'mallet-service-history')
   const counts:Counts={board:waiting(state).total,jobs:rows(state,'job').filter(j=>repair(state,j).column).length},frame=(section:Section,more={})=>({section,counts,...more})
   if(path==='/app'){const board=shopBoard(state,actor,(await operators(env.DB)).names,url.searchParams.get('ro'));return page('Shop Board',taxNotice(state,actor)+board.body,actor,200,frame('board',{subtitle:board.subtitle,aside:board.aside}))}
+  if(path==='/api/mallet/reports/technicians'||path==='/app/reports/technicians') {
+   if(actor.role==='agent')throw new HttpError(403,'staff_required')
+   const report=technicianReport(await load(env.DB),actor,period(url.searchParams.get('from'),url.searchParams.get('to'),new Date().toISOString()))
+   if(path.startsWith('/api/'))return json(report)
+   return page('Technician efficiency',technicianReportPage(report,actor,(await operators(env.DB)).names),actor,200,frame('jobs',{subtitle:'Sold versus actual hours, productivity and attendance, recomputed from clock events.'}))
+  }
   if(path==='/app/time'){if(actor.role==='agent')throw new HttpError(403,'staff_required');return page('Time & attendance',`<div class="narrow">${timePanel(state,actor,(await operators(env.DB)).names)}</div>`,actor,200,frame('jobs'))}
-  if(path==='/app/jobs')return page('Repair orders',(actor.role!=='agent'?'<p><a href="/app/time">My time & attendance</a></p>':'')+repairOrders(state,(await operators(env.DB)).names),actor,200,frame('jobs',{subtitle:'Open repair orders by start time, then invoiced visits.'}))
+  if(path==='/app/jobs')return page('Repair orders',(actor.role!=='agent'?'<p><a href="/app/time">My time & attendance</a> · <a href="/app/reports/technicians">Technician efficiency</a></p>':'')+repairOrders(state,(await operators(env.DB)).names),actor,200,frame('jobs',{subtitle:'Open repair orders by start time, then invoiced visits.'}))
   if(path==='/app/customers')return page('Customers',customers(state,actor),actor,200,frame('customers',{subtitle:'Every customer’s vehicle and its visits.'}))
   if(path==='/app/approvals')return page('Approvals',approvals(state),actor,200,frame('approvals',{subtitle:'Every price, dispatch plan and invoice a person approved, at its exact revision.'}))
   if(path==='/app/tax'){if(!human(actor))throw new HttpError(403,'manager_required');return page('Shop sales tax',`<div class="narrow">${taxPage(state,url.searchParams.has('saved'))}</div>`,actor,200,frame('tax',{subtitle:'The sales tax rate Mallet applies to new estimates, in USD.'}))}

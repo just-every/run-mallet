@@ -1,4 +1,6 @@
 import {timeBrowser} from './time-browser.mjs'
+import {reportBrowser} from './report-browser.mjs'
+import {reportJourney} from './support/report-journey.mjs'
 import {timeJourney} from './support/time-journey.mjs'
 import {pricingBrowser} from './pricing-browser.mjs'
 import {pricingJourney} from './support/pricing-journey.mjs'
@@ -233,3 +235,7 @@ test('EST-002: native matrix/package editors and reasoned override at 1440 and 3
 test('TIME-001: two assigned job timers, breaks, approved corrections, isolation and recovery',()=>run(timeJourney))
 
 test('TIME-001: native clocks, reasoned correction decisions and actual board time at 1440/390',timeBrowser)
+
+test('REPORT-003: sold versus actual hours, recomputed corrections, drill-through, owner-only pay rates and recovery',()=>run(reportJourney))
+
+test('REPORT-003: native technician report, rate form and role views at 1440/390',reportBrowser)

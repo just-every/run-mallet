@@ -227,7 +227,7 @@ Neighboring products stay separate: [Pier](https://github.com/just-every/run-pie
 
 - **REPORT-002 — Repair and parts profitability.** Show gross profit and margin by repair, parts/labor/sublet, technician, advisor, service, supplier and location using actual purchase cost, loaded labor, discounts, core/refund adjustments and warranty rework; distinguish estimated from realized margin. New product data inherits OPS-001 before shipping. **Acceptance evidence:** Receive a higher-cost part, finish a discounted repair and a comeback, then compare estimated/realized margins and source cost events.
 
-- **REPORT-003 — Technician efficiency and productivity.** Report sold-versus-actual hours, efficiency, productivity/utilization, attendance and nonbillable/rework time, with clear formulas and drill-through to timers, edits and assignments; staff access follows role. New product data inherits OPS-001 before shipping. **Acceptance evidence:** Clock two technicians through billable and rework jobs, adjust one timer and recompute the report from clock events; unauthorized staff cannot see payroll-sensitive rates.
+- **REPORT-003 — Technician efficiency and productivity.** Report sold-versus-actual hours, efficiency, productivity/utilization, attendance and nonbillable/rework time, with clear formulas and drill-through to timers, edits and assignments; staff access follows role. Sold hours are customer-authorized labor on repairs currently assigned to the technician, dated by the UTC date of the customer decision; actual hours are billable job-timer time; efficiency = sold ÷ actual billable hours; productivity (utilization) = all job-timer time (billable, nonbillable and rework) ÷ net attendance (attendance less breaks). Intervals use their latest approved TIME-001 revision, clipped to an inclusive UTC date range (a running interval counts to now); percentages round half-up to one decimal. Payroll-sensitive hourly rates are owner-only: set with an inclusive UTC effective-from date and a reason, every revision retained, the greatest effective-from on or before a date applying (ties to the latest save); pay cost is each attendance interval’s net time at the rate in effect on its UTC start date, half-up cents, and unrated time is shown as unrated. Owner and admin read every technician’s hours, members read only their own row, and agents have no report. New product data inherits OPS-001 before shipping. **Acceptance evidence:** Clock two technicians through billable and rework jobs, adjust one timer and recompute the report from clock events; unauthorized staff cannot see payroll-sensitive rates.
 
 - **REPORT-004 — Turnaround and customer promises.** Report cycle time and time in each stage, overdue promises, wait-for-parts/approval causes, booking no-shows, DVI completion/engagement and warranty comeback rates; compare locations and periods with retained history. New product data inherits OPS-001 before shipping. **Acceptance evidence:** Run repairs with controlled waits and a comeback, then drill the delay report and promised-versus-actual completion to the exact stage events.
 
@@ -419,7 +419,7 @@ Every capability claim on the approved homepage (`src/site/landing/`, checked ag
 | 48 | 10 Follow-up | Text failed on a landline, sent by email | MSG-001, MSG-002 | missing |
 | 49 | 10 Follow-up | Reminders stopped for a sold vehicle | AUTO-003 | missing |
 | 50 | 11 Week | Emailed weekly report: car count, ARO, sales, on promise | REPORT-001, REPORT-004, REPORT-006 | missing |
-| 51 | 11 Week | Technician sold, clocked and efficiency | REPORT-003 | missing |
+| 51 | 11 Week | Technician sold, clocked and efficiency | REPORT-003 | done |
 | 52 | 11 Week | "Every number opens the repair orders behind it" | REPORT-001 | missing |
 | 53 | 12 Moving in | "31,906 Tekmetric repair orders, all searchable" | MOVE-001 | missing |
 | 54 | 12 Moving in | "Customers, vehicles, history, canned jobs and open work come across before cutover" | MOVE-001, MOVE-012, MOVE-013 | missing |
@@ -438,8 +438,8 @@ OPEN-001 was added on 18 October 2026. Its 19 October acceptance now runs the pu
 | Clauses | Done | Partial | Missing | Total |
 | --- | ---: | ---: | ---: | ---: |
 | Published | 9 | 0 | 0 | 9 |
-| Target and push further | 11 | 25 | 95 | 131 |
-| All | 20 | 25 | 95 | 140 |
+| Target and push further | 12 | 25 | 94 | 131 |
+| All | 21 | 25 | 94 | 140 |
 
 | Clause | Title | Kind | Status | Evidence | Gap |
 | --- | --- | --- | --- | --- | --- |
@@ -534,7 +534,7 @@ OPEN-001 was added on 18 October 2026. Its 19 October acceptance now runs the pu
 | `MSG-004` | Communication controls and searchable history | target | missing |  | No repair communication templates, transcript export, language preferences or shared send-policy enforcement. |
 | `REPORT-001` | ARO car count and sales funnel | target | missing |  | No operational KPI reports, definitions, filters or drill-through. |
 | `REPORT-002` | Repair and parts profitability | target | missing |  | No cost ledger, loaded labor, gross-profit/margin reporting or warranty-cost adjustments. |
-| `REPORT-003` | Technician efficiency and productivity | target | missing |  | No clocks, efficiency/productivity reports or rate-sensitive reporting permissions. |
+| `REPORT-003` | Technician efficiency and productivity | target | done | `src/mallet/reports/technicians.ts`; `src/mallet/pay-rates.ts`; `src/mallet/ui/reports.ts`; `src/mallet/http.ts`; `tests/support/report-journey.mjs`; `tests/report-browser.mjs` |  |
 | `REPORT-004` | Turnaround and customer promises | target | missing |  | No stage timing, promise ledger, no-show/DVI or comeback analytics. |
 | `REPORT-005` | Daily financial and inventory close | target | missing |  | No financial/inventory reports, tender reconciliation or period snapshots. |
 | `REPORT-006` | Scheduled reports and portable data | target | missing |  | No report subscriptions, XLSX exports or imported-history reporting. |
