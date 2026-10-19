@@ -5,7 +5,7 @@ import {validateReplacements} from './supplement-scope'
 export const approvalLinkCommands=['approvalLink.create','approvalLink.delivery','approvalLink.revoke','estimate.customerDecide'] as const
 // Recorded only by the server around a mail send or a customer link; never accepted from the command door.
 export const internalApprovalCommands=['approvalLink.delivery','estimate.customerDecide']
-export const CONSENT='I agree that my typed name is my electronic signature for this decision.'
+export const CONSENT='I agree to sign and receive this record electronically, and that my typed name is my electronic signature for this decision. To request a paper copy of this estimate and decision, ask your repair shop by phone or in person.'
 export const SIGNATURE_LABEL='Typed-name electronic signature; identity not verified beyond possession of the emailed link.'
 const current=(estimate:Row)=>estimate.revisions.at(-1)
 const canonical=(value:any):string=>Array.isArray(value)?`[${value.map(canonical).join(',')}]`:value&&typeof value==='object'?`{${Object.keys(value).sort().map(k=>JSON.stringify(k)+':'+canonical(value[k])).join(',')}}`:JSON.stringify(value)
