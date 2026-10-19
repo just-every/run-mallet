@@ -9,7 +9,9 @@ import {execute,load,MalletError,type State} from './model'
 import {assetHistoryCsv} from './workshop'
 import {catalogue} from './pier'
 import {mediaResponse} from './media/http'
-import {mediaPage} from './ui/media'
+import {uploadScope} from './media/service'
+import {uploadView} from './media/types'
+import {mediaPage,mediaPreview} from './ui/media'
 import {restorePage} from './ui/restore'
 import {UNVERIFIED_ERASURE_HISTORY} from './restore/notice.mjs'
 import {e,rows,money,when,status,type Names} from './ui/common'
@@ -141,6 +143,8 @@ export async function malletResponse(request:Request,original:Bindings):Promise<
   if(path==='/app/move-in')return page('Move into Mallet',moveIn(actor),actor,200,frame('move-in'))
   if(path==='/app/data'){if(!human(actor))throw new HttpError(403,'manager_required');const keys=await env.DB.prepare('SELECT id,label,expires_at,revoked_at FROM mallet_agent_keys ORDER BY created_at DESC').all();return page('Data & access',dataPage(actor,keys.results),actor,200,frame('data'))}
   if(path==='/app/backup')throw new HttpError(405,'post_required')
+  const previewMatch=path.match(/^\/app\/jobs\/([^/]+)\/media\/view\/([^/]+)$/)
+  if(previewMatch){const job=rows(state,'job').find(j=>j.id===previewMatch[1]);if(!job)throw new HttpError(404,'not_found');const {row}=await uploadScope(env.DB,actor,auth.authority,previewMatch[2]);if(row.job_id!==job.id||!row.complete)throw new HttpError(404,'not_found');return page('Inspection evidence',mediaPreview(job,uploadView(row)),actor,200,frame('jobs',{subtitle:e(job.title),media:true}))}
   const mediaMatch=path.match(/^\/app\/jobs\/([^/]+)\/media$/)
   if(mediaMatch){if(actor.role==='agent')throw new HttpError(403,'manager_required');const job=rows(state,'job').find(j=>j.id===mediaMatch[1]);if(!job)throw new HttpError(404,'not_found');return page('Inspection photos & video',mediaPage(job),actor,200,frame('jobs',{subtitle:e(job.title)+' · '+e(job.asset.label),media:true}))}
   const asset=path.match(/^\/app\/assets\/([^/]+)$/),job=path.match(/^\/app\/jobs\/([^/]+)$/)

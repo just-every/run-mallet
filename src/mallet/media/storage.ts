@@ -18,9 +18,12 @@ async function batch(db: D1Database, queries: Sql[]): Promise<D1Result[]> {
   throw error
  }
 }
-export async function guarded(db: D1Database, scope: Scope, queries: Sql[]): Promise<D1Result[]> {
+export function scopeAssertion(scope: Scope): Sql {
  const grant = assignment(scope.actor)
- const results = await batch(db, [nativeGuard(scope.authority), assertion(`EXISTS(SELECT 1 FROM mallet_records j WHERE j.kind='job' AND j.id=? AND j.revision=? AND ${grant.sql})`, [scope.jobId, scope.revision, ...grant.params]), ...queries, { sql: 'DELETE FROM mallet_assert' }])
+ return assertion(`EXISTS(SELECT 1 FROM mallet_records j WHERE j.kind='job' AND j.id=? AND j.revision=? AND ${grant.sql})`, [scope.jobId, scope.revision, ...grant.params])
+}
+export async function guarded(db: D1Database, scope: Scope, queries: Sql[]): Promise<D1Result[]> {
+ const results = await batch(db, [nativeGuard(scope.authority), scopeAssertion(scope), ...queries, { sql: 'DELETE FROM mallet_assert' }])
  return results.slice(2, -1)
 }
 async function locate<T>(db: D1Database, actor: Actor, authority: Authority, table: 'job' | 'finding' | 'upload', id: string): Promise<{ scope: Scope; row: T }> {

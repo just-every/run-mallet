@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto'
 import type { Bindings } from '../../auth.server'
 import { originGuard, type Actor, type Authority } from '../auth'
 import { fail } from '../model'
+import { inspectionHistory, carryFinding, resolveFinding } from './history'
 import { CHUNK_BYTES, type ChunkRow } from './types'
 import { findingInput, identifier, uploadInput, uuid } from './validation'
 import { chunkBytes, chunkPage, completeUpload, createFinding, createUpload, listFindings, uploadScope, uploadStatus, writeChunk } from './service'
@@ -82,6 +83,10 @@ export async function mediaResponse(request: Request, env: Bindings, actor: Acto
  if (!['owner', 'admin', 'member'].includes(actor.role)) fail('FORBIDDEN', 'Agents cannot access inspection media.', null, 403)
  originGuard(request, env)
  const url = new URL(request.url), path = url.pathname
+ if (path === '/api/mallet/media/history' && request.method === 'GET') return json(await inspectionHistory(env.DB, actor, authority, identifier(url.searchParams.get('jobId'), 'jobId')))
+ if (path === '/api/mallet/media/carry' && request.method === 'POST') return json(await carryFinding(env.DB, actor, authority, await body(request)))
+ const resolution = /^\/api\/mallet\/media\/findings\/([^/]+)\/resolve$/.exec(path)
+ if (resolution && request.method === 'POST') return json(await resolveFinding(env.DB, actor, authority, identifier(resolution[1], 'findingId'), await body(request)))
  if (path === '/api/mallet/media/findings') {
   if (request.method === 'POST') return json(await createFinding(env.DB, actor, authority, findingInput(await body(request))))
   if (request.method === 'GET') return json(await listFindings(env.DB, actor, authority, identifier(url.searchParams.get('jobId'), 'jobId')))

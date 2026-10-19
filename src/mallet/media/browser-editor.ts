@@ -13,7 +13,7 @@ async function loadFindings(){
  if(!findings.length)list.append(node('p','No inspection evidence saved for this repair yet.','muted'));
  for(const f of findings){
   const article=node('article',undefined,'evidence-item');article.append(node('h3',f.title));
-  article.append(node('p','Reported capture: '+formatTime(f.capturedAt)+' · '+f.by.name,'meta'));
+  article.append(node('p','Reported capture: '+formatTime(f.capturedAt)+' · '+f.by.name,'meta'));observationText(article,f);
   for(const m of f.media){
    const item=node('div',undefined,'media-version');const name=m.variant==='original'?'Original (immutable)':'Prepared shared version · private';
    item.append(node('span',name,'badge '+(m.variant==='original'?'gray':'blue')));
@@ -28,15 +28,19 @@ async function loadFindings(){
    }
    if(m.annotations?.text)item.append(node('p',m.annotations.text));article.append(item);
   }
-  if(!f.media.length)article.append(node('p','Finding saved. Add a photo or video.','muted'));list.append(article);
+  if(!f.media.length)article.append(node('p',f.carriedFrom?'Prior observation retained by reference; record a separate finding for a new test.':'Finding saved. Add a photo or video.','muted'));list.append(article);
  }
+ await loadHistory();
 }
 findSelect.addEventListener('change',()=>{if(findSelect.value)localStorage.setItem(findingKey+'Id',findSelect.value);else localStorage.removeItem(findingKey+'Id')});
 root.querySelector('[data-create]').addEventListener('click',async event=>{
  const button=event.currentTarget;button.disabled=true;
  try{
   if(!titleInput.value.trim()||!timeInput.value)throw Error('Enter the finding and its technician-reported capture time.');
-  const result=await api('/findings',{jobId:root.dataset.jobId,clientId:opaqueKey(findingKey+'Client'),title:titleInput.value.trim(),capturedAt:new Date(timeInput.value).toISOString()});
+  const measurements=[];
+  for(let i=0;i<3;i++){const name=root.querySelector('[name=measurementName'+i+']').value,value=root.querySelector('[name=measurementValue'+i+']').value,unit=root.querySelector('[name=measurementUnit'+i+']').value;if(name||value||unit){if(!name||value===''||!unit)throw Error('Each measurement needs its name, value and unit.');measurements.push({name,value:Number(value),unit})}}
+  const provenance=root.querySelector('[name=provenance]').value==='native'?{kind:'native'}:{kind:'imported',system:root.querySelector('[name=sourceSystem]').value,recordId:root.querySelector('[name=sourceRecordId]').value,observer:root.querySelector('[name=sourceObserver]').value};
+  const result=await api('/findings',{observation:{measurements,recommendation:root.querySelector('[name=recommendation]').value,provenance},jobId:root.dataset.jobId,clientId:opaqueKey(findingKey+'Client'),title:titleInput.value.trim(),capturedAt:new Date(timeInput.value).toISOString()});
   localStorage.setItem(findingKey+'Id',result.id);localStorage.removeItem(findingKey+'Client');await loadFindings();findSelect.value=result.id;say('Finding saved. Capture or select its evidence.');
  }catch(error){say(error.message)}finally{button.disabled=false}
 });

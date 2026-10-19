@@ -1,20 +1,21 @@
 import { createHash } from 'node:crypto'
 import { fail, integer } from '../model'
-import type { Actor, Authority, ChunkRow, FindingInput, FindingRow, Scope, UploadInput, UploadRow } from './types'
+import type { Actor, Authority, ChunkRow, FindingInput, FindingRow, Scope, Sql, UploadInput, UploadRow } from './types'
 import { CHUNK_BYTES, contentUrl, findingView, uploadView } from './types'
-import { assertion, findingScope, getUpload, guarded, jobScope, readRows, uploadScope } from './storage'
+import { assertion, scopeAssertion, findingScope, getUpload, guarded, jobScope, readRows, uploadScope } from './storage'
 import { decodeChunk, sniff } from './validation'
 
-export async function createFinding(db: D1Database, actor: Actor, authority: Authority, input: FindingInput) {
+export async function createFinding(db: D1Database, actor: Actor, authority: Authority, input: FindingInput, guardScopes: Scope[] = [], assertions: Sql[] = []) {
  const scope = await jobScope(db, actor, authority, input.jobId), request = JSON.stringify(input)
  const existing = await readRows<FindingRow>(db, scope, 'SELECT * FROM mallet_media_findings WHERE job_id=? AND client_id=?', [input.jobId, input.clientId])
  if (existing[0] && existing[0].request_json !== request) fail('MEDIA_REPLAY', 'This finding clientId was already used for different data.')
  const result = await guarded(db, scope, [
+  ...guardScopes.map(scopeAssertion), ...assertions,
   { sql: 'INSERT OR IGNORE INTO mallet_media_findings(id,job_id,client_id,title,captured_at,created_at,actor_json,request_json) VALUES(?,?,?,?,?,?,?,?)', params: [crypto.randomUUID(), input.jobId, input.clientId, input.title, input.capturedAt, new Date().toISOString(), JSON.stringify(actor), request] },
   assertion('EXISTS(SELECT 1 FROM mallet_media_findings WHERE job_id=? AND client_id=? AND request_json=?)', [input.jobId, input.clientId, request]),
   { sql: 'SELECT * FROM mallet_media_findings WHERE job_id=? AND client_id=?', params: [input.jobId, input.clientId] }
  ])
- return findingView(result[2].results[0] as FindingRow)
+ return findingView(result.at(-1)!.results[0] as FindingRow)
 }
 export async function listFindings(db: D1Database, actor: Actor, authority: Authority, jobId: string) {
  const scope = await jobScope(db, actor, authority, jobId)

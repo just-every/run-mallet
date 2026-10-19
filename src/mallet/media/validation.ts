@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto'
 import { choice, fail, integer, object, text } from '../model'
-import { MIME_TYPES, type Annotations, type FindingInput, type MediaMime, type Point, type UploadInput } from './types'
+import { MIME_TYPES, type Annotations, type FindingInput, type Observation, type MediaMime, type Point, type UploadInput } from './types'
 export function uuid(value: unknown, label: string): string {
  const result = text(value, label, 36)
  if (!/^[a-f0-9]{8}-[a-f0-9]{4}-[1-8][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/i.test(result)) fail('INPUT', `${label} must be a UUID.`, null, 400)
@@ -44,9 +44,21 @@ export function annotations(value: unknown): Annotations | null {
  if (input.labels !== undefined) result.labels = list(input.labels, 100, 'labels').map(value => { const label = object(value, 'label'); return { ...point(label), text: text(label.text, 'label text', 200) } })
  return Object.keys(result).length ? result : null
 }
+export function observation(value: unknown): Observation {
+ const p = object(value, 'observation'), provenance = object(p.provenance ?? { kind: 'native' }, 'provenance')
+ const measurements = list(p.measurements ?? [], 30, 'measurements').map(value => {
+  const m = object(value, 'measurement')
+  if (typeof m.value !== 'number' || !Number.isFinite(m.value) || Math.abs(m.value) > 1e9) fail('INPUT', 'Measurement must be a finite number within one billion.', null, 400)
+  return { name: text(m.name, 'measurement name', 100), value: m.value, unit: text(m.unit, 'measurement unit', 30) }
+ })
+ if (new Set(measurements.map(m => m.name.toLowerCase()+'\0'+m.unit)).size !== measurements.length) fail('INPUT', 'Measurement names and units must be distinct.', null, 400)
+ return { measurements, recommendation: text(p.recommendation, 'unresolved recommendation', 2000, true), provenance: provenance.kind === 'native' ? { kind: 'native' } : {
+  kind: choice(provenance.kind, ['imported'] as const, 'provenance'), system: text(provenance.system, 'source system', 100), recordId: text(provenance.recordId, 'source record id', 200), observer: text(provenance.observer, 'source observer', 200)
+ } }
+}
 export function findingInput(value: unknown): FindingInput {
  const p = object(value)
- return { jobId: identifier(p.jobId, 'jobId'), clientId: uuid(p.clientId, 'clientId'), title: text(p.title, 'title', 200), capturedAt: timestamp(p.capturedAt) }
+ return { jobId: identifier(p.jobId, 'jobId'), clientId: uuid(p.clientId, 'clientId'), title: text(p.title, 'title', 200), capturedAt: timestamp(p.capturedAt), ...(p.observation !== undefined ? { observation: observation(p.observation) } : {}) }
 }
 export function uploadInput(value: unknown): UploadInput {
  const p = object(value), variant = choice(p.variant, ['original', 'shared'] as const, 'variant'), mime = choice(p.mime, MIME_TYPES, 'mime'), notes = annotations(p.annotations)

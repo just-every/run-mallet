@@ -83,3 +83,48 @@ test('DVI-002 / OPS-001: private original/shared custody, interrupted upload, ex
 test('DVI-002: phone/tablet markup, compression, visible interruption/resume, original/shared photo and playable video',async()=>{
  const {mediaBrowser}=await import('./media-browser.mjs');await mediaBrowser()
 })
+
+test('DVI-004 / OPS-001: compare same-asset measurements/images, imported provenance, declined carry without new tests/consent, resolution and exact restore',()=>run(async h=>{
+ const tech=await h.person('history-tech@example.test'),other=await h.person('history-other@example.test')
+ const {asset,job}=await booking(h,{technicianId:tech.id,startAt:'2026-09-01T09:00:00-04:00',endAt:'2026-09-01T10:00:00-04:00'})
+ const base={jobId:job.id,clientId:randomUUID(),title:'Front brake pads',capturedAt:'2026-09-01T09:10:00-04:00',observation:{measurements:[{name:'Front pad thickness',value:3,unit:'mm'}],recommendation:'Replace front pads',provenance:{kind:'native'}}}
+ const source=await h.api(path+'/findings',base,{as:tech.cookie})
+ await h.api(path+'/findings',{...base,clientId:randomUUID(),observation:{...base.observation,measurements:[{name:'Front pad thickness',value:2,unit:''}]}},{status:400})
+ const imported=await h.api(path+'/findings',{...base,clientId:randomUUID(),title:'Prior supplier inspection',capturedAt:'2026-08-01T09:00:00Z',observation:{measurements:[{name:'Front pad thickness',value:4,unit:'mm'}],recommendation:'Monitor pad wear',provenance:{kind:'imported',system:'Owner-supplied prior report',recordId:'BR-18',observer:'Pat, prior technician'}}})
+ let upload=await h.api(path+'/uploads',{findingId:source.id,clientId:randomUUID(),variant:'original',filename:'prior-brake.png',mime:'image/png',size:pixel.length,sha256:hash(pixel),capturedAt:source.capturedAt})
+ await h.api(path+'/uploads/'+upload.id+'/chunks/0',chunk(pixel,0),{method:'PUT'});upload=await h.api(path+'/uploads/'+upload.id+'/complete',{})
+ const {estimate,authorise}=await import('./harness.mjs');let quote=await estimate(h,job);quote=await authorise(h,quote,[])
+ let state=await h.state(),prior=state.records.job.find(j=>j.id===job.id)
+ const reading=await h.command('reading.record',{jobId:job.id,version:prior.version,stage:'intake',value:60000,observedAt:source.capturedAt})
+ const decline=await h.command('decline.record',{estimateId:quote.id,version:quote.version,lineId:quote.revisions[0].lines[0].id,readingId:reading.id,reason:'Customer defers pads',evidence:'Recorded exact full decline',dueValue:65000})
+ const currentAsset=(await h.state()).records.asset.find(a=>a.id===asset.id)
+ const next=(await booking(h,{asset:currentAsset,technicianId:tech.id,startAt:'2026-10-01T09:00:00-04:00',endAt:'2026-10-01T10:00:00-04:00'})).job
+ const measured=await h.api(path+'/findings',{...base,jobId:next.id,clientId:randomUUID(),capturedAt:'2026-10-01T09:10:00-04:00',observation:{...base.observation,measurements:[{name:'Front pad thickness',value:2,unit:'mm'}]}},{as:tech.cookie})
+ let currentUpload=await h.api(path+'/uploads',{findingId:measured.id,clientId:randomUUID(),variant:'original',filename:'current-brake.png',mime:'image/png',size:pixel.length,sha256:hash(pixel),capturedAt:measured.capturedAt})
+ await h.api(path+'/uploads/'+currentUpload.id+'/chunks/0',chunk(pixel,0),{method:'PUT'});currentUpload=await h.api(path+'/uploads/'+currentUpload.id+'/complete',{})
+ const input={jobId:next.id,findingId:source.id,declinedWorkId:decline.id}
+ await h.api(path+'/carry',input,{as:other.cookie,status:404});await h.api(path+'/carry',input,{headers:{origin:'https://elsewhere.test'},status:403})
+ const carried=await h.api(path+'/carry',{...input,capturedAt:'2026-10-01T09:10:00Z',observation:{measurements:[]}},{as:tech.cookie})
+ assert.equal(carried.capturedAt,source.capturedAt);assert.equal(carried.observation,null);assert.equal(carried.carriedFrom.id,source.id);assert.equal(carried.carriedFrom.by.id,tech.id);assert.deepEqual(carried.carriedFrom.measurements,base.observation.measurements);assert.equal(carried.carriedFrom.declinedWorkId,decline.id)
+ assert.deepEqual(await h.api(path+'/carry',input,{as:tech.cookie}),carried)
+ const history=await h.api(path+'/history?jobId='+next.id,undefined,{as:tech.cookie})
+ assert.deepEqual(history.visits.map(v=>v.job.id),[job.id,next.id]);assert.equal(history.visits[0].findings.find(f=>f.id===source.id).media[0].id,upload.id)
+ assert.equal(history.visits[0].findings.find(f=>f.id===imported.id).observation.provenance.observer,'Pat, prior technician')
+ assert.equal(history.visits[1].findings.find(f=>f.id===measured.id).observation.measurements[0].value,2);assert.equal(history.visits[1].findings.find(f=>f.id===measured.id).media[0].id,currentUpload.id);assert.notEqual(currentUpload.id,upload.id);assert.notEqual(currentUpload.capturedAt,upload.capturedAt)
+ assert.equal(history.visits[0].findings.find(f=>f.id===source.id).observation.measurements[0].value,3)
+ assert.equal(history.visits[1].findings.filter(f=>f.carriedFrom).length,1)
+ state=await h.state();assert.equal(state.records.job.find(j=>j.id===next.id).estimateId,null);assert.deepEqual(state.records.estimate.find(q=>q.id===quote.id).authorisation,quote.authorisation)
+ const unrelated=(await booking(h,{asset:await h.command('asset.create',{customerName:'Someone Else',label:'Different vehicle',identifier:'OTHER-VEHICLE'}),bayId:'Bay 3',technicianId:'Someone',startAt:'2026-11-01T09:00:00Z',endAt:'2026-11-01T10:00:00Z'})).job
+ await h.api(path+'/carry',{...input,jobId:unrelated.id},{status:400});await h.api(path+'/carry',{jobId:job.id,findingId:measured.id},{status:400})
+ const resolution=await h.api(path+'/findings/'+source.id+'/resolve',{reason:'Pads replaced under a later separately authorized repair'},{as:tech.cookie})
+ assert.equal(JSON.parse(resolution.actor_json).id,tech.id);await h.api(path+'/carry',input,{status:409})
+ const after=await h.api(path+'/history?jobId='+next.id)
+ assert.equal(after.visits[0].findings.find(f=>f.id===source.id).resolution.reason,resolution.reason)
+ const backup=await archive(h),fresh=await installation({bindings:{OWNER_EMAIL:'history-restore@example.test'}})
+ try{await restore(fresh,backup);assert.deepEqual(await fresh.api(path+'/history?jobId='+next.id),after);assert.deepEqual(Buffer.from(await(await fresh.request(upload.contentUrl)).arrayBuffer()),pixel);await fresh.api(path+'/history?jobId='+next.id,undefined,{as:tech.cookie,status:401})}finally{await fresh.close()}
+ await h.api('/auth/operator/status',{operatorId:tech.id,status:'inactive'});await h.api(path+'/history?jobId='+next.id,undefined,{as:tech.cookie,status:401})
+}))
+
+test('DVI-004: second-visit comparison, imported source, declined carry and resolved history on desktop and phone',async()=>{
+ const {inspectionHistoryBrowser}=await import('./inspection-history-browser.mjs');await inspectionHistoryBrowser()
+})

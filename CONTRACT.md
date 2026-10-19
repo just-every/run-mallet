@@ -79,7 +79,7 @@ Neighboring products stay separate: [Pier](https://github.com/just-every/run-pie
 
 - **DVI-003 — Customer inspection presentation.** Text/email a branded mobile report showing measurements, urgency, technician evidence and an advisor-reviewed plain-language explanation, linked to exact estimate lines; record delivery and views without treating a view as approval. New product data inherits OPS-001 before shipping. Customer delivery must preserve DVI-002 private-original control; a prepared shared variant is never itself delivery. **Acceptance evidence:** Send an inspection report to a customer phone, play its video and open a proposed repair; a viewed report leaves all approval decisions unchanged.
 
-- **DVI-004 — Inspection history comparison.** Compare prior inspection measurements and images for the same vehicle/asset, distinguish imported evidence, and carry unresolved recommendations forward without silently representing old observations as new tests. New product data inherits OPS-001 before shipping. **Acceptance evidence:** Open a second visit, compare brake measurements with the prior visit and carry a declined finding into a new inspection; date and provenance remain visible.
+- **DVI-004 — Inspection history comparison.** Compare prior inspection measurements and images for the same vehicle/asset, distinguish imported evidence, and carry unresolved recommendations forward without silently representing old observations as new tests. Measurements retain the entered numeric value, name and explicit unit; comparison never converts units. Imported attribution is source-declared, not provider-verified. A carry is a reference to the original observation, date, actor and optional exact declined decision, never a new test or authorization. Resolution appends a reason and native actor without changing original evidence; resolved recommendations cannot be carried again. Current DVI-002 access rules apply separately to every source and destination visit. New product data inherits OPS-001 before shipping. **Acceptance evidence:** Open a second visit, compare brake measurements with the prior visit and carry a declined finding into a new inspection; date and provenance remain visible.
 
 - **QUALITY-001 — Completion tests and return clearance.** Define pre/post-repair checklists, road-test measurements and required technician/quality sign-off; a failed or incomplete critical check blocks ready-for-return until an authorized override with reason. Physical safety clearance is always a qualified human decision. New product data inherits OPS-001 before shipping. **Acceptance evidence:** Fail the post-repair brake check, try ready status, record corrective work and obtain a second sign-off; inspect the failed result and any manager override.
 
@@ -438,8 +438,8 @@ OPEN-001 was added on 18 October 2026. Its 19 October acceptance now runs the pu
 | Clauses | Done | Partial | Missing | Total |
 | --- | ---: | ---: | ---: | ---: |
 | Published | 9 | 0 | 0 | 9 |
-| Target and push further | 5 | 27 | 99 | 131 |
-| All | 14 | 27 | 99 | 140 |
+| Target and push further | 6 | 27 | 98 | 131 |
+| All | 15 | 27 | 98 | 140 |
 
 | Clause | Title | Kind | Status | Evidence | Gap |
 | --- | --- | --- | --- | --- | --- |
@@ -466,7 +466,7 @@ OPEN-001 was added on 18 October 2026. Its 19 October acceptance now runs the pu
 | `DVI-001` | Configurable digital inspections | target | missing |  | No digital inspection templates, assignments, measurements or completeness controls. |
 | `DVI-002` | Photo and video inspection evidence | target | done | `src/mallet/media/http.ts`; `src/mallet/media/service.ts`; `src/mallet/ui/media.ts`; `public/app/media.css`; `migrations/core/0019_inspection_media.sql`; `tests/media.test.mjs`; `tests/media-browser.mjs` | Native private photo/video capture, touch markup and JPEG compression, hash-bound interruption/resume, original/shared viewing, duplicate control, provenance and native archive recovery asserted through public doors (DVI-002). |
 | `DVI-003` | Customer inspection presentation | target | missing |  | No customer DVI report, delivery/view receipt or estimate-line mapping. |
-| `DVI-004` | Inspection history comparison | target | missing |  | No inspection records or historical comparison. |
+| `DVI-004` | Inspection history comparison | target | done | `src/mallet/media/history.ts`; `src/mallet/media/validation.ts`; `src/mallet/media/browser-history.ts`; `src/mallet/ui/media.ts`; `migrations/core/0020_inspection_resolution.sql`; `tests/media.test.mjs`; `tests/inspection-history-browser.mjs` | DVI-004 public HTTP and 1440/390 journeys assert prior/current measurements and images, declared imported provenance, exact declined carry without new tests/consent, resolution, current access checks and exact archive recovery. |
 | `QUALITY-001` | Completion tests and return clearance | target | missing |  | Completion currently requires actual work only; no test checklist, quality gate or clearance evidence. |
 | `DIAG-002` | Specialist diagnostics connections | target | missing |  | No scan-tool, PhoneCheck or Blackbelt360 adapters or result ingestion. |
 | `DIAG-003` | OEM service information and recall context | target | missing |  | No automotive technical-data, TSB, recall or maintenance-schedule integration. |
