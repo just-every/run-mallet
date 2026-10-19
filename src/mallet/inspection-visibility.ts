@@ -5,5 +5,5 @@ export function withoutInspectionSource(row:any) {
  return {...row,revisions:row.revisions.map(({inspectionSource,...revision}:any)=>revision)}
 }
 export function withoutInspections(state:State):State {
- return {...state,records:Object.fromEntries(Object.entries(state.records).filter(([kind])=>!kind.startsWith('inspection')).map(([kind,values])=>[kind,kind==='event'?values.filter(row=>!row.kind.startsWith('inspection')):kind==='estimate'?values.map(withoutInspectionSource):values]))}
+ return {...state,records:Object.fromEntries(Object.entries(state.records).filter(([kind])=>!kind.startsWith('inspection')).map(([kind,values])=>[kind,kind==='event'?values.filter(row=>!row.kind.startsWith('inspection')&&row.kind!=='recipe.prepare'):kind==='estimate'?values.map(withoutInspectionSource):values]))}
 }

@@ -1,3 +1,5 @@
+import {pricingBrowser} from './pricing-browser.mjs'
+import {pricingJourney} from './support/pricing-journey.mjs'
 import {inspectionJourney} from './support/inspection-journey.mjs'
 import {inspectionBrowser} from './inspection-browser.mjs'
 import {supplementJourney} from './support/supplement-journey.mjs'
@@ -221,3 +223,7 @@ test('EST-004: separate incremental decisions, prospective price changes, exact 
 
 test('DVI-001 / DVI-004: exact assigned template, measured/photo outcomes, not-inspected state, canned-job estimate and archive',()=>run(inspectionJourney))
 test('DVI-001: native template/recipe/assignment and technician inspection at 1440/390',inspectionBrowser)
+
+test('EST-002: cost-priced packages, finding overrides, immutable rules and fresh-owner recovery',()=>run(pricingJourney))
+
+test('EST-002: native matrix/package editors and reasoned override at 1440 and 390',pricingBrowser)

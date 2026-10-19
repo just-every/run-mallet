@@ -1,11 +1,12 @@
+import {priceRecipe} from './pricing'
 import {bump,choice,event,expectVersion,fail,find,integer,object,put,text,who,type Context,type Handler,type Row} from './model'
 import {quantity} from './money'
 import {estimates} from './estimates'
 import {openJob} from './workshop'
 
-export type InspectionRecipeLine = {kind:'part'|'labor';description:string;quantity:number;unitCents:number}
+export type InspectionRecipeLine = {kind:'part'|'labor';description:string;quantity:number;unitCents:number;costCents?:number;matrixId?:string}
 export type InspectionItem = {id:string;label:string;measurement:null|{name:string;unit:string;grades?:string[]};recipe:null|{id:string;revision:number;snapshot:any}}
-export const inspectionCommands = ['inspectionJob.save','inspectionTemplate.save','inspection.assign','inspection.record','inspection.estimate'] as const
+export const inspectionCommands = ['inspectionJob.save','inspectionTemplate.save','inspection.assign','inspection.record','inspection.estimate','recipe.prepare'] as const
 export const inspectionMemberCommands = ['inspection.record'] as const
 export const latestInspectionRevision = (row:Row) => row.revisions.at(-1)
 const manager = (c:Context) => {
@@ -15,7 +16,8 @@ function recipeLines(value:unknown):InspectionRecipeLine[] {
  if(!Array.isArray(value)||!value.length||value.length>100)fail('INPUT','Provide 1–100 service recipe lines.',null,400)
  return value.map(raw=>{
   const line=object(raw,'service recipe line')
-  return {kind:choice(line.kind,['part','labor'],'line kind'),description:text(line.description,'line description',500),quantity:quantity(line.quantity)/1000,unitCents:integer(line.unitCents,'unitCents')}
+  if((line.matrixId!=null)!==(line.costCents!=null))fail('INPUT','Provide both base cost and pricing matrix.',null,400)
+  return {kind:choice(line.kind,['part','labor'],'line kind'),description:text(line.description,'line description',500),quantity:quantity(line.quantity)/1000,unitCents:integer(line.unitCents,'unitCents'),...(line.matrixId?{matrixId:text(line.matrixId,'matrixId'),costCents:integer(line.costCents,'costCents')}:{})}
  })
 }
 function templateItems(c:Context,value:unknown):InspectionItem[] {
@@ -61,7 +63,16 @@ export const inspections:Handler=(c,command,p)=>{
  if(!(inspectionCommands as readonly string[]).includes(command))return
  if(c.actor.role==='agent')fail('FORBIDDEN','Inspection records require a native staff session.',null,403)
  if(command!=='inspection.record')manager(c)
- if(command==='inspectionJob.save')return saveRevision(c,'inspectionJob',p,{name:text(p.name,'service recipe name'),lines:recipeLines(p.lines)})
+ if(command==='inspectionJob.save') {
+  const lines=recipeLines(p.lines);priceRecipe(c,lines)
+  let inspectionTemplate=null
+  if(p.inspectionTemplateId){const template=find(c.s,'inspectionTemplate',p.inspectionTemplateId),revision=integer(p.inspectionTemplateRevision,'inspection template revision',1),snapshot=template.revisions.find((r:any)=>r.n===revision);if(!snapshot)fail('INPUT','Choose an existing inspection template revision.',null,400);inspectionTemplate={id:template.id,revision,snapshot:structuredClone(snapshot)}}
+  return saveRevision(c,'inspectionJob',p,{name:text(p.name,'service recipe name'),lines,inspectionTemplate})
+ }
+ if(command==='recipe.prepare') {
+  const job=openJob(c,p),recipe=find(c.s,'inspectionJob',p.recipeId);expectVersion(recipe,p.recipeVersion)
+  return preparePackage(c,p,job,recipe,null)
+ }
  if(command==='inspectionTemplate.save')return saveRevision(c,'inspectionTemplate',p,{name:text(p.name,'template name'),vehicle:text(p.vehicle,'vehicle applicability',200),service:text(p.service,'service applicability',200),items:templateItems(c,p.items)})
  if(command==='inspection.assign') {
   const job=openJob(c,p),template=find(c.s,'inspectionTemplate',p.templateId)
@@ -105,13 +116,20 @@ export const inspections:Handler=(c,command,p)=>{
  if(!item.recipe)fail('INSPECTION_RECIPE','This inspection point has no mapped service recipe.')
  const recipe=find(c.s,'inspectionJob',item.recipe.id)
  expectVersion(recipe,p.recipeVersion)
- const priced=latestInspectionRevision(recipe)
- const source={inspectionId:inspection.id,inspectionVersion:inspection.version,itemId:item.id,result:structuredClone(result),template:structuredClone(inspection.template),mappedRecipe:structuredClone(item.recipe),pricedRecipe:{id:recipe.id,revision:priced.n,snapshot:structuredClone(priced)},preparedAt:c.now,preparedBy:who(c)}
- const quote=estimates(c,'estimate.prepare',{jobId:job.id,version:job.version,lines:priced.lines,notes:text(p.notes,'estimate notes',4000,true),...(job.estimateId?{supplement:true,reason:`Inspection finding: ${item.label}`}:{})})
- // Preparation stays draft-only. The frozen revision carries source evidence even
- // after the recipe, template or observation acquires a newer revision.
+ return preparePackage(c,p,job,recipe,{inspectionId:inspection.id,inspectionVersion:inspection.version,itemId:item.id,result:structuredClone(result),template:structuredClone(inspection.template),mappedRecipe:structuredClone(item.recipe)})
+}
+function preparePackage(c:Context,p:any,job:Row,recipe:Row,finding:any) {
+ const priced=latestInspectionRevision(recipe),calculation=priceRecipe(c,priced.lines,p)
+ const source:any={...finding,pricedRecipe:{id:recipe.id,revision:priced.n,snapshot:structuredClone(priced)},pricing:calculation.provenance,preparedAt:c.now,preparedBy:who(c)}
+ const quote=estimates(c,'estimate.prepare',{jobId:job.id,version:job.version,lines:calculation.lines,notes:text(p.notes,'estimate notes',4000,true),...(job.estimateId?{supplement:true,reason:finding?`Inspection finding: ${finding.result.item.label}`:text(p.reason,'supplement reason',2000)}:{})})
+ if(priced.inspectionTemplate) {
+  const mapping=priced.inspectionTemplate
+  const assigned=put(c.s,'inspection',{jobId:job.id,technicianId:job.technicianId,template:structuredClone(mapping),assignedAt:c.now,assignedBy:who(c),reason:`Service package: ${priced.name}`,results:[]})
+  source.packageInspection={id:assigned.id,template:structuredClone(mapping)}
+  event(c,'inspection.assign',job.id,assigned.id,{template:assigned.template,technicianId:job.technicianId,reason:assigned.reason})
+ }
  const revisions=quote.revisions.map((revision:any,n:number)=>n===quote.revisions.length-1?{...revision,inspectionSource:source}:revision)
  const saved=bump(c.s,'estimate',quote,{revisions})
- event(c,command,job.id,saved.id,{revision:latestInspectionRevision(saved).n,inspectionSource:source})
+ event(c,finding?'inspection.estimate':'recipe.prepare',job.id,saved.id,{revision:latestInspectionRevision(saved).n,inspectionSource:source})
  return saved
 }

@@ -1,3 +1,4 @@
+import {pricingFormInput,pricingOverrideInput} from './ui/pricing'
 import {inspectionFormInput} from './ui/inspections'
 import {inspectionRecordInput,inspectionPhotos} from './inspection-photo'
 import {withoutInspectionSource,withoutInspections} from './inspection-visibility'
@@ -73,7 +74,7 @@ function formInput(data:FormData) {
  if(input.command==='tax.configure'){input.ratePercent=input.ratePercent===''?null:Number(input.ratePercent);input.partsTaxable=data.has('partsTaxable');input.laborTaxable=data.has('laborTaxable')}
  if(input.command==='decline.reprice')input.unitCents=Math.round(Number(input.unitCents)*100)
  if(input.channel)input.method=input.channel
- return inspectionFormInput(data,qualityFormInput(data,input))
+ return pricingOverrideInput(data,pricingFormInput(data,inspectionFormInput(data,qualityFormInput(data,input))))
 }
 export async function malletResponse(request:Request,original:Bindings):Promise<Response|null> {
  const url=new URL(request.url),path=url.pathname
