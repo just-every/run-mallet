@@ -437,9 +437,9 @@ OPEN-001 was added on 18 October 2026. Its 19 October acceptance now runs the pu
 
 | Clauses | Done | Partial | Missing | Total |
 | --- | ---: | ---: | ---: | ---: |
-| Published | 8 | 1 | 0 | 9 |
+| Published | 9 | 0 | 0 | 9 |
 | Target and push further | 3 | 28 | 100 | 131 |
-| All | 11 | 29 | 100 | 140 |
+| All | 12 | 28 | 100 | 140 |
 
 | Clause | Title | Kind | Status | Evidence | Gap |
 | --- | --- | --- | --- | --- | --- |
@@ -451,7 +451,7 @@ OPEN-001 was added on 18 October 2026. Its 19 October acceptance now runs the pu
 | `AGENT-001` | Prepare, then person decides | published | done | `src/mallet/auth.ts`; `src/mallet/model.ts`; `tests/mallet.test.mjs` |  |
 | `IMPORT-001` | Reviewed register move | published | done | `src/mallet/imports/service.ts`; `src/mallet/imports/snapshots.ts`; `tests/mallet.test.mjs` |  |
 | `DATA-001` | Custody and erasure | published | done | `src/mallet/archive-policy.mjs`; `src/mallet/imports/portability.ts`; `src/mallet/imports/erasure.ts`; `tests/mallet.test.mjs` |  |
-| `PIER-001` | Read only | published | partial | `src/mallet/pier.ts`; `src/mallet/http.ts` | Read-only adapter exists; no exercising integration journey with Pier or proven provider credential rotation. |
+| `PIER-001` | Read only | published | done | `src/mallet/pier.ts`; `src/mallet/http.ts`; `tests/pier-journey.mjs`; `tests/support/real-pier.mjs` | Real Pier source and native sessions: SKU/name/unit and observation time, received-stock comparison, revoked-session error and credential rotation asserted through the public APIs (PIER-001). |
 | `CUS-001` | Customer and fleet accounts | target | partial | `src/mallet/workshop.ts`; `tests/mallet.test.mjs` | Only customer name/email embedded on assets; no independent contacts, fleet accounts, search or merge. |
 | `VEH-001` | Vehicle identity and VIN decode | target | missing |  | No structured vehicle fields, camera VIN/plate scan or decode provider connection. |
 | `VEH-002` | Mileage and service intervals | target | done | `src/mallet/mileage.ts`; `src/mallet/ui/mileage.ts`; `tests/mallet.test.mjs` |  |

@@ -99,4 +99,7 @@ Dry run builds and validates locally without provider requests. A real deploy pr
 
 Optional Pier integration is available at `GET /api/mallet/catalogue`, a read-only catalog adapter using `GET /api/pier/state` at your configured `PIER_ORIGIN`, with a private authorized `PIER_SESSION`. It does not reserve, decrement or order stock and is not required for a repair. The first release does not need supplier networks, payments, vehicle-registry lookups, OEM repair data or warranty claims.
 
+`node --test tests/pier-journey.mjs` exercises PIER-001 against a temporary installation of the real public Pier source (revision pinned in `tests/support/real-pier.mjs`). It uses native sign-in and purchasing/receipt APIs, checks catalog fields and observation time, revokes and rotates the connection session, and compares source stock after every access. It needs Git and network access to clone Pier; it removes that checkout and database afterward. No existing Pier installation is touched. This journey runs in the push Verify workflow.
+
+
 [ACCEPTANCE.md](ACCEPTANCE.md) defines the release journey; [CONTRACT.md](CONTRACT.md) records invariants and [SOURCES.md](docs/SOURCES.md) records implementation provenance. Acceptance criteria describe what must be proved; they are not a claim that a hosted stranger journey has already passed.

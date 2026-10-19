@@ -22,7 +22,7 @@ Run the complete US repair: vehicle identification and inspection → priced est
 
 **DATA-001 — Custody and erasure.** Status: **done**. Export populated records through portability routes, restore to an empty fresh installation and compare history; reject populated restore, unauthorized erase and pre-erasure archives; restore a post-erasure backup. Evidence: `src/mallet/archive-policy.mjs`; `src/mallet/imports/portability.ts`; `src/mallet/imports/erasure.ts`; `tests/mallet.test.mjs`.
 
-**PIER-001 — Read only.** Status: **partial**. Connect a real Pier installation, open the catalog and compare SKU/name/unit with source; revoke access and show a recoverable error while source stock remains unchanged. Evidence: `src/mallet/pier.ts`; `src/mallet/http.ts`. Gap: Read-only adapter exists; no exercising integration journey with Pier or proven provider credential rotation.
+**PIER-001 — Read only.** Status: **done**. Connect a real Pier installation, open the catalog and compare SKU/name/unit with source; revoke access and show a recoverable error while source stock remains unchanged. Evidence: `src/mallet/pier.ts`; `src/mallet/http.ts`; `tests/pier-journey.mjs`; `tests/support/real-pier.mjs` (PIER-001). The journey runs the unmodified pinned public Pier source with its own temporary database and native sessions, receives twelve pairs of brake pads through purchase/receipt commands, checks observation time and read-only GET traffic, signs out the connection, checks the recoverable refusal, and rotates to a fresh session. Source stock, movements, reservations, orders and receipts remain unchanged throughout catalog access. Only the mail-provider edge is controlled.
 
 ## Customers, vehicles and intake
 
