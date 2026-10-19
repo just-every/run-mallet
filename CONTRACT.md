@@ -97,7 +97,7 @@ Neighboring products stay separate: [Pier](https://github.com/just-every/run-pie
 
 - **EST-004 — Supplemental approval on the same repair.** New findings or price changes create a separate supplementary version on the existing RO, retaining prior accepted/declined lines, completed work and decisions; only the incremental scope needs fresh consent and refusal does not stop already authorized work. **Acceptance evidence:** Authorize brakes, start work, discover a rotor and send its supplement; decline it, then approve a new supplement and verify invoice quantities cannot cross authorized revisions.
 
-- **EST-005 — Declined work register.** Keep each declined or deferred repair with reason, evidence, price/version, date and mileage, owner and due trigger; advisors recall it on the next visit and reprice before asking again, never count it as sold. **Acceptance evidence:** Decline tires at 60,000 miles, open the next visit and turn the still-needed item into a repriced estimate with a new decision; history keeps both outcomes.
+- **EST-005 — Declined work register.** Keep each declined or deferred repair with reason, evidence, price/version, date and mileage, owner and due trigger; advisors recall it on the next visit and reprice before asking again, never count it as sold. Staff record the exact current customer decision, including a full decline with zero authorized lines, with no work authority from a decline. The register snapshots the observed reading and decision; its follow-up is due at the entered same-unit reading threshold (inclusive) or UTC date (inclusive), whichever arrives first. A later visit prepares a separate current-price draft and needs its own approval and customer decision; the prior decline stays unchanged. **Acceptance evidence:** Decline tires at 60,000 miles, open the next visit and turn the still-needed item into a repriced estimate with a new decision; history keeps both outcomes.
 
 - **GUIDE-001 — MOTOR labor times.** With licensed MOTOR access, select exact vehicle/engine and operations, include overlapping-operation adjustments and source/version on an advisor-reviewed labor line; never confuse flat-rate billed time with technician clock time. **Acceptance evidence:** Select a MOTOR operation, add a related operation with overlap and compare imported hours/provenance to the licensed source before approval.
 
@@ -365,7 +365,7 @@ The wider category is evidenced by [Tekmetric shop management](https://www.tekme
 
 ## Homepage claims
 
-Every capability claim on the approved homepage (`src/site/landing/`, checked against br's claims truth table of 18 October 2026, rows 1–59 in page order) maps to the named clauses that promise it. A claim's status is `done` when every mapped clause is done, `missing` when every one is missing, and `partial` otherwise, from the status table below. The sample shop, people, vehicles and figures in the drawings (Buckeye Auto Repair, RO 4127, Ohio's 7.5% sales tax) are illustrations, not claims. 59 claims: 2 done, 26 partial, 31 missing.
+Every capability claim on the approved homepage (`src/site/landing/`, checked against br's claims truth table of 18 October 2026, rows 1–59 in page order) maps to the named clauses that promise it. A claim's status is `done` when every mapped clause is done, `missing` when every one is missing, and `partial` otherwise, from the status table below. The sample shop, people, vehicles and figures in the drawings (Buckeye Auto Repair, RO 4127, Ohio's 7.5% sales tax) are illustrations, not claims. 59 claims: 3 done, 26 partial, 30 missing.
 
 | # | Section | Claim | Clause(s) | Status |
 | --- | --- | --- | --- | --- |
@@ -379,7 +379,7 @@ Every capability claim on the approved homepage (`src/site/landing/`, checked ag
 | 8 | Hero | "alternative to Tekmetric, Shopmonkey and Mitchell 1 Manager SE" | MOVE-001, MOVE-002, MOVE-003 | missing |
 | 9 | Hero card | RO 4127 · VIN decoded · 62,100 mi | VEH-001, VEH-002 | partial |
 | 10 | Hero card | Inspection · 2 red, 3 yellow · texted to Dana Brooks | DVI-001, DVI-003, MSG-001 | missing |
-| 11 | Hero card | Front brakes approved · cabin filter declined → due at 67,000 mi | ESTIMATE-001, EST-005 | partial |
+| 11 | Hero card | Front brakes approved · cabin filter declined → due at 67,000 mi | ESTIMATE-001, EST-005 | done |
 | 12 | Hero card | Pads backordered at Worldpac → PartsTech +$8.40 · Dana re-approved 10:05 | ADV-004, BUY-003, BUY-005, ESTIMATE-001 | partial |
 | 13 | Hero card | Bay 3 · Luis Romero · 2.4 hrs sold · promise 5:00 pm · ready 4:10 | WORKSHOP-001, FLOW-001, FLOW-002 | partial |
 | 14 | Hero card | Paid by text · $531.70 incl. 7.5% tax | PAY-003, TAX-001 | partial |
@@ -395,7 +395,7 @@ Every capability claim on the approved homepage (`src/site/landing/`, checked ag
 | 24 | 05 Approve | MOTOR labor times (1.6 + 0.8 hrs) | GUIDE-001 | missing |
 | 25 | 05 Approve | "Checked by Kayla Ortiz" before it goes out | ESTIMATE-001, AGENT-001 | done |
 | 26 | 05 Approve | "Dana says yes to the brakes and not now to the filter" (on her phone, signed) | ESTIMATE-001, EST-003 | partial |
-| 27 | 05 Approve | Declined work kept with photo and price, due at 67,000 mi | EST-005 | missing |
+| 27 | 05 Approve | Declined work kept with photo and price, due at 67,000 mi | EST-005, DVI-002 | partial |
 | 28 | 06 Parts | "The agent finds pads in stock nearby" | ADV-004, BUY-002, BUY-003 | missing |
 | 29 | 06 Parts | "reprices the line" | ESTIMATE-001, AGENT-001 | done |
 | 30 | 06 Parts | "checks Bay 3’s afternoon" | AGENT-001, FLOW-002 | partial |
@@ -438,8 +438,8 @@ OPEN-001 was added on 18 October 2026 and judged from `9ca3be806f00da2d4febf5bac
 | Clauses | Done | Partial | Missing | Total |
 | --- | ---: | ---: | ---: | ---: |
 | Published | 8 | 1 | 0 | 9 |
-| Target and push further | 1 | 29 | 101 | 131 |
-| All | 9 | 30 | 101 | 140 |
+| Target and push further | 2 | 29 | 100 | 131 |
+| All | 10 | 30 | 100 | 140 |
 
 | Clause | Title | Kind | Status | Evidence | Gap |
 | --- | --- | --- | --- | --- | --- |
@@ -472,9 +472,9 @@ OPEN-001 was added on 18 October 2026 and judged from `9ca3be806f00da2d4febf5bac
 | `DIAG-003` | OEM service information and recall context | target | missing |  | No automotive technical-data, TSB, recall or maintenance-schedule integration. |
 | `EST-001` | Parts and labor pricing | target | partial | `src/mallet/money.ts`; `src/mallet/estimates.ts`; `src/mallet/invoices.ts`; `tests/mallet.test.mjs` | Revisioned USD part/labor lines use shop sales tax settings and frozen per-line tax snapshots through authorized actuals and invoices; no cost, fee, discount or rate profiles. |
 | `EST-002` | Canned jobs and pricing matrices | target | missing |  | No packages, pricing matrices, minimum-charge policies or override rules. |
-| `EST-003` | Customer approval and decline by link | target | partial | `src/mallet/estimates.ts`; `tests/mallet.test.mjs` | Staff-recorded manual partial authorization exists; no delivered link, customer decision endpoint, full decline or signature artifact. |
+| `EST-003` | Customer approval and decline by link | target | partial | `src/mallet/estimates.ts`; `tests/mallet.test.mjs` | Staff-recorded manual partial authorization and full decline exist; no delivered link, customer decision endpoint or signature artifact. |
 | `EST-004` | Supplemental approval on the same repair | target | partial | `src/mallet/estimates.ts`; `tests/mallet.test.mjs` | Pre-authorization revisioning exists; accepted estimates freeze and additional work currently requires a new visit. |
-| `EST-005` | Declined work register | target | missing |  | No explicit decline record, reason, mileage trigger or carry-forward. |
+| `EST-005` | Declined work register | target | done | `src/mallet/declined-work.ts`; `src/mallet/ui/declined-work.ts`; `tests/mallet.test.mjs` |  |
 | `GUIDE-001` | MOTOR labor times | target | missing |  | No MOTOR labor-guide adapter or overlap-time handling. |
 | `GUIDE-002` | ALLDATA labor and procedures | target | missing |  | No ALLDATA integration or entitlement workflow. |
 | `GUIDE-003` | ProDemand estimating and maintenance | target | missing |  | No ProDemand adapter or licensed-data workflow. |

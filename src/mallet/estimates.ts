@@ -57,11 +57,11 @@ export const estimates: Handler = (c, command, p) => {
       const { estimate, rev } = exact(c, p)
       if (!rev.approval || estimate.status !== 'sent' || !estimate.sent.some((s: any) => s.revision === rev.n)) fail('NOT_SENT', 'Record sharing the approved exact estimate revision before customer authorization.')
       selfApproval(c, rev.preparedBy)
-      if (!Array.isArray(p.lineIds) || !p.lineIds.length || p.lineIds.length > rev.lines.length) fail('INPUT', 'Select at least one authorized estimate line.', null, 400)
+      if (!Array.isArray(p.lineIds) || p.lineIds.length > rev.lines.length) fail('INPUT', 'Select the exact authorized lines; select none if all work is declined.', null, 400)
       const lineIds = p.lineIds.map((id: unknown) => text(id, 'lineId'))
       if (new Set(lineIds).size !== lineIds.length || lineIds.some((id: string) => !rev.lines.some((l: Row) => l.id === id))) fail('INPUT', 'Authorized lines must be unique lines on this exact revision.', null, 400)
       const authorisation = { revision: rev.n, lineIds, customerName: text(p.customerName, 'customerName'), method: choice(p.method, ['signed', 'email reply', 'phone', 'in person'] as const, 'authorization method'), evidence: text(p.evidence, 'evidence', 4000), recordedBy: who(c), at: c.now, totals: totals(rev.lines.filter((l: Row) => lineIds.includes(l.id))) }
-      const row = bump(c.s, 'estimate', estimate, { status: 'authorised', authorisation })
+      const row = bump(c.s, 'estimate', estimate, { status: lineIds.length ? 'authorised' : 'declined', authorisation })
       event(c, command, row.jobId, row.id, authorisation)
       return row
     }

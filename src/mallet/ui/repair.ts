@@ -28,6 +28,7 @@ export function repair(state:any,job:any):Repair {
  else if(job.status==='completed'){column='ready';chip=invoice?.status==='approved'?['Ready for pickup','green']:invoice?['Invoice draft','amber']:['Ready to invoice','']}
  else if(job.status==='working'){column='bay';chip=[inBay(job.bayId,sold?`${clock(clocked)}/${Number(sold.toFixed(2))} h`:''),'violet']}
  else if(estimate?.status==='authorised'){column='authorised';const n=estimate.authorisation.lineIds.length,of=rev.lines.length;chip=[n===of?(n===1?'Authorized':`All ${n} authorized`):`${n} of ${of} authorized`,'green']}
+ else if(estimate?.status==='declined'){column='waiting';chip=['All work declined','amber']}
  else if(estimate?.status==='sent'){column='waiting';chip=[`Shared ${shared[estimate.sent.at(-1)?.method]??''}`.trim(),'amber']}
  else if(estimate){column='estimate';chip=estimate.status==='approved'?['Ready to share','cyan']:rev.preparedBy.role==='agent'?['Draft to approve','amber']:['Draft','']}
  else column='booked'
@@ -45,4 +46,4 @@ export function waiting(state:any) {
 }
 
 // What each recorded event reads as on the board's activity list and a repair order's history.
-export const eventNames:Record<string,string>={'reading.record':'Mileage or hours recorded','serviceInterval.save':'Service due trigger saved','asset.create':'Vehicle registered','asset.update':'Vehicle updated','job.book':'Visit booked','estimate.prepare':'Estimate prepared','estimate.revise':'Estimate revised','estimate.approve':'Estimate approved','estimate.markSent':'Estimate shared','estimate.authorise':'Customer authorization recorded','work.record':'Parts or labor recorded','job.complete':'Repair completed','invoice.prepare':'Invoice prepared','invoice.approve':'Invoice approved','invoice.export':'Invoice exported','dispatch.prepare':'Dispatch change prepared','dispatch.approve':'Dispatch change approved'}
+export const eventNames:Record<string,string>={'decline.record':'Declined work saved','decline.reprice':'Declined work repriced','reading.record':'Mileage or hours recorded','serviceInterval.save':'Service due trigger saved','asset.create':'Vehicle registered','asset.update':'Vehicle updated','job.book':'Visit booked','estimate.prepare':'Estimate prepared','estimate.revise':'Estimate revised','estimate.approve':'Estimate approved','estimate.markSent':'Estimate shared','estimate.authorise':'Customer authorization recorded','work.record':'Parts or labor recorded','job.complete':'Repair completed','invoice.prepare':'Invoice prepared','invoice.approve':'Invoice approved','invoice.export':'Invoice exported','dispatch.prepare':'Dispatch change prepared','dispatch.approve':'Dispatch change approved'}

@@ -19,8 +19,8 @@ export const initials=(name:string)=>name.split(/\s+/).filter(Boolean).slice(0,2
 // A status pill; its tone picks one of the board's chip colours (cyan selection, amber waiting, green done, violet working).
 export type Tone=''|'cyan'|'amber'|'green'|'violet'|'red'
 export const badge=(value:unknown,tone:Tone='')=>`<span class="pill${tone?` ${tone}`:''}" title="${e(value)}">${e(value)}</span>`
-export const tones:Record<string,Tone>={booked:'',working:'violet',completed:'green',invoiced:'',draft:'amber',approved:'cyan',sent:'amber',authorised:'green',exported:''}
-const labels:Record<string,string>={booked:'Booked',working:'Working',completed:'Completed',invoiced:'Invoiced',draft:'Draft',approved:'Approved',sent:'Sent',authorised:'Authorized',exported:'Exported'}
+export const tones:Record<string,Tone>={booked:'',working:'violet',completed:'green',invoiced:'',draft:'amber',approved:'cyan',sent:'amber',authorised:'green',declined:'amber',exported:''}
+const labels:Record<string,string>={booked:'Booked',working:'Working',completed:'Completed',invoiced:'Invoiced',draft:'Draft',approved:'Approved',sent:'Sent',authorised:'Authorized',declined:'Declined',exported:'Exported'}
 export const status=(value:string)=>badge(labels[value]??value,tones[value]??'')
 export const rows=(state:any,kind:string):any[]=>state.records[kind]??[]
 // A list row whose whole area is one link; the chevron shows on phones.
