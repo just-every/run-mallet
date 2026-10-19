@@ -1,5 +1,6 @@
 import {test} from 'node:test'
 import assert from 'node:assert/strict'
+import {portableRepair} from './support/portable-repair.mjs'
 import {run,installation,assetInput,booking,estimate,authorise,archive,restore,snapshots} from './harness.mjs'
 
 test('native sign-in, CSRF, member isolation and immediate session revocation',()=>run(async h=>{
@@ -101,16 +102,7 @@ test('import undo preserves an asset once it has a native repair visit',()=>run(
  assert.ok(failed.error);assert.equal((await h.state()).records.job.length,1)
 }))
 
-test('complete archive restores records and import custody; populated restore is refused',()=>run(async h=>{
- const input=await snapshots(),plan=await h.api('/api/mallet/imports/preview',input),imported=await h.api('/api/mallet/imports/apply',{...input,fingerprint:plan.fingerprint})
- const backup=await archive(h),fresh=await installation()
- try{
-  await restore(fresh,backup)
-  assert.deepEqual((await fresh.state()).records.asset,(await h.state()).records.asset)
-  const journal=await fresh.api('/api/mallet/imports/journal?id='+imported.id);assert.equal(journal.originals.length,2)
-  const failed=await restore(fresh,backup,{status:409});assert.ok(failed.error)
- }finally{await fresh.close()}
-}))
+test('OPS-001: complete native archive restores every current record and finishes repair under fresh authority',()=>run(portableRepair))
 
 test('unused imported asset erasure withdraws custody and later journal fences old restore',()=>run(async h=>{
  const input=await snapshots(),plan=await h.api('/api/mallet/imports/preview',input),job=await h.api('/api/mallet/imports/apply',{...input,fingerprint:plan.fingerprint}),old=await archive(h)

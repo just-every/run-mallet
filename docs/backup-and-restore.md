@@ -56,4 +56,4 @@ If you try the older backup with the later one as its erasure journal, the impor
 rer import --input exports/older.rer --journal exports/after-erasure.rer --yes
 ```
 
-It exits with code 4 and reports `restore_refused` with the reason `erasure_epoch`. That is the safeguard working. Importing the same older backup without `--journal` is accepted and would bring the erased data back, so keep only backups made after your latest erasure.
+It exits with code 4 and reports `restore_refused` with the reason `erasure_epoch`. That is the safeguard working. The older archive is also refused without `--journal`; the archive policy never treats an omitted journal as permission to resurrect erased data. Keep a fresh backup made after your latest erasure.

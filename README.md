@@ -103,3 +103,5 @@ Optional Pier integration is available at `GET /api/mallet/catalogue`, a read-on
 
 
 [ACCEPTANCE.md](ACCEPTANCE.md) defines the release journey; [CONTRACT.md](CONTRACT.md) records invariants and [SOURCES.md](docs/SOURCES.md) records implementation provenance. Acceptance criteria describe what must be proved; they are not a claim that a hosted stranger journey has already passed.
+
+For pre-update backups, safe source updates and recovery into a fresh checkout, see [Backups, updates and recovery](docs/operations.md). OPS-001 runs a complete repair archive/restore journey both through the HTTP tests and after the published-command clean install.

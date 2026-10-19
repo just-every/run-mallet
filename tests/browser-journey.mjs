@@ -97,7 +97,9 @@ export async function browserJourney(openUrl,{directory='.cache/browser',fixture
   await page.getByLabel('Type ERASE to confirm').fill('ERASE');await click('Erase unused vehicle')
   assert.equal(await page.getByRole('link',{name:'Unbooked inspection request'}).count(),0)
   await shot('23-erased-register')
+  const credentials={origin,cookie:(await page.context().cookies(origin)).map(c=>c.name+'='+c.value).join('; ')}
   console.log('Browser repair, partial authorization, invoice, history, import/undo, backup, key revocation and erasure journey passed at 1440 and 390.')
+  return credentials
  }catch(error){throw new Error(`Browser journey failed at ${stage}: ${String(error.message).replace(/https?:\/\/\S+/g,'[private URL]').slice(0,1200)}`)}finally{await browser.close()}
 }
 if(process.argv[1]===import.meta.filename) {

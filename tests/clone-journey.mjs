@@ -4,6 +4,7 @@ import {mkdtemp,readFile,rm,mkdir} from 'node:fs/promises'
 import {tmpdir} from 'node:os'
 import {join} from 'node:path'
 import {browserJourney} from './browser-journey.mjs'
+import {portableRepair,publicDoor} from './support/portable-repair.mjs'
 import {openSourceInstallation} from './open-source-journey.mjs'
 
 const directory=await mkdtemp(join(tmpdir(),'mallet-published-')),scratchHome=join(directory,'home')
@@ -35,6 +36,8 @@ try {
  })
  const checkout=join(directory,JSON.parse(await readFile('src/site/run.json','utf8')).folder)
  const paywall=await openSourceInstallation(checkout),open=await readFile(join(checkout,'.rer/local/open-url'),'utf8')
- await browserJourney(open.trim(),{directory:process.env.MALLET_SCREENSHOTS??'.cache/clone-browser',fixtures:join(checkout,'tests/fixtures/repairshopr'),fresh:true,paywall})
+ const source=await browserJourney(open.trim(),{directory:process.env.MALLET_SCREENSHOTS??'.cache/clone-browser',fixtures:join(checkout,'tests/fixtures/repairshopr'),fresh:true,paywall})
+ await portableRepair(publicDoor(source.origin,source.cookie))
+ console.log('OPS-001: fresh published-command installation exported full repair history; an empty separately owned installation restored exact records, refused old authority and finished the repair.')
  console.log('OPEN-001: published npx command reached empty-shop setup; installed MIT source and every exercised app screen have no Mallet commercial gate.')
 }finally{await stopOwned();await rm(directory,{recursive:true,force:true})}
