@@ -1,3 +1,4 @@
+import {qualityReady} from './support/quality-ready.mjs'
 import {test} from 'node:test'
 import assert from 'node:assert/strict'
 import {readFile} from 'node:fs/promises'
@@ -27,6 +28,7 @@ test('shop setup, taxability, frozen Dana invoice and USD CSV use per-line sales
  await h.command('tax.configure',{ratePercent:9})
  let current=(await h.state()).records.job.find(j=>j.id===job.id)
  for(const line of estimate.revisions[0].lines)current=await h.command('work.record',{jobId:job.id,version:current.version,lineId:line.id,quantity:line.quantity})
+ await qualityReady(h,current)
  current=await h.command('job.complete',{jobId:job.id,version:current.version})
  let invoice=await h.command('invoice.prepare',{jobId:job.id,version:current.version})
  assert.equal(invoice.totals.totalCents,53170)

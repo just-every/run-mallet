@@ -56,7 +56,15 @@ Press **Record customer authorization**. The estimate table now shows each line 
 
 Under **Parts & labor**, pick an **Authorized item**, enter the **Quantity used / hours worked** and an optional **Work note**, and press **Record parts or labor**. You can only record work against authorized lines, and never more than was authorized.
 
-When the job is ready to hand over, press **Complete repair**.
+Before **Complete repair**, use **Quality & road test**:
+
+1. An owner or admin defines this repair’s pre-work and post-work checks. Mark required and safety-critical items; add named road-test measurements with their units where relevant. Saving a new checklist revision retains the old one and needs fresh results and signatures.
+2. The assigned technician records pass, fail or not inspected, evidence/reason, and each measured value in the checklist’s units. Nothing converts units or infers a physical safety result.
+3. After a failure, record actual corrective work under **Parts & labor**, link that work and a reason under **Record corrective work for a failed check**, then record the passing retest. The old failed result remains.
+4. The technician signs the current checks and work, giving their relevant competence and evidence. A **different** qualified owner/admin then makes and signs the independent quality decision. The owner acts for the missing manager role. Use the owner’s [people routes](/docs/people-and-agents) to invite a second person if needed.
+5. Failed or incomplete required/critical checks block Ready. Only an independent owner/admin can select the exact checks to waive and record a qualified safe-to-release decision and reason under **Authorize an exception**. An override does not replace either signature. Review the retained failure, correction, signatures and any override in **Quality history**.
+
+Later actual work, new results, checklist revisions or changed technician assignment makes clearance stale. Inspect and sign the current evidence again. Physical safety decisions belong to qualified people; Mallet does not certify a repair. Once current clearance is complete, press **Complete repair**.
 
 ## 7. Invoice and export once
 

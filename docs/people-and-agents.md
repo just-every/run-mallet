@@ -5,8 +5,8 @@ Mallet has three roles for people and one kind of key for agents. People decide;
 | Role | What they can do |
 | --- | --- |
 | Owner | Everything an admin can, plus download backups, restore and erase unused assets. |
-| Admin | Manage jobs, approve estimates, dispatch plans and invoices, export invoices, move data in and manage agent keys. |
-| Member | See the jobs assigned to them, with their assets and estimates, and record parts and labor on those jobs. |
+| Admin | Manage jobs and quality checklists; make independent quality decisions/overrides when not the assigned technician; approve estimates, dispatch plans and invoices, export invoices, move data in and manage agent keys. |
+| Member | See the jobs assigned to them, with their assets and estimates, and record parts and labor, quality check results/corrective work and technician sign-off on those jobs. |
 
 Members cannot approve prices or export invoices.
 

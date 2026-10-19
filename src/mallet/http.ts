@@ -21,6 +21,7 @@ import {errorMessage,notFound,refused} from './ui/errors'
 import {repairOrders,customers,approvals,assetPage} from './ui/workshop'
 import {shopBoard} from './ui/board'
 import {repair,waiting} from './ui/repair'
+import {qualityFormInput} from './ui/quality'
 import {jobPage} from './ui/job'
 import {taxPage,taxNotice,invoiceTotals,lineTax} from './ui/tax'
 import {moveIn,importPreview,importJournal,dataPage} from './ui/data'
@@ -48,7 +49,7 @@ async function nativeForm(request:Request) {
 function visible(s:State,actor:Actor):State {
  if(actor.role!=='member')return s
  const jobs=rows(s,'job').filter(j=>j.technicianId===actor.id),ids=new Set(jobs.map(j=>j.id)),assets=new Set(jobs.map(j=>j.assetId))
- return {version:s.version,records:{job:jobs,asset:rows(s,'asset').filter(a=>assets.has(a.id)).map(a=>({...a,visits:a.visits.filter((id:string)=>ids.has(id))})),estimate:rows(s,'estimate').filter(x=>ids.has(x.jobId)),declinedWork:rows(s,'declinedWork').filter(x=>ids.has(x.jobId)),reading:rows(s,'reading').filter(x=>ids.has(x.jobId)),serviceInterval:rows(s,'serviceInterval').filter(x=>ids.has(x.jobId)),event:rows(s,'event').filter(x=>ids.has(x.jobId))}}
+ return {version:s.version,records:{job:jobs,asset:rows(s,'asset').filter(a=>assets.has(a.id)).map(a=>({...a,visits:a.visits.filter((id:string)=>ids.has(id))})),estimate:rows(s,'estimate').filter(x=>ids.has(x.jobId)),declinedWork:rows(s,'declinedWork').filter(x=>ids.has(x.jobId)),reading:rows(s,'reading').filter(x=>ids.has(x.jobId)),serviceInterval:rows(s,'serviceInterval').filter(x=>ids.has(x.jobId)),quality:rows(s,'quality').filter(x=>ids.has(x.jobId)),event:rows(s,'event').filter(x=>ids.has(x.jobId))}}
 }
 async function operators(db:D1Database) {
  const people=(await db.prepare("SELECT id,display_name AS name,role,status FROM oa_operators WHERE status IN ('active','invited') ORDER BY created_at,id").all<{id:string,name:string,role:string,status:string}>()).results
@@ -63,7 +64,7 @@ function formInput(data:FormData) {
  if(input.command==='tax.configure'){input.ratePercent=input.ratePercent===''?null:Number(input.ratePercent);input.partsTaxable=data.has('partsTaxable');input.laborTaxable=data.has('laborTaxable')}
  if(input.command==='decline.reprice')input.unitCents=Math.round(Number(input.unitCents)*100)
  if(input.channel)input.method=input.channel
- return input
+ return qualityFormInput(data,input)
 }
 export async function malletResponse(request:Request,original:Bindings):Promise<Response|null> {
  const url=new URL(request.url),path=url.pathname
@@ -166,6 +167,10 @@ export async function malletResponse(request:Request,original:Bindings):Promise<
    return page('Booking conflict',conflictPage(clashes,names,back),actor,status,{section:command==='job.book'?'customers':'jobs'})
   }
   if(status===404&&code==='not_found')return page('Page not found',notFound(),actor,404,{section:null,heading:false})
+  if(error instanceof MalletError&&error.code==='QUALITY_BLOCKED'&&Array.isArray(error.details?.blockers)) {
+   const jobId=error.details.jobId??submitted?.input?.jobId
+   return page('Quality clearance needed',`<section class="card"><p>${e(error.message)}</p><ul>${error.details.blockers.map((b:any)=>`<li>${e(b.reason)}</li>`).join('')}</ul>${jobId?`<p><a href="/app/jobs/${encodeURIComponent(String(jobId))}#quality">Return to this repair’s quality checks</a></p>`:''}</section>`,actor,status,{section:'jobs'})
+  }
   const details=error instanceof MalletError&&error.details?`<pre>${e(JSON.stringify(error.details,null,2))}</pre>`:''
   return page('Could not complete that action',refused(known?errorMessage(code,error.message):'The action could not be completed. Check what you entered and try again.',details,path.startsWith('/app/move-in')),actor,status,{section:path.startsWith('/app/move-in')?'move-in':path==='/app/data'?'data':path==='/app/tax'?'tax':path.startsWith('/app/actions')?'board':null})
  }

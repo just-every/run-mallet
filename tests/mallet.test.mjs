@@ -1,3 +1,4 @@
+import {qualityReady} from './support/quality-ready.mjs'
 import {test} from 'node:test'
 import assert from 'node:assert/strict'
 import {portableRepair} from './support/portable-repair.mjs'
@@ -22,7 +23,7 @@ test('booking rejects bay and technician collisions and keeps every asset visit'
  const current=()=>h.state().then(s=>s.records.asset.find(a=>a.id===asset.id))
  const input={assetId:asset.id,version:(await current()).version,title:'Second visit',bayId:'Bay 1',technicianId:'Jordan',startAt:job.startAt,endAt:job.endAt}
  assert.equal((await h.command('job.book',input,{status:409})).error,'DISPATCH_CONFLICT')
- await h.command('job.book',{...input,bayId:'Bay 2',technicianId:'Alex'},{status:409})
+ await h.command('job.book',{...input,bayId:'Bay 2',technicianId:job.technicianId},{status:409})
  const post=(path,fields)=>h.mf.dispatchFetch(h.origin+path,{method:'POST',redirect:'manual',headers:{origin:h.origin,host:new URL(h.origin).host,'content-type':'application/x-www-form-urlencoded',cookie:h.owner},body:new URLSearchParams(fields).toString()})
  assert.equal((await post('/setup',{confirm:'yes',ratePercent:'10',partsTaxable:'yes',laborTaxable:'yes'})).status,303)
  const refused=await post('/app/actions',{command:'job.book',...input}),html=await refused.text()
@@ -54,6 +55,7 @@ test('agent prepares, person approves, immutable actual-work invoice exports onc
  q=await authorise(h,q,[q.revisions[0].lines[0].id])
  let j=(await h.state()).records.job[0]
  j=await h.command('work.record',{jobId:j.id,version:j.version,lineId:q.revisions[0].lines[0].id,quantity:2})
+ await qualityReady(h,j)
  j=await h.command('job.complete',{jobId:j.id,version:j.version})
  let invoice=await h.command('invoice.prepare',{jobId:j.id,version:j.version},agent)
  assert.equal(invoice.totals.totalCents,5500);assert.equal(invoice.lines.length,1)
@@ -145,6 +147,7 @@ test('VEH-002: visit readings, reasoned corrections, regression warnings and obs
  let q=await authorise(h,await estimate(h,(await h.state()).records.job.find(j=>j.id===id)))
  j=(await h.state()).records.job.find(j=>j.id===id)
  j=await h.command('work.record',{jobId:id,version:j.version,lineId:q.revisions[0].lines[0].id,quantity:1})
+ await qualityReady(h,j)
  await h.command('job.complete',{jobId:id,version:j.version})
  s=await h.state();assert.equal(s.records.job.find(j=>j.id===id).status,'completed');assert.equal(s.records.reading.find(x=>x.id===out.id).value,62112);assert.equal(s.records.reading.find(x=>x.id===r.id).value,62100)
  // Public pages expose thresholds without extrapolating a current odometer.
@@ -171,6 +174,7 @@ test('EST-005: decline tires at 60000 miles, retain exact evidence and reprice o
  j=(await h.state()).records.job.find(x=>x.id===job.id)
  await h.command('work.record',{jobId:j.id,version:j.version,lineId:item.line.id,quantity:1},{status:409})
  j=await h.command('work.record',{jobId:j.id,version:j.version,lineId:q.revisions[0].lines[1].id,quantity:1})
+ await qualityReady(h,j)
  j=await h.command('job.complete',{jobId:j.id,version:j.version})
  const oldInvoice=await h.command('invoice.prepare',{jobId:j.id,version:j.version});assert.equal(oldInvoice.lines.length,1);assert.equal(oldInvoice.lines[0].description,'Brake adjustment');assert.equal(oldInvoice.totals.totalCents,10000)
  const next=await booking(h,{asset:(await h.state()).records.asset.find(a=>a.id===asset.id),startAt:'2026-11-01T09:00:00-05:00',endAt:'2026-11-01T10:00:00-05:00'})
@@ -201,3 +205,11 @@ test('EST-005: decline tires at 60000 miles, retain exact evidence and reprice o
  const board=await h.request('/app?ro='+j.id);assert.match(await board.text(),/All work declined/)
 
 }))
+
+test('QUALITY-001 / OPS-001: failed brake test blocks ready; corrective work, independent sign-off, reasoned override and immutable restore',()=>run(async h=>{
+ const {qualityJourney}=await import('./support/quality-journey.mjs');await qualityJourney(h)
+}))
+
+test('QUALITY-001: counter/technician failed test, corrective work and independent Ready clearance at 1440/390',async()=>{
+ const {qualityBrowser}=await import('./quality-browser.mjs');await qualityBrowser()
+})

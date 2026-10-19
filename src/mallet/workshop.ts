@@ -1,4 +1,5 @@
 import { approval, bump, event, expectVersion, fail, find, put, rows, selfApproval, text, who, type Context, type Handler, type Row, type State } from './model'
+import { assertQualityReady } from './quality'
 import { quantity } from './money'
 
 export function instant(value: unknown, label: string) {
@@ -100,6 +101,7 @@ export const workshop: Handler = (c, command, p) => {
     case 'job.complete': {
       const job = openJob(c, p)
       if (!job.actuals.length) fail('NO_WORK', 'Record authorized parts or labor before completing this job.')
+      assertQualityReady(c.s,job)
       const row = bump(c.s, 'job', job, { status: 'completed', completedAt: c.now, completedBy: who(c), completionNote: text(p.note, 'note', 2000, true) })
       event(c, command, row.id, row.id, { note: row.completionNote })
       return row

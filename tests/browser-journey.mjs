@@ -1,3 +1,5 @@
+import {qualityReady} from './support/quality-ready.mjs'
+import {publicDoor} from './support/portable-repair.mjs'
 import assert from 'node:assert/strict'
 import {chromium} from '@playwright/test'
 import {mkdir,readFile} from 'node:fs/promises'
@@ -56,6 +58,7 @@ export async function browserJourney(openUrl,{directory='.cache/browser',fixture
   await click('Record customer authorization');await shot('08-partial-authorisation')
   await page.getByLabel('Work note').fill('Pads supplied over the counter. Labor not authorized.')
   await click('Record parts or labor');await shot('09-work-recorded')
+  const qualityDoor=publicDoor(origin,(await page.context().cookies(origin)).map(c=>c.name+'='+c.value).join('; ')),qualityJob=(await qualityDoor.state()).records.job.find(j=>jobUrl.endsWith('/'+j.id));await qualityReady(qualityDoor,qualityJob);await page.reload();
   await click('Complete repair');await shot('10-completed')
   await click('Prepare invoice');await shot('11-invoice-draft')
   await click('Approve invoice');await shot('12-invoice-approved')

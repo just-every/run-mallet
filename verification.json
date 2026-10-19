@@ -35,7 +35,7 @@
     },
     {
       "name": "workshop",
-      "browser": false,
+      "browser": true,
       "hosted": false,
       "commands": [
         "pnpm run test:mallet"

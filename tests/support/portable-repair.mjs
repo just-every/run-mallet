@@ -1,3 +1,4 @@
+import {qualityReady} from './quality-ready.mjs'
 import assert from 'node:assert/strict'
 import {installation,booking,estimate,authorise,archive,restore,snapshots} from '../harness.mjs'
 
@@ -6,7 +7,15 @@ import {installation,booking,estimate,authorise,archive,restore,snapshots} from 
 export function publicDoor(origin,owner) {
  const request=(path,{method='GET',body,as=owner,headers={}}={})=>fetch(origin+path,{method,redirect:'manual',headers:{origin,'content-type':'application/json',...(as?{cookie:as}:{}),...headers},...(body===undefined?{}:{body:JSON.stringify(body)})})
  const api=async(path,body,{status=200,...options}={})=>{const response=await request(path,{...(body===undefined?{}:{method:'POST',body}),...options});assert.equal(response.status,status,'OPS-001: public response at '+path);return response.json()}
- return {origin,owner,request,api,command:(command,input,options)=>api('/api/mallet/commands',{command,input},options),state:options=>api('/api/mallet/state',undefined,options)}
+ const person=async(email,role='member',displayName=email.split('@')[0].replace(/-/g,' '))=>{
+  await api('/auth/invite',{email,role,displayName,returnTo:'/app'},{status:202})
+  const entered=await request('/auth/one-click?as='+encodeURIComponent(email));assert.equal(entered.status,303,'QUALITY-001: invited reviewer enters the native development door')
+  const cookies=new Map(owner.split('; ').map(pair=>[pair.slice(0,pair.indexOf('=')),pair.slice(pair.indexOf('=')+1)]))
+  for(const value of entered.headers.getSetCookie()){const pair=value.split(';')[0],at=pair.indexOf('=');cookies.set(pair.slice(0,at),pair.slice(at+1))}
+  const cookie=[...cookies].map(([k,v])=>k+'='+v).join('; '),session=await api('/auth/session',undefined,{as:cookie})
+  return {id:session.operator.id,cookie,session}
+ }
+ return {origin,owner,request,api,person,command:(command,input,options)=>api('/api/mallet/commands',{command,input},options),state:options=>api('/api/mallet/state',undefined,options)}
 }
 
 export async function portableRepair(source) {
@@ -20,7 +29,7 @@ export async function portableRepair(source) {
  assert.equal(imported.state,'completed')
  await source.command('tax.configure',{ratePercent:7.5,partsTaxable:true,laborTaxable:false})
  const asset=await source.command('asset.create',{customerName:'Dana Brooks',customerEmail:'dana@example.test',label:'2019 Honda CR-V EX',identifier:'OH-OPS-4471'})
- let {job}=await booking(source,{asset,bayId:'Recovery bay',technicianId:'Recovery technician',startAt:'2026-12-01T09:00:00-05:00',endAt:'2026-12-01T11:00:00-05:00'})
+ let {job}=await booking(source,{asset,bayId:'Recovery bay',technicianId:(await source.state()).actor.id,startAt:'2026-12-01T09:00:00-05:00',endAt:'2026-12-01T11:00:00-05:00'})
  const key=await source.command('agent.create',{label:'Pre-update drafting assistant'})
  let q=await estimate(source,job,{as:'',headers:{authorization:'Bearer '+key.token}})
  q=await authorise(source,q,[q.revisions[0].lines[0].id])
@@ -36,10 +45,11 @@ export async function portableRepair(source) {
  job=await source.command('work.record',{jobId:job.id,version:job.version,lineId:q.revisions[0].lines[0].id,quantity:1,note:'One authorized pad supplied before backup'})
  // A second repair proves immutable invoiced history and saved bytes travel too.
  const priorAsset=await source.command('asset.create',{customerName:'Morgan Reed',customerEmail:'morgan@example.test',label:'2020 Ford Transit',identifier:'OH-OPS-2264'})
- let prior=(await booking(source,{asset:priorAsset,bayId:'Invoice bay',technicianId:'Prior technician',startAt:'2026-11-01T09:00:00-05:00',endAt:'2026-11-01T10:00:00-05:00'})).job
+ let prior=(await booking(source,{asset:priorAsset,bayId:'Invoice bay',technicianId:(await source.state()).actor.id,startAt:'2026-11-01T09:00:00-05:00',endAt:'2026-11-01T10:00:00-05:00'})).job
  const oldQuote=await authorise(source,await estimate(source,prior))
  prior=(await source.state()).records.job.find(j=>j.id===prior.id)
  prior=await source.command('work.record',{jobId:prior.id,version:prior.version,lineId:oldQuote.revisions[0].lines[1].id,quantity:1})
+ await qualityReady(source,prior)
  prior=await source.command('job.complete',{jobId:prior.id,version:prior.version})
  let invoice=await source.command('invoice.prepare',{jobId:prior.id,version:prior.version})
  invoice=await source.command('invoice.approve',{invoiceId:invoice.id,version:invoice.version})
@@ -65,6 +75,8 @@ export async function portableRepair(source) {
   let continued=restored.job.find(j=>j.id===job.id)
   await fresh.command('work.record',{jobId:continued.id,version:continued.version,lineId:q.revisions[0].lines[1].id,quantity:1},{status:409})
   continued=await fresh.command('work.record',{jobId:continued.id,version:continued.version,lineId:q.revisions[0].lines[0].id,quantity:1,note:'Finish under recovered owner'})
+  continued=await fresh.command('quality.takeover',{jobId:continued.id,version:continued.version,qualityVersion:0,reason:'Fresh owner takes explicit custody of unfinished repair after recovery'})
+  await qualityReady(fresh,continued)
   continued=await fresh.command('job.complete',{jobId:continued.id,version:continued.version})
   let finished=await fresh.command('invoice.prepare',{jobId:continued.id,version:continued.version})
   assert.equal(finished.lines.length,1);assert.equal(finished.lines[0].quantity,2);assert.equal(finished.totals.totalCents,5375)

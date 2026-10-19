@@ -27,6 +27,7 @@ export async function installation({entry='tests/worker.ts',bindings={},outbound
   const request=(path,{method='GET',body,as=owner,headers={}}={})=>(network?fetch:mf.dispatchFetch.bind(mf))(origin+path,{method,redirect:'manual',headers:{origin,host:new URL(origin).host,'content-type':'application/json',...(as?{cookie:as}:{}),...headers},...(body===undefined?{}:{body:JSON.stringify(body)})})
   const boot=await request('/auth/bootstrap',{method:'POST',body:{token:setup,displayName:'Morgan Workshop'}});assert.equal(boot.status,303,await boot.text())
   owner=boot.headers.getSetCookie().map(x=>x.split(';')[0]).join('; ')
+  if(bindings.RER_DEV_KEY){const gate=await request('/__dev/key',{method:'POST',body:{key:bindings.RER_DEV_KEY}});assert.equal(gate.status,204);owner+='; '+gate.headers.getSetCookie().map(x=>x.split(';')[0]).join('; ')}
   const api=async(path,body,{status=200,...options}={})=>{const response=await request(path,{...(body===undefined?{}:{method:'POST',body}),...options});const value=await response.json();assert.equal(response.status,status,JSON.stringify(value));return value}
   const command=(command,input={},options={})=>api('/api/mallet/commands',{command,input},options)
   const state=(options={})=>api('/api/mallet/state',undefined,options)
@@ -43,7 +44,8 @@ export async function installation({entry='tests/worker.ts',bindings={},outbound
 }
 export async function run(fn,options){const h=await installation(options);try{return await fn(h)}finally{await h.close()}}
 export const assetInput=(suffix='1')=>({customerName:'Cedar Bikes',customerEmail:'cedar@example.test',label:'Trek FX 3',identifier:'BIKE-'+suffix})
-export async function booking(h,{asset,technicianId='Alex',startAt='2026-10-19T09:00:00+10:00',endAt='2026-10-19T10:00:00+10:00',bayId='Bay 1'}={}) {
+export async function booking(h,{asset,technicianId,startAt='2026-10-19T09:00:00+10:00',endAt='2026-10-19T10:00:00+10:00',bayId='Bay 1'}={}) {
+ technicianId??=(await h.state()).actor.id
  asset??=await h.command('asset.create',assetInput())
  return {asset,job:await h.command('job.book',{assetId:asset.id,version:asset.version,title:'Brake service',technicianId,bayId,startAt,endAt})}
 }
