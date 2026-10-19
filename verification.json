@@ -56,6 +56,14 @@
       "commands": [
         "node --test --test-concurrency=1 tests/media.test.mjs"
       ]
+    },
+    {
+      "name": "restore",
+      "browser": true,
+      "hosted": false,
+      "commands": [
+        "node --test --test-concurrency=1 tests/restore.test.mjs"
+      ]
     }
   ],
   "nightly": [

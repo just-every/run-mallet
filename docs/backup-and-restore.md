@@ -57,3 +57,5 @@ rer import --input exports/older.rer --journal exports/after-erasure.rer --yes
 ```
 
 It exits with code 4 and reports `restore_refused` with the reason `erasure_epoch`. That is the safeguard working. A destination that already knows the later erasure refuses the old archive too. A completely fresh destination has no later source history unless you carry it: without the later journal it can accept the old archive and resurrect erased data. Always retain and carry the latest post-erasure backup/journal; importing an older archive without it cannot establish freshness.
+
+On a fresh local installation, the owner can choose **Restore a workshop backup before finishing setup**, select the workshop archive and supply the latest archive as its erasure journal. If later evidence is unavailable, the owner must explicitly choose unverified recovery; success is labelled **Erasure history unverified**. A supplied known later erasure still refuses the old archive. Native API results carry the same notice; the CLI emits a reminder that freshness depends on the latest trusted source journal.

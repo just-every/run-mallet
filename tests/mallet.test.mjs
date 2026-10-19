@@ -104,7 +104,7 @@ test('import undo preserves an asset once it has a native repair visit',()=>run(
 
 test('OPS-001: complete native archive restores every current record and finishes repair under fresh authority',()=>run(portableRepair))
 
-test('unused imported asset erasure withdraws custody and later journal fences old restore',()=>run(async h=>{
+test('DATA-001: native erasure fences known old archives and labels unknown fresh recovery',()=>run(async h=>{
  const input=await snapshots(),plan=await h.api('/api/mallet/imports/preview',input),job=await h.api('/api/mallet/imports/apply',{...input,fingerprint:plan.fingerprint}),old=await archive(h)
  const asset=(await h.state()).records.asset[0],member=await h.person('tech@example.test')
  await h.command('asset.erase',{assetId:asset.id,confirm:'ERASE'},{as:member.cookie,status:403})
@@ -113,6 +113,8 @@ test('unused imported asset erasure withdraws custody and later journal fences o
  assert.ok(!(await h.state()).records.asset?.some(a=>a.id===asset.id))
  const later=await archive(h),fresh=await installation()
  try{const failed=await restore(fresh,old,{status:400,laterJournal:{sourceIdentity:later[0].sourceIdentity,epoch:later[0].epoch,journal:later[0].journal}});assert.ok(failed.error)}finally{await fresh.close()}
+ const unknown=await installation(),current=await installation()
+ try{const restored=await restore(unknown,old);assert.equal(restored.erasureHistory,'unverified');assert.match(restored.erasureNotice,/Erasure history unverified/);assert.ok((await unknown.state()).records.asset.some(a=>a.id===asset.id));const verified=await restore(current,later,{laterJournal:{sourceIdentity:later[0].sourceIdentity,epoch:later[0].epoch,journal:later[0].journal}});assert.equal(verified.erasureHistory,'journal-supplied');assert.ok(!(await current.state()).records.asset?.some(a=>a.id===asset.id))}finally{await unknown.close();await current.close()}
  await h.api('/api/mallet/imports/undo',{id:job.id})
  assert.ok(!(await h.state()).records.asset?.some(a=>a.id===asset.id))
 }))

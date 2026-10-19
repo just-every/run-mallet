@@ -1,5 +1,7 @@
 import type { Bindings } from '../auth.server'
 import { runtimeBindings } from '../auth.server'
+import {boundedJson} from '@runeditrun/rer/modules/portability/http'
+import {MAX_LINE_BYTES} from '@runeditrun/rer/modules/portability/format'
 import { createPortability, createPortabilityHandler } from '@runeditrun/rer/modules/portability'
 import policy from './archive-policy.mjs'
 import {identity,originGuard,human,agentKey,HttpError,type Actor} from './auth'
@@ -8,6 +10,8 @@ import {assetHistoryCsv} from './workshop'
 import {catalogue} from './pier'
 import {mediaResponse} from './media/http'
 import {mediaPage} from './ui/media'
+import {restorePage} from './ui/restore'
+import {UNVERIFIED_ERASURE_HISTORY} from './restore/notice.mjs'
 import {e,rows,money,when,status,type Names} from './ui/common'
 import {page,type Section,type Counts} from './ui/shell'
 import {conflictPage} from './ui/conflict'
@@ -61,7 +65,7 @@ function formInput(data:FormData) {
 }
 export async function malletResponse(request:Request,original:Bindings):Promise<Response|null> {
  const url=new URL(request.url),path=url.pathname
- if(path!=='/app' && !path.startsWith('/app/') && !path.startsWith('/api/mallet/') && !path.startsWith('/api/portability/'))return null
+ if(path!=='/restore' && path!=='/app' && !path.startsWith('/app/') && !path.startsWith('/api/mallet/') && !path.startsWith('/api/portability/'))return null
  const env=runtimeBindings(original),isApi=path.startsWith('/api/')
  let actor:Actor|undefined,submitted:any
  try {
@@ -71,8 +75,12 @@ export async function malletResponse(request:Request,original:Bindings):Promise<
   if(path.startsWith('/api/portability/')) {
    if(actor.role!=='owner')throw new HttpError(403,'owner_required')
    const handler=await createPortabilityHandler({db:env.DB,policy,appOrigin:env.AUTH_ORIGIN,authorize:async req=>{const current=await identity(req,env);originGuard(req,env,current.bearer);return current.actor.role==='owner'?current.actor.id:null}})
-   return await handler(request)
+   const finalizing=request.method==='POST'&&/^\/api\/portability\/imports\/[^/]+\/finalize$/.test(path),input:any=finalizing?await boundedJson(request.clone(),MAX_LINE_BYTES):null
+   const response=await handler(request)
+   if(finalizing&&response?.ok){const result=await response.json() as Record<string,unknown>;return json({...result,erasureHistory:input?.laterJournal?'journal-supplied':'unverified',erasureNotice:input?.laterJournal?'Erasure journal supplied; freshness depends on this being the latest trusted source archive.':UNVERIFIED_ERASURE_HISTORY})}
+   return response
   }
+  if(path==='/restore'){if(actor.role!=='owner')throw new HttpError(403,'owner_required');if(!['GET','HEAD'].includes(request.method))throw new HttpError(405,'method_not_allowed');return page('Restore workshop',restorePage(),actor,200,{section:'data',restore:true})}
   if(path.startsWith('/api/mallet/imports/') || path.startsWith('/app/move-in/')) {
    if(!human(actor))throw new HttpError(403,'manager_required')
    const api=path.startsWith('/api/'),action=path.split('/').at(-1)
