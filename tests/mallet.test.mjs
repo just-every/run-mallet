@@ -3,6 +3,8 @@ import {reportBrowser} from './report-browser.mjs'
 import {reportJourney} from './support/report-journey.mjs'
 import {diagnosisJourney} from './support/diagnosis-journey.mjs'
 import {diagnosisBrowser} from './diagnosis-browser.mjs'
+import {approvalJourney} from './support/approval-journey.mjs'
+import {approvalBrowser} from './approval-browser.mjs'
 import {timeJourney} from './support/time-journey.mjs'
 import {pricingBrowser} from './pricing-browser.mjs'
 import {pricingJourney} from './support/pricing-journey.mjs'
@@ -245,3 +247,7 @@ test('REPORT-003: native technician report, rate form and role views at 1440/390
 test('DIAG-001: codes, measurements, staff-only notes, reviewed sharing and a read-only customer link',()=>run(diagnosisJourney))
 
 test('DIAG-001: native diagnosis form, advisor sharing and customer link at 1440/390',diagnosisBrowser)
+
+test('EST-003: emailed approval link, signed line decision, replay, stale and revoked links and receipt recovery',()=>run(approvalJourney))
+
+test('EST-003: customer approves and declines lines on a phone with a signed receipt at 390/1440',approvalBrowser)

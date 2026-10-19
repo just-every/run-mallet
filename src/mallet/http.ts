@@ -4,6 +4,8 @@ import {period,technicianReport} from './reports/technicians'
 import {technicianReportPage} from './ui/reports'
 import {createLink,customerLinkResponse,diagnosisInput,diagnosisMedia} from './diagnosis-links'
 import {diagnosisFormInput} from './ui/diagnostics'
+import {approvalReceipt,approvalResponse,sendApprovalLink} from './approval-door'
+import {internalApprovalCommands} from './approval-links'
 import {pricingFormInput,pricingOverrideInput} from './ui/pricing'
 import {inspectionFormInput} from './ui/inspections'
 import {inspectionRecordInput,inspectionPhotos} from './inspection-photo'
@@ -60,7 +62,7 @@ function visible(s:State,actor:Actor):State {
  s=scopedTime(s,actor)
  if(actor.role!=='owner'){const {payRate:_rates,...records}=s.records;s={...s,records}}
  // Diagnostic notes and customer links are native staff evidence; agents never receive them.
- if(actor.role==='agent'){const {diagnosis:_d,diagnosisLink:_l,diagnosisLinkView:_v,...records}=s.records;s={...s,records:{...records,event:rows(s,'event').filter(x=>!x.kind.startsWith('diagnosis'))}}}
+ if(actor.role==='agent'){const {diagnosis:_d,diagnosisLink:_l,diagnosisLinkView:_v,approvalLink:_a,...records}=s.records;s={...s,records:{...records,event:rows(s,'event').filter(x=>!x.kind.startsWith('diagnosis'))}}}
  if(actor.role==='agent')return withoutInspections(s)
  if(actor.role!=='member')return s
  const jobs=rows(s,'job').filter(j=>j.technicianId===actor.id),ids=new Set(jobs.map(j=>j.id)),assets=new Set(jobs.map(j=>j.assetId))
@@ -84,12 +86,14 @@ function formInput(data:FormData) {
  if(input.command==='tax.configure'){input.ratePercent=input.ratePercent===''?null:Number(input.ratePercent);input.partsTaxable=data.has('partsTaxable');input.laborTaxable=data.has('laborTaxable')}
  if(input.command==='decline.reprice')input.unitCents=Math.round(Number(input.unitCents)*100)
  if(input.channel)input.method=input.channel
+ if(input.command==='approvalLink.create')input.days=Number(input.days)
  if(input.command==='payRate.set'){input.centsPerHour=Math.round(Number(input.rate)*100);delete input.rate}
  return diagnosisFormInput(data,timeFormInput(data,pricingOverrideInput(data,pricingFormInput(data,inspectionFormInput(data,qualityFormInput(data,input))))))
 }
 export async function malletResponse(request:Request,original:Bindings):Promise<Response|null> {
  const url=new URL(request.url),path=url.pathname
  const customer=await customerLinkResponse(request,original);if(customer)return customer
+ const decision=await approvalResponse(request,original);if(decision)return decision
  if(path!=='/restore' && path!=='/app' && !path.startsWith('/app/') && !path.startsWith('/api/mallet/') && !path.startsWith('/api/portability/'))return null
  const env=runtimeBindings(original),isApi=path.startsWith('/api/')
  let actor:Actor|undefined,submitted:any
@@ -126,7 +130,9 @@ export async function malletResponse(request:Request,original:Bindings):Promise<
    const data=path==='/app/actions'?formInput(await nativeForm(request)):await body(request),command=String(data.command),input=data.input??data
    submitted={command,input}
    let result:any
-   if(command.startsWith('agent.')) result=await agentKey(env.DB,actor,auth.authority,command,input)
+   if(internalApprovalCommands.includes(command))throw new HttpError(404,'unknown_command')
+   if(command==='approvalLink.create'){if(!human(actor))throw new HttpError(403,'manager_required');result=await sendApprovalLink(env,actor,auth.authority,input)}
+   else if(command.startsWith('agent.')) result=await agentKey(env.DB,actor,auth.authority,command,input)
    else if(command==='asset.erase') {
     if(actor.role!=='owner')throw new HttpError(403,'owner_required')
     if(input.confirm!=='ERASE')throw new HttpError(400,'confirmation_required')
@@ -139,6 +145,7 @@ export async function malletResponse(request:Request,original:Bindings):Promise<
    if(isApi)return json(actor.role==='agent'?withoutInspectionSource(result):result)
    if(command==='agent.create')return page('Agent key created',`<section class="card"><p>Copy this key once into your agent’s private environment. It will not be shown again.</p><pre>${e(result.token)}</pre><p>Expires ${when(new Date(result.expiresAt).toISOString(),undefined,'date-year')}</p><p class="card-foot"><a href="/app/data">Return to access</a></p></section>`,actor,200,{section:'data'})
    if(command==='asset.erase')return redirect('/app/customers')
+   if(command==='approvalLink.create')return page('Approval link sent',`<section class="card"><p>${e(result.delivery?.status==='accepted'?'Handed to the mail provider for '+result.to+'; delivery is not confirmed.':result.delivery?.status==='development'?'Written to the development mail outbox for '+result.to+'; not sent.':'The mail provider did not accept the message for '+result.to+'.')}</p><p>If the customer cannot find the email, share this link yourself. It will not be shown again.</p><pre>${e(result.url)}</pre><p class="card-foot"><a href="/app/jobs/${e(result.jobId)}#approval-links">Return to the repair</a></p></section>`,actor,200,{section:'jobs'})
    if(command==='diagnosisLink.create')return page('Customer inspection link',`<section class="card"><p>Copy this read-only link to the customer yourself. Mallet has not sent it, and it will not be shown again.</p><pre>${e(result.url)}</pre><p>Expires ${when(result.expiresAt)}</p><p class="card-foot"><a href="/app/jobs/${e(result.jobId)}#diagnosis">Return to the repair</a></p></section>`,actor,200,{section:'jobs'})
    if(command==='agent.revoke')return redirect('/app/data')
    if(command==='tax.configure')return redirect('/app/tax?saved=1')
@@ -159,6 +166,8 @@ export async function malletResponse(request:Request,original:Bindings):Promise<
   const state=visible(await load(env.DB),actor)
   if(path==='/api/mallet/catalogue'){if(actor.role==='member')throw new HttpError(403,'manager_required');return json(await catalogue(env))}
   if(path==='/api/mallet/state')return json({actor,...state})
+  const receiptMatch=path.match(/^\/api\/mallet\/approval-receipts\/([^/]+)$/)
+  if(receiptMatch)return json(approvalReceipt(state,actor,receiptMatch[1]))
   const exportMatch=path.match(/^\/api\/mallet\/exports\/([^/]+)$/)
   if(exportMatch){if(!human(actor))throw new HttpError(403,'manager_required');const x=rows(state,'export').find(x=>x.id===exportMatch[1]);if(!x)throw new HttpError(404,'not_found');return csv(x.csv,'mallet-invoice')}
   const historyMatch=path.match(/^\/api\/mallet\/assets\/([^/]+)\/history.csv$/)

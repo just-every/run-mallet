@@ -56,7 +56,7 @@ export async function portableRepair(source) {
  const saved=await source.command('invoice.export',{invoiceId:invoice.id,version:invoice.version})
  const savedBytes=await (await source.request('/api/mallet/exports/'+saved.id)).text()
  const original=(await source.state()).records,backup=await archive(source)
- for(const table of backup[0].tables)assert.ok(!/^oa_|^mallet_agent_keys$|^mallet_customer_links$/.test(table.name),'OPS-001: identity and access keys are excluded')
+ for(const table of backup[0].tables)assert.ok(!/^oa_|^mallet_agent_keys$|^mallet_customer_links$|^mallet_approval_links$/.test(table.name),'OPS-001: identity and access keys are excluded')
  assert.equal(backup[0].objects.length,0,'OPS-001: current capabilities have no object-store media')
  const fresh=await installation({bindings:{OWNER_EMAIL:'recovered-owner@example.test'}})
  try {
