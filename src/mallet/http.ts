@@ -6,6 +6,8 @@ import {identity,originGuard,human,agentKey,HttpError,type Actor} from './auth'
 import {execute,load,MalletError,type State} from './model'
 import {assetHistoryCsv} from './workshop'
 import {catalogue} from './pier'
+import {mediaResponse} from './media/http'
+import {mediaPage} from './ui/media'
 import {e,rows,money,when,status,type Names} from './ui/common'
 import {page,type Section,type Counts} from './ui/shell'
 import {conflictPage} from './ui/conflict'
@@ -64,6 +66,7 @@ export async function malletResponse(request:Request,original:Bindings):Promise<
  let actor:Actor|undefined,submitted:any
  try {
   const auth=await identity(request,env);actor=auth.actor;originGuard(request,env,auth.bearer)
+  if(path.startsWith('/api/mallet/media/'))return await mediaResponse(request,env,actor,auth.authority)
   if(!['GET','POST','PUT','HEAD'].includes(request.method))throw new HttpError(405,'method_not_allowed')
   if(path.startsWith('/api/portability/')) {
    if(actor.role!=='owner')throw new HttpError(403,'owner_required')
@@ -130,6 +133,8 @@ export async function malletResponse(request:Request,original:Bindings):Promise<
   if(path==='/app/move-in')return page('Move into Mallet',moveIn(actor),actor,200,frame('move-in'))
   if(path==='/app/data'){if(!human(actor))throw new HttpError(403,'manager_required');const keys=await env.DB.prepare('SELECT id,label,expires_at,revoked_at FROM mallet_agent_keys ORDER BY created_at DESC').all();return page('Data & access',dataPage(actor,keys.results),actor,200,frame('data'))}
   if(path==='/app/backup')throw new HttpError(405,'post_required')
+  const mediaMatch=path.match(/^\/app\/jobs\/([^/]+)\/media$/)
+  if(mediaMatch){if(actor.role==='agent')throw new HttpError(403,'manager_required');const job=rows(state,'job').find(j=>j.id===mediaMatch[1]);if(!job)throw new HttpError(404,'not_found');return page('Inspection photos & video',mediaPage(job),actor,200,frame('jobs',{subtitle:e(job.title)+' · '+e(job.asset.label),media:true}))}
   const asset=path.match(/^\/app\/assets\/([^/]+)$/),job=path.match(/^\/app\/jobs\/([^/]+)$/)
   const people=asset||job?await operators(env.DB):undefined
   const view=asset?assetPage(state,asset[1],actor,people!.names,people!.list,Object.fromEntries(bookingFields.filter(k=>url.searchParams.has(k)).map(k=>[k,url.searchParams.get(k)!.slice(0,200)]))):job?jobPage(state,job[1],actor,people!.names):null

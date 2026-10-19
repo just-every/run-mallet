@@ -2,7 +2,7 @@ Your workshop lives with you, so the backups are yours too. Mallet makes one fil
 
 ## What a backup holds
 
-A backup holds your workshop records: assets, jobs, estimates and their frozen approvals, authorizations, recorded work, invoices and their saved CSVs, and the original files from any move-in. It leaves out sign-in identities, sessions, agent keys and private settings: the installation you restore into has its own owner and its own keys.
+A backup holds your workshop records: assets, jobs, estimates and their frozen approvals, authorizations, recorded work, invoices and their saved CSVs, the original files from any move-in, and private inspection findings, original/shared photo and video bytes, provenance and resumable upload chunks. It leaves out sign-in identities, sessions, agent keys and private settings: the installation you restore into has its own owner and its own keys.
 
 Keep backups private. They contain your customers' names and contact details.
 
@@ -56,4 +56,4 @@ If you try the older backup with the later one as its erasure journal, the impor
 rer import --input exports/older.rer --journal exports/after-erasure.rer --yes
 ```
 
-It exits with code 4 and reports `restore_refused` with the reason `erasure_epoch`. That is the safeguard working. The older archive is also refused without `--journal`; the archive policy never treats an omitted journal as permission to resurrect erased data. Keep a fresh backup made after your latest erasure.
+It exits with code 4 and reports `restore_refused` with the reason `erasure_epoch`. That is the safeguard working. A destination that already knows the later erasure refuses the old archive too. A completely fresh destination has no later source history unless you carry it: without the later journal it can accept the old archive and resurrect erased data. Always retain and carry the latest post-erasure backup/journal; importing an older archive without it cannot establish freshness.

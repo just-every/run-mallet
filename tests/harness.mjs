@@ -8,15 +8,15 @@ import {join} from 'node:path'
 import assert from 'node:assert/strict'
 const bundles={}
 // entry: the Worker under test; bindings: extra Worker bindings (the demo test sets RER_DEMO).
-export async function installation({entry='tests/worker.ts',bindings={},outboundService}={}) {
+export async function installation({entry='tests/worker.ts',bindings={},outboundService,network=false,assets=false}={}) {
  const bundle=bundles[entry]??=await build({entryPoints:[entry],bundle:true,write:false,format:'esm',platform:'neutral',target:'es2022',external:['node:*','cloudflare:*']})
  const directory=await mkdtemp(join(tmpdir(),'mallet-api-')),setup=randomBytes(32).toString('hex'),messages=[]
  let origin='https://127.0.0.1'
  const secret=randomBytes(32).toString('hex')
- const options=()=>({...convertV4MiniflareOptions({host:'127.0.0.1',port:Number(new URL(origin).port),modules:true,script:bundle.outputFiles[0].text,compatibilityDate:'2026-09-08',compatibilityFlags:['nodejs_compat'],d1Databases:['DB'],bindings:{AUTH_ORIGIN:origin,OWNER_EMAIL:'owner@example.test',SESSION_SECRET:secret,SETUP_TOKEN:setup,MAIL_PROVIDER:'resend',MAIL_API_KEY:'test-mail-edge',MAIL_FROM:'auth@example.test',...bindings},outboundService:async request=>{if(outboundService&&new URL(request.url).hostname!=='api.resend.com')return outboundService(request);assert.equal(new URL(request.url).hostname,'api.resend.com');messages.push(await request.json());return Response.json({id:randomUUID()})}}),resourcePersistencePath:directory})
+ const options=()=>({...convertV4MiniflareOptions({host:'127.0.0.1',port:Number(new URL(origin).port),modules:true,script:bundle.outputFiles[0].text,compatibilityDate:'2026-09-08',compatibilityFlags:['nodejs_compat'],...(assets?{assets:{directory:'public',binding:'ASSETS',run_worker_first:true,routerConfig:{has_user_worker:true}}}:{}),d1Databases:['DB'],bindings:{AUTH_ORIGIN:origin,OWNER_EMAIL:'owner@example.test',SESSION_SECRET:secret,SETUP_TOKEN:setup,MAIL_PROVIDER:'resend',MAIL_API_KEY:'test-mail-edge',MAIL_FROM:'auth@example.test',...bindings},outboundService:async request=>{if(outboundService&&new URL(request.url).hostname!=='api.resend.com')return outboundService(request);assert.equal(new URL(request.url).hostname,'api.resend.com');messages.push(await request.json());return Response.json({id:randomUUID()})}}),resourcePersistencePath:directory})
  const mf=new Miniflare(options())
  try {
-  origin='https://'+(await mf.ready).host
+  origin=(network?'http://':'https://')+(await mf.ready).host
   await mf.setOptions(options())
   await mf.ready
  }catch(error){await mf.dispose();await rm(directory,{recursive:true,force:true});throw error}
@@ -24,7 +24,7 @@ export async function installation({entry='tests/worker.ts',bindings={},outbound
   const db=await mf.getD1Database('DB')
   for(const file of (await readdir('migrations/core')).filter(f=>f.endsWith('.sql')).sort())await db.batch(unstable_splitSqlQuery(await readFile(join('migrations/core',file),'utf8')).map(sql=>db.prepare(sql)))
   let owner=''
-  const request=(path,{method='GET',body,as=owner,headers={}}={})=>mf.dispatchFetch(origin+path,{method,redirect:'manual',headers:{origin,host:new URL(origin).host,'content-type':'application/json',...(as?{cookie:as}:{}),...headers},...(body===undefined?{}:{body:JSON.stringify(body)})})
+  const request=(path,{method='GET',body,as=owner,headers={}}={})=>(network?fetch:mf.dispatchFetch.bind(mf))(origin+path,{method,redirect:'manual',headers:{origin,host:new URL(origin).host,'content-type':'application/json',...(as?{cookie:as}:{}),...headers},...(body===undefined?{}:{body:JSON.stringify(body)})})
   const boot=await request('/auth/bootstrap',{method:'POST',body:{token:setup,displayName:'Morgan Workshop'}});assert.equal(boot.status,303,await boot.text())
   owner=boot.headers.getSetCookie().map(x=>x.split(';')[0]).join('; ')
   const api=async(path,body,{status=200,...options}={})=>{const response=await request(path,{...(body===undefined?{}:{method:'POST',body}),...options});const value=await response.json();assert.equal(response.status,status,JSON.stringify(value));return value}
