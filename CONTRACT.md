@@ -53,7 +53,7 @@ Neighboring products stay separate: [Pier](https://github.com/just-every/run-pie
 
 - **VEH-001 — Vehicle identity and VIN decode.** Store VIN, plate/state, year/make/model, engine, trim, drivetrain, fuel and vehicle-specific fitment; scan VIN/plate from a phone and decode through NHTSA vPIC and a licensed US plate provider such as CarMD. A staff correction keeps raw decode provenance and never conflates two vehicles. **Acceptance evidence:** Scan a VIN and state plate through intake, compare decoded engine/trim with provider evidence, correct an ambiguous result and show duplicate warnings and manual entry when decode is unavailable.
 
-- **VEH-002 — Mileage and service intervals.** Record intake/out mileage or hours, units, observation date and corrections with reason; retain readings per visit, flag impossible regressions and compute time/mileage service due without inventing a current odometer. **Acceptance evidence:** Enter 62,100 miles, close at 62,112, record a corrected prior reading and inspect due dates and the warning for a lower uncorrected reading.
+- **VEH-002 — Mileage and service intervals.** Record intake/out mileage or hours, units, observation date and corrections with reason; retain readings per visit, flag impossible regressions and compute time/mileage service due without inventing a current odometer. Readings are nonnegative whole miles (default), kilometers or hours, with timezone-bearing observations stored in UTC; corrections append with a reason and retain the original. A service becomes due when its latest observed reading in the same unit reaches or exceeds the entered threshold, or its inclusive UTC due date arrives; the two triggers use OR and no current reading is extrapolated. **Acceptance evidence:** Enter 62,100 miles, close at 62,112, record a corrected prior reading and inspect due dates and the warning for a lower uncorrected reading.
 
 - **VEH-003 — CARFAX service history exchange.** With the shop’s eligible CARFAX account, retrieve vehicle service history and submit eligible completed service records; preserve provider attribution, consent, event IDs and submission failures. External history remains distinguished from shop-performed work. **Acceptance evidence:** Connect a CARFAX approved test account, read history by VIN, close a qualifying repair and submit once; duplicate events do not duplicate history and a provider refusal remains actionable.
 
@@ -365,7 +365,7 @@ The wider category is evidenced by [Tekmetric shop management](https://www.tekme
 
 ## Homepage claims
 
-Every capability claim on the approved homepage (`src/site/landing/`, checked against br's claims truth table of 18 October 2026, rows 1–59 in page order) maps to the named clauses that promise it. A claim's status is `done` when every mapped clause is done, `missing` when every one is missing, and `partial` otherwise, from the status table below. The sample shop, people, vehicles and figures in the drawings (Buckeye Auto Repair, RO 4127, Ohio's 7.5% sales tax) are illustrations, not claims. 59 claims: 2 done, 24 partial, 33 missing.
+Every capability claim on the approved homepage (`src/site/landing/`, checked against br's claims truth table of 18 October 2026, rows 1–59 in page order) maps to the named clauses that promise it. A claim's status is `done` when every mapped clause is done, `missing` when every one is missing, and `partial` otherwise, from the status table below. The sample shop, people, vehicles and figures in the drawings (Buckeye Auto Repair, RO 4127, Ohio's 7.5% sales tax) are illustrations, not claims. 59 claims: 2 done, 26 partial, 31 missing.
 
 | # | Section | Claim | Clause(s) | Status |
 | --- | --- | --- | --- | --- |
@@ -377,7 +377,7 @@ Every capability claim on the approved homepage (`src/site/landing/`, checked ag
 | 6 | Hero | "brings customers back" | AUTO-003, AUTO-004, ADV-005 | missing |
 | 7 | Hero | "100% free, open source" | OPEN-001 | partial |
 | 8 | Hero | "alternative to Tekmetric, Shopmonkey and Mitchell 1 Manager SE" | MOVE-001, MOVE-002, MOVE-003 | missing |
-| 9 | Hero card | RO 4127 · VIN decoded · 62,100 mi | VEH-001, VEH-002 | missing |
+| 9 | Hero card | RO 4127 · VIN decoded · 62,100 mi | VEH-001, VEH-002 | partial |
 | 10 | Hero card | Inspection · 2 red, 3 yellow · texted to Dana Brooks | DVI-001, DVI-003, MSG-001 | missing |
 | 11 | Hero card | Front brakes approved · cabin filter declined → due at 67,000 mi | ESTIMATE-001, EST-005 | partial |
 | 12 | Hero card | Pads backordered at Worldpac → PartsTech +$8.40 · Dana re-approved 10:05 | ADV-004, BUY-003, BUY-005, ESTIMATE-001 | partial |
@@ -411,7 +411,7 @@ Every capability claim on the approved homepage (`src/site/landing/`, checked ag
 | 40 | 08 Pickup | "Dana gets a ready text with her balance and pays from her phone" (Apple Pay) | PAY-003, MSG-001 | missing |
 | 41 | 08 Pickup | Invoice 10418 from labor and parts, sales tax 7.5% | INVOICE-001, TAX-001 | partial |
 | 42 | 08 Pickup | "QuickBooks has it a minute later" | BOOKS-001 | missing |
-| 43 | 08 Pickup | Collected 4:30 pm, miles out, keys returned | RETURN-001, VEH-002 | missing |
+| 43 | 08 Pickup | Collected 4:30 pm, miles out, keys returned | RETURN-001, VEH-002 | partial |
 | 44 | 09 Interlude | Reminder on Priya's phone: "Timing belt due at 105,000 mi", $780.00, Book | AUTO-004, ADV-005, MSG-001, BOOK-001 | missing |
 | 45 | 10 Follow-up | "The agent tracks declined work and service intervals by mileage" | ADV-005, AUTO-003, AUTO-004 | missing |
 | 46 | 10 Follow-up | "refreshes each price" | ADV-005 | missing |
@@ -438,8 +438,8 @@ OPEN-001 was added on 18 October 2026 and judged from `9ca3be806f00da2d4febf5bac
 | Clauses | Done | Partial | Missing | Total |
 | --- | ---: | ---: | ---: | ---: |
 | Published | 8 | 1 | 0 | 9 |
-| Target and push further | 0 | 29 | 102 | 131 |
-| All | 8 | 30 | 102 | 140 |
+| Target and push further | 1 | 29 | 101 | 131 |
+| All | 9 | 30 | 101 | 140 |
 
 | Clause | Title | Kind | Status | Evidence | Gap |
 | --- | --- | --- | --- | --- | --- |
@@ -454,7 +454,7 @@ OPEN-001 was added on 18 October 2026 and judged from `9ca3be806f00da2d4febf5bac
 | `PIER-001` | Read only | published | partial | `src/mallet/pier.ts`; `src/mallet/http.ts` | Read-only adapter exists; no exercising integration journey with Pier or proven provider credential rotation. |
 | `CUS-001` | Customer and fleet accounts | target | partial | `src/mallet/workshop.ts`; `tests/mallet.test.mjs` | Only customer name/email embedded on assets; no independent contacts, fleet accounts, search or merge. |
 | `VEH-001` | Vehicle identity and VIN decode | target | missing |  | No structured vehicle fields, camera VIN/plate scan or decode provider connection. |
-| `VEH-002` | Mileage and service intervals | target | missing |  | No mileage/hour ledger, unit handling or service interval calculation. |
+| `VEH-002` | Mileage and service intervals | target | done | `src/mallet/mileage.ts`; `src/mallet/ui/mileage.ts`; `tests/mallet.test.mjs` |  |
 | `VEH-003` | CARFAX service history exchange | target | missing |  | No CARFAX history or service reporting integration; account/program approval is required engineering work. |
 | `INTAKE-001` | Condition media and custody | target | missing |  | No intake attachments, custody/accessory register, secret handling or receipts. |
 | `INTAKE-002` | Custom forms and signed shop terms | target | missing |  | No custom forms, signed terms, signatures or copy delivery. |

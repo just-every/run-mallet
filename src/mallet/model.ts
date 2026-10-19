@@ -1,3 +1,4 @@
+import { mileage } from './mileage'
 import { workshop } from './workshop'
 import { estimates } from './estimates'
 import { invoices } from './invoices'
@@ -62,14 +63,14 @@ export function approval(c: Context, kind: string, row: Row, revision: number, p
   return put(c.s, 'approval', { subjectKind: kind, subjectId: row.id, revision, subjectVersion: row.version, preparedBy, approvedBy: who(c), decision: 'approved', at: c.now })
 }
 const agentCommands = new Set(['estimate.prepare', 'estimate.revise', 'invoice.prepare', 'dispatch.prepare'])
-const commands = new Set(['tax.configure', 'asset.create', 'asset.update', 'job.book', 'job.complete', 'work.record', 'estimate.prepare', 'estimate.revise', 'estimate.approve', 'estimate.markSent', 'estimate.authorise', 'invoice.prepare', 'invoice.approve', 'invoice.export', 'dispatch.prepare', 'dispatch.approve'])
+const commands = new Set(['reading.record', 'serviceInterval.save', 'tax.configure', 'asset.create', 'asset.update', 'job.book', 'job.complete', 'work.record', 'estimate.prepare', 'estimate.revise', 'estimate.approve', 'estimate.markSent', 'estimate.authorise', 'invoice.prepare', 'invoice.approve', 'invoice.export', 'dispatch.prepare', 'dispatch.approve'])
 export function reduce(s: State, actor: Actor, command: string, payload: any, now = new Date().toISOString()): any {
   object(actor, 'actor'); text(actor.id, 'actor.id'); text(actor.name, 'actor.name'); choice(actor.role, ['owner', 'admin', 'member', 'agent'], 'role')
   if (!commands.has(command)) fail('COMMAND', 'Unknown Mallet command.', null, 400)
   if (actor.role === 'agent' && !agentCommands.has(command) || actor.role === 'member' && command !== 'work.record') fail('FORBIDDEN', 'This role cannot perform that command.', null, 403)
   migrateSalesTax(s)
   const c = { s, actor, now }, p = object(payload)
-  for (const handler of [tax, workshop, estimates, invoices]) {
+  for (const handler of [tax, workshop, mileage, estimates, invoices]) {
     const result = handler(c, command, p)
     if (result !== undefined) return result
   }
