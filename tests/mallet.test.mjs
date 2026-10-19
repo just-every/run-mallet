@@ -1,6 +1,8 @@
 import {timeBrowser} from './time-browser.mjs'
 import {reportBrowser} from './report-browser.mjs'
 import {reportJourney} from './support/report-journey.mjs'
+import {diagnosisJourney} from './support/diagnosis-journey.mjs'
+import {diagnosisBrowser} from './diagnosis-browser.mjs'
 import {timeJourney} from './support/time-journey.mjs'
 import {pricingBrowser} from './pricing-browser.mjs'
 import {pricingJourney} from './support/pricing-journey.mjs'
@@ -239,3 +241,7 @@ test('TIME-001: native clocks, reasoned correction decisions and actual board ti
 test('REPORT-003: sold versus actual hours, recomputed corrections, drill-through, owner-only pay rates and recovery',()=>run(reportJourney))
 
 test('REPORT-003: native technician report, rate form and role views at 1440/390',reportBrowser)
+
+test('DIAG-001: codes, measurements, staff-only notes, reviewed sharing and a read-only customer link',()=>run(diagnosisJourney))
+
+test('DIAG-001: native diagnosis form, advisor sharing and customer link at 1440/390',diagnosisBrowser)
