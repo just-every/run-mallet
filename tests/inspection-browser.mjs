@@ -1,0 +1,44 @@
+import assert from 'node:assert/strict'
+import {randomBytes} from 'node:crypto'
+import {mkdir} from 'node:fs/promises'
+import {chromium} from '@playwright/test'
+import {installation,booking} from './harness.mjs'
+import {publicDoor} from './support/portable-repair.mjs'
+import {inspectionPhoto} from './support/inspection-photo.mjs'
+export async function inspectionBrowser(){
+ const h=await installation({entry:'tests/dev-worker.ts',network:true,assets:true,bindings:{AUTH_LOCAL:'true',RER_DEV_KEY:randomBytes(32).toString('base64url')}});let browser
+ try{
+  h.person=publicDoor(h.origin,h.owner).person
+  const setup=await fetch(h.origin+'/setup',{method:'POST',redirect:'manual',headers:{Origin:h.origin,Cookie:h.owner,'Content-Type':'application/x-www-form-urlencoded'},body:'confirm=yes&ratePercent=7.5&partsTaxable=yes'});assert.equal(setup.status,303)
+  const tech=await h.person('luis-inspection@example.test'),asset=await h.command('asset.create',{customerName:'Dana Brooks',customerEmail:'dana@example.test',label:'2019 Honda CR-V EX',identifier:'OH-INSPECTION-4471'})
+  const {job}=await booking(h,{asset,technicianId:tech.id,startAt:'2026-10-19T09:00:00-04:00',endAt:'2026-10-19T11:00:00-04:00'}),frontPhoto=await inspectionPhoto(h,job.id,tech.cookie),rearPhoto=await inspectionPhoto(h,job.id,tech.cookie,'Rear brake pads')
+  browser=await chromium.launch({headless:true,args:['--use-mock-keychain','--password-store=basic']})
+  const context=async(cookie)=>{const c=await browser.newContext({viewport:{width:1440,height:1000},timezoneId:'America/New_York',locale:'en-US'});await c.addCookies(cookie.split('; ').map(pair=>({name:pair.slice(0,pair.indexOf('=')),value:pair.slice(pair.indexOf('=')+1),url:h.origin})));return c}
+  const ownerContext=await context(h.owner),techContext=await context(tech.cookie),page=await ownerContext.newPage(),technician=await techContext.newPage(),errors=[]
+  for(const p of [page,technician])p.on('pageerror',e=>errors.push(e.message))
+  await mkdir('.cache/inspection-browser',{recursive:true})
+  const shot=async(p,name,locator)=>{for(const width of [1440,390]){await p.setViewportSize({width,height:1000});await p.evaluate(()=>new Promise(requestAnimationFrame));if(locator)await locator.scrollIntoViewIfNeeded();assert.ok(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'DVI-001 fits '+width);await p.screenshot({path:'.cache/inspection-browser/'+name+'-'+width+'.png'})}await p.setViewportSize({width:1440,height:1000})}
+  const url=h.origin+'/app/jobs/'+job.id;await page.goto(url)
+  const panel=()=>page.locator('#inspections');await panel().getByText('Reusable service recipes',{exact:true}).click();await panel().getByText('Create a service recipe',{exact:true}).click()
+  let form=panel().locator('form:has([name=command][value="inspectionJob.save"])');await form.getByLabel('Service recipe name').fill('Front brake service')
+  for(const [key,value] of Object.entries({lineDescription0:'Front pad set',lineQuantity0:'1',linePrice0:'65',lineDescription1:'Replace front pads',lineQuantity1:'1.5',linePrice1:'120'}))await form.locator('[name='+key+']').fill(value)
+  await form.locator('[name=lineKind1]').selectOption('labor');await form.getByLabel('Reason for this recipe revision').fill('Reviewed standard brake package');await shot(page,'01-service-recipe-form',form);await form.getByRole('button',{name:'Create service recipe',exact:true}).click();await page.waitForLoadState('domcontentloaded')
+  const recipe=(await h.state()).records.inspectionJob[0]
+  await panel().getByText('Versioned inspection templates',{exact:true}).click();await panel().getByText('Create an inspection template',{exact:true}).click();form=panel().locator('form:has([name=command][value="inspectionTemplate.save"])')
+  for(const [name,value] of Object.entries({name:'Brake inspection',vehicle:'Passenger vehicles',service:'Brake service',pointLabel0:'Front brake pad thickness',pointMeasure0:'Pad thickness',pointUnit0:'mm',pointLabel1:'Rear brake pad thickness',pointMeasure1:'Pad thickness',pointUnit1:'mm',pointLabel2:'Brake fluid condition',pointMeasure2:'Fluid condition',pointUnit2:'grade',pointGrades2:'Clear\nCloudy\nContaminated',reason:'Standard multipoint brake assessment'}))await form.locator('[name='+name+']').fill(value)
+  await form.locator('[name=pointRecipe0]').selectOption(recipe.id+':1');await shot(page,'02-template-form',form);await form.getByRole('button',{name:'Create inspection template',exact:true}).click();await page.waitForLoadState('domcontentloaded')
+  await panel().getByText('Assign an inspection to the current technician',{exact:true}).click();form=panel().locator('form:has([name=command][value="inspection.assign"])');await form.getByLabel('Assignment reason').fill('Luis inspects the brake complaint before quoting');await form.getByRole('button',{name:'Assign this checklist',exact:true}).click();await page.waitForLoadState('domcontentloaded')
+  const original=(await h.state()).records.inspection[0];assert.equal(original.template.revision,1)
+  await technician.goto(url);const assigned=()=>technician.locator('[data-inspection-id="'+original.id+'"]')
+  await shot(technician,'03-assigned-incomplete',assigned())
+  const record=async(label,outcome,reason,value,photo)=>{const item=assigned().locator('li.plain').filter({has:technician.getByRole('heading',{name:label,exact:true})}),f=item.locator('form:has([name=command][value="inspection.record"])');await f.locator('[name=outcome]').selectOption(outcome);await f.getByLabel('Observed evidence / reason (required)',{exact:true}).fill(reason);if(typeof value==='string')await f.locator('[name=measurementGrade]').selectOption(value);else if(value!==undefined)await f.getByLabel('Pad thickness (mm)',{exact:true}).fill(String(value));if(photo)await f.locator('[name=photoUploadId]').selectOption(photo.id);await f.getByRole('button',{name:'Record inspection point',exact:true}).click();await technician.waitForLoadState('domcontentloaded')}
+  await record('Front brake pad thickness','red','Front pads measured at 2.5 mm; photo retained',2.5,frontPhoto);await record('Rear brake pad thickness','not-inspected','Wheel lock key unavailable');await record('Brake fluid condition','green','Fluid condition visually inspected','Clear')
+  await shot(technician,'04-measured-and-uninspected',assigned());assert.equal(await assigned().getAttribute('data-inspection-complete'),'false')
+  await page.goto(url);await panel().getByText('Versioned inspection templates',{exact:true}).click();await panel().locator('summary').filter({hasText:'Brake inspection · revision 1 · Passenger vehicles · Brake service'}).click();form=panel().locator('form:has([name=command][value="inspectionTemplate.save"])').first();await form.locator('[name=name]').fill('Expanded brake inspection');await form.locator('[name=pointLabel3]').fill('Rotor thickness');await form.locator('[name=pointMeasure3]').fill('Rotor thickness');await form.locator('[name=pointUnit3]').fill('mm');await form.getByLabel('Reason for this template revision').fill('Add rotor measurement for future inspections');await form.getByRole('button',{name:'Save template revision',exact:true}).click();await page.waitForLoadState('domcontentloaded')
+  assert.deepEqual((await h.state()).records.inspection[0].template,original.template)
+  const estimate=panel().locator('form:has([name=command][value="inspection.estimate"])');await estimate.getByLabel('Estimate notes').fill('Advisor to review exact measured finding and recipe prices');await shot(page,'05-original-snapshot-after-template-change',page.locator('[data-inspection-id]'));await estimate.getByRole('button',{name:'Prepare estimate from finding',exact:true}).click();await page.waitForLoadState('domcontentloaded')
+  const quote=(await h.state()).records.estimate[0];assert.equal(quote.status,'draft');assert.equal(quote.revisions[0].inspectionSource.template.revision,1);assert.equal(quote.revisions[0].inspectionSource.result.photo.id,frontPhoto.id);await shot(page,'06-real-canned-estimate')
+  await technician.goto(url);await record('Rear brake pad thickness','yellow','Key supplied; rear pads measured at 4 mm',4,rearPhoto);await assigned().getByText('All recorded observations (',{exact:false}).click();await shot(technician,'07-original-complete-history',assigned());await shot(technician,'08-original-complete-status',assigned().getByRole('heading').first());assert.equal(await assigned().getAttribute('data-inspection-complete'),'true')
+  const final=(await h.state()).records.inspection[0];assert.equal(final.template.snapshot.items.length,3);assert.equal((await h.state()).records.inspectionTemplate[0].revisions.at(-1).items.length,4);assert.equal(final.results[1].outcome,'not-inspected');assert.equal(final.results.at(-1).photo.id,rearPhoto.id);assert.deepEqual(errors,[],'DVI-001 browser errors')
+ }finally{await browser?.close();await h.close()}
+}

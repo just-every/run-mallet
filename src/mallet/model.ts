@@ -1,3 +1,4 @@
+import {inspections,inspectionCommands,inspectionMemberCommands} from './inspections'
 import { quality, qualityCommands } from './quality'
 import { declinedWork } from './declined-work'
 import { mileage } from './mileage'
@@ -65,14 +66,14 @@ export function approval(c: Context, kind: string, row: Row, revision: number, p
   return put(c.s, 'approval', { subjectKind: kind, subjectId: row.id, revision, subjectVersion: row.version, preparedBy, approvedBy: who(c), decision: 'approved', at: c.now })
 }
 const agentCommands = new Set(['estimate.prepare', 'estimate.revise', 'invoice.prepare', 'dispatch.prepare'])
-const commands = new Set([...qualityCommands,'decline.record', 'decline.reprice', 'reading.record', 'serviceInterval.save', 'tax.configure', 'asset.create', 'asset.update', 'job.book', 'job.complete', 'work.record', 'estimate.prepare', 'estimate.revise', 'estimate.approve', 'estimate.markSent', 'estimate.authorise', 'invoice.prepare', 'invoice.approve', 'invoice.export', 'dispatch.prepare', 'dispatch.approve'])
+const commands = new Set([...inspectionCommands,...qualityCommands,'decline.record', 'decline.reprice', 'reading.record', 'serviceInterval.save', 'tax.configure', 'asset.create', 'asset.update', 'job.book', 'job.complete', 'work.record', 'estimate.prepare', 'estimate.revise', 'estimate.approve', 'estimate.markSent', 'estimate.authorise', 'invoice.prepare', 'invoice.approve', 'invoice.export', 'dispatch.prepare', 'dispatch.approve'])
 export function reduce(s: State, actor: Actor, command: string, payload: any, now = new Date().toISOString()): any {
   object(actor, 'actor'); text(actor.id, 'actor.id'); text(actor.name, 'actor.name'); choice(actor.role, ['owner', 'admin', 'member', 'agent'], 'role')
   if (!commands.has(command)) fail('COMMAND', 'Unknown Mallet command.', null, 400)
-  if (actor.role === 'agent' && !agentCommands.has(command) || actor.role === 'member' && !['work.record','quality.record','quality.correct','quality.signTechnician'].includes(command)) fail('FORBIDDEN', 'This role cannot perform that command.', null, 403)
+  if (actor.role === 'agent' && !agentCommands.has(command) || actor.role === 'member' && ![...inspectionMemberCommands,'work.record','quality.record','quality.correct','quality.signTechnician'].includes(command)) fail('FORBIDDEN', 'This role cannot perform that command.', null, 403)
   migrateSalesTax(s)
   const c = { s, actor, now }, p = object(payload)
-  for (const handler of [tax, workshop, mileage, estimates, declinedWork, invoices, quality]) {
+  for (const handler of [tax, workshop, mileage, estimates, declinedWork, invoices, quality, inspections]) {
     const result = handler(c, command, p)
     if (result !== undefined) return result
   }

@@ -73,7 +73,7 @@ Neighboring products stay separate: [Pier](https://github.com/just-every/run-pie
 
 ### Digital inspections and repair quality
 
-- **DVI-001 — Configurable digital inspections.** Create versioned multipoint templates by vehicle/service, assign technicians and mark green/yellow/red or not inspected with measurements and mandatory reasons; incomplete checks remain visible and templates can map findings to canned jobs. New product data inherits OPS-001 before shipping. **Acceptance evidence:** Assign a brake inspection, record pad thickness and an uninspected item, change the template and reopen the original; the original checklist and its completion state remain exact.
+- **DVI-001 — Configurable digital inspections.** Create versioned multipoint templates by vehicle/service, assign technicians and mark green/yellow/red or not inspected with measurements and mandatory reasons; incomplete checks remain visible and templates can map findings to canned jobs. Owner/admin manage reusable templates and versioned canned service recipes; each assignment snapshots its exact template and mapped recipe revisions for the repair’s current native technician. Only the currently assigned technician records immutable observations; owners/admin read shop inspections, technicians read only their currently assigned repair snapshots, and agents have no inspection-record, event or raw-source access. Every result needs evidence/reason. Yellow/red results also need a configured exact-unit numeric measurement or owner-defined labelled grade, and a completed same-repair private DVI-002 image; the write binds its native custody, digest and provenance. A not-inspected point stays incomplete without invented values. New observations append and supersede earlier results without changing them. Template/recipe edits never alter earlier assignments, results or prepared estimates. A mapped yellow/red finding prepares a real part/labor estimate at the explicitly reviewed current recipe revision and shop tax, preserving original finding, template, mapped recipe and priced recipe snapshots; approval and work still need separate exact decisions. Existing decided repairs use EST-004 supplements. All reusable/assigned history, grade labels, photo references and bytes inherit OPS-001 portability with fresh native authority. New product data inherits OPS-001 before shipping. **Acceptance evidence:** Assign a brake inspection, record pad thickness and an uninspected item, change the template and reopen the original; the original checklist and its completion state remain exact.
 
 - **DVI-002 — Photo and video inspection evidence.** Capture, annotate and upload findings on phones/tablets with compression, resumable progress, capture time and technician provenance; keep originals and shared versions and recover interruption without duplicate findings. Owner/admin sessions may access all shop findings; technicians access only their currently assigned repairs, and agents have no media access. Every upload, resume and download rechecks native authority and assignment; writes are same-origin. Findings and uploads bind opaque client IDs and exact metadata, 64 KiB chunk ordinals and SHA-256; mismatched retries refuse, and completion verifies the whole digest before viewing. JPEG/PNG/WebP originals are at most 8 MiB and MP4/WebM originals at most 32 MiB. The phone camera/file door retains original bytes; the annotated shared photo is a JPEG at quality 0.78 with its longest edge at most 1600 pixels. Browser video capture records up to 30 seconds at requested video/audio bitrates of 1,500,000/64,000 bits per second; a prepared shared video retains the captured compressed bytes. Capture time is technician-reported with a timezone and normalized to UTC, separate from server receipt time and native actor provenance. Both versions stay private, with no public URLs; “shared” means prepared, not sent. The browser remembers only opaque finding/upload IDs and content hashes for reselect-and-resume. DVI-003 owns reviewed customer delivery and must preserve private-original control; GOV-006 owns retention, erasure and holds, with no automatic media deletion before that policy ships. New product data inherits OPS-001 before shipping. **Acceptance evidence:** Capture marked-up brake photos and a short video, interrupt the upload, resume, and view original/shared media from the finding; duplicates and private originals are controlled.
 
@@ -365,7 +365,7 @@ The wider category is evidenced by [Tekmetric shop management](https://www.tekme
 
 ## Homepage claims
 
-Every capability claim on the approved homepage (`src/site/landing/`, checked against br's claims truth table of 18 October 2026, rows 1–59 in page order) maps to the named clauses that promise it. A claim's status is `done` when every mapped clause is done, `missing` when every one is missing, and `partial` otherwise, from the status table below. The sample shop, people, vehicles and figures in the drawings (Buckeye Auto Repair, RO 4127, Ohio's 7.5% sales tax) are illustrations, not claims. 59 claims: 8 done, 22 partial, 29 missing.
+Every capability claim on the approved homepage (`src/site/landing/`, checked against br's claims truth table of 18 October 2026, rows 1–59 in page order) maps to the named clauses that promise it. A claim's status is `done` when every mapped clause is done, `missing` when every one is missing, and `partial` otherwise, from the status table below. The sample shop, people, vehicles and figures in the drawings (Buckeye Auto Repair, RO 4127, Ohio's 7.5% sales tax) are illustrations, not claims. 59 claims: 11 done, 22 partial, 26 missing.
 
 | # | Section | Claim | Clause(s) | Status |
 | --- | --- | --- | --- | --- |
@@ -378,7 +378,7 @@ Every capability claim on the approved homepage (`src/site/landing/`, checked ag
 | 7 | Hero | "100% free, open source" | OPEN-001 | done |
 | 8 | Hero | "alternative to Tekmetric, Shopmonkey and Mitchell 1 Manager SE" | MOVE-001, MOVE-002, MOVE-003 | missing |
 | 9 | Hero card | RO 4127 · VIN decoded · 62,100 mi | VEH-001, VEH-002 | partial |
-| 10 | Hero card | Inspection · 2 red, 3 yellow · texted to Dana Brooks | DVI-001, DVI-003, MSG-001 | missing |
+| 10 | Hero card | Inspection · 2 red, 3 yellow · texted to Dana Brooks | DVI-001, DVI-003, MSG-001 | partial |
 | 11 | Hero card | Front brakes approved · cabin filter declined → due at 67,000 mi | ESTIMATE-001, EST-005 | done |
 | 12 | Hero card | Pads backordered at Worldpac → PartsTech +$8.40 · Dana re-approved 10:05 | ADV-004, BUY-003, BUY-005, ESTIMATE-001 | partial |
 | 13 | Hero card | Bay 3 · Luis Romero · 2.4 hrs sold · promise 5:00 pm · ready 4:10 | WORKSHOP-001, FLOW-001, FLOW-002 | partial |
@@ -388,8 +388,8 @@ Every capability claim on the approved homepage (`src/site/landing/`, checked ag
 | 17 | 03 Check-in | "Mallet decodes the VIN" | VEH-001 | missing |
 | 18 | 03 Check-in | "has the repair order ready when Kayla opens it" | INTAKE-003 | missing |
 | 19 | 03 Check-in | RO card: mileage in, last visit, "6 visits · 5 imported from Tekmetric" | WORKSHOP-001, VEH-002, MOVE-001 | partial |
-| 20 | 04 Inspect | "Luis inspects 39 points on a tablet" | DVI-001 | missing |
-| 21 | 04 Inspect | "Every red and yellow item carries a measurement and a photo" | DVI-001, DVI-002 | partial |
+| 20 | 04 Inspect | "Luis inspects 39 points on a tablet" | DVI-001 | done |
+| 21 | 04 Inspect | "Every red and yellow item carries a measurement and a photo" | DVI-001, DVI-002 | done |
 | 22 | 04 Inspect | Inspection texted, "Delivered 9:12 · opened 9:19" | DVI-003, MSG-001 | missing |
 | 23 | 05 Approve | "The agent prices what Luis found" | ADV-001, AGENT-001 | partial |
 | 24 | 05 Approve | MOTOR labor times (1.6 + 0.8 hrs) | GUIDE-001 | missing |
@@ -438,8 +438,8 @@ OPEN-001 was added on 18 October 2026. Its 19 October acceptance now runs the pu
 | Clauses | Done | Partial | Missing | Total |
 | --- | ---: | ---: | ---: | ---: |
 | Published | 9 | 0 | 0 | 9 |
-| Target and push further | 8 | 26 | 97 | 131 |
-| All | 17 | 26 | 97 | 140 |
+| Target and push further | 9 | 26 | 96 | 131 |
+| All | 18 | 26 | 96 | 140 |
 
 | Clause | Title | Kind | Status | Evidence | Gap |
 | --- | --- | --- | --- | --- | --- |
@@ -463,7 +463,7 @@ OPEN-001 was added on 18 October 2026. Its 19 October acceptance now runs the pu
 | `BOOK-002` | Resource calendars and waitlist | target | partial | `src/mallet/workshop.ts`; `tests/mallet.test.mjs` | Bay/technician collision checks and approved dispatch ship; no calendar UI, skills, absences, waitlist, loaners or US timezone preferences. |
 | `DIAG-001` | Diagnostic findings and private notes | target | partial | `src/mallet/workshop.ts`; `src/mallet/estimates.ts`; `src/mallet/http.ts` | Job/estimate/work notes exist; no structured diagnostics, attachments or customer-safe sharing view. |
 | `ASSET-001` | Bicycle and device repair benches | target | partial | `src/mallet/workshop.ts`; `tests/browser-journey.mjs` | Generic asset and bicycle repair core ships; no typed specifications, complete parts/payment/return journey or device custody. |
-| `DVI-001` | Configurable digital inspections | target | missing |  | No digital inspection templates, assignments, measurements or completeness controls. |
+| `DVI-001` | Configurable digital inspections | target | done | `src/mallet/inspections.ts`; `src/mallet/inspection-photo.ts`; `src/mallet/inspection-visibility.ts`; `src/mallet/ui/inspections.ts`; `tests/mallet.test.mjs`; `tests/support/inspection-journey.mjs`; `tests/inspection-browser.mjs` | DVI-001 public commands and 1440/390 native forms assert versioned template/recipe creation, exact assigned checklist, measured/graded photo outcomes, mandatory reasons, visible skipped points, template-change isolation, real finding-to-estimate mapping, native access and exact archive recovery. |
 | `DVI-002` | Photo and video inspection evidence | target | done | `src/mallet/media/http.ts`; `src/mallet/media/service.ts`; `src/mallet/ui/media.ts`; `public/app/media.css`; `migrations/core/0019_inspection_media.sql`; `tests/media.test.mjs`; `tests/media-browser.mjs` | Native private photo/video capture, touch markup and JPEG compression, hash-bound interruption/resume, original/shared viewing, duplicate control, provenance and native archive recovery asserted through public doors (DVI-002). |
 | `DVI-003` | Customer inspection presentation | target | missing |  | No customer DVI report, delivery/view receipt or estimate-line mapping. |
 | `DVI-004` | Inspection history comparison | target | done | `src/mallet/media/history.ts`; `src/mallet/media/validation.ts`; `src/mallet/media/browser-history.ts`; `src/mallet/ui/media.ts`; `migrations/core/0020_inspection_resolution.sql`; `tests/media.test.mjs`; `tests/inspection-history-browser.mjs` | DVI-004 public HTTP and 1440/390 journeys assert prior/current measurements and images, declared imported provenance, exact declined carry without new tests/consent, resolution, current access checks and exact archive recovery. |

@@ -1,3 +1,4 @@
+import {inspectionPanel} from './inspections'
 import {estimateCard,supplementForms} from './estimates'
 import {jobEstimates,authorizedCap} from '../supplement-scope'
 import {qualityPanel} from './quality'
@@ -7,7 +8,7 @@ import {e,field,area,form,box,rows,badge,status,money,join,when,person,role,type
 import {eventNames} from './repair'
 import {human,type Actor} from '../auth'
 import {taxNotice,taxSummary,invoiceTotals,lineTax} from './tax'
-export function jobPage(state:any,id:string,actor:Actor,names:Names) {
+export function jobPage(state:any,id:string,actor:Actor,names:Names,photos:any[]=[]) {
  const job=rows(state,'job').find(j=>j.id===id);if(!job)return null
  const asset=rows(state,'asset').find(a=>a.id===job.assetId),estimate=rows(state,'estimate').find(q=>q.id===job.estimateId),invoice=rows(state,'invoice').find(q=>q.jobId===id)
  const rev=estimate?.revisions?.at(-1),ir=invoice?.revisions?.at(-1),manager=human(actor)
@@ -28,5 +29,5 @@ export function jobPage(state:any,id:string,actor:Actor,names:Names) {
  const events=rows(state,'event').filter(v=>v.jobId===id).sort((a,b)=>a.at.localeCompare(b.at))
  const proposals=rows(state,'proposal').filter(p=>p.jobId===id&&p.status==='pending')
  const dispatch=manager&&proposals.length?box('Prepared dispatch plans',proposals.map(p=>`<p>${e(p.preparedBy.name)}: ${e(p.reason)}</p><dl><dt>Bay</dt><dd>${e(p.plan.bayId)}</dd><dt>Technician</dt><dd>${e(person(names,p.plan.technicianId))}</dd><dt>Start</dt><dd>${when(p.plan.startAt)}</dd><dt>End</dt><dd>${when(p.plan.endAt)}</dd></dl>${form('dispatch.approve','<p>Current bay and technician availability will be checked again.</p>','Approve dispatch plan',{proposalId:p.id,version:p.version})}`).join('')):''
- return {title:job.title,subtitle:`<a href="/app/assets/${e(asset?.id)}">${e(asset?.label)}</a> · ${join(asset?.identifier,asset?.customerName,job.bayId,person(names,job.technicianId))} · ${when(job.startAt,job.endAt)} ${status(job.status)}`,body:`${taxNotice(state,actor)}${actor.role!=='agent'?`<p><a href="/app/jobs/${e(id)}/media">Inspection photos & video</a></p>`:''}<div class="grid"><div class="col">${quotes.length?quotes.map(q=>estimateCard(state,job,asset,q,actor)).join(''):estimateCard(state,job,asset,null,actor)}${supplementForms(state,job,actor)}${box('Parts & labor',work)}${qualityPanel(state,job,actor)}${mileagePanel(state,job,actor)}${declinedPanel(state,job,actor)}</div><div class="col">${dispatch}${box('Handover invoice',bill,{pill:invoice?status(invoice.status):''})}${box('Visit history',`<ul class="list events">${events.map(v=>`<li class="plain split"><span class="row-name">${e(eventNames[v.kind]??v.kind)}${v.data?.revision?` · revision ${e(v.data.revision)}`:''}${v.data?.totals?` · ${money(v.data.totals.totalCents)}`:''}</span><span class="row-meta">${when(v.at??v.createdAt)} · ${e(v.by?.name??v.actor?.name)}</span></li>`).join('')}</ul>`)}</div></div>`}
+ return {title:job.title,subtitle:`<a href="/app/assets/${e(asset?.id)}">${e(asset?.label)}</a> · ${join(asset?.identifier,asset?.customerName,job.bayId,person(names,job.technicianId))} · ${when(job.startAt,job.endAt)} ${status(job.status)}`,body:`${taxNotice(state,actor)}${actor.role!=='agent'?`<p><a href="/app/jobs/${e(id)}/media">Inspection photos & video</a></p>`:''}<div class="grid"><div class="col">${quotes.length?quotes.map(q=>estimateCard(state,job,asset,q,actor)).join(''):estimateCard(state,job,asset,null,actor)}${supplementForms(state,job,actor)}${box('Parts & labor',work)}${inspectionPanel(state,job,actor,photos)}${qualityPanel(state,job,actor)}${mileagePanel(state,job,actor)}${declinedPanel(state,job,actor)}</div><div class="col">${dispatch}${box('Handover invoice',bill,{pill:invoice?status(invoice.status):''})}${box('Visit history',`<ul class="list events">${events.map(v=>`<li class="plain split"><span class="row-name">${e(eventNames[v.kind]??v.kind)}${v.data?.revision?` · revision ${e(v.data.revision)}`:''}${v.data?.totals?` · ${money(v.data.totals.totalCents)}`:''}</span><span class="row-meta">${when(v.at??v.createdAt)} · ${e(v.by?.name??v.actor?.name)}</span></li>`).join('')}</ul>`)}</div></div>`}
 }

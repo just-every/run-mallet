@@ -1,3 +1,5 @@
+import {inspectionJourney} from './support/inspection-journey.mjs'
+import {inspectionBrowser} from './inspection-browser.mjs'
 import {supplementJourney} from './support/supplement-journey.mjs'
 import {qualityReady} from './support/quality-ready.mjs'
 import {test} from 'node:test'
@@ -216,3 +218,6 @@ test('QUALITY-001: counter/technician failed test, corrective work and independe
 })
 
 test('EST-004: separate incremental decisions, prospective price changes, exact actuals/invoice and recovery',supplementJourney)
+
+test('DVI-001: exact assigned template, measured/photo outcomes, not-inspected state, canned-job estimate and archive',()=>run(inspectionJourney))
+test('DVI-001: native template/recipe/assignment and technician inspection at 1440/390',inspectionBrowser)
