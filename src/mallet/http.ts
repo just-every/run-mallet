@@ -61,6 +61,11 @@ function formInput(data:FormData) {
  for(const name of ['version','itemVersion','revision','quantity','value','dueValue'])if(input[name]!==undefined&&input[name]!=='')input[name]=Number(input[name])
  if(data.has('lineIds') || input.command==='estimate.authorise')input.lineIds=data.getAll('lineIds')
  if(['estimate.prepare','estimate.revise'].includes(input.command))input.lines=['part','labor'].map(kind=>({kind,description:input[`${kind}Description`],quantity:Number(input[`${kind}Quantity`]),unitCents:Math.round(Number(input[`${kind}Price`])*100)}))
+ if(input.command==='estimate.prepare'&&input.supplement==='yes')input.supplement=true
+ if(input.command==='estimate.prepare'&&input.replacementSource) {
+  let source:any;try{source=JSON.parse(input.replacementSource)}catch{throw new HttpError(400,'invalid_replacement')}
+  input.lines=[{kind:source.kind,description:source.description,quantity:Number(input.replacementQuantity),unitCents:Math.round(Number(input.replacementPrice)*100),replaces:{estimateId:source.estimateId,revision:source.revision,lineId:source.lineId}}]
+ }
  if(input.command==='tax.configure'){input.ratePercent=input.ratePercent===''?null:Number(input.ratePercent);input.partsTaxable=data.has('partsTaxable');input.laborTaxable=data.has('laborTaxable')}
  if(input.command==='decline.reprice')input.unitCents=Math.round(Number(input.unitCents)*100)
  if(input.channel)input.method=input.channel
@@ -153,7 +158,7 @@ export async function malletResponse(request:Request,original:Bindings):Promise<
   const view=asset?assetPage(state,asset[1],actor,people!.names,people!.list,Object.fromEntries(bookingFields.filter(k=>url.searchParams.has(k)).map(k=>[k,url.searchParams.get(k)!.slice(0,200)]))):job?jobPage(state,job[1],actor,people!.names):null
   if(view)return page(view.title,view.body,actor,200,frame(asset?'customers':'jobs',{subtitle:view.subtitle}))
   const print=path.match(/^\/app\/estimates\/([^/]+)\/print$/)
-  if(print){const estimate=rows(state,'estimate').find(x=>x.id===print[1]);if(!estimate)throw new HttpError(404,'not_found');const rev=estimate.revisions.at(-1);return page('Repair estimate',`<section class="card print-sheet"><p class="sub">Revision ${e(rev.n)} · ${status(estimate.status)}</p><ul class="list">${rev.lines.map((l:any)=>`<li class="plain"><span class="row-name">${e(l.description)}</span><span class="row-meta">${e(l.quantity)} × ${money(l.unitCents)} before tax · ${lineTax(l)}</span></li>`).join('')}</ul>${invoiceTotals(rev.totals)}<p>Tell the shop exactly which lines you authorize. The shop records your decision and its evidence against this revision.</p></section>`,actor,200,frame('jobs'))}
+  if(print){const estimate=rows(state,'estimate').find(x=>x.id===print[1]);if(!estimate)throw new HttpError(404,'not_found');const rev=estimate.revisions.at(-1);return page('Repair estimate',`<section class="card print-sheet"><p class="sub">${estimate.supplementOf?`Supplement ${e(estimate.sequence)} · incremental scope · `:''}Revision ${e(rev.n)} · ${status(estimate.status)}</p>${estimate.supplementOf?`<p>${e(estimate.reason)}</p><p>Prior accepted scope and completed work remain unchanged. Decide only the incremental lines below.</p>`:''}<ul class="list">${rev.lines.map((l:any)=>`<li class="plain"><span class="row-name">${e(l.description)}</span><span class="row-meta">${e(l.quantity)} × ${money(l.unitCents)} before tax · ${lineTax(l)}</span></li>`).join('')}</ul>${invoiceTotals(rev.totals)}<p>Tell the shop exactly which lines you authorize. The shop records your decision and its evidence against this revision.</p></section>`,actor,200,frame('jobs'))}
   throw new HttpError(404,'not_found')
  } catch(error:any) {
   const kitCode=error instanceof Error && /^[A-Z][A-Z0-9_]{1,100}$/.test(error.message)?error.message:null

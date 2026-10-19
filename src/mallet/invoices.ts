@@ -1,29 +1,35 @@
 import { approval, bump, event, expectVersion, fail, find, put, rows, selfApproval, who, type Context, type Handler, type Row } from './model'
 import { price, totals, type Line } from './money'
 import { current } from './estimates'
+import { authorizedCap, jobEstimates } from './supplement-scope'
 
 /** Invoice preparation freezes precisely the authorised estimate prices and actual quantities. */
 function suggested(c: Context, job: Row) {
-  const estimate = find(c.s, 'estimate', job.estimateId), rev = current(estimate)
-  if (!rev.approval || !estimate.authorisation || estimate.authorisation.revision !== rev.n) fail('NOT_AUTHORISED', 'This job needs an approved, customer authorized estimate.')
-  const priced: Line[] = []
-  for (const line of rev.lines as Line[]) {
-    const actuals = job.actuals.filter((a: any) => a.lineId === line.id)
+  const sources = jobEstimates(c.s, job), priced: (Line & {sourceEstimateId: string; sourceRevision: number})[] = [], decisions: any[] = []
+  for (const estimate of sources) {
+    const rev = current(estimate), actuals = job.actuals.filter((a: any) => a.estimateId === estimate.id)
     if (!actuals.length) continue
-    if (!estimate.authorisation.lineIds.includes(line.id) || actuals.some((a: any) => a.estimateId !== estimate.id || a.revision !== rev.n)) fail('WORK_AUTHORITY', 'Recorded work does not belong to the approved, authorized revision.')
-    const quantityMilli = actuals.reduce((sum: number, a: any) => sum + a.quantityMilli, 0)
-    if (!Number.isSafeInteger(quantityMilli) || quantityMilli <= 0 || quantityMilli > line.quantityMilli) fail('WORK_AUTHORITY', 'Recorded work exceeds the customer authorized quantity.')
-    const billed = { ...line, quantityMilli, quantity: quantityMilli / 1000 }
-    priced.push({ ...billed, ...price(billed) })
+    if (!rev.approval || !estimate.authorisation || estimate.authorisation.revision !== rev.n) fail('NOT_AUTHORISED', 'Actual work requires an exact approved customer decision.')
+    for (const line of rev.lines as Line[]) {
+      const used = actuals.filter((a: any) => a.lineId === line.id)
+      if (!used.length) continue
+      if (!estimate.authorisation.lineIds.includes(line.id) || used.some((a: any) => a.revision !== rev.n)) fail('WORK_AUTHORITY', 'Recorded work does not belong to the approved, authorized revision.')
+      const quantityMilli = used.reduce((sum: number, a: any) => sum + a.quantityMilli, 0)
+      if (!Number.isSafeInteger(quantityMilli) || quantityMilli <= 0 || quantityMilli > authorizedCap(c.s, estimate, line)) fail('WORK_AUTHORITY', 'Recorded work exceeds the customer authorized quantity.')
+      const billed = { ...line, quantityMilli, quantity: quantityMilli / 1000 }
+      priced.push({ ...billed, ...price(billed), sourceEstimateId: estimate.id, sourceRevision: rev.n })
+    }
+    decisions.push({estimateId: estimate.id, revision: rev.n, approval: structuredClone(rev.approval), customerAuthorisation: structuredClone(estimate.authorisation), supplementOf: estimate.supplementOf ?? null})
   }
-  if (!priced.length || job.actuals.some((a: any) => !priced.some(l => l.id === a.lineId))) fail('WORK_AUTHORITY', 'Every invoice line must come from authorized actual work.')
-  return { estimateId: estimate.id, estimateRevision: rev.n, estimateApproval: rev.approval, customerAuthorisation: structuredClone(estimate.authorisation), lines: priced, totals: totals(priced) }
+  if (!priced.length || job.actuals.some((a: any) => !priced.some(l => l.sourceEstimateId === a.estimateId && l.sourceRevision === a.revision && l.id === a.lineId))) fail('WORK_AUTHORITY', 'Every invoice line must come from authorized actual work.')
+  const estimate = find(c.s, 'estimate', job.estimateId), rev = current(estimate)
+  return { estimateId: estimate.id, estimateRevision: rev.n, estimateApproval: rev.approval, customerAuthorisation: structuredClone(estimate.authorisation), sources: decisions, lines: priced, totals: totals(priced) }
 }
 const csvCell = (value: unknown) => { const raw = String(value ?? ''), safe = /^[=+\-@\t\r]/.test(raw) ? `'${raw}` : raw; return `"${safe.replace(/"/g, '""')}"` }
-export const exportColumns = ['InvoiceNumber', 'CustomerName', 'CustomerEmail', 'Vehicle', 'Identifier', 'JobId', 'EstimateRevision', 'Description', 'Kind', 'Quantity', 'UnitUSD', 'SubtotalUSD', 'SalesTaxUSD', 'TotalUSD', 'Currency']
+export const exportColumns = ['InvoiceNumber', 'CustomerName', 'CustomerEmail', 'Vehicle', 'Identifier', 'JobId', 'EstimateRevision', 'Description', 'Kind', 'Quantity', 'UnitUSD', 'SubtotalUSD', 'SalesTaxUSD', 'TotalUSD', 'Currency', 'EstimateId']
 const dollars = (value: number) => `${Math.floor(value / 100)}.${String(value % 100).padStart(2, '0')}`
 function csv(invoice: Row) {
-  return [exportColumns, ...invoice.lines.map((line: Line) => [invoice.number, invoice.customer.customerName, invoice.customer.customerEmail, invoice.customer.label, invoice.customer.identifier, invoice.jobId, invoice.estimateRevision, line.description, line.kind, line.quantity, dollars(line.unitCents), dollars(line.subtotalCents), dollars(line.salesTaxCents), dollars(line.totalCents), 'USD'])].map(row => row.map(csvCell).join(',')).join('\r\n') + '\r\n'
+  return [exportColumns, ...invoice.lines.map((line: any) => [invoice.number, invoice.customer.customerName, invoice.customer.customerEmail, invoice.customer.label, invoice.customer.identifier, invoice.jobId, line.sourceRevision ?? invoice.estimateRevision, line.description, line.kind, line.quantity, dollars(line.unitCents), dollars(line.subtotalCents), dollars(line.salesTaxCents), dollars(line.totalCents), 'USD', line.sourceEstimateId ?? invoice.estimateId])].map(row => row.map(csvCell).join(',')).join('\r\n') + '\r\n'
 }
 export const invoices: Handler = (c, command, p) => {
   switch (command) {

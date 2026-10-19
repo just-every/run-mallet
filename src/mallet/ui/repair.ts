@@ -1,6 +1,7 @@
 // One repair order as the screens read it: its job, vehicle, estimate, invoice and any plan waiting for a person,
 // the board column it stands in and its blocker chip. Everything here is derived from records; nothing is stored.
 import {rows,type Tone} from './common'
+import {jobEstimates,authorizedCap} from '../supplement-scope'
 
 export type Column='booked'|'estimate'|'waiting'|'authorised'|'bay'|'ready'
 export const columns:[Column,string][]=[['booked','Booked'],['estimate','Estimate'],['waiting','Waiting approval'],['authorised','Authorized'],['bay','In the bay'],['ready','Ready']]
@@ -9,9 +10,8 @@ const shared:Record<string,string>={phone:'by phone',email:'by email',printed:'o
 export type Repair={job:any,asset:any,estimate:any,rev:any,invoice:any,plans:any[],column:Column|null,chip:[string,Tone],sold:number,clocked:number}
 
 // Hours sold are the customer-authorized labor lines; hours clocked are the labor recorded against them.
-function hours(job:any,estimate:any,rev:any) {
- const ids=new Set<string>(estimate?.authorisation?.lineIds??[])
- const sold=(rev?.lines??[]).filter((l:any)=>l.kind==='labor'&&ids.has(l.id)).reduce((n:number,l:any)=>n+l.quantityMilli,0)/1000
+function hours(state:any,job:any) {
+ const sold=jobEstimates(state,job).reduce((sum,q)=>sum+q.revisions.at(-1).lines.filter((l:any)=>l.kind==='labor'&&q.authorisation?.lineIds.includes(l.id)).reduce((n:number,l:any)=>n+authorizedCap(state,q,l),0),0)/1000
  const clocked=(job.actuals??[]).filter((a:any)=>a.kind==='labor').reduce((n:number,a:any)=>n+a.quantityMilli,0)/1000
  return {sold,clocked}
 }
@@ -21,8 +21,8 @@ const inBay=(bay:string,hours:string)=>[`In ${bay.replace(/^Bay\b/,'bay')||'the 
 export const hrs=(value:number)=>`${Number(value.toFixed(2))} hr${value===1?'':'s'}`
 
 export function repair(state:any,job:any):Repair {
- const asset=rows(state,'asset').find(a=>a.id===job.assetId)??job.asset,estimate=rows(state,'estimate').find(x=>x.jobId===job.id),invoice=rows(state,'invoice').find(x=>x.jobId===job.id)
- const rev=estimate?.revisions?.at(-1),plans=rows(state,'proposal').filter(p=>p.jobId===job.id&&p.status==='pending'),{sold,clocked}=hours(job,estimate,rev)
+ const asset=rows(state,'asset').find(a=>a.id===job.assetId)??job.asset,estimate=rows(state,'estimate').find(x=>x.id===job.estimateId),invoice=rows(state,'invoice').find(x=>x.jobId===job.id)
+ const rev=estimate?.revisions?.at(-1),plans=rows(state,'proposal').filter(p=>p.jobId===job.id&&p.status==='pending'),{sold,clocked}=hours(state,job)
  let column:Column|null=null,chip:[string,Tone]=['Booked','']
  if(job.status==='invoiced'){column=null;chip=['Invoiced','']}
  else if(job.status==='completed'){column='ready';chip=invoice?.status==='approved'?['Ready for pickup','green']:invoice?['Invoice draft','amber']:['Ready to invoice','']}

@@ -1,3 +1,4 @@
+import {supplementJourney} from './support/supplement-journey.mjs'
 import {qualityReady} from './support/quality-ready.mjs'
 import {test} from 'node:test'
 import assert from 'node:assert/strict'
@@ -213,3 +214,5 @@ test('QUALITY-001 / OPS-001: failed brake test blocks ready; corrective work, in
 test('QUALITY-001: counter/technician failed test, corrective work and independent Ready clearance at 1440/390',async()=>{
  const {qualityBrowser}=await import('./quality-browser.mjs');await qualityBrowser()
 })
+
+test('EST-004: separate incremental decisions, prospective price changes, exact actuals/invoice and recovery',supplementJourney)

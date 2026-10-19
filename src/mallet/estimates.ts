@@ -2,10 +2,12 @@ import { approval, bump, choice, event, expectVersion, fail, find, integer, put,
 import { lines, totals } from './money'
 import { openJob } from './workshop'
 import { configuredTax } from './tax'
+import { jobEstimates, normalizeReplacements, validateReplacements } from './supplement-scope'
 
 export const current = (estimate: Row) => estimate.revisions[estimate.revisions.length - 1]
-function revision(c: Context, p: any, n: number) {
-  const priced = lines(p.lines, configuredTax(c.s))
+function revision(c: Context, p: any, n: number, job: Row) {
+  const priced = normalizeReplacements(c, job, p.lines, lines(p.lines, configuredTax(c.s)))
+  validateReplacements(c, job, priced, p.estimateId)
   return { n, lines: priced, totals: totals(priced), notes: text(p.notes, 'notes', 4000, true), preparedBy: who(c), preparedAt: c.now, approval: null }
 }
 function exact(c: Context, p: any) {
@@ -19,18 +21,21 @@ export const estimates: Handler = (c, command, p) => {
   switch (command) {
     case 'estimate.prepare': {
       const job = openJob(c, p)
-      if (job.estimateId) fail('DUPLICATE', 'This job already has an estimate. Revise that estimate.')
-      const row = put(c.s, 'estimate', { jobId: job.id, status: 'draft', revisions: [revision(c, p, 1)], sent: [], authorisation: null, createdAt: c.now })
-      bump(c.s, 'job', job, { estimateId: row.id })
+      if (job.estimateId && p.supplement !== true) fail('DUPLICATE', 'This job already has an estimate. Revise it or explicitly prepare a supplement.')
+      if (!job.estimateId && p.supplement === true) fail('ESTIMATE_REQUIRED', 'Prepare the original estimate before adding a supplement.')
+      if (job.estimateId && !find(c.s, 'estimate', job.estimateId).authorisation) fail('NOT_AUTHORISED', 'Record the original customer decision before preparing incremental scope.')
+      const supplemental = job.estimateId ? { supplementOf: job.estimateId, reason: text(p.reason, 'supplement reason', 2000), sequence: jobEstimates(c.s, job).length } : {}
+      const row = put(c.s, 'estimate', { jobId: job.id, ...supplemental, status: 'draft', revisions: [revision(c, p, 1, job)], sent: [], authorisation: null, createdAt: c.now })
+      bump(c.s, 'job', job, job.estimateId ? {} : { estimateId: row.id })
       event(c, command, job.id, row.id, { revision: 1, totals: current(row).totals })
       return row
     }
     case 'estimate.revise': {
       const { estimate, rev } = exact(c, p)
-      if (estimate.authorisation) fail('ESTIMATE_FROZEN', 'A customer authorized estimate is immutable. Book a new visit for additional work.')
+      if (estimate.authorisation) fail('ESTIMATE_FROZEN', 'A customer authorized estimate is immutable. Prepare a separate supplement on this repair for additional work or a prospective price change.')
       const job = find(c.s, 'job', estimate.jobId)
       if (!['booked', 'working'].includes(job.status)) fail('JOB_STATE', 'Completed jobs cannot have new estimates.')
-      const next = revision(c, p, rev.n + 1)
+      const next = revision(c, p, rev.n + 1, job)
       const row = bump(c.s, 'estimate', estimate, { status: 'draft', revisions: [...estimate.revisions, next] })
       event(c, command, job.id, row.id, { revision: next.n, totals: next.totals })
       return row
@@ -60,6 +65,9 @@ export const estimates: Handler = (c, command, p) => {
       if (!Array.isArray(p.lineIds) || p.lineIds.length > rev.lines.length) fail('INPUT', 'Select the exact authorized lines; select none if all work is declined.', null, 400)
       const lineIds = p.lineIds.map((id: unknown) => text(id, 'lineId'))
       if (new Set(lineIds).size !== lineIds.length || lineIds.some((id: string) => !rev.lines.some((l: Row) => l.id === id))) fail('INPUT', 'Authorized lines must be unique lines on this exact revision.', null, 400)
+      const job = find(c.s, 'job', estimate.jobId)
+      if (!['booked', 'working'].includes(job.status)) fail('JOB_STATE', 'A completed repair cannot acquire new work authority.')
+      validateReplacements(c, job, rev.lines.filter((l: Row) => lineIds.includes(l.id)), estimate.id)
       const authorisation = { revision: rev.n, lineIds, customerName: text(p.customerName, 'customerName'), method: choice(p.method, ['signed', 'email reply', 'phone', 'in person'] as const, 'authorization method'), evidence: text(p.evidence, 'evidence', 4000), recordedBy: who(c), at: c.now, totals: totals(rev.lines.filter((l: Row) => lineIds.includes(l.id))) }
       const row = bump(c.s, 'estimate', estimate, { status: lineIds.length ? 'authorised' : 'declined', authorisation })
       event(c, command, row.jobId, row.id, authorisation)

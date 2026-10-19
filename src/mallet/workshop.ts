@@ -1,6 +1,7 @@
 import { approval, bump, event, expectVersion, fail, find, put, rows, selfApproval, text, who, type Context, type Handler, type Row, type State } from './model'
 import { assertQualityReady } from './quality'
 import { quantity } from './money'
+import { authorizedCap, estimateForWork } from './supplement-scope'
 
 export function instant(value: unknown, label: string) {
   const raw = text(value, label, 40)
@@ -87,12 +88,12 @@ export const workshop: Handler = (c, command, p) => {
       const job = openJob(c, p)
       if (c.actor.role === 'member' && job.technicianId !== c.actor.id) fail('FORBIDDEN', 'Technicians record work only on their assigned jobs.', null, 403)
       if (!job.estimateId) fail('NOT_AUTHORISED', 'Approve and record customer authorization before recording work.')
-      const estimate = find(c.s, 'estimate', job.estimateId), rev = estimate.revisions.at(-1)
-      if (!estimate.authorisation || estimate.authorisation.revision !== rev.n || !rev.approval) fail('NOT_AUTHORISED', 'This estimate revision has not been authorized by the customer.')
+      const { estimate, rev } = estimateForWork(c.s, job, p)
       const lineId = text(p.lineId, 'lineId'), line = rev.lines.find((l: Row) => l.id === lineId)
       if (!line || !estimate.authorisation.lineIds.includes(lineId)) fail('NOT_AUTHORISED', 'The customer did not authorize this line.')
-      const quantityMilli = quantity(p.quantity), used = job.actuals.filter((a: any) => a.lineId === lineId).reduce((n: number, a: any) => n + a.quantityMilli, 0)
-      if (used + quantityMilli > line.quantityMilli) fail('QUANTITY_EXCEEDED', 'Actual work cannot exceed the approved, customer authorized quantity.', { lineId, approvedQuantity: line.quantity, recordedQuantity: used / 1000, remainingQuantity: (line.quantityMilli - used) / 1000 })
+      const quantityMilli = quantity(p.quantity), used = job.actuals.filter((a: any) => a.estimateId === estimate.id && a.revision === rev.n && a.lineId === lineId).reduce((n: number, a: any) => n + a.quantityMilli, 0)
+      const cap = authorizedCap(c.s, estimate, line)
+      if (used + quantityMilli > cap) fail('QUANTITY_EXCEEDED', 'Actual work cannot exceed the approved, customer authorized quantity.', { lineId, approvedQuantity: cap / 1000, recordedQuantity: used / 1000, remainingQuantity: (cap - used) / 1000 })
       const actual = { id: crypto.randomUUID(), lineId, estimateId: estimate.id, revision: rev.n, kind: line.kind, quantityMilli, quantity: quantityMilli / 1000, note: text(p.note, 'note', 2000, true), by: who(c), at: c.now }
       const row = bump(c.s, 'job', job, { status: 'working', actuals: [...job.actuals, actual] })
       event(c, command, job.id, job.id, actual)
