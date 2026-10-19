@@ -6,7 +6,7 @@ import type {Actor,Authority} from './auth'
 /** Bind inspection observations to real private photo custody, never caller claims. */
 export async function inspectionRecordInput(db:D1Database,actor:Actor,authority:Authority,raw:any) {
  const input={...raw,photo:null}
- if(!['yellow','red'].includes(input.outcome))return {input,authority}
+ if(!['yellow','red'].includes(input.outcome)&&(input.photoUploadId===undefined||input.photoUploadId===null||input.photoUploadId===''))return {input,authority}
  const id=text(input.photoUploadId,'completed inspection photo'),{row}=await uploadScope(db,actor,authority,id)
  if(row.job_id!==input.jobId||!row.complete||!row.mime.startsWith('image/'))fail('INSPECTION_EVIDENCE','Choose a completed private photo belonging to this repair.',null,400)
  const photo=uploadView(row)

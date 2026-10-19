@@ -8,12 +8,33 @@ function observationText(article,f){
  const source=observed.provenance;
  article.append(node('p',source.kind==='imported'?'Imported evidence · '+source.system+' · record '+source.recordId+' · observer '+source.observer+' (source declared, not provider-verified)':'Native shop observation','meta'));
 }
+function checklistHistory(article,visit){
+ for(const checklist of visit.inspections){
+  const entry=node('div',undefined,'media-version');entry.dataset.historyChecklist=checklist.id;
+  entry.append(node('h4',checklist.template.snapshot.name+' · template revision '+checklist.template.revision));
+  const original=node('a','Open original assigned checklist');original.href='/app/jobs/'+encodeURIComponent(visit.job.id)+'#inspections';entry.append(original);
+  for(const item of checklist.template.snapshot.items){
+   const result=checklist.results.filter(r=>r.itemId===item.id).at(-1);
+   entry.append(node('h5',item.label));
+   if(!result){entry.append(node('p','Not inspected — no result recorded.'));continue}
+   const measured=result.measurement?result.measurement.name+': '+result.measurement.value+' '+result.measurement.unit+' · ':'';
+   entry.append(node('p',measured+result.outcome+' · '+result.reason),node('p','Recorded '+formatTime(result.at)+' by '+result.by.name,'meta'));
+   if(result.photo){const photo=node('a','Open checklist photo · captured '+formatTime(result.photo.capturedAt)+' by '+result.photo.by.name);photo.href='/app/jobs/'+encodeURIComponent(visit.job.id)+'/media/view/'+encodeURIComponent(result.photo.id);entry.append(photo)}
+  }
+  if(checklist.results.some(r=>r.supersedes)){
+   const detail=node('details'),summary=node('summary','Retained checklist observations');detail.append(summary);
+   for(const result of checklist.results)detail.append(node('p',result.item.label+' · '+result.outcome+(result.measurement?' · '+result.measurement.name+': '+result.measurement.value+' '+result.measurement.unit:'')+' · '+result.reason+' · '+formatTime(result.at)+' · '+result.by.name));entry.append(detail);
+  }
+  article.append(entry);
+ }
+}
 async function loadHistory(){
  const history=await api('/history?jobId='+encodeURIComponent(root.dataset.jobId)),container=root.querySelector('[data-inspection-history]');container.replaceChildren();
  container.append(node('p','Compare matching measurement names and units; no unit conversion or new test is inferred. Only prior visits you can currently access are included.'));
  for(const visit of history.visits){
   const article=node('article',undefined,'evidence-item');article.append(node('h3',visit.job.title+(visit.job.id===history.jobId?' · current visit':' · prior visit')));
   const link=node('a','Open original visit evidence');link.href='/app/jobs/'+encodeURIComponent(visit.job.id)+'/media';article.append(link);
+  checklistHistory(article,visit);
   for(const f of visit.findings){
    const entry=node('div',undefined,'media-version');entry.dataset.historyFinding=f.id;entry.append(node('h4',f.title));entry.append(node('p','Observed '+formatTime(f.capturedAt)+' · recorded by '+f.by.name,'meta'));observationText(entry,f);
    // A carry points back to prior images; it does not re-upload or re-date them.
@@ -34,7 +55,7 @@ async function loadHistory(){
    }
    article.append(entry);
   }
-  if(!visit.findings.length)article.append(node('p','No observations recorded on this visit.','muted'));container.append(article);
+  if(!visit.findings.length&&!visit.inspections.length)article.append(node('p','No observations recorded on this visit.','muted'));container.append(article);
  }
 }
 `;

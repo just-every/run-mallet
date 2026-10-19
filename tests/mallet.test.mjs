@@ -219,5 +219,5 @@ test('QUALITY-001: counter/technician failed test, corrective work and independe
 
 test('EST-004: separate incremental decisions, prospective price changes, exact actuals/invoice and recovery',supplementJourney)
 
-test('DVI-001: exact assigned template, measured/photo outcomes, not-inspected state, canned-job estimate and archive',()=>run(inspectionJourney))
+test('DVI-001 / DVI-004: exact assigned template, measured/photo outcomes, not-inspected state, canned-job estimate and archive',()=>run(inspectionJourney))
 test('DVI-001: native template/recipe/assignment and technician inspection at 1440/390',inspectionBrowser)

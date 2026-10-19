@@ -18,8 +18,9 @@ export async function inspectionHistory(db: D1Database, actor: Actor, authority:
   const job = JSON.parse(row.value) as Job, priorScope = await jobScope(db, actor, authority, job.id)
   const findings = (await listFindings(db, actor, authority, job.id)).findings
   const resolutions = await readRows<any>(db, priorScope, 'SELECT * FROM mallet_media_resolutions WHERE job_id=?', [job.id])
+  const inspections = await readRows<{value:string}>(db, priorScope, "SELECT value FROM mallet_records WHERE kind='inspection' AND json_extract(value,'$.jobId')=? ORDER BY id", [job.id])
   const declined = await readRows<{ value: string }>(db, priorScope, "SELECT value FROM mallet_records WHERE kind='declinedWork' AND json_extract(value,'$.jobId')=?", [job.id])
-  visits.push({ job, findings: findings.map(f => ({ ...f, resolution: resolutions.find(r => r.finding_id === f.id) ?? null })), declined: declined.map(r => JSON.parse(r.value)) })
+  visits.push({ job, inspections: inspections.map(r => JSON.parse(r.value)), findings: findings.map(f => ({ ...f, resolution: resolutions.find(r => r.finding_id === f.id) ?? null })), declined: declined.map(r => JSON.parse(r.value)) })
  }
  return { jobId, assetId: current.assetId, visits }
 }
