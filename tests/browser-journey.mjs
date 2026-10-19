@@ -3,19 +3,22 @@ import {chromium} from '@playwright/test'
 import {mkdir,readFile} from 'node:fs/promises'
 import {join} from 'node:path'
 
-export async function browserJourney(openUrl,{directory='.cache/browser',fixtures='tests/fixtures/repairshopr'}={}) {
+export async function browserJourney(openUrl,{directory='.cache/browser',fixtures='tests/fixtures/repairshopr',fresh=false,paywall}={}) {
  await mkdir(directory,{recursive:true})
  const browser=await chromium.launch({headless:true,args:['--disable-gpu','--use-mock-keychain','--password-store=basic']})
  let stage='open app'
  try {
-  const page=await browser.newPage({viewport:{width:1440,height:1000}})
+  const page=await browser.newPage({viewport:{width:1440,height:1000},timezoneId:'America/New_York'})
   await page.goto(openUrl)
   await page.waitForURL(url=>['/setup','/app'].includes(url.pathname))
+  if(fresh){assert.equal(new URL(page.url()).pathname,'/setup','OPEN-001: published install starts at first-run setup');for(const width of [1440,390]){await page.setViewportSize({width,height:1000});await page.screenshot({path:join(directory,`00-setup-${width}.png`),fullPage:true})}}
   if(new URL(page.url()).pathname==='/setup') {await page.getByLabel('Sales tax rate (%)').fill('10');await page.getByLabel('Labor is taxable').check();await page.getByRole('checkbox',{name:'I confirm this owner account is ready to use.'}).check();await page.getByRole('button',{name:'Finish setup'}).click()}
   await page.waitForURL('**/app')
   const origin=new URL(page.url()).origin
+  if(fresh){const state=await (await page.request.get(origin+'/api/mallet/state')).json();for(const [kind,records] of Object.entries(state.records))if(kind!=='taxSettings')assert.equal(records.length,0,`OPEN-001: installed shop starts empty (${kind})`);assert.equal(state.actor.role,'owner','OPEN-001: local buyer owns the installation')}
   const shot=async name=>{
    stage=name
+   if(paywall)assert.doesNotMatch(await page.locator('body').innerText(),paywall,'OPEN-001: no Mallet commercial gate on '+name)
    for(const width of [1440,390]) {
     await page.setViewportSize({width,height:1000})
     assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth),'Page fits its viewport')
@@ -33,8 +36,8 @@ export async function browserJourney(openUrl,{directory='.cache/browser',fixture
   await page.getByLabel('Repair request').fill('Brake pads and safety inspection')
   await page.getByLabel('Bay',{exact:true}).fill('Bay 2')
   await page.locator('select[name=technicianId]').selectOption({index:0})
-  await page.getByLabel('Start (with timezone)').fill('2026-10-19T09:00:00+10:00')
-  await page.getByLabel('End (with timezone)').fill('2026-10-19T11:00:00+10:00')
+  await page.getByLabel('Start (with timezone)').fill('2026-10-19T09:00:00-04:00')
+  await page.getByLabel('End (with timezone)').fill('2026-10-19T11:00:00-04:00')
   await click('Book visit');const jobUrl=page.url();await shot('03-booked')
   await page.getByLabel('Part description').fill('Shimano B05S brake pads')
   await page.getByLabel('Part unit price (before tax)').fill('32.50')
@@ -62,13 +65,13 @@ export async function browserJourney(openUrl,{directory='.cache/browser',fixture
   assert.match(await readFile(join(directory,'invoice.csv'),'utf8'),/35.75/)
   await page.goto(assetUrl);await shot('14-service-history')
   await page.getByLabel('Repair request').fill('Follow-up wheel alignment')
-  await page.getByLabel('Start (with timezone)').fill('2026-11-02T09:00:00+10:00')
-  await page.getByLabel('End (with timezone)').fill('2026-11-02T10:00:00+10:00')
+  await page.getByLabel('Start (with timezone)').fill('2026-11-02T09:00:00-05:00')
+  await page.getByLabel('End (with timezone)').fill('2026-11-02T10:00:00-05:00')
   await click('Book visit');await page.goto(assetUrl);assert.equal(await page.locator('.list li').count(),2);await shot('15-repeat-visit')
   const state=await (await page.request.get(origin+'/api/mallet/state')).json(),followup=state.records.job.find(j=>j.title==='Follow-up wheel alignment')
   const send=async(command,input,headers={})=>{const response=await page.request.post(origin+'/api/mallet/commands',{headers:{Origin:origin,...headers},data:{command,input}});assert.equal(response.status(),200);return response.json()}
   const preparation=await send('agent.create',{label:'Dispatch assistant'})
-  await send('dispatch.prepare',{jobId:followup.id,version:followup.version,bayId:'Bay 3',technicianId:'Jordan Lee',startAt:'2026-11-03T09:00:00+10:00',endAt:'2026-11-03T10:00:00+10:00',reason:'Use the alignment stand after the wheel arrives'},{Authorization:'Bearer '+preparation.token})
+  await send('dispatch.prepare',{jobId:followup.id,version:followup.version,bayId:'Bay 3',technicianId:'Jordan Lee',startAt:'2026-11-03T09:00:00-05:00',endAt:'2026-11-03T10:00:00-05:00',reason:'Use the alignment stand after the wheel arrives'},{Authorization:'Bearer '+preparation.token})
   await page.goto(origin+'/app/jobs/'+followup.id);await shot('15-dispatch-proposed')
   await click('Approve dispatch plan');await shot('15-dispatch-approved')
   await send('agent.revoke',{id:preparation.id})

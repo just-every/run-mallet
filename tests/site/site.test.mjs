@@ -31,8 +31,11 @@ test('the run site builds, Run Mallet opens /run, and every link and file a page
   }
 })
 
-test('the homepage shows the one-line start and nothing of a running installation', () => {
+test('OPEN-001: MIT run site publishes the one-line start without installation data', () => {
   const home = text(readFileSync(join(site, 'index.html'), 'utf8'))
+  assert.ok(text(readFileSync(join(site,'run.html'),'utf8')).includes(run.clone),'OPEN-001: built /run publishes the command')
+  assert.equal(JSON.parse(readFileSync(join(root,'rer-project.json'),'utf8')).license,'MIT')
+  assert.match(readFileSync(join(root,'LICENSE'),'utf8'),/Permission is hereby granted, free of charge/)
   assert.ok(home.includes(run.clone), 'the one-line start is on the page')
   assert.doesNotMatch(home, /RER_[A-Z]+|127\.0\.0\.1|localhost|\[::1\]/, 'no rer output lines or local addresses')
   assert.doesNotMatch(home, /git clone|rer install|rer setup/, 'no multi-step install flow')

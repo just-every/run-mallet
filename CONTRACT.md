@@ -365,7 +365,7 @@ The wider category is evidenced by [Tekmetric shop management](https://www.tekme
 
 ## Homepage claims
 
-Every capability claim on the approved homepage (`src/site/landing/`, checked against br's claims truth table of 18 October 2026, rows 1–59 in page order) maps to the named clauses that promise it. A claim's status is `done` when every mapped clause is done, `missing` when every one is missing, and `partial` otherwise, from the status table below. The sample shop, people, vehicles and figures in the drawings (Buckeye Auto Repair, RO 4127, Ohio's 7.5% sales tax) are illustrations, not claims. 59 claims: 3 done, 26 partial, 30 missing.
+Every capability claim on the approved homepage (`src/site/landing/`, checked against br's claims truth table of 18 October 2026, rows 1–59 in page order) maps to the named clauses that promise it. A claim's status is `done` when every mapped clause is done, `missing` when every one is missing, and `partial` otherwise, from the status table below. The sample shop, people, vehicles and figures in the drawings (Buckeye Auto Repair, RO 4127, Ohio's 7.5% sales tax) are illustrations, not claims. 59 claims: 6 done, 23 partial, 30 missing.
 
 | # | Section | Claim | Clause(s) | Status |
 | --- | --- | --- | --- | --- |
@@ -375,7 +375,7 @@ Every capability claim on the approved homepage (`src/site/landing/`, checked ag
 | 4 | Hero | "runs the technician board" | FLOW-001 | partial |
 | 5 | Hero | "takes payment" | PAY-003 | missing |
 | 6 | Hero | "brings customers back" | AUTO-003, AUTO-004, ADV-005 | missing |
-| 7 | Hero | "100% free, open source" | OPEN-001 | partial |
+| 7 | Hero | "100% free, open source" | OPEN-001 | done |
 | 8 | Hero | "alternative to Tekmetric, Shopmonkey and Mitchell 1 Manager SE" | MOVE-001, MOVE-002, MOVE-003 | missing |
 | 9 | Hero card | RO 4127 · VIN decoded · 62,100 mi | VEH-001, VEH-002 | partial |
 | 10 | Hero card | Inspection · 2 red, 3 yellow · texted to Dana Brooks | DVI-001, DVI-003, MSG-001 | missing |
@@ -426,20 +426,20 @@ Every capability claim on the approved homepage (`src/site/landing/`, checked ag
 | 55 | 12 Moving in | Reviewed import (preview, apply what was reviewed) | MOVE-010, IMPORT-001 | partial |
 | 56 | 12 Moving in | Shadow compare RO 3987 and cutover | MOVE-012 | missing |
 | 57 | 12 Moving in | "Run it yourself with one line" (`npx -y @runeditrun/rer dev just-every/run-mallet`) | OPS-001 | partial |
-| 58 | 13 Closing | "100% free and open source. MIT licensed." | OPEN-001 | partial |
-| 59 | Footer | "Free, open source shop management" | OPEN-001 | partial |
+| 58 | 13 Closing | "100% free and open source. MIT licensed." | OPEN-001 | done |
+| 59 | Footer | "Free, open source shop management" | OPEN-001 | done |
 
 ## Status
 
 Judged from the code and tests at commit `88562eb529abd66394171d97778854c4a94fa4b2` (17 October 2026).
 
-OPEN-001 was added on 18 October 2026 and judged from `9ca3be806f00da2d4febf5bac6d3a8379bfaecff`: LICENSE, rer-project.json, README.md and the run-page configuration support MIT licensing and the published command; the full acceptance journey remains unproven. Existing clause statuses are unchanged.
+OPEN-001 was added on 18 October 2026. Its 19 October acceptance now runs the published command in a clean directory, verifies empty owner setup, inspects the installed MIT source and exercises the app without a Mallet commercial gate (`tests/clone-journey.mjs`, `tests/open-source-journey.mjs`, `tests/browser-journey.mjs`, `tests/site/site.test.mjs`).
 
 | Clauses | Done | Partial | Missing | Total |
 | --- | ---: | ---: | ---: | ---: |
 | Published | 8 | 1 | 0 | 9 |
-| Target and push further | 2 | 29 | 100 | 131 |
-| All | 10 | 30 | 100 | 140 |
+| Target and push further | 3 | 28 | 100 | 131 |
+| All | 11 | 29 | 100 | 140 |
 
 | Clause | Title | Kind | Status | Evidence | Gap |
 | --- | --- | --- | --- | --- | --- |
@@ -574,7 +574,7 @@ OPEN-001 was added on 18 October 2026 and judged from `9ca3be806f00da2d4febf5bac
 | `GOV-006` | Retention erasure and legal holds | target | partial | `src/mallet/imports/erasure.ts`; `src/mallet/imports/portability.ts`; `tests/mallet.test.mjs` | Unused-asset erasure and old-archive fence ship; no customer/media erasure, configurable retention or legal holds for completed repairs. |
 | `OPS-001` | Owner-run deployment and complete portability | target | partial | `src/mallet/archive-policy.mjs`; `src/mallet/http.ts`; `tests/clone-journey.mjs`; `tests/mallet.test.mjs` | Base launch and core archive routes exist; target records/media, full invoiced-archive journey and operational update/recovery coverage remain incomplete. |
 | `OPS-002` | Fast counter work and dependable background jobs | target | missing |  | No declared-capacity dataset, p95 search/board/RO/photo measurements, durable follow-up jobs or restart-bounded background recovery for target workflows. |
-| `OPEN-001` | Free and open source under the MIT license, run by one command | target | partial | `LICENSE`; `rer-project.json`; `src/site/run.json`; `README.md` | MIT licensing and the published one-command install exist; no cited journey runs that command in a clean directory through empty-shop setup or checks the installed source and app for Mallet license keys, fees, paid gates and upgrade prompts. |
+| `OPEN-001` | Free and open source under the MIT license, run by one command | target | done | `LICENSE`; `rer-project.json`; `tests/clone-journey.mjs`; `tests/open-source-journey.mjs`; `tests/browser-journey.mjs`; `tests/site/site.test.mjs` |  |
 | `ADV-001` | Inspection evidence to priced estimate | push-further | partial | `src/mallet/estimates.ts`; `src/mallet/model.ts`; `tests/mallet.test.mjs` | Scoped agents can prepare estimate revisions; no evidence interpretation, guide/supplier data, compatible stock pricing or integrated review packet. |
 | `ADV-002` | Approved customer conversations | push-further | missing |  | No repair conversational agent, delivered customer messages, approved reply policy or escalation handoff. |
 | `ADV-003` | Resolve the next repair blocker | push-further | partial | `src/mallet/workshop.ts`; `src/mallet/estimates.ts`; `tests/mallet.test.mjs` | Agent-prepared dispatch/estimate proposals with human approval ship; no continuous blocker analysis, ownership or action follow-through. |

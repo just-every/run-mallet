@@ -294,7 +294,7 @@ Run the complete US repair: vehicle identification and inspection → priced est
 
 ## Open source and installation
 
-**OPEN-001 — Free and open source under the MIT license, run by one command.** Status: **partial**. Read LICENSE and rer-project.json and find MIT; build the run site and read the command on /run; run `npx -y @runeditrun/rer dev just-every/run-mallet` in a clean directory and reach setup with an empty shop; inspect the installed source and app for Mallet license keys, fees, paid gates and upgrade prompts and find none. Evidence: `LICENSE`; `rer-project.json`; `src/site/run.json`; `README.md`. Gap: MIT licensing and the published one-command install exist; no cited journey runs that command through empty-shop setup or checks the installed source and app for Mallet license keys, fees, paid gates and upgrade prompts.
+**OPEN-001 — Free and open source under the MIT license, run by one command.** Status: **done**. Read LICENSE and rer-project.json and find MIT; build the run site and read the command on /run; run `npx -y @runeditrun/rer dev just-every/run-mallet` in a clean directory and reach setup with an empty shop; inspect the installed source and app for Mallet license keys, fees, paid gates and upgrade prompts and find none. Evidence: `LICENSE`; `rer-project.json`; `tests/clone-journey.mjs`; `tests/open-source-journey.mjs`; `tests/browser-journey.mjs`; `tests/site/site.test.mjs` (OPEN-001). The published command is exercised against public main from a new directory; the installed source is inspected and the empty-owner setup and workshop journey complete without Mallet licensing or paid-plan inputs.
 
 ## Push further with a service-advisor agent
 
