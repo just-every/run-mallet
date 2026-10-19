@@ -1,0 +1,51 @@
+import {promiseZoneSettings,shopTimeZone,shopTime} from '../promise-zone'
+import {currentPromise,currentPromisePlan,promiseProjection} from '../promises'
+import type {Actor} from '../auth'
+import {area,badge,box,e,field,form,person,rows,select,when,type Names} from './common'
+
+export function promiseFormInput(data:FormData,input:any){
+ if(!String(input.command).startsWith('promise.'))return input
+ for(const key of ['version','planVersion','promiseVersion','proposalVersion','settingsVersion'])if(data.has(key))input[key]=Number(data.get(key))
+ if(data.has('remove'))input.remove=data.get('remove')==='yes'
+ return input
+}
+export function noticeLabel(notice:any){
+ const status=notice.outcome?.status
+ if(status==='accepted')return 'Handed to the mail provider; delivery is not confirmed'
+ if(status==='development')return 'Development outbox only; not sent'
+ if(status==='rejected'||status==='rate_limited')return 'Customer notice failed; advisor must contact the customer'
+ return 'Customer notice unconfirmed; one send claimed, no automatic retry. Check with the customer before further contact'
+}
+const promiseTone=(status:string)=>status==='overdue'?'red':status==='at-risk'?'amber':status==='on-plan'?'green':''
+const promiseStatus=(status:string)=>({'overdue':'Overdue pickup promise','at-risk':'Pickup promise at risk','on-plan':'Pickup promise on plan','closed':'Repair closed','no-promise':'No customer pickup promise'}[status]??status)
+function planDetails(state:any,job:any,names:Names,projection:any){
+ const dependencies=projection.dependencies.map((d:any)=>{const other=rows(state,'job').find(j=>j.id===d.jobId);return `<li>${other?`<a href="/app/jobs/${e(other.id)}">${e(other.title)}</a> · ${e(other.bayId)} · ${e(person(names,other.technicianId))} · ${when(other.startAt,other.endAt)}`:'Advisor-managed dependency'} · ${e(d.resource)} · ${e(d.reason)}</li>`}).join('')
+ return `<p>Bay ${e(job.bayId)} · Technician ${e(person(names,job.technicianId))}<br>Booking ${when(job.startAt,job.endAt)}</p><p>Customer-authorized sold labor: ${e(projection.soldHours)} hours · Performed labor: ${e(projection.performedHours)} hours · Labor remaining: ${e(projection.remainingHours)} hours.</p><p>Planning estimate, earliest finish: ${when(projection.earliestFinishAt)}. Remaining authorized labor is placed after the booking start, current time, unreceived part ETAs and unfinished resource dependencies. This does not move a booking or certify readiness.</p><h3>Required parts & ETA</h3><ul>${projection.parts.map((p:any)=>`<li><strong>${e(p.name)}</strong> · ${e(p.partId)} · ETA ${when(p.eta)}<br>${e(p.source)} · ${e(p.sourceNote)}<br>${p.receivedAt?`Physical receipt recorded ${when(p.receivedAt)}`:'Not physically received'} · ${e(p.reportedBy.name)} · ${when(p.at)}</li>`).join('')||'<li>No required parts entered.</li>'}</ul><h3>Resource dependencies</h3><ul>${dependencies||'<li>No resource dependencies entered.</li>'}</ul>${projection.reasons.length?`<ul>${projection.reasons.map((r:string)=>`<li>${e(r)}</li>`).join('')}</ul>`:''}`
+}
+/** Existing repairs list gains the full advisor plan; technicians receive their assigned subset from HTTP. */
+export function promisePlan(state:any,actor:Actor,names:Names){
+ if(actor.role==='agent')return ''
+ const jobs=rows(state,'job').filter(j=>['owner','admin'].includes(actor.role)||j.technicianId===actor.id)
+ const zone=shopTimeZone(state),settings=promiseZoneSettings(state),config=['owner','admin'].includes(actor.role)?`<details><summary>Shop time zone for customer promises</summary>${form('promise.timeZone',field('Shop time zone','timeZone','text',zone,'required')+area('Reason for time zone change','reason','','required'),'Save shop time zone',{settingsVersion:settings?.version??0})}</details>`:''
+ return box('Pickup promises & capacity',`<p>Customer promises use shop time: ${e(zone)}.</p>${config}`+jobs.map(job=>{const p=promiseProjection(state,job);return `<article><h3><a href="/app/jobs/${e(job.id)}#promises">${e(job.title)} · ${e(job.asset?.label)}</a> ${badge(promiseStatus(p.status),promiseTone(p.status))}</h3><p>${p.pickupAt?`Customer pickup promise ${e(shopTime(p.pickupAt,zone))}`:'Set a customer promise separately from the resource booking.'}</p>${planDetails(state,job,names,p)}</article>`}).join('')||'<p>No repairs in your current plan.</p>',{id:'promise-plan'})
+}
+export function promisePanel(state:any,job:any,actor:Actor,names:Names){
+ if(actor.role==='agent'||actor.role==='member'&&job.technicianId!==actor.id)return ''
+ const zone=shopTimeZone(state),manager=['owner','admin'].includes(actor.role),open=['booked','working'].includes(job.status),promise=currentPromise(state,job.id),plan=currentPromisePlan(state,job.id),projection=promiseProjection(state,job),back={jobId:job.id,version:job.version,planVersion:plan?.version??0}
+ let content=`<p>The customer pickup promise is separate from the bay/technician booking. Times require a timezone and are stored in UTC. Customer pickup promises use shop time (${e(zone)}); operational booking and ETA times use your browser time zone.</p><p>${badge(promiseStatus(projection.status),promiseTone(projection.status))}${projection.pickupAt?` · Pickup ${e(shopTime(projection.pickupAt,zone))}`:''}</p>${planDetails(state,job,names,projection)}`
+ if(open){
+  const parts=plan?.revisions.at(-1).parts??[]
+  content+=`<details><summary>Record required part or change its ETA</summary><p>Enter the same part reference to append an updated ETA. Staff-reported ETAs and source notes are not supplier confirmations. Record physical receipt only after inspecting the actual arrival.</p>${form('promise.partETA',field('Part reference','partId','text','','required maxlength="100"')+field('Required part name','name','text','','required')+field('Staff-reported ETA (ISO with timezone)','eta','text','','required')+area('ETA source note','sourceNote','','required maxlength="2000"')+field('Physical receipt (ISO with timezone, optional)','receivedAt')+area('Reason for plan change','reason','','required maxlength="2000"'),'Save required part ETA',back)}${parts.length?`<p>Existing references: ${parts.map((p:any)=>e(p.partId)).join(', ')}.</p>`:''}</details>`
+  const others=rows(state,'job').filter(j=>j.id!==job.id&&(manager||j.technicianId===actor.id))
+  if(others.length)content+=`<details><summary>Manage resource dependency</summary>${form('promise.dependency',select('Repair that must release the resource','dependencyJobId',others.map(j=>[j.id,`${j.title} · ${j.bayId} · ${person(names,j.technicianId)}`]))+select('Dependent resource','resource',[['bay','Bay'],['technician','Technician'],['both','Bay and technician']])+select('Dependency action','remove',[['no','Add or update'],['yes','Remove dependency']])+area('Reason for resource dependency change','reason','','required maxlength="2000"'),'Save resource dependency',back)}</details>`
+ }
+ if(manager&&open){
+  content+=promise?`<details><summary>Propose a revised customer pickup promise</summary>${form('promise.propose',field('Revised pickup (ISO with timezone)','pickupAt','text','','required')+area('Reason for revised promise','reason','','required maxlength="2000"')+'<p>The customer keeps the current promise until an advisor approves this exact revision and claims its email notice. Parts, assignment, recipient and dependencies are checked again.</p>','Prepare promise revision',{...back,promiseVersion:promise.version})}</details>`:form('promise.set',field('Customer pickup (ISO with timezone)','pickupAt','text','','required')+area('Reason for original promise','reason','','required maxlength="2000"')+'<p>Approve the original pickup promise. This records the advisor decision; it does not claim a customer message was sent.</p>','Approve original pickup promise',back)
+  const proposals=rows(state,'promiseRevision').filter(p=>p.jobId===job.id)
+  content+=proposals.map(p=>`<details${p.status==='proposed'?' open':''}><summary>Promise revision · ${e(p.status)} · ${when(p.preparedAt)}</summary><p>Old pickup ${e(shopTime(p.oldPickupAt,p.timeZone))}<br>Proposed pickup ${e(shopTime(p.pickupAt,p.timeZone))}<br>Customer email ${e(p.to)}<br>${e(p.reason)}<br>Prepared by ${e(p.preparedBy.name)}</p>${p.status==='proposed'?form('promise.approveAndNotify','<p>Approve these exact old/new shop-local pickup times and email the asset’s customer address through the configured shop sender. One send is claimed; failures remain visible and are never automatically retried.</p>','Approve and email revised promise',{jobId:job.id,proposalId:p.id,proposalVersion:p.version}):''}</details>`).join('')
+ }
+ if(promise)content+=`<details><summary>Retained original and approved pickup promises</summary><ol>${promise.revisions.map((r:any)=>`<li>${r.n===1?'Original promise':'Approved revision '+e(r.n)}: ${e(shopTime(r.pickupAt,r.timeZone??zone))} · ${e(r.reason)} · ${e(r.approvedBy.name)} · ${when(r.at)}</li>`).join('')}</ol></details>`
+ if(manager)content+=`<h3>Customer notice receipts</h3><ul>${rows(state,'promiseNotice').filter(n=>n.jobId===job.id).map(n=>`<li><strong>${e(noticeLabel(n))}</strong><br>To ${e(n.to)} · Old pickup ${e(shopTime(n.oldPickupAt,n.timeZone))} · Revised pickup ${e(shopTime(n.newPickupAt,n.timeZone))}<br>${e(n.reason)}<br>Approved by ${e(n.approvedBy.name)} · Send claimed ${when(n.claimedAt)}${n.outcome?` · ${e(n.outcome.provider)}${n.outcome.providerMessageId?' · Provider reference '+e(n.outcome.providerMessageId):''} · ${when(n.outcome.at)}`:''}</li>`).join('')||'<li>No revised-promise customer notices.</li>'}</ul>`
+ if(plan)content+=`<details><summary>Retained parts and resource plan history</summary><ol>${plan.revisions.map((r:any)=>`<li>Plan ${e(r.n)} · ${e(r.reason)} · ${e(r.by.name)} · ${when(r.at)}<ul>${r.parts.map((p:any)=>`<li>${e(p.name)} · ${e(p.partId)} · ETA ${when(p.eta)} · ${e(p.sourceNote)} · ${e(p.source)}${p.receivedAt?' · Physically received '+when(p.receivedAt):''}</li>`).join('')}${r.dependencies.map((d:any)=>`<li>Depends on ${e(rows(state,'job').find(j=>j.id===d.jobId)?.title??'advisor-managed repair')} · ${e(d.resource)} · ${e(d.reason)}</li>`).join('')}</ul></li>`).join('')}</ol></details>`
+ return box('Customer pickup promise',content,{id:'promises'})
+}

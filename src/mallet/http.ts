@@ -1,3 +1,6 @@
+import {scopedPromises,internalPromiseCommands} from './promises'
+import {sendPromiseNotice} from './promise-door'
+import {promiseFormInput,promisePlan} from './ui/promises'
 import {timePanel,timeFormInput} from './ui/time'
 import {scopedTime} from './time'
 import {period,technicianReport} from './reports/technicians'
@@ -59,6 +62,7 @@ async function nativeForm(request:Request) {
  return data
 }
 function visible(s:State,actor:Actor):State {
+ s=scopedPromises(s,actor)
  s=scopedTime(s,actor)
  if(actor.role!=='owner'){const {payRate:_rates,...records}=s.records;s={...s,records}}
  // Diagnostic notes and customer links are native staff evidence; agents never receive them.
@@ -66,7 +70,7 @@ function visible(s:State,actor:Actor):State {
  if(actor.role==='agent')return withoutInspections(s)
  if(actor.role!=='member')return s
  const jobs=rows(s,'job').filter(j=>j.technicianId===actor.id),ids=new Set(jobs.map(j=>j.id)),assets=new Set(jobs.map(j=>j.assetId))
- return {version:s.version,records:{timeEntry:rows(s,'timeEntry'),timeCorrection:rows(s,'timeCorrection'),job:jobs,asset:rows(s,'asset').filter(a=>assets.has(a.id)).map(a=>({...a,visits:a.visits.filter((id:string)=>ids.has(id))})),estimate:rows(s,'estimate').filter(x=>ids.has(x.jobId)),declinedWork:rows(s,'declinedWork').filter(x=>ids.has(x.jobId)),reading:rows(s,'reading').filter(x=>ids.has(x.jobId)),serviceInterval:rows(s,'serviceInterval').filter(x=>ids.has(x.jobId)),quality:rows(s,'quality').filter(x=>ids.has(x.jobId)),diagnosis:rows(s,'diagnosis').filter(x=>ids.has(x.jobId)),inspection:rows(s,'inspection').filter(x=>ids.has(x.jobId)),event:rows(s,'event').filter(x=>ids.has(x.jobId)||x.kind.startsWith('time.')&&x.data.ownerId===actor.id)}}
+ return {version:s.version,records:{promiseSettings:rows(s,'promiseSettings'),promise:rows(s,'promise'),promisePlan:rows(s,'promisePlan'),timeEntry:rows(s,'timeEntry'),timeCorrection:rows(s,'timeCorrection'),job:jobs,asset:rows(s,'asset').filter(a=>assets.has(a.id)).map(a=>({...a,visits:a.visits.filter((id:string)=>ids.has(id))})),estimate:rows(s,'estimate').filter(x=>ids.has(x.jobId)),declinedWork:rows(s,'declinedWork').filter(x=>ids.has(x.jobId)),reading:rows(s,'reading').filter(x=>ids.has(x.jobId)),serviceInterval:rows(s,'serviceInterval').filter(x=>ids.has(x.jobId)),quality:rows(s,'quality').filter(x=>ids.has(x.jobId)),diagnosis:rows(s,'diagnosis').filter(x=>ids.has(x.jobId)),inspection:rows(s,'inspection').filter(x=>ids.has(x.jobId)),event:rows(s,'event').filter(x=>ids.has(x.jobId)||x.kind.startsWith('time.')&&x.data.ownerId===actor.id)}}
 }
 async function operators(db:D1Database) {
  const people=(await db.prepare("SELECT id,display_name AS name,role,status FROM oa_operators WHERE status IN ('active','invited') ORDER BY created_at,id").all<{id:string,name:string,role:string,status:string}>()).results
@@ -88,7 +92,7 @@ function formInput(data:FormData) {
  if(input.channel)input.method=input.channel
  if(input.command==='approvalLink.create')input.days=Number(input.days)
  if(input.command==='payRate.set'){input.centsPerHour=Math.round(Number(input.rate)*100);delete input.rate}
- return diagnosisFormInput(data,timeFormInput(data,pricingOverrideInput(data,pricingFormInput(data,inspectionFormInput(data,qualityFormInput(data,input))))))
+ return promiseFormInput(data,diagnosisFormInput(data,timeFormInput(data,pricingOverrideInput(data,pricingFormInput(data,inspectionFormInput(data,qualityFormInput(data,input)))))))
 }
 export async function malletResponse(request:Request,original:Bindings):Promise<Response|null> {
  const url=new URL(request.url),path=url.pathname
@@ -130,8 +134,9 @@ export async function malletResponse(request:Request,original:Bindings):Promise<
    const data=path==='/app/actions'?formInput(await nativeForm(request)):await body(request),command=String(data.command),input=data.input??data
    submitted={command,input}
    let result:any
-   if(internalApprovalCommands.includes(command))throw new HttpError(404,'unknown_command')
-   if(command==='approvalLink.create'){if(!human(actor))throw new HttpError(403,'manager_required');result=await sendApprovalLink(env,actor,auth.authority,input)}
+   if(internalPromiseCommands.includes(command)||internalApprovalCommands.includes(command))throw new HttpError(404,'unknown_command')
+   if(command==='promise.approveAndNotify')result=await sendPromiseNotice(env,actor,auth.authority,input)
+   else if(command==='approvalLink.create'){if(!human(actor))throw new HttpError(403,'manager_required');result=await sendApprovalLink(env,actor,auth.authority,input)}
    else if(command.startsWith('agent.')) result=await agentKey(env.DB,actor,auth.authority,command,input)
    else if(command==='asset.erase') {
     if(actor.role!=='owner')throw new HttpError(403,'owner_required')
@@ -149,6 +154,7 @@ export async function malletResponse(request:Request,original:Bindings):Promise<
    if(command==='diagnosisLink.create')return page('Customer inspection link',`<section class="card"><p>Copy this read-only link to the customer yourself. Mallet has not sent it, and it will not be shown again.</p><pre>${e(result.url)}</pre><p>Expires ${when(result.expiresAt)}</p><p class="card-foot"><a href="/app/jobs/${e(result.jobId)}#diagnosis">Return to the repair</a></p></section>`,actor,200,{section:'jobs'})
    if(command==='agent.revoke')return redirect('/app/data')
    if(command==='tax.configure')return redirect('/app/tax?saved=1')
+   if(command==='promise.timeZone')return redirect('/app/jobs#promise-plan')
    if(command.startsWith('time.')&&!input.jobId)return redirect('/app/time')
    if(command==='payRate.set')return redirect('/app/reports/technicians#tech-'+encodeURIComponent(input.technicianId))
    if(command==='asset.create')return redirect(`/app/assets/${result.id}`)
@@ -181,7 +187,7 @@ export async function malletResponse(request:Request,original:Bindings):Promise<
    return page('Technician efficiency',technicianReportPage(report,actor,(await operators(env.DB)).names),actor,200,frame('jobs',{subtitle:'Sold versus actual hours, productivity and attendance, recomputed from clock events.'}))
   }
   if(path==='/app/time'){if(actor.role==='agent')throw new HttpError(403,'staff_required');return page('Time & attendance',`<div class="narrow">${timePanel(state,actor,(await operators(env.DB)).names)}</div>`,actor,200,frame('jobs'))}
-  if(path==='/app/jobs')return page('Repair orders',(actor.role!=='agent'?'<p><a href="/app/time">My time & attendance</a> · <a href="/app/reports/technicians">Technician efficiency</a></p>':'')+repairOrders(state,(await operators(env.DB)).names),actor,200,frame('jobs',{subtitle:'Open repair orders by start time, then invoiced visits.'}))
+  if(path==='/app/jobs'){const names=(await operators(env.DB)).names;return page('Repair orders',(actor.role!=='agent'?'<p><a href="/app/time">My time & attendance</a> · <a href="/app/reports/technicians">Technician efficiency</a></p>':'')+promisePlan(state,actor,names)+repairOrders(state,names),actor,200,frame('jobs',{subtitle:'Open repair orders by start time, then invoiced visits.'}))}
   if(path==='/app/customers')return page('Customers',customers(state,actor),actor,200,frame('customers',{subtitle:'Every customer’s vehicle and its visits.'}))
   if(path==='/app/approvals')return page('Approvals',approvals(state),actor,200,frame('approvals',{subtitle:'Every price, dispatch plan and invoice a person approved, at its exact revision.'}))
   if(path==='/app/tax'){if(!human(actor))throw new HttpError(403,'manager_required');return page('Shop sales tax',`<div class="narrow">${taxPage(state,url.searchParams.has('saved'))}</div>`,actor,200,frame('tax',{subtitle:'The sales tax rate Mallet applies to new estimates, in USD.'}))}

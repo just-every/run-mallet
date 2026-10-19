@@ -111,7 +111,7 @@ Neighboring products stay separate: [Pier](https://github.com/just-every/run-pie
 
 - **FLOW-001 — Live repair and technician boards.** Show intake, diagnosis, approval, parts, work, quality, ready, collected and closed stages with assignment, customer, due date, priority and blockers; filter and search, enforce allowed transitions and retain canceled/lost work. New product data inherits OPS-001 before shipping. **Acceptance evidence:** Move several realistic ROs through the board, filter one technician and overdue customer promise, and try to skip authorization/quality gates.
 
-- **FLOW-002 — Promise times and capacity.** Set a customer promise separately from bay booking; show parts ETA, labor remaining and resource dependencies, warn before a promise is missed, and require an advisor to approve and communicate any revised promise. New product data inherits OPS-001 before shipping. **Acceptance evidence:** Delay a required part beyond a promised pickup, inspect the affected bay/technician plan and approve one revised promise; preserve original promise and customer notice receipt.
+- **FLOW-002 — Promise times and capacity.** Set a customer promise separately from bay booking; show parts ETA, labor remaining and resource dependencies, warn before a promise is missed, and require an advisor to approve and communicate any revised promise. Owner/admin act as the service advisor and approve original promises or exact proposed revisions; assigned native technicians may update required-part ETAs and resource dependencies only for currently assigned repairs. The pickup promise is separate from the bay/technician booking. Every part or dependency edit appends its source, reason, actor and UTC time; a staff-reported ETA is never supplier confirmation or physical receipt. Labor remaining is current customer-authorized sold labor less performed quantities and accepted replacements, excluding timers. The planning finish is the latest of now, booking start, unreceived part ETAs, and unfinished dependency booking/projected finishes, plus remaining labor hours. The plan warns before pickup when that finish exceeds the promise or an unreceived part is past ETA; now at or beyond pickup is overdue. These calculations never move a booking. Revising a promise requires an owner/admin to review the exact prior promise, plan, dependency versions, recipient and remaining work, then approve and claim one email through the configured Base mail sender. The original promise and all revisions remain. Receipts retain exact old/new times, reason, approving actor, recipient and provider outcome; accepted means handed to the provider, development means not sent, and failed or unconfirmed notices remain visible for advisor action without automatic retries. Customer pickup promises and mail render in the configured installation time zone with its IANA name (America/New_York by default), preserving daylight-saving changes. Owner/admin may change the shop zone with a reason; its version is rechecked before approving a notice, and each notice retains the zone used. Staff operational times may use the browser zone while showing the shop zone. Historical claimed sends cannot be replayed after restore. New product data inherits OPS-001 before shipping. **Acceptance evidence:** Delay a required part beyond a promised pickup, inspect the affected bay/technician plan and approve one revised promise; preserve original promise and customer notice receipt.
 
 - **FLOW-003 — Rules-based routing and escalation.** Route intake by location, repair type, skill and priority; escalate unassigned, approval-waiting, parts-stalled or diagnostic exceptions to a named manager on shop-hour deadlines, with acknowledgment and resolution history. New product data inherits OPS-001 before shipping. **Acceptance evidence:** Submit two repair types, run routing and advance a closed-day deadline; one assigned handler receives each case and an unacknowledged blocker escalates once.
 
@@ -383,7 +383,7 @@ Every capability claim on the approved homepage (`src/site/landing/`, checked ag
 | 12 | Hero card | Pads backordered at Worldpac → PartsTech +$8.40 · Dana re-approved 10:05 | ADV-004, BUY-003, BUY-005, ESTIMATE-001 | partial |
 | 13 | Hero card | Bay 3 · Luis Romero · 2.4 hrs sold · promise 5:00 pm · ready 4:10 | WORKSHOP-001, FLOW-001, FLOW-002 | partial |
 | 14 | Hero card | Paid by text · $531.70 incl. 7.5% tax | PAY-003, TAX-001 | partial |
-| 15 | 02 Day | Six-stop day timeline with "Promise 5:00 pm · kept" | WORKSHOP-001, FLOW-002 | partial |
+| 15 | 02 Day | Six-stop day timeline with "Promise 5:00 pm · kept" | WORKSHOP-001, FLOW-002 | done |
 | 16 | 03 Check-in | "Dana checks in from her phone at the drop box" | INTAKE-003 | missing |
 | 17 | 03 Check-in | "Mallet decodes the VIN" | VEH-001 | missing |
 | 18 | 03 Check-in | "has the repair order ready when Kayla opens it" | INTAKE-003 | missing |
@@ -398,10 +398,10 @@ Every capability claim on the approved homepage (`src/site/landing/`, checked ag
 | 27 | 05 Approve | Declined work kept with photo and price, due at 67,000 mi | EST-005, DVI-002 | done |
 | 28 | 06 Parts | "The agent finds pads in stock nearby" | ADV-004, BUY-002, BUY-003 | missing |
 | 29 | 06 Parts | "reprices the line" | ESTIMATE-001, AGENT-001 | done |
-| 30 | 06 Parts | "checks Bay 3’s afternoon" | AGENT-001, FLOW-002 | partial |
+| 30 | 06 Parts | "checks Bay 3’s afternoon" | AGENT-001, FLOW-002 | done |
 | 31 | 06 Parts | "Dana re-approves by text" | EST-003, MSG-001, ESTIMATE-001 | partial |
 | 32 | 06 Parts | Worldpac backorder, Morse Rd supplier via PartsTech, order approved, pads scanned to RO 4127 | BUY-002, BUY-003, BUY-005, PART-006 | missing |
-| 33 | 06 Parts | "Customer promise changed: no" | FLOW-002 | partial |
+| 33 | 06 Parts | "Customer promise changed: no" | FLOW-002 | done |
 | 34 | 07 Board | "Every car’s stage, promise and clock, live" | FLOW-001, FLOW-002, TIME-001 | partial |
 | 35 | 07 Board | "Technicians start and stop jobs from the bay" | WORK-001, TIME-001 | done |
 | 36 | 07 Board | Waiting parts: promise moved, customer told | PART-006, FLOW-002 | partial |
@@ -438,8 +438,8 @@ OPEN-001 was added on 18 October 2026. Its 19 October acceptance now runs the pu
 | Clauses | Done | Partial | Missing | Total |
 | --- | ---: | ---: | ---: | ---: |
 | Published | 9 | 0 | 0 | 9 |
-| Target and push further | 14 | 23 | 94 | 131 |
-| All | 23 | 23 | 94 | 140 |
+| Target and push further | 15 | 22 | 94 | 131 |
+| All | 24 | 22 | 94 | 140 |
 
 | Clause | Title | Kind | Status | Evidence | Gap |
 | --- | --- | --- | --- | --- | --- |
@@ -480,7 +480,7 @@ OPEN-001 was added on 18 October 2026. Its 19 October acceptance now runs the pu
 | `GUIDE-003` | ProDemand estimating and maintenance | target | missing |  | No ProDemand adapter or licensed-data workflow. |
 | `EST-006` | Estimate expiry and approval chasing | target | missing |  | No estimate delivery, expiry, signature-request automation or chase queue. |
 | `FLOW-001` | Live repair and technician boards | target | partial | `src/mallet/ui/workshop.ts`; `src/mallet/workshop.ts`; `tests/browser-journey.mjs` | Basic status badges, job lists and member visibility exist; no full stages, filters, priorities or blocker board. |
-| `FLOW-002` | Promise times and capacity | target | partial | `src/mallet/workshop.ts`; `tests/mallet.test.mjs` | Start/end booking times and dispatch proposals exist; no promise, dependency model, overdue view or customer notice. |
+| `FLOW-002` | Promise times and capacity | target | done | `src/mallet/promises.ts`; `src/mallet/promise-zone.ts`; `src/mallet/promise-door.ts`; `src/mallet/ui/promises.ts`; `src/mallet/http.ts`; `tests/support/promise-journey.mjs`; `tests/promise-browser.mjs` (FLOW-002) | — |
 | `FLOW-003` | Rules-based routing and escalation | target | missing |  | No automatic routing, skill rules, deadline scheduler or escalation acknowledgment. |
 | `TIME-001` | Employee clock and job timers | target | done | `src/mallet/time.ts`; `src/mallet/ui/time.ts`; `src/mallet/http.ts`; `tests/mallet.test.mjs`; `tests/support/time-journey.mjs`; `tests/time-browser.mjs` | Clause-named API/native 1440/390 and archive journeys assert attendance, breaks, two job timers, immutable approved corrections, elapsed/sold/nonbillable separation and access boundaries. |
 | `FLOW-004` | Technician collaboration and handoff | target | partial | `src/mallet/model.ts`; `src/mallet/http.ts`; `tests/mallet.test.mjs` | Single-technician assignment isolation and notes exist; no teams, subtasks, mentions or handoff acknowledgment. |

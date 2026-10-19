@@ -1,3 +1,5 @@
+import {promiseJourney,promiseMailFailureJourney} from './support/promise-journey.mjs'
+import {promiseBrowser} from './promise-browser.mjs'
 import {timeBrowser} from './time-browser.mjs'
 import {reportBrowser} from './report-browser.mjs'
 import {reportJourney} from './support/report-journey.mjs'
@@ -251,3 +253,8 @@ test('DIAG-001: native diagnosis form, advisor sharing and customer link at 1440
 test('EST-003: emailed approval link, signed line decision, replay, stale and revoked links and receipt recovery',()=>run(approvalJourney))
 
 test('EST-003: customer approves and declines lines on a phone with a signed receipt at 390/1440',approvalBrowser)
+
+
+test('FLOW-002: delayed required parts, resource/labor plan, advisor promise notices and archive recovery',()=>run(promiseJourney))
+test('FLOW-002: failed/uncertain provider outcome claims one send and remains visible',promiseMailFailureJourney)
+test('FLOW-002: revised pickup promise and customer notice through native forms at 1440/390',promiseBrowser)
