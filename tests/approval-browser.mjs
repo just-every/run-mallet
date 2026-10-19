@@ -15,7 +15,7 @@ export async function approvalBrowser(){
   await mkdir('.cache/approval-browser',{recursive:true})
   const shot=async(p,name,target)=>{for(const width of [390,1440]){await p.setViewportSize({width,height:1000});await target.scrollIntoViewIfNeeded();await p.evaluate(()=>new Promise(requestAnimationFrame));assert.ok(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'EST-003 responsive '+name+' '+width);await p.screenshot({path:`.cache/approval-browser/${name}-${width}.png`})}await p.setViewportSize({width:390,height:1000})}
   const o=await open(h.owner,1440);await o.goto(h.origin+'/app/jobs/'+job.id);const panel=o.locator('#approval-links');await shot(o,'01-advisor-send',panel)
-  await panel.getByRole('button',{name:'Email approval link for estimate revision 1',exact:true}).click();await o.waitForLoadState('domcontentloaded')
+  await panel.getByRole('button',{name:'Email approval link',exact:true}).click();await o.waitForLoadState('domcontentloaded')
   assert.match(await o.locator('main').innerText(),/development mail outbox[\s\S]*not sent/,'EST-003 the development outbox is never claimed as a send');const url=(await o.locator('pre').innerText()).trim()
   const phone=await open('',390);await phone.goto(url);await shot(phone,'02-customer-estimate',phone.locator('main'))
   const [pads,labor]=q.revisions[0].lines
