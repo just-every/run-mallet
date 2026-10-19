@@ -5,12 +5,17 @@ import {run} from './harness.mjs'
 const demo={entry:'tests/demo-worker.ts',bindings:{RER_DEMO:'1'}}
 const count=(list,key)=>list.reduce((n,x)=>({...n,[x[key]]:(n[x[key]]??0)+1}),{})
 
-test('demo opens on a lived-in workshop whose prepared work a person can decide, and sends nothing',()=>run(async h=>{
+test('QUALITY-001: demo opens on a lived-in workshop whose prepared work a person can decide, and sends nothing',()=>run(async h=>{
  const s=await h.state()
  assert.equal(s.actor.name,'Kayla Ortiz')
  const jobs=s.records.job,estimates=s.records.estimate,status=count(jobs,'status')
  for(const state of ['booked','working','completed','invoiced'])assert.ok(status[state]>0,state)
  for(const state of ['draft','sent','authorised'])assert.ok(count(estimates,'status')[state]>0,state)
+ for(const job of jobs.filter(j=>['completed','invoiced'].includes(j.status))){
+  const q=s.records.quality.find(q=>q.jobId===job.id);assert.ok(q,'Demo completion uses the same quality gate')
+  const technician=q.signoffs.find(x=>x.kind==='technician'),reviewer=q.signoffs.find(x=>x.kind==='quality')
+  assert.equal(technician.by.id,job.technicianId);assert.notEqual(reviewer.by.id,technician.by.id);assert.equal(reviewer.safetyDecision,'safe');assert.ok(q.results.every(r=>r.outcome==='pass'))
+ }
  assert.ok(s.records.asset.length>=20)
  assert.ok(estimates.some(e=>e.authorisation&&e.authorisation.lineIds.length<e.revisions.at(-1).lines.length),'a partial customer authorisation')
  assert.ok(s.records.asset.some(a=>!a.visits.length),'an unused asset')

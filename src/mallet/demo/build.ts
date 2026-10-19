@@ -5,6 +5,7 @@ import { reduce, rows, type Actor, type Row, type State } from '../model'
 import { current as revision } from '../estimates'
 import { shopTime, shopWeekday, workshopClock } from './clock'
 import { assets, assistantKey, contacts, owner, retiredKey, team, technician, type Who } from './people'
+import { beginDemoQuality, finishDemoQuality } from './quality'
 import { current, history, type Line, type Visit } from './jobs'
 
 const MIN = 60000, HOUR = 60 * MIN
@@ -95,6 +96,7 @@ export function buildWorkshop(now: Date, ownerId: string) {
     const work: [number, number][] = v.work ?? chosen.map((l: Row) => [rev.lines.indexOf(l), l.quantity] as [number, number])
     const from = Math.max(start + 15 * MIN, t + 15 * MIN), finished = v.stage === 'working' ? from + work.length * 20 * MIN : end - 10 * MIN
     const step = work.length > 1 ? Math.max(5 * MIN, (finished - from) / (work.length - 1)) : 0
+    const quality = v.stage === 'working' ? null : beginDemoQuality(run, job(), tech, from)
     let last = from
     work.forEach(([n, quantity], k) => {
       const line = rev.lines[n]
@@ -104,6 +106,7 @@ export function buildWorkshop(now: Date, ownerId: string) {
     if (v.stage === 'working') return
 
     t = Math.max(last + 5 * MIN, end - 5 * MIN)
+    finishDemoQuality(run, job(), tech, quality!, t)
     run('ben', 'job.complete', { jobId, version: job().version, note: `Road tested. Ready for ${first} to collect.` }, t)
     if (!v.invoice && v.stage !== 'invoiced') return
     let invoice = run(v.invoicedBy ?? 'ben', 'invoice.prepare', { jobId, version: job().version }, t += 10 * MIN)
