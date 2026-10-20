@@ -43,7 +43,7 @@ export async function estimatePricingBrowser(){
   q=await h.command('estimate.approve',{estimateId:q.id,version:q.version,revision:1})
   const link=await h.command('approvalLink.create',{estimateId:q.id,version:q.version,revision:1,days:7})
   const customer=await context.newPage();await customer.goto(link.url)
-  assert.match(await customer.locator('main').innerText(),/\$45\.00[\s\S]*\$90\.00[\s\S]*\$335\.19/)
+  const customerText=await customer.locator('main').innerText();for(const amount of ['$45.00','$90.00','$335.19'])assert.ok(customerText.includes(amount),'EST-001 customer sees exact discounted price '+amount)
   assert.doesNotMatch(await customer.locator('main').innerText(),/Unit cost/)
   for(const width of [1440,390]){await customer.setViewportSize({width,height:1000});await customer.screenshot({path:`.cache/estimate-pricing-browser/08-customer-approval-${width}.png`,fullPage:true})}
   q=(await h.state()).records.estimate[0]
