@@ -14,7 +14,7 @@ export const currentPromisePlan=(s:State,jobId:string)=>rows(s,'promisePlan').fi
 const current=(r:Row)=>r.revisions.at(-1)
 const scopeVersions=(s:State,job:Row)=>jobEstimates(s,job).map(q=>({id:q.id,version:q.version}))
 function planFence(s:State,jobId:string,version:unknown){const plan=currentPromisePlan(s,jobId);if(integer(version,'planVersion',0)!==(plan?.version??0))fail('VERSION','Parts or dependencies changed. Refresh the plan before continuing.');return plan}
-function savePlan(c:Context,job:Row,plan:Row|undefined,parts:any[],dependencies:any[],reason:string){
+export function savePlan(c:Context,job:Row,plan:Row|undefined,parts:any[],dependencies:any[],reason:string){
  const revision={n:(plan?.revisions.length??0)+1,parts,dependencies,reason,at:c.now,by:who(c)}
  return plan?bump(c.s,'promisePlan',plan,{revisions:[...plan.revisions,revision]}):put(c.s,'promisePlan',{jobId:job.id,revisions:[revision]})
 }
@@ -95,7 +95,9 @@ export const promises:Handler=(c,command,p)=>{
  if(command==='promise.partETA'||command==='promise.dependency'){
   const plan=planFence(c.s,job.id,p.planVersion),prior=plan&&current(plan),parts=structuredClone(prior?.parts??[]),dependencies=structuredClone(prior?.dependencies??[]),reason=text(p.reason,'plan change reason',2000)
   if(command==='promise.partETA'){
-   const partId=text(p.partId,'part reference',100),name=text(p.name,'required part name',200),eta=instant(p.eta,'staff-reported part ETA'),sourceNote=text(p.sourceNote,'ETA source note',2000),receivedAt=p.receivedAt?instant(p.receivedAt,'physical receipt time'):null
+   const partId=text(p.partId,'part reference',100)
+   if(partId.startsWith('special:'))fail('SPECIAL_PART_RECEIVING','Use the special-order receipt or supplier update form for this part.')
+   const name=text(p.name,'required part name',200),eta=instant(p.eta,'staff-reported part ETA'),sourceNote=text(p.sourceNote,'ETA source note',2000),receivedAt=p.receivedAt?instant(p.receivedAt,'physical receipt time'):null
    if(receivedAt&&receivedAt>c.now)fail('INPUT','Physical receipt cannot be recorded in the future.',null,400)
    const part={partId,name,eta,sourceNote,receivedAt,reportedBy:who(c),at:c.now,source:'staff-reported; not supplier-confirmed'},index=parts.findIndex((r:any)=>r.partId===partId)
    if(index<0)parts.push(part);else parts[index]=part

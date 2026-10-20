@@ -1,3 +1,4 @@
+import {specialPartNotices} from './ui/special-parts'
 import {scopedPromises,internalPromiseCommands} from './promises'
 import {boardFilter,repairBoard,scopedFlow} from './flow'
 import {sendPromiseNotice} from './promise-door'
@@ -72,7 +73,7 @@ function visible(s:State,actor:Actor):State {
  if(actor.role!=='owner'){const {payRate:_rates,...records}=s.records;s={...s,records}}
  // Diagnostic notes and customer links are native staff evidence; agents never receive them.
  if(actor.role==='agent'){const {diagnosis:_d,diagnosisLink:_l,diagnosisLinkView:_v,approvalLink:_a,approvalChase:_c,chaseOptOut:_o,chaseTask:_t,...records}=s.records;s={...s,records:{...records,event:rows(s,'event').filter(x=>!x.kind.startsWith('diagnosis'))}}}
- if(actor.role==='agent')return withoutInspections(s)
+ if(actor.role==='agent'){const {specialPart:_parts,specialPartNotice:_notices,...records}=s.records;return withoutInspections({...s,records})}
  if(actor.role!=='member')return s
  const jobs=rows(s,'job').filter(j=>onCrew(j,actor.id)),ids=new Set(jobs.map(j=>j.id)),assets=new Set(jobs.map(j=>j.assetId))
  return {version:s.version,records:{jobNote:rows(s,'jobNote'),subtask:rows(s,'subtask'),handoff:rows(s,'handoff'),promiseSettings:rows(s,'promiseSettings'),promise:rows(s,'promise'),promisePlan:rows(s,'promisePlan'),timeEntry:rows(s,'timeEntry'),timeCorrection:rows(s,'timeCorrection'),job:jobs,asset:rows(s,'asset').filter(a=>assets.has(a.id)).map(a=>({...a,visits:a.visits.filter((id:string)=>ids.has(id))})),estimate:rows(s,'estimate').filter(x=>ids.has(x.jobId)),declinedWork:rows(s,'declinedWork').filter(x=>ids.has(x.jobId)),reading:rows(s,'reading').filter(x=>ids.has(x.jobId)),serviceInterval:rows(s,'serviceInterval').filter(x=>ids.has(x.jobId)),quality:rows(s,'quality').filter(x=>ids.has(x.jobId)),diagnosis:rows(s,'diagnosis').filter(x=>ids.has(x.jobId)),flow:scopedFlow(s,ids),inspection:rows(s,'inspection').filter(x=>ids.has(x.jobId)),event:rows(s,'event').filter(x=>ids.has(x.jobId)||x.kind.startsWith('time.')&&x.data.ownerId===actor.id)}}
@@ -100,6 +101,7 @@ function formInput(data:FormData) {
  if(input.command==='note.add'){input.mentionIds=data.getAll('mentionIds');input.attachmentIds=data.getAll('attachmentIds')}
  if(input.command==='handoff.propose')input.keepHelper=data.get('keepHelper')==='yes'
  if(input.command==='chasePolicy.save'){input.linkDays=Number(input.linkDays);input.reminderDays=String(input.reminderDays??'').split(',').map(d=>d.trim()).filter(Boolean).map(Number)}
+ if(input.command.startsWith('specialPart.')){if(input.partVersion!==undefined)input.partVersion=Number(input.partVersion);if(input.source){let source:any;try{source=JSON.parse(input.source)}catch{throw new HttpError(400,'invalid_source')};input.estimateId=source.estimateId;input.revision=source.revision;input.lineId=source.lineId}}
  if(input.command==='payRate.set'){input.centsPerHour=Math.round(Number(input.rate)*100);delete input.rate}
  return promiseFormInput(data,diagnosisFormInput(data,timeFormInput(data,pricingOverrideInput(data,pricingFormInput(data,inspectionFormInput(data,qualityFormInput(data,input)))))))
 }
@@ -172,6 +174,7 @@ export async function malletResponse(request:Request,original:Bindings):Promise<
    if(command==='handoff.decline')return redirect('/app/jobs')
    if(['chasePolicy.save','chaseOptOut.record','chaseOptOut.lift'].includes(command)||command==='chaseTask.resolve'&&!input.jobId)return redirect('/app/approvals#'+(command==='chasePolicy.save'?'chase-policy':command==='chaseTask.resolve'?'chase-tasks':'chase-opt-outs'))
    if(command==='approvalChase.recordReply'||command==='chaseTask.resolve')return redirect(`/app/jobs/${encodeURIComponent(String(input.jobId))}#approval-links`)
+   if(command==='specialPart.review')return redirect('/app/jobs#special-part-notices')
    if(command==='promise.timeZone')return redirect('/app/jobs#promise-plan')
    if(command.startsWith('time.')&&!input.jobId)return redirect('/app/time')
    // The saved rate is shown in the period the owner was reviewing, not silently today's.
@@ -207,7 +210,7 @@ export async function malletResponse(request:Request,original:Bindings):Promise<
    return page('Technician efficiency',technicianReportPage(report,actor,(await operators(env.DB)).names),actor,200,frame('jobs',{subtitle:'Sold versus actual hours, productivity and attendance, recomputed from clock events.'}))
   }
   if(path==='/app/time'){if(actor.role==='agent')throw new HttpError(403,'staff_required');return page('Time & attendance',`<div class="narrow">${timePanel(state,actor,(await operators(env.DB)).names)}</div>`,actor,200,frame('jobs'))}
-  if(path==='/app/jobs'){const names=(await operators(env.DB)).names;return page('Repair orders',(actor.role!=='agent'?waitingForMe(state,actor)+'<p><a href="/app/time">My time & attendance</a> · <a href="/app/reports/technicians">Technician efficiency</a></p>':'')+promisePlan(state,actor,names)+repairOrders(state,names),actor,200,frame('jobs',{subtitle:'Open repair orders by start time, then invoiced visits.'}))}
+  if(path==='/app/jobs'){const names=(await operators(env.DB)).names;return page('Repair orders',(actor.role!=='agent'?waitingForMe(state,actor)+'<p><a href="/app/time">My time & attendance</a> · <a href="/app/reports/technicians">Technician efficiency</a></p>':'')+specialPartNotices(state,actor)+promisePlan(state,actor,names)+repairOrders(state,names),actor,200,frame('jobs',{subtitle:'Open repair orders by start time, then invoiced visits.'}))}
   if(path==='/app/customers')return page('Customers',customers(state,actor),actor,200,frame('customers',{subtitle:'Every customer’s vehicle and its visits.'}))
   if(path==='/app/approvals')return page('Approvals',(human(actor)?chasePage(state):'')+approvals(state),actor,200,frame('approvals',{subtitle:'Every price, dispatch plan and invoice a person approved, at its exact revision.'}))
   if(path==='/app/tax'){if(!human(actor))throw new HttpError(403,'manager_required');return page('Shop sales tax',`<div class="narrow">${taxPage(state,url.searchParams.has('saved'))}</div>`,actor,200,frame('tax',{subtitle:'The sales tax rate Mallet applies to new estimates, in USD.'}))}

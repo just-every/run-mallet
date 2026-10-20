@@ -1,3 +1,5 @@
+import {specialPartJourney} from './support/special-part-journey.mjs'
+import {specialPartBrowser} from './special-part-browser.mjs'
 import {promiseJourney,promiseMailFailureJourney} from './support/promise-journey.mjs'
 import {promiseBrowser} from './promise-browser.mjs'
 import {timeBrowser} from './time-browser.mjs'
@@ -272,3 +274,6 @@ test('FLOW-004: helper crew, dependent subtasks, mentioned advisor with media, a
 test('FLOW-004: native helper, dependent subtasks, mention and acknowledged handoff at 1440/390',collaborationBrowser)
 test('FLOW-001: nine-stage board, gated moves, technician/overdue/priority/search filters, canceled and lost retention, recorded collection and recovery',()=>run(flowJourney))
 test('FLOW-001: native board filters, priority, cancel and recorded collection at 1440/390',flowBrowser)
+
+test('PART-006: supplier backorder, approved charge, internal advisor changes, actual receipt, invoice once and fresh-owner archive recovery',()=>run(specialPartJourney))
+test('PART-006: approved special order, retained delay, advisor review and physical receipt through native forms at 1440/390',specialPartBrowser)

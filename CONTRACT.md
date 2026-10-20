@@ -147,7 +147,7 @@ Neighboring products stay separate: [Pier](https://github.com/just-every/run-pie
 
 - **PART-005 — Supplier RMAs and defective parts.** Create linked supplier returns for faulty, unused and warranty parts with reason, serial/lot, original PO/RO, authorization, label, shipment and expected credit; quarantine defective stock until disposition. New product data inherits OPS-001 before shipping. **Acceptance evidence:** Remove a failed installed part, quarantine it, obtain an RMA and reconcile partial credit; repair warranty cost and stock both remain traceable.
 
-- **PART-006 — ETA and special-order follow-through.** Link each special part to its RO and approved charge, expose acknowledged ETA and delays, notify purchaser/advisor on change, and update availability only after receiving staff confirms actual arrival. New product data inherits OPS-001 before shipping. **Acceptance evidence:** Backorder a special part, change supplier ETA and receive it; waiting RO and promise review update, and the invoice includes only approved charges once.
+- **PART-006 — ETA and special-order follow-through.** Link each special part to its RO and approved charge, expose acknowledged ETA and delays, notify purchaser/advisor on change, and update availability only after receiving staff confirms actual arrival. Special-order evidence records the supplier, order reference, exact customer-authorized part revision/line and remaining quantity, acknowledgment text and timezone-bearing ETA (stored in UTC); it is labeled staff-recorded, not provider-verified, and does not claim Mallet placed an order. Backorder, ETA change and receipt create retained internal owner/admin advisor notices, with review attribution; these notices do not send email/SMS. Receipt records the full linked quantity, receiving reference, actual arrival time and recorder, cannot be repeated or silently reopened, and is required before recording consumption of the linked part. The same record updates FLOW-002’s versioned plan and invalidates stale promise reviews; a changed ETA alone never establishes receipt. Actuals and INVOICE-001 remain the sole billing path at authorized prices, with no extra special-order charge. New product data inherits OPS-001 before shipping. **Acceptance evidence:** Backorder a special part, change supplier ETA and receive it; waiting RO and promise review update, and the invoice includes only approved charges once.
 
 - **PART-007 — Low-stock replenishment.** Configure min/max by location, demand and preferred supplier; low-stock alerts prepare reviewable replenishment POs/carts with open orders deducted, and never treat a suggested order as placed. New product data inherits OPS-001 before shipping. **Acceptance evidence:** Consume below minimum with an outstanding PO, run replenishment twice and approve the resulting cart; only unmet demand is ordered once.
 
@@ -353,7 +353,7 @@ Neighboring products stay separate: [Pier](https://github.com/just-every/run-pie
 
 Mallet owns the complete repair-shop job above. It does not act as a bank, card network, lender, parcel carrier, OEM service franchise, physical diagnostic instrument, tax advisor or full general ledger. The shop uses its merchant-owned Stripe/Square accounts and financing partners, ShipStation/carriers, licensed labor/OEM programs, technician-confirmed tests and QuickBooks Online/Xero or Pantry. Integrating each required account, approval program and data agreement is part of delivery. Provider refusal or missing eligibility is visible and leaves the affected job pending; it never fabricates a result or removes the contractual integration.
 
-The first buyer is US independent auto repair. Tire, fleet, bicycle, device, mail-in and equipment workflows remain expressly included at the named clauses’ depth. Manufacturing, general warehouse planning, payroll/tax filing and broad marketing campaign management stay in their separate products; Mallet exports staff time, finance and consented repair events to those authorities. Shop repair reminders, declined-work recovery and review follow-up are native Mallet workflows. Physical diagnosis, road-test and safe return are qualified technician decisions; consumer financing is underwritten and disclosed by the provider.
+The first buyer is US independent auto repair. Tire, fleet, bicycle, device, mail-in and equipment workflows remain expressly included at the named clauses’ depth. Manufacturing, general warehouse planning, payroll/tax filing ([Envelope](https://github.com/just-every/run-envelope)) and broad marketing campaign management stay in their separate products; Mallet exports staff time, finance and consented repair events to those authorities. Shop repair reminders, declined-work recovery and review follow-up are native Mallet workflows. Physical diagnosis, road-test and safe return are qualified technician decisions; consumer financing is underwritten and disclosed by the provider.
 
 ## Research and source formats
 
@@ -404,7 +404,7 @@ Every capability claim on the approved homepage (`src/site/landing/`, checked ag
 | 33 | 06 Parts | "Customer promise changed: no" | FLOW-002 | done |
 | 34 | 07 Board | "Every car’s stage, promise and clock, live" | FLOW-001, FLOW-002, TIME-001 | done |
 | 35 | 07 Board | "Technicians start and stop jobs from the bay" | WORK-001, TIME-001 | done |
-| 36 | 07 Board | Waiting parts: promise moved, customer told | PART-006, FLOW-002 | partial |
+| 36 | 07 Board | Waiting parts: promise moved, customer told | PART-006, FLOW-002 | done |
 | 37 | 07 Board | Agent "Next blocker" | ADV-003 | partial |
 | 38 | 07 Board | "clocked in 7:28 am · 6.1 hrs sold today" | TIME-001 | done |
 | 39 | 08 Pickup | Quality check: road test, pedal, lug torque, signed | QUALITY-001 | done |
@@ -438,8 +438,8 @@ OPEN-001 was added on 18 October 2026. Its 19 October acceptance now runs the pu
 | Clauses | Done | Partial | Missing | Total |
 | --- | ---: | ---: | ---: | ---: |
 | Published | 9 | 0 | 0 | 9 |
-| Target and push further | 18 | 20 | 93 | 131 |
-| All | 27 | 20 | 93 | 140 |
+| Target and push further | 19 | 20 | 92 | 131 |
+| All | 28 | 20 | 92 | 140 |
 
 | Clause | Title | Kind | Status | Evidence | Gap |
 | --- | --- | --- | --- | --- | --- |
@@ -497,7 +497,7 @@ OPEN-001 was added on 18 October 2026. Its 19 October acceptance now runs the pu
 | `BUY-005` | Worldpac sourcing and orders | target | missing |  | No Worldpac or speedDIAL integration; supplier approval/access work remains required. |
 | `PART-004` | Core deposits and returns | target | missing |  | No core ledger, deposits, deadlines or supplier credit tracking. |
 | `PART-005` | Supplier RMAs and defective parts | target | missing |  | No return/RMA workflow, quarantine, shipping or supplier credits. |
-| `PART-006` | ETA and special-order follow-through | target | missing |  | No special-order links, supplier ETAs, arrival events or approved charge carry-through. |
+| `PART-006` | ETA and special-order follow-through | target | done | `src/mallet/special-parts.ts`; `src/mallet/ui/special-parts.ts`; `src/mallet/promises.ts`; `src/mallet/workshop.ts`; `tests/support/special-part-journey.mjs`; `tests/special-part-browser.mjs` | Clause-named public API/native journeys bind authorized charges, retain supplier evidence/delays, review internal notices, require physical receipt, refuse stale promise reviews, invoice once and restore all records. |
 | `PART-007` | Low-stock replenishment | target | missing |  | No balances, min/max, demand calculation or replenishment automation. |
 | `PART-008` | Inter-store transfers | target | missing |  | No locations, inter-store transfer ledger or in-transit custody. |
 | `BUY-006` | Supplier and warranty compensation reconciliation | target | missing |  | No supplier invoice or warranty-labor matching, remittance or exception workflow. |

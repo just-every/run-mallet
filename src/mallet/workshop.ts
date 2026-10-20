@@ -92,6 +92,7 @@ export const workshop: Handler = (c, command, p) => {
       const { estimate, rev } = estimateForWork(c.s, job, p)
       const lineId = text(p.lineId, 'lineId'), line = rev.lines.find((l: Row) => l.id === lineId)
       if (!line || !estimate.authorisation.lineIds.includes(lineId)) fail('NOT_AUTHORISED', 'The customer did not authorize this line.')
+      if (rows(c.s, 'specialPart').some(part => part.jobId === job.id && part.estimateId === estimate.id && part.revision === rev.n && part.lineId === lineId && !part.receipt)) fail('PART_NOT_RECEIVED', 'Receiving staff must confirm actual arrival before this special part is used.')
       const quantityMilli = quantity(p.quantity), used = job.actuals.filter((a: any) => a.estimateId === estimate.id && a.revision === rev.n && a.lineId === lineId).reduce((n: number, a: any) => n + a.quantityMilli, 0)
       const cap = authorizedCap(c.s, estimate, line)
       if (used + quantityMilli > cap) fail('QUANTITY_EXCEEDED', 'Actual work cannot exceed the approved, customer authorized quantity.', { lineId, approvedQuantity: cap / 1000, recordedQuantity: used / 1000, remainingQuantity: (cap - used) / 1000 })
