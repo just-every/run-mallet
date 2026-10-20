@@ -1,4 +1,4 @@
-/* The Shop Board: bay strip, the agent's strip, six stage columns of compact repair-order cards, recent activity,
+/* The Shop Board: bay strip, the agent's strip, filters, nine FLOW-001 stage columns of compact repair-order cards, recent activity,
    and the selected repair order's panel with the decision it waits on. Measures follow the 12ui conversion of the
    owner-picked image; at 390 the columns stack and a chosen repair order opens as a sheet above the board. */
 
@@ -23,12 +23,24 @@ a.bay:hover{border-color:color-mix(in srgb,var(--cyan) 50%,white)}
 .app .advisor .button{min-height:36px;padding:0 18px;border-radius:999px}
 
 /* Columns and cards. */
-.board{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px;scroll-margin-top:80px}
+.board{display:grid;grid-template-columns:repeat(9,minmax(150px,1fr));gap:6px;overflow-x:auto;padding-bottom:4px;scroll-margin-top:80px}
+.board:has(>.column:only-child){grid-template-columns:minmax(0,1fr)}
+.app form.board-filters{display:flex;flex-wrap:wrap;align-items:flex-end;gap:8px 10px;margin:0 0 12px}
+.app .board-filters label{gap:3px;min-width:0;flex:1 1 130px;font-size:12px}
+.app .board-filters label:last-of-type{flex:2 1 200px}
+.app .board-filters>button,.app .board-filters .button{flex:none;min-height:40px}
+.column.stage-collected,.column.stage-closed{background:color-mix(in srgb,var(--page-alt) 80%,var(--card))}
+.ro-priority .pill{margin-bottom:3px}
+.ro-due{margin-bottom:5px;color:var(--muted);font-size:11.5px}
+.ro-due.late{color:var(--red);font-weight:600}
+.ro-blockers{margin-top:5px;color:var(--body);font-size:11.5px;line-height:1.35}
+.app .ro.urgent{border-left:3px solid var(--red)}
+.app .ro.high{border-left:3px solid var(--amber)}
 .column{min-width:0;padding:6px 6px 10px;border-radius:10px;background:color-mix(in srgb,var(--cyan-soft) 30%,var(--page-alt))}
 .column h2{display:flex;align-items:center;gap:6px;padding:8px 4px 12px;color:var(--ink);font:700 14px/1.2 var(--font-display);letter-spacing:-.01em;white-space:nowrap}
 .column h2 span{padding:1px 5px;border-radius:999px;background:color-mix(in srgb,var(--cyan-soft) 65%,var(--card));color:var(--steel);font:600 12px/1.5 var(--font-body)}
-.column.ready{background:color-mix(in srgb,var(--green-soft) 24%,var(--page-alt))}
-.column.ready h2{color:var(--green-ink)}
+.column.stage-ready{background:color-mix(in srgb,var(--green-soft) 24%,var(--page-alt))}
+.column.stage-ready h2{color:var(--green-ink)}
 .column-empty{padding:6px 6px 2px;color:var(--faint);font-size:12px}
 .app .ro{display:grid;gap:1px;margin-bottom:7px;padding:12px 11px;background:var(--card);border:1px solid var(--line);border-radius:10px;box-shadow:none;color:var(--body);font-size:12.5px;line-height:1.4;text-decoration:none;overflow-wrap:break-word}
 .app .ro:hover{border-color:color-mix(in srgb,var(--cyan) 45%,white)}
@@ -123,10 +135,10 @@ a.bay:hover{border-color:color-mix(in srgb,var(--cyan) 50%,white)}
  .app .actions form>button,.app .actions .button{padding:6px;font-size:14px}
 }
 @media (min-width:1181px) and (max-width:1360px){
- .board{grid-template-columns:repeat(3,minmax(0,1fr))}
+ .board{grid-template-columns:repeat(3,minmax(0,1fr));overflow-x:visible}
 }
 @media (max-width:1180px){
- .board{grid-template-columns:repeat(3,minmax(0,1fr))}
+ .board{grid-template-columns:repeat(3,minmax(0,1fr));overflow-x:visible}
  .detail{min-height:0;margin:0 24px 32px;border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow)}
 }
 @media (max-width:760px){
@@ -136,7 +148,8 @@ a.bay:hover{border-color:color-mix(in srgb,var(--cyan) 50%,white)}
  .advisor>p:first-of-type{flex-basis:calc(100% - 40px)}
  .approval{padding:0;border:0}
  .app .advisor .button{margin-left:auto}
- .board{grid-template-columns:minmax(0,1fr);gap:10px}
+ .board{grid-template-columns:minmax(0,1fr);gap:10px;overflow-x:visible}
+ .app .board-filters label,.app .board-filters label:last-of-type{flex-basis:100%}
  .layout{display:flex;flex-direction:column}
  .layout>.main{order:1;width:100%}
  .detail{order:2;margin:0 16px 28px;padding:18px 16px 22px}

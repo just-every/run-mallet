@@ -109,7 +109,7 @@ Neighboring products stay separate: [Pier](https://github.com/just-every/run-pie
 
 ### Workshop execution and technician work
 
-- **FLOW-001 — Live repair and technician boards.** Show intake, diagnosis, approval, parts, work, quality, ready, collected and closed stages with assignment, customer, due date, priority and blockers; filter and search, enforce allowed transitions and retain canceled/lost work. New product data inherits OPS-001 before shipping. **Acceptance evidence:** Move several realistic ROs through the board, filter one technician and overdue customer promise, and try to skip authorization/quality gates.
+- **FLOW-001 — Live repair and technician boards.** Show intake, diagnosis, approval, parts, work, quality, ready, collected and closed stages with assignment, customer, due date, priority and blockers; filter and search, enforce allowed transitions and retain canceled/lost work. Stages derive from each repair’s own records in this precedence: closed (canceled, lost, or collected with the invoice exported), collected, ready (completed after QUALITY-001 clearance), quality (recorded work with the assigned technician’s current sign-off or a post-work check result), approval (any estimate or supplement undecided, or every one declined), parts (customer-authorized with a staff-reported required part not physically received), work (customer-authorized), diagnosis (a DIAG-001 diagnosis or DVI inspection exists), then intake; a card moves only when its gated command succeeds, so work needs customer authorization and ready needs quality clearance. Due is the current customer pickup promise, else the booked end; overdue means now is at or after the promise. Owner/admin set normal, high or urgent priority with a reason and kept history; cancel or mark lost an open repair with no recorded work and no running timer (reason, stage and actor kept, bay and technician freed, shown under Closed); and record collection only on a completed repair whose invoice a person approved: staff type the collector’s name, and the immutable record keeps the recorder, time and invoice number and status, labelled “Collection recorded by staff. Mallet did not record or verify payment, keys or the collector’s identity.” RETURN-001 adds its settlement gate, unpaid-release override with reason, delegate authority, keys/accessories, mileage-out, receipt and warranty advice to that record before it ships. Filters cover one technician (lead or helper), stage, priority, customer-promise status and search over customer, email, vehicle, plate/VIN, title and invoice number; technicians see only repairs they are on; the board re-reads current records on every load and every 60 seconds. New product data inherits OPS-001 before shipping. **Acceptance evidence:** Move several realistic ROs through the board, filter one technician and overdue customer promise, and try to skip authorization/quality gates.
 
 - **FLOW-002 — Promise times and capacity.** Set a customer promise separately from bay booking; show parts ETA, labor remaining and resource dependencies, warn before a promise is missed, and require an advisor to approve and communicate any revised promise. Owner/admin act as the service advisor and approve original promises or exact proposed revisions; assigned native technicians may update required-part ETAs and resource dependencies only for currently assigned repairs. The pickup promise is separate from the bay/technician booking. Every part or dependency edit appends its source, reason, actor and UTC time; a staff-reported ETA is never supplier confirmation or physical receipt. Labor remaining is current customer-authorized sold labor less performed quantities and accepted replacements, excluding timers. The planning finish is the latest of now, booking start, unreceived part ETAs, and unfinished dependency booking/projected finishes, plus remaining labor hours. The plan warns before pickup when that finish exceeds the promise or an unreceived part is past ETA; now at or beyond pickup is overdue. These calculations never move a booking. Revising a promise requires an owner/admin to review the exact prior promise, plan, dependency versions, recipient and remaining work, then approve and claim one email through the configured Base mail sender. The original promise and all revisions remain. Receipts retain exact old/new times, reason, approving actor, recipient and provider outcome; accepted means handed to the provider, development means not sent, and failed or unconfirmed notices remain visible for advisor action without automatic retries. Customer pickup promises and mail render in the configured installation time zone with its IANA name (America/New_York by default), preserving daylight-saving changes. Owner/admin may change the shop zone with a reason; its version is rechecked before approving a notice, and each notice retains the zone used. Staff operational times may use the browser zone while showing the shop zone. Historical claimed sends cannot be replayed after restore. New product data inherits OPS-001 before shipping. **Acceptance evidence:** Delay a required part beyond a promised pickup, inspect the affected bay/technician plan and approve one revised promise; preserve original promise and customer notice receipt.
 
@@ -121,7 +121,7 @@ Neighboring products stay separate: [Pier](https://github.com/just-every/run-pie
 
 - **WARRANTY-001 — Warranty and comeback work.** Link a comeback to original invoice, VIN/serial, installed part/lot, failure, mileage and warranty terms; distinguish shop, supplier and OEM responsibility, approve coverage, track claim/rework costs and retain the original paid repair. New product data inherits OPS-001 before shipping. **Acceptance evidence:** Return with the same symptom within coverage, open a linked rework RO, approve no-charge labor and a supplier claim, then compare comeback cost and preserved original invoice.
 
-- **RETURN-001 — Paid and documented handover.** Ready status requires quality evidence; collection records actual customer/delegate, keys/accessories, mileage, receipt and warranty advice. Unpaid release requires explicit permitted manager override; no payment screenshot or agent inference counts as settlement. New product data inherits OPS-001 before shipping. **Acceptance evidence:** Try collection with a failed test and unpaid invoice, then settle through the processor and hand keys to an authorized delegate; inspect receipt and any override.
+- **RETURN-001 — Paid and documented handover.** Ready status requires quality evidence; collection records actual customer/delegate, keys/accessories, mileage, receipt and warranty advice. Unpaid release requires explicit permitted manager override; no payment screenshot or agent inference counts as settlement. FLOW-001’s staff-recorded collection is today’s only release record; before RETURN-001 ships it adds the processor settlement gate, permitted-manager unpaid-release override with reason, delegate authority, keys/accessories, mileage-out, receipt and warranty advice to that record. New product data inherits OPS-001 before shipping. **Acceptance evidence:** Try collection with a failed test and unpaid invoice, then settle through the processor and hand keys to an authorized delegate; inspect receipt and any override.
 
 - **FLEET-001 — Fleet and commercial repair workflows.** Handle fleet purchase-order numbers, driver versus authorizer, credit limits, payer terms, consolidated statements and vehicle downtime; require the fleet’s allowed authorizer and preserve per-vehicle cost history. New product data inherits OPS-001 before shipping. **Acceptance evidence:** A driver drops off a fleet van, the fleet manager approves against its PO, accounts receives a term invoice and a statement drills to that van’s downtime/cost.
 
@@ -365,14 +365,14 @@ The wider category is evidenced by [Tekmetric shop management](https://www.tekme
 
 ## Homepage claims
 
-Every capability claim on the approved homepage (`src/site/landing/`, checked against br's claims truth table of 18 October 2026, rows 1–59 in page order) maps to the named clauses that promise it. A claim's status is `done` when every mapped clause is done, `missing` when every one is missing, and `partial` otherwise, from the status table below. The sample shop, people, vehicles and figures in the drawings (Buckeye Auto Repair, RO 4127, Ohio's 7.5% sales tax) are illustrations, not claims. 59 claims: 13 done, 20 partial, 26 missing.
+Every capability claim on the approved homepage (`src/site/landing/`, checked against br's claims truth table of 18 October 2026, rows 1–59 in page order) maps to the named clauses that promise it. A claim's status is `done` when every mapped clause is done, `missing` when every one is missing, and `partial` otherwise, from the status table below. The sample shop, people, vehicles and figures in the drawings (Buckeye Auto Repair, RO 4127, Ohio's 7.5% sales tax) are illustrations, not claims. 59 claims: 16 done, 17 partial, 26 missing.
 
 | # | Section | Claim | Clause(s) | Status |
 | --- | --- | --- | --- | --- |
 | 1 | Hero | "Mallet checks cars in by VIN" | INTAKE-003, VEH-001 | missing |
 | 2 | Hero | "texts photo inspections for line-by-line approval" | DVI-002, DVI-003, MSG-001, EST-003, ESTIMATE-001 | partial |
 | 3 | Hero | "orders parts" | BUY-002 | missing |
-| 4 | Hero | "runs the technician board" | FLOW-001 | partial |
+| 4 | Hero | "runs the technician board" | FLOW-001 | done |
 | 5 | Hero | "takes payment" | PAY-003 | missing |
 | 6 | Hero | "brings customers back" | AUTO-003, AUTO-004, ADV-005 | missing |
 | 7 | Hero | "100% free, open source" | OPEN-001 | done |
@@ -381,7 +381,7 @@ Every capability claim on the approved homepage (`src/site/landing/`, checked ag
 | 10 | Hero card | Inspection · 2 red, 3 yellow · texted to Dana Brooks | DVI-001, DVI-003, MSG-001 | partial |
 | 11 | Hero card | Front brakes approved · cabin filter declined → due at 67,000 mi | ESTIMATE-001, EST-005 | done |
 | 12 | Hero card | Pads backordered at Worldpac → PartsTech +$8.40 · Dana re-approved 10:05 | ADV-004, BUY-003, BUY-005, ESTIMATE-001 | partial |
-| 13 | Hero card | Bay 3 · Luis Romero · 2.4 hrs sold · promise 5:00 pm · ready 4:10 | WORKSHOP-001, FLOW-001, FLOW-002 | partial |
+| 13 | Hero card | Bay 3 · Luis Romero · 2.4 hrs sold · promise 5:00 pm · ready 4:10 | WORKSHOP-001, FLOW-001, FLOW-002 | done |
 | 14 | Hero card | Paid by text · $531.70 incl. 7.5% tax | PAY-003, TAX-001 | partial |
 | 15 | 02 Day | Six-stop day timeline with "Promise 5:00 pm · kept" | WORKSHOP-001, FLOW-002 | done |
 | 16 | 03 Check-in | "Dana checks in from her phone at the drop box" | INTAKE-003 | missing |
@@ -402,7 +402,7 @@ Every capability claim on the approved homepage (`src/site/landing/`, checked ag
 | 31 | 06 Parts | "Dana re-approves by text" | EST-003, MSG-001, ESTIMATE-001 | partial |
 | 32 | 06 Parts | Worldpac backorder, Morse Rd supplier via PartsTech, order approved, pads scanned to RO 4127 | BUY-002, BUY-003, BUY-005, PART-006 | missing |
 | 33 | 06 Parts | "Customer promise changed: no" | FLOW-002 | done |
-| 34 | 07 Board | "Every car’s stage, promise and clock, live" | FLOW-001, FLOW-002, TIME-001 | partial |
+| 34 | 07 Board | "Every car’s stage, promise and clock, live" | FLOW-001, FLOW-002, TIME-001 | done |
 | 35 | 07 Board | "Technicians start and stop jobs from the bay" | WORK-001, TIME-001 | done |
 | 36 | 07 Board | Waiting parts: promise moved, customer told | PART-006, FLOW-002 | partial |
 | 37 | 07 Board | Agent "Next blocker" | ADV-003 | partial |
@@ -438,8 +438,8 @@ OPEN-001 was added on 18 October 2026. Its 19 October acceptance now runs the pu
 | Clauses | Done | Partial | Missing | Total |
 | --- | ---: | ---: | ---: | ---: |
 | Published | 9 | 0 | 0 | 9 |
-| Target and push further | 17 | 21 | 93 | 131 |
-| All | 26 | 21 | 93 | 140 |
+| Target and push further | 18 | 20 | 93 | 131 |
+| All | 27 | 20 | 93 | 140 |
 
 | Clause | Title | Kind | Status | Evidence | Gap |
 | --- | --- | --- | --- | --- | --- |
@@ -479,7 +479,7 @@ OPEN-001 was added on 18 October 2026. Its 19 October acceptance now runs the pu
 | `GUIDE-002` | ALLDATA labor and procedures | target | missing |  | No ALLDATA integration or entitlement workflow. |
 | `GUIDE-003` | ProDemand estimating and maintenance | target | missing |  | No ProDemand adapter or licensed-data workflow. |
 | `EST-006` | Estimate expiry and approval chasing | target | done | `src/mallet/approval-chasing.ts`; `src/mallet/approval-door.ts`; `src/mallet/approval-links.ts`; `src/mallet/ui/chasing.ts`; `migrations/core/0023_approval_reminders.sql`; `tests/support/chase-journey.mjs`; `tests/approval-browser.mjs` |  |
-| `FLOW-001` | Live repair and technician boards | target | partial | `src/mallet/ui/workshop.ts`; `src/mallet/workshop.ts`; `tests/browser-journey.mjs` | Basic status badges, job lists and member visibility exist; no full stages, filters, priorities or blocker board. |
+| `FLOW-001` | Live repair and technician boards | target | done | `src/mallet/flow.ts`; `src/mallet/ui/board.ts`; `src/mallet/ui/flow.ts`; `tests/support/flow-journey.mjs`; `tests/flow-browser.mjs` |  |
 | `FLOW-002` | Promise times and capacity | target | done | `src/mallet/promises.ts`; `src/mallet/promise-zone.ts`; `src/mallet/promise-door.ts`; `src/mallet/ui/promises.ts`; `src/mallet/http.ts`; `tests/support/promise-journey.mjs`; `tests/promise-browser.mjs` (FLOW-002) | — |
 | `FLOW-003` | Rules-based routing and escalation | target | missing |  | No automatic routing, skill rules, deadline scheduler or escalation acknowledgment. |
 | `TIME-001` | Employee clock and job timers | target | done | `src/mallet/time.ts`; `src/mallet/ui/time.ts`; `src/mallet/http.ts`; `tests/mallet.test.mjs`; `tests/support/time-journey.mjs`; `tests/time-browser.mjs` | Clause-named API/native 1440/390 and archive journeys assert attendance, breaks, two job timers, immutable approved corrections, elapsed/sold/nonbillable separation and access boundaries. |

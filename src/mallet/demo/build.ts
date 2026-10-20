@@ -113,7 +113,9 @@ export function buildWorkshop(now: Date, ownerId: string) {
     if (v.invoice === 'draft') return
     invoice = run('kayla', 'invoice.approve', { invoiceId: invoice.id, version: invoice.version, revision: 1 }, t += 15 * MIN)
     if (v.invoice === 'approved') return
-    run('ben', 'invoice.export', { invoiceId: invoice.id, version: invoice.version }, Math.max(end + HOUR, t + 30 * MIN))
+    const collected = Math.max(end + HOUR, t + 30 * MIN)
+    run('ben', 'flow.collect', { jobId, version: job().version, flowVersion: 0, collectorName: customer, note: 'Picked up at the counter.' }, collected - 10 * MIN)
+    run('ben', 'invoice.export', { invoiceId: invoice.id, version: invoice.version }, collected)
     }
   })
   return fixedIds(s, new Set([ownerId, ...team.map(p => p.id), assistantKey.id, retiredKey.id]))

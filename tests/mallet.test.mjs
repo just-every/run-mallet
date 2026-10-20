@@ -10,6 +10,8 @@ import {approvalBrowser,chaseBrowser} from './approval-browser.mjs'
 import {chaseJourney} from './support/chase-journey.mjs'
 import {collaborationJourney} from './support/collaboration-journey.mjs'
 import {collaborationBrowser} from './collaboration-browser.mjs'
+import {flowJourney} from './support/flow-journey.mjs'
+import {flowBrowser} from './flow-browser.mjs'
 import {timeJourney} from './support/time-journey.mjs'
 import {pricingBrowser} from './pricing-browser.mjs'
 import {pricingJourney} from './support/pricing-journey.mjs'
@@ -268,3 +270,5 @@ test('FLOW-002: revised pickup promise and customer notice through native forms 
 
 test('FLOW-004: helper crew, dependent subtasks, mentioned advisor with media, acknowledged handoff, per-person time and recovery',()=>run(collaborationJourney))
 test('FLOW-004: native helper, dependent subtasks, mention and acknowledged handoff at 1440/390',collaborationBrowser)
+test('FLOW-001: nine-stage board, gated moves, technician/overdue/priority/search filters, canceled and lost retention, recorded collection and recovery',()=>run(flowJourney))
+test('FLOW-001: native board filters, priority, cancel and recorded collection at 1440/390',flowBrowser)

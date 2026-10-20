@@ -17,7 +17,7 @@ export function slot(p: any) {
   return { bayId: text(p.bayId, 'bayId', 100), technicianId: text(p.technicianId, 'technicianId', 100), startAt, endAt }
 }
 export function conflicts(s: State, plan: ReturnType<typeof slot>, exceptJobId?: string) {
-  return rows(s, 'job').filter(j => j.id !== exceptJobId && j.status !== 'completed' && j.status !== 'invoiced' && plan.startAt < j.endAt && plan.endAt > j.startAt && (plan.bayId === j.bayId || plan.technicianId === j.technicianId)).map(j => ({ jobId: j.id, title: j.title, bayId: j.bayId, technicianId: j.technicianId, startAt: j.startAt, endAt: j.endAt, resources: [j.bayId === plan.bayId ? 'bay' : '', j.technicianId === plan.technicianId ? 'technician' : ''].filter(Boolean) }))
+  return rows(s, 'job').filter(j => j.id !== exceptJobId && !['completed', 'invoiced', 'canceled', 'lost'].includes(j.status) && plan.startAt < j.endAt && plan.endAt > j.startAt && (plan.bayId === j.bayId || plan.technicianId === j.technicianId)).map(j => ({ jobId: j.id, title: j.title, bayId: j.bayId, technicianId: j.technicianId, startAt: j.startAt, endAt: j.endAt, resources: [j.bayId === plan.bayId ? 'bay' : '', j.technicianId === plan.technicianId ? 'technician' : ''].filter(Boolean) }))
 }
 function requireFree(c: Context, plan: ReturnType<typeof slot>, jobId?: string) {
   const found = conflicts(c.s, plan, jobId)
@@ -27,7 +27,7 @@ function requireFree(c: Context, plan: ReturnType<typeof slot>, jobId?: string) 
 export function openJob(c: Context, p: any) {
   const job = find(c.s, 'job', p.jobId)
   expectVersion(job, p.version)
-  if (job.status !== 'booked' && job.status !== 'working') fail('JOB_STATE', 'This job is already completed.')
+  if (job.status !== 'booked' && job.status !== 'working') fail('JOB_STATE', job.closure ? `This repair was ${job.status}; book a new visit instead.` : 'This job is already completed.')
   return job
 }
 function assetFields(p: any) {

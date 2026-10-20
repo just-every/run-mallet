@@ -1,10 +1,11 @@
 // The Shop Board (/app): the bays, the work an agent prepared for a person, every open repair order in its column,
 // and the selected repair order beside them with the decision it waits on. Visual authority: the owner-picked
 // app look (desk 17 Oct, app-1536.png).
-import {e,form,money,badge,status,initials,nobr,person,rows,when,type Names} from './common'
+import {e,form,money,badge,status,initials,nobr,person,rows,when,select,field,type Names} from './common'
 import {icon} from './icons'
 import {columns,repair,waiting,clock,hrs,eventNames,type Repair} from './repair'
 import {human,type Actor} from '../auth'
+import {repairBoard,stages,priorities,type BoardFilter,type Card} from '../flow'
 
 const bayNumber=(bay:string)=>Number(bay.match(/\d+/)?.[0]??999)
 
@@ -27,15 +28,27 @@ function advisor(state:any) {
  return `<section class="advisor" aria-label="Prepared by an agent">${icon('spark','spark')}<p><strong>${e(w.agent)}:</strong> prepared ${e(list)}, nothing shared.</p><p class="approval"><i class="dot" aria-hidden="true"></i>${w.total} change${w.total===1?' needs':'s need'} approval</p><a class="button quiet" href="/app?ro=${e(w.jobIds[0])}#ro">Review</a></section>`
 }
 
-const card=(r:Repair,names:Names,selected:boolean)=>{const tech=person(names,r.job.technicianId);return `<a class="ro${selected?' selected':''}" href="/app?ro=${e(r.job.id)}#ro"${selected?' aria-current="true"':''}><span class="ro-head"><strong>${e(r.job.bayId)}</strong>${when(r.job.startAt,undefined,'card')}</span><span class="ro-vehicle">${nobr(r.asset?.label)}</span><span>${nobr(r.asset?.customerName)}</span><span class="ro-title" title="${e(r.job.title)}">${nobr(r.job.title)}</span><span class="tech" title="${e(tech)}"><span class="avatar" aria-hidden="true">${e(initials(tech))}</span><span class="tech-name">${e(tech)}</span></span>${badge(r.chip[0],r.chip[1])}</a>`}
+const priorityTone={urgent:'red',high:'amber',normal:''} as const
+const due=(c:Card)=>c.due.kind==='promise'?`${c.promiseStatus==='overdue'?'Promise overdue':'Promise'} ${when(c.due.at,undefined,'short')}`:`Booked until ${when(c.due.at,undefined,'short')}`
+const card=(r:Repair,c:Card,names:Names,selected:boolean,query:string)=>{const tech=person(names,r.job.technicianId);return `<a class="ro${selected?' selected':''}${c.priority!=='normal'?` ${c.priority}`:''}" href="/app?${query}ro=${e(r.job.id)}#ro"${selected?' aria-current="true"':''} data-stage="${e(c.stage)}"><span class="ro-head"><strong>${e(r.job.bayId)}</strong>${when(r.job.startAt,undefined,'card')}</span>${c.priority!=='normal'?`<span class="ro-priority">${badge(c.priority==='urgent'?'Urgent':'High priority',priorityTone[c.priority as keyof typeof priorityTone])}</span>`:''}<span class="ro-vehicle">${nobr(r.asset?.label)}</span><span>${nobr(r.asset?.customerName)}</span><span class="ro-title" title="${e(r.job.title)}">${nobr(r.job.title)}</span><span class="tech" title="${e(tech)}"><span class="avatar" aria-hidden="true">${e(initials(tech))}</span><span class="tech-name">${e(tech)}${c.helpers.length?` +${c.helpers.length}`:''}</span></span>${c.stage==='closed'?'':`<span class="ro-due${c.promiseStatus==='overdue'?' late':''}">${due(c)}</span>`}${badge(r.chip[0],r.chip[1])}${c.blockers.length?`<span class="ro-blockers"><span>${e(c.blockers[0])}</span>${c.blockers.length>1?`<span class="muted"> +${c.blockers.length-1} more</span>`:''}</span>`:''}</a>`}
 
 const LIMIT=5
-function board(open:Repair[],names:Names,selected?:string) {
- return `<section class="board" id="board" aria-label="Repair orders by stage">${columns.map(([id,label])=>{
-  const list=open.filter(r=>r.column===id).sort((a,b)=>a.job.startAt.localeCompare(b.job.startAt)),shown=list.slice(0,LIMIT)
-  if(selected&&!shown.some(r=>r.job.id===selected)){const pick=list.find(r=>r.job.id===selected);if(pick)shown.splice(LIMIT-1,1,pick)}
-  return `<section class="column ${id}"><h2>${e(label)} <span>${list.length}</span></h2>${shown.map(r=>card(r,names,r.job.id===selected)).join('')||'<p class="column-empty">Nothing here</p>'}${list.length>shown.length?`<a class="more" href="/app/jobs">+ ${list.length-shown.length} more ${e(label.toLowerCase())}</a>`:''}</section>`
+function board(all:Repair[],state:any,names:Names,filter:BoardFilter,selected?:string) {
+ const view=repairBoard(state,new Date().toISOString(),filter),byId=new Map(all.map(r=>[r.job.id,r]))
+ const query=new URLSearchParams(Object.entries({technician:filter.technicianId,stage:filter.stage,priority:filter.priority,due:filter.due,q:filter.q}).filter(([,v])=>v) as [string,string][]).toString(),prefix=query?query+'&':''
+ const focused=!!filter.stage
+ return `<section class="board" id="board" aria-label="Repair orders by stage">${view.stages.filter(s=>!focused||s.id===filter.stage).map(({id,label,cards})=>{
+  const shown=focused?cards:cards.slice(0,LIMIT)
+  if(selected&&!shown.some(c=>c.jobId===selected)){const pick=cards.find(c=>c.jobId===selected);if(pick)shown.splice(LIMIT-1,1,pick)}
+  return `<section class="column stage-${id}" data-stage="${id}"><h2>${e(label)} <span>${cards.length}</span></h2>${shown.map(c=>card(byId.get(c.jobId)!,c,names,c.jobId===selected,prefix)).join('')||'<p class="column-empty">Nothing here</p>'}${cards.length>shown.length?`<a class="more" href="/app?${e(new URLSearchParams({...Object.fromEntries(new URLSearchParams(query)),stage:id}).toString())}#board">+ ${cards.length-shown.length} more ${e(label.toLowerCase())}</a>`:''}</section>`
  }).join('')}</section>`
+}
+
+// GET filters: one technician (lead or helper), stage, priority, customer-promise status and free-text search.
+function filters(state:any,names:Names,filter:BoardFilter) {
+ const techs=[...new Set(rows(state,'job').flatMap((j:any)=>[j.technicianId,...(j.helpers??[])]))].map(id=>[String(id),person(names,id)] as [string,string]).sort((a,b)=>a[1].localeCompare(b[1]))
+ const label=(id:string)=>id[0].toUpperCase()+id.slice(1)
+ return `<form class="board-filters" method="get" action="/app" role="search" aria-label="Filter the board">${select('Technician','technician',[['','Everyone'],...techs],filter.technicianId??'')}${select('Stage','stage',[['','All stages'],...stages.map(([id,l])=>[id,l] as [string,string])],filter.stage??'')}${select('Priority','priority',[['','Any priority'],...priorities.map(p=>[p,label(p)] as [string,string])],filter.priority??'')}${select('Customer promise','due',[['','Any'],['overdue','Overdue'],['at-risk','At risk'],['on-plan','On plan'],['no-promise','No promise']],filter.due??'')}${field('Search','q','search',filter.q??'','placeholder="Customer, vehicle, plate or VIN, invoice"')}<button type="submit">Filter</button>${Object.values(filter).some(Boolean)?'<a class="button quiet" href="/app#board">Clear</a>':''}</form>`
 }
 
 function activity(state:any) {
@@ -70,14 +83,14 @@ function detail(r:Repair,state:any,names:Names,actor:Actor,picked:boolean) {
  return `<aside class="detail${picked?' picked':''}" id="ro" aria-label="Selected repair order"><div class="detail-title"><h2>${nobr(asset?.label)}</h2><a class="close" href="/app?ro=none#board" aria-label="Close">${icon('close')}</a></div><div class="detail-pill">${pill}</div><p class="owner">${e(asset?.customerName)}</p><p class="contact"><span>${icon('car')}${e(asset?.identifier)}</span>${asset?.customerEmail?`<span>${icon('mail')}${e(asset.customerEmail)}</span>`:''}</p><nav class="tabs" aria-label="Repair order"><a aria-current="page" href="/app?ro=${e(job.id)}#ro">Overview</a><a href="/app/jobs/${e(job.id)}">Repair order</a><a href="/app/assets/${e(job.assetId)}">History</a></nav><p class="job-line"><strong>${e(job.title)}</strong>${e(job.bayId)} · ${e(person(names,job.technicianId))} · ${when(job.startAt,job.endAt)}</p>${work}${decide}${recent}</aside>`
 }
 
-export function shopBoard(state:any,actor:Actor,names:Names,ro:string|null) {
- const jobs=rows(state,'job'),all=jobs.map(j=>repair(state,j)),open=all.filter(r=>r.column)
- const subtitle=`${open.length} open repair order${open.length===1?'':'s'} <span aria-hidden="true">·</span> ${open.filter(r=>r.column==='bay').length} in the bays`
- if(!open.length){
-  const body=`<section class="card empty-board"><img src="/brand/mark.svg" alt="" width="64" height="64"><h2>No open repair orders</h2><p>Add a customer’s vehicle, then book its first visit. Each repair order then moves across the board from booked to ready.</p>${human(actor)?'<a class="button primary" href="/app/customers#add">New repair order</a>':''}${jobs.length?'<p><a href="/app/jobs">See finished repair orders</a></p>':''}</section>${activity(state)}`
+export function shopBoard(state:any,actor:Actor,names:Names,ro:string|null,filter:BoardFilter={}) {
+ const jobs=rows(state,'job'),all=jobs.map(j=>repair(state,j)),open=all.filter(r=>r.column!=='closed')
+ const subtitle=`${open.length} open repair order${open.length===1?'':'s'} <span aria-hidden="true">·</span> ${open.filter(r=>r.job.status==='working').length} in the bays`
+ if(!jobs.length){
+  const body=`<section class="card empty-board"><img src="/brand/mark.svg" alt="" width="64" height="64"><h2>No open repair orders</h2><p>Add a customer’s vehicle, then book its first visit. Each repair order then moves across the board from intake to closed.</p>${human(actor)?'<a class="button primary" href="/app/customers#add">New repair order</a>':''}</section>${activity(state)}`
   return {subtitle,body,aside:''}
  }
  // ?ro=none closes the panel (its ×, or Keep as is); otherwise the chosen repair order, else the first decision waiting.
  const w=waiting(state),chosen=ro==='none'?undefined:(ro&&all.find(r=>r.job.id===ro))||all.find(r=>r.job.id===w.jobIds[0])
- return {subtitle,body:`${bays(open,names)}${advisor(state)}${board(open,names,chosen?.job.id)}<div class="bottom">${activity(state)}</div>`,aside:chosen?detail(chosen,state,names,actor,!!ro):''}
+ return {subtitle,body:`${bays(open,names)}${advisor(state)}${filters(state,names,filter)}${board(all,state,names,filter,chosen?.job.id)}<div class="bottom">${activity(state)}</div>`,aside:chosen?detail(chosen,state,names,actor,!!ro):''}
 }
