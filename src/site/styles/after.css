@@ -121,3 +121,9 @@
   .import .done{width:24px;height:24px}
   .import-foot{gap:12px;padding:18px;font-size:15px;align-items:flex-start}
 }
+/* Narrow phones (320-359): section heads scale with the width so "Promise still 5:00." stays on one line inside the gutter,
+   and a follow-up's booked pill takes the card's full row so its date and time stay whole. */
+@media (max-width:359px){
+  .section-head h2,.inspect h2{font-size:min(38px,10.6vw)}
+  .queue li>.pill{grid-column:1/-1}
+}
