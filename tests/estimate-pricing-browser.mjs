@@ -9,6 +9,7 @@ import {qualityReady} from './support/quality-ready.mjs'
 export async function estimatePricingBrowser(){
  const h=await installation({entry:'tests/dev-worker.ts',network:true,assets:true,bindings:{AUTH_LOCAL:'true',RER_DEV_KEY:randomBytes(32).toString('base64url')}});let browser
  try{
+  const setup=await fetch(h.origin+'/setup',{method:'POST',redirect:'manual',headers:{origin:h.origin,cookie:h.owner,'content-type':'application/x-www-form-urlencoded'},body:'confirm=yes&ratePercent=7.5&partsTaxable=yes'});assert.equal(setup.status,303)
   const {job}=await booking(h)
   await h.command('tax.configure',{ratePercent:7.5,partsTaxable:true,laborTaxable:false})
   browser=await chromium.launch({headless:true,args:['--use-mock-keychain','--password-store=basic']})
