@@ -9,7 +9,7 @@ function nativeGuard(authority: Authority): Sql {
 }
 function assignment(actor: Actor): { sql: string; params: any[] } {
  if (!['owner', 'admin', 'member'].includes(actor.role)) fail('FORBIDDEN', 'Agents cannot access inspection media.', null, 403)
- return actor.role === 'member' ? { sql: "json_extract(j.value,'$.technicianId')=?", params: [actor.id] } : { sql: '1=1', params: [] }
+ return actor.role === 'member' ? { sql: "(json_extract(j.value,'$.technicianId')=? OR EXISTS(SELECT 1 FROM json_each(j.value,'$.helpers') WHERE json_each.value=?))", params: [actor.id, actor.id] } : { sql: '1=1', params: [] }
 }
 async function batch(db: D1Database, queries: Sql[]): Promise<D1Result[]> {
  try { return await db.batch(queries.map(query => statement(db, query))) }

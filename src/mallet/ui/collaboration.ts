@@ -1,0 +1,37 @@
+import {area,box,e,field,form,person,rows,when,type Names} from './common'
+import {crewTime,onCrew} from '../collaboration'
+// FLOW-004 screens: crew, dependent subtasks, staff-private notes with mentions, and acknowledged handoffs.
+type Op={id:string,name:string,role:string,status:string}
+const hours=(seconds:number)=>`${(seconds/3600).toFixed(2)} h`
+const timeList=(time:Record<string,any>)=>Object.entries(time).map(([,t])=>`<li>${e(t.name)} · billable ${hours(t.billable)} · rework ${hours(t.rework)} · nonbillable ${hours(t.nonbillable)}</li>`).join('')||'<li>No job time recorded.</li>'
+const checks=(name:string,options:[string,string][])=>options.map(([value,label])=>`<label><input type="checkbox" name="${e(name)}" value="${e(value)}"> ${e(label)}</label>`).join('')
+const pick=(label:string,name:string,options:[string,string][])=>`<label>${e(label)}<select name="${e(name)}" required><option value="">Choose…</option>${options.map(([v,t])=>`<option value="${e(v)}">${e(t)}</option>`).join('')}</select></label>`
+export function receipt(h:any,names:Names) {
+ const r=h.receipt
+ return `<div class="receipt"><p><strong>Handover receipt</strong> · ${e(person(names,r.from.id))} → ${e(r.to.name)} · proposed ${when(r.proposedAt)} by ${e(r.proposedBy.name)} · acknowledged ${when(r.acknowledgedAt)}</p><p>${e(r.note)}</p><p>Open subtasks at handover: ${r.openSubtasks.length?r.openSubtasks.map((t:any)=>e(t.title)).join(', '):'none'}.${r.previousLeadKept?' The previous lead stays as a helper.':''}</p><ul>${timeList(r.time)}</ul></div>`
+}
+export function collaborationPanel(state:any,job:any,actor:any,names:Names,people:Op[],media:any[]) {
+ const manager=['owner','admin'].includes(actor.role),isLead=manager||actor.id===job.technicianId,crew=[job.technicianId,...(job.helpers??[])]
+ const techs=people.filter(p=>p.status==='active'&&p.role==='member'),open=['booked','working'].includes(job.status)
+ const crewList=`<ul>${crew.map((id:string,i:number)=>`<li>${e(person(names,id))} · ${i?'helper':'lead'}${i&&manager&&open?form('crew.remove','',`Remove ${person(names,id)}`,{jobId:job.id,version:job.version,technicianId:id},'inline'):''}</li>`).join('')}</ul>`
+ const addHelper=manager&&open?form('crew.add',pick('Add a helper technician','technicianId',techs.filter(t=>!onCrew(job,t.id)).map(t=>[t.id,t.name])),'Add helper',{jobId:job.id,version:job.version}):''
+ const tasks=rows(state,'subtask').filter((t:any)=>t.jobId===job.id),title=(id:string)=>tasks.find((t:any)=>t.id===id)?.title??'subtask'
+ const taskList=tasks.map((t:any)=>{const waiting=t.dependsOn.filter((d:string)=>!tasks.find((x:any)=>x.id===d)?.completedAt);return `<li class="plain"><p>${t.completedAt?'✓ ':''}<strong>${e(t.title)}</strong> · ${e(person(names,t.assigneeId))}${t.dependsOn.length?` · after ${t.dependsOn.map((d:string)=>e(title(d))).join(', ')}`:''}${t.completedAt?` · completed by ${e(t.completedBy.name)} ${when(t.completedAt)}`:waiting.length?' · waiting on dependencies':''}</p>${!t.completedAt&&!waiting.length&&open&&(manager||actor.id===t.assigneeId)?form('subtask.complete','','Complete subtask',{subtaskId:t.id,version:t.version,jobId:job.id},'inline'):''}</li>`}).join('')
+ const addTask=isLead&&open?`<details><summary>Add a subtask</summary>${form('subtask.create',`${field('Subtask','title','text','','required maxlength="200"')}${pick('Assign to','assigneeId',crew.map((id:string)=>[id,person(names,id)]))}${tasks.length?`<fieldset><legend>Starts after</legend>${checks('dependsOn',tasks.map((t:any)=>[t.id,t.title]))}</fieldset>`:''}`,'Add subtask',{jobId:job.id})}</details>`:''
+ const notes=rows(state,'jobNote').filter((n:any)=>n.jobId===job.id).map((n:any)=>{const mine=n.mentions.find((m:any)=>m.id===actor.id&&!m.acknowledgedAt);return `<li class="plain"><p><strong>${e(n.by.name)}</strong> · ${when(n.at)}</p><p>${e(n.body)}</p>${n.mentions.length?`<p>Mentions: ${n.mentions.map((m:any)=>`${e(m.name)}${m.acknowledgedAt?' (seen)':''}`).join(', ')}</p>`:''}${n.attachments.length?`<p>Attachments: ${n.attachments.map((a:any)=>`<a href="/app/jobs/${e(job.id)}/media">${e(a.filename)}</a>`).join(', ')}</p>`:''}${mine?form('mention.acknowledge','','Mark mention seen',{noteId:n.id,version:n.version,jobId:job.id},'inline'):''}</li>`}).join('')
+ const mentionable=people.filter(p=>p.status==='active'&&(['owner','admin'].includes(p.role)||onCrew(job,p.id))&&p.id!==actor.id)
+ const addNote=open?form('note.add',`${area('Staff note (never shown to customers)','body','','required maxlength="2000" rows="3"')}${mentionable.length?`<fieldset><legend>Mention</legend>${checks('mentionIds',mentionable.map(p=>[p.id,`${p.name} (${p.role==='member'?'technician':p.role==='admin'?'service advisor':'owner'})`]))}</fieldset>`:''}${media.length?`<fieldset><legend>Attach this repair’s media</legend>${checks('attachmentIds',media.map((m:any)=>[m.id,m.label]))}</fieldset>`:''}`,'Add note',{jobId:job.id}):''
+ const handoffs=rows(state,'handoff').filter((h:any)=>h.jobId===job.id)
+ const pending=handoffs.find((h:any)=>h.status==='proposed')
+ const propose=isLead&&open&&!pending?`<details><summary>Hand off this repair</summary>${form('handoff.propose',`${pick('Hand to specialist','toId',techs.filter(t=>t.id!==job.technicianId).map(t=>[t.id,t.name]))}${area('Work so far and what is next','note','','required maxlength="2000" rows="3"')}<label><input type="checkbox" name="keepHelper" value="yes"> Keep the current lead as a helper</label>`,'Propose handoff',{jobId:job.id,version:job.version})}</details>`:''
+ const handoffList=handoffs.map((h:any)=>h.status==='acknowledged'?`<li class="plain">${receipt(h,names)}</li>`:`<li class="plain"><p>Handoff to ${e(h.toName)} · ${h.status==='proposed'?'waiting for their acknowledgment':`declined ${when(h.decidedAt)}: ${e(h.reason)}`}</p>${h.status==='proposed'&&actor.id===h.toId?decide(h):''}</li>`).join('')
+ return box('Crew & handoff',`<h3>Crew</h3>${crewList}${addHelper}<h3>Subtasks</h3><ul class="list">${taskList||'<li>No subtasks.</li>'}</ul>${addTask}<h3>Staff notes</h3><ul class="list">${notes||'<li>No notes yet.</li>'}</ul>${addNote}<h3>Handoffs</h3><ul class="list">${handoffList||'<li>No handoffs.</li>'}</ul>${propose}<h3>Time on this repair</h3><ul>${timeList(crewTime(state,job.id,new Date().toISOString()))}</ul>`,{id:'crew'})
+}
+const decide=(h:any)=>`${form('handoff.acknowledge','','Acknowledge and take over',{handoffId:h.id,version:h.version,jobId:h.jobId})}<details><summary>Decline</summary>${form('handoff.decline',area('Why you are declining','reason','','required maxlength="500" rows="2"'),'Decline handoff',{handoffId:h.id,version:h.version,jobId:h.jobId})}</details>`
+/** On the repair list: handoffs waiting for this technician and mentions they have not seen. */
+export function waitingForMe(state:any,actor:any) {
+ const handoffs=rows(state,'handoff').filter((h:any)=>h.status==='proposed'&&h.toId===actor.id)
+ const mentions=rows(state,'jobNote').filter((n:any)=>n.mentions.some((m:any)=>m.id===actor.id&&!m.acknowledgedAt))
+ if(!handoffs.length&&!mentions.length)return ''
+ return box('Waiting for you',`<ul class="list">${handoffs.map((h:any)=>`<li class="plain"><p>Handoff: <strong>${e(h.jobTitle)}</strong> · ${e(h.note)}</p>${decide(h)}</li>`).join('')}${mentions.map((n:any)=>`<li class="plain"><p>${e(n.by.name)} mentioned you: ${e(n.body)}</p><p><a href="/app/jobs/${e(n.jobId)}#crew">Open the repair</a></p></li>`).join('')}</ul>`,{id:'waiting'})
+}

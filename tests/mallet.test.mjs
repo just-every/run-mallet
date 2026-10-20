@@ -8,6 +8,8 @@ import {diagnosisBrowser} from './diagnosis-browser.mjs'
 import {approvalJourney} from './support/approval-journey.mjs'
 import {approvalBrowser,chaseBrowser} from './approval-browser.mjs'
 import {chaseJourney} from './support/chase-journey.mjs'
+import {collaborationJourney} from './support/collaboration-journey.mjs'
+import {collaborationBrowser} from './collaboration-browser.mjs'
 import {timeJourney} from './support/time-journey.mjs'
 import {pricingBrowser} from './pricing-browser.mjs'
 import {pricingJourney} from './support/pricing-journey.mjs'
@@ -263,3 +265,6 @@ test('EST-006: native chase policy, reminder history, customer opt-out and advis
 test('FLOW-002: delayed required parts, resource/labor plan, advisor promise notices and archive recovery',()=>run(promiseJourney))
 test('FLOW-002: failed/uncertain provider outcome claims one send and remains visible',promiseMailFailureJourney)
 test('FLOW-002: revised pickup promise and customer notice through native forms at 1440/390',promiseBrowser)
+
+test('FLOW-004: helper crew, dependent subtasks, mentioned advisor with media, acknowledged handoff, per-person time and recovery',()=>run(collaborationJourney))
+test('FLOW-004: native helper, dependent subtasks, mention and acknowledged handoff at 1440/390',collaborationBrowser)

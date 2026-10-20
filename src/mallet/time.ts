@@ -1,5 +1,6 @@
 import {bump,choice,event,expectVersion,fail,find,put,rows,text,who,type Context,type Handler,type Row,type State,type Actor} from './model'
 import {instant,openJob} from './workshop'
+import {onCrew} from './collaboration'
 export const timeCommands=['time.clockIn','time.clockOut','time.breakStart','time.breakEnd','time.start','time.pause','time.correct','time.approveCorrection'] as const
 export const timeMemberCommands=timeCommands.filter(command=>command!=='time.approveCorrection')
 export const timeRange=(entry:Row)=>entry.revisions.at(-1)
@@ -58,7 +59,7 @@ export const time:Handler=(c,command,p)=>{
  if(command==='time.start') {
   if(!attendance||onBreak||running)fail('TIME_STATE','Clock in, end your break and pause any running job timer first.')
   const job=openJob(c,p)
-  if(job.technicianId!==c.actor.id)fail('FORBIDDEN','Start timers only on your own assigned repairs.',null,403)
+  if(!onCrew(job,c.actor.id))fail('FORBIDDEN','Start timers only on your own assigned repairs.',null,403)
   const row=create(c,'job',attendance,job,choice(p.category,['billable','nonbillable','rework'],'time category')==='billable')
   // Category is retained independently from the invoiced actuals and sold hours.
   const saved=bump(c.s,'timeEntry',row,{category:p.category});emit(c,command,saved,{category:p.category});return saved

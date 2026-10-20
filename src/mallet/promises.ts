@@ -1,3 +1,4 @@
+import {onCrew} from './collaboration'
 import {promiseZoneSettings,shopTimeZone} from './promise-zone'
 import {bump,choice,event,expectVersion,fail,find,integer,put,rows,text,who,type Actor,type Context,type Handler,type Row,type State} from './model'
 import {instant,openJob} from './workshop'
@@ -7,7 +8,7 @@ export const promiseCommands=['promise.timeZone','promise.set','promise.partETA'
 export const promiseMemberCommands=['promise.partETA','promise.dependency'] as const
 export const internalPromiseCommands=['promise.approve','promise.noticeOutcome']
 const manager=(c:Context)=>{if(!['owner','admin'].includes(c.actor.role))fail('FORBIDDEN','An owner or service advisor must approve customer promises.',null,403)}
-const assigned=(c:Context,job:Row)=>{if(!['owner','admin'].includes(c.actor.role)&&!(c.actor.role==='member'&&job.technicianId===c.actor.id))fail('FORBIDDEN','Use your currently assigned repair.',null,403)}
+const assigned=(c:Context,job:Row)=>{if(!['owner','admin'].includes(c.actor.role)&&!(c.actor.role==='member'&&onCrew(job,c.actor.id)))fail('FORBIDDEN','Use your currently assigned repair.',null,403)}
 export const currentPromise=(s:State,jobId:string)=>rows(s,'promise').find(r=>r.jobId===jobId)
 export const currentPromisePlan=(s:State,jobId:string)=>rows(s,'promisePlan').find(r=>r.jobId===jobId)
 const current=(r:Row)=>r.revisions.at(-1)
@@ -123,7 +124,7 @@ export const promises:Handler=(c,command,p)=>{
 /** Apply before the HTTP state's existing per-role projection. Credentials never appear in these records. */
 export function scopedPromises(s:State,actor:Actor):State {
  if(['owner','admin'].includes(actor.role))return s
- const records={...s.records},ids=new Set(rows(s,'job').filter(j=>actor.role==='member'&&j.technicianId===actor.id).map(j=>j.id))
+ const records={...s.records},ids=new Set(rows(s,'job').filter(j=>actor.role==='member'&&onCrew(j,actor.id)).map(j=>j.id))
  for(const kind of ['promise','promisePlan','promiseRevision','promiseNotice']){
   if(actor.role==='agent'){delete records[kind];continue}
   records[kind]=rows(s,kind).filter(r=>ids.has(r.jobId)).map(r=>{

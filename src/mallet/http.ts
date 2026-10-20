@@ -10,6 +10,8 @@ import {diagnosisFormInput} from './ui/diagnostics'
 import {approvalReceipt,approvalResponse,sendApprovalLink} from './approval-door'
 import {internalApprovalCommands} from './approval-links'
 import {internalChaseCommands} from './approval-chasing'
+import {onCrew,scopedCollaboration} from './collaboration'
+import {waitingForMe} from './ui/collaboration'
 import {chasePage} from './ui/chasing'
 import {pricingFormInput,pricingOverrideInput} from './ui/pricing'
 import {inspectionFormInput} from './ui/inspections'
@@ -64,15 +66,15 @@ async function nativeForm(request:Request) {
  return data
 }
 function visible(s:State,actor:Actor):State {
- s=scopedPromises(s,actor)
+ s=scopedCollaboration(scopedPromises(s,actor),actor)
  s=scopedTime(s,actor)
  if(actor.role!=='owner'){const {payRate:_rates,...records}=s.records;s={...s,records}}
  // Diagnostic notes and customer links are native staff evidence; agents never receive them.
  if(actor.role==='agent'){const {diagnosis:_d,diagnosisLink:_l,diagnosisLinkView:_v,approvalLink:_a,approvalChase:_c,chaseOptOut:_o,chaseTask:_t,...records}=s.records;s={...s,records:{...records,event:rows(s,'event').filter(x=>!x.kind.startsWith('diagnosis'))}}}
  if(actor.role==='agent')return withoutInspections(s)
  if(actor.role!=='member')return s
- const jobs=rows(s,'job').filter(j=>j.technicianId===actor.id),ids=new Set(jobs.map(j=>j.id)),assets=new Set(jobs.map(j=>j.assetId))
- return {version:s.version,records:{promiseSettings:rows(s,'promiseSettings'),promise:rows(s,'promise'),promisePlan:rows(s,'promisePlan'),timeEntry:rows(s,'timeEntry'),timeCorrection:rows(s,'timeCorrection'),job:jobs,asset:rows(s,'asset').filter(a=>assets.has(a.id)).map(a=>({...a,visits:a.visits.filter((id:string)=>ids.has(id))})),estimate:rows(s,'estimate').filter(x=>ids.has(x.jobId)),declinedWork:rows(s,'declinedWork').filter(x=>ids.has(x.jobId)),reading:rows(s,'reading').filter(x=>ids.has(x.jobId)),serviceInterval:rows(s,'serviceInterval').filter(x=>ids.has(x.jobId)),quality:rows(s,'quality').filter(x=>ids.has(x.jobId)),diagnosis:rows(s,'diagnosis').filter(x=>ids.has(x.jobId)),inspection:rows(s,'inspection').filter(x=>ids.has(x.jobId)),event:rows(s,'event').filter(x=>ids.has(x.jobId)||x.kind.startsWith('time.')&&x.data.ownerId===actor.id)}}
+ const jobs=rows(s,'job').filter(j=>onCrew(j,actor.id)),ids=new Set(jobs.map(j=>j.id)),assets=new Set(jobs.map(j=>j.assetId))
+ return {version:s.version,records:{jobNote:rows(s,'jobNote'),subtask:rows(s,'subtask'),handoff:rows(s,'handoff'),promiseSettings:rows(s,'promiseSettings'),promise:rows(s,'promise'),promisePlan:rows(s,'promisePlan'),timeEntry:rows(s,'timeEntry'),timeCorrection:rows(s,'timeCorrection'),job:jobs,asset:rows(s,'asset').filter(a=>assets.has(a.id)).map(a=>({...a,visits:a.visits.filter((id:string)=>ids.has(id))})),estimate:rows(s,'estimate').filter(x=>ids.has(x.jobId)),declinedWork:rows(s,'declinedWork').filter(x=>ids.has(x.jobId)),reading:rows(s,'reading').filter(x=>ids.has(x.jobId)),serviceInterval:rows(s,'serviceInterval').filter(x=>ids.has(x.jobId)),quality:rows(s,'quality').filter(x=>ids.has(x.jobId)),diagnosis:rows(s,'diagnosis').filter(x=>ids.has(x.jobId)),inspection:rows(s,'inspection').filter(x=>ids.has(x.jobId)),event:rows(s,'event').filter(x=>ids.has(x.jobId)||x.kind.startsWith('time.')&&x.data.ownerId===actor.id)}}
 }
 async function operators(db:D1Database) {
  const people=(await db.prepare("SELECT id,display_name AS name,role,status FROM oa_operators WHERE status IN ('active','invited') ORDER BY created_at,id").all<{id:string,name:string,role:string,status:string}>()).results
@@ -93,6 +95,9 @@ function formInput(data:FormData) {
  if(input.command==='decline.reprice')input.unitCents=Math.round(Number(input.unitCents)*100)
  if(input.channel)input.method=input.channel
  if(input.command==='approvalLink.create')input.days=Number(input.days)
+ if(input.command==='subtask.create')input.dependsOn=data.getAll('dependsOn')
+ if(input.command==='note.add'){input.mentionIds=data.getAll('mentionIds');input.attachmentIds=data.getAll('attachmentIds')}
+ if(input.command==='handoff.propose')input.keepHelper=data.get('keepHelper')==='yes'
  if(input.command==='chasePolicy.save'){input.linkDays=Number(input.linkDays);input.reminderDays=String(input.reminderDays??'').split(',').map(d=>d.trim()).filter(Boolean).map(Number)}
  if(input.command==='payRate.set'){input.centsPerHour=Math.round(Number(input.rate)*100);delete input.rate}
  return promiseFormInput(data,diagnosisFormInput(data,timeFormInput(data,pricingOverrideInput(data,pricingFormInput(data,inspectionFormInput(data,qualityFormInput(data,input)))))))
@@ -148,6 +153,12 @@ export async function malletResponse(request:Request,original:Bindings):Promise<
     result=await imports.erase(env.DB,actor,input.assetId,auth.authority,{nativeStatements:[{sql:"DELETE FROM mallet_records WHERE kind='event' AND json_extract(value,'$.assetId')=? AND json_extract(value,'$.jobId') IS NULL",params:[input.assetId]}],checkpoint})
    } else if(command==='diagnosisLink.create'){if(!human(actor))throw new HttpError(403,'manager_required');result=await createLink(env.DB,actor,auth.authority,input,env.AUTH_ORIGIN)}
    else if(command==='diagnosis.record'&&actor.role!=='agent'){const checked=await diagnosisInput(env.DB,actor,auth.authority,input);result=await execute(env.DB,actor as any,command,checked.input,checked.authority)}
+   else if(['crew.add','handoff.propose','note.add'].includes(command)&&actor.role!=='agent'){
+    // FLOW-004: people named in a command are resolved here against active operators; client claims are discarded.
+    const people=(await operators(env.DB)).list.filter(o=>o.status==='active'),one=(id:unknown)=>people.find(o=>o.id===id)
+    if(command==='note.add'){const checked=await diagnosisInput(env.DB,actor,auth.authority,{...input,attachmentIds:input.attachmentIds??[]});result=await execute(env.DB,actor as any,command,{...checked.input,mentions:[...new Set(Array.isArray(input.mentionIds)?input.mentionIds:[])].map(id=>one(id)??{id,role:'none'}).map((o:any)=>({id:o.id,name:o.name??'',role:o.role}))},checked.authority)}
+    else{const tech=one(command==='crew.add'?input.technicianId:input.toId);result=await execute(env.DB,actor as any,command,{...input,verifiedTechnician:tech?.role==='member',toName:tech?.name},auth.authority)}
+   }
    else if(command==='inspection.record'&&actor.role!=='agent'){const checked=await inspectionRecordInput(env.DB,actor,auth.authority,input);result=await execute(env.DB,actor as any,command,checked.input,checked.authority)}
    else result=await execute(env.DB,actor as any,command,input,auth.authority)
    if(isApi)return json(actor.role==='agent'?withoutInspectionSource(result):result)
@@ -157,6 +168,7 @@ export async function malletResponse(request:Request,original:Bindings):Promise<
    if(command==='diagnosisLink.create')return page('Customer inspection link',`<section class="card"><p>Copy this read-only link to the customer yourself. Mallet has not sent it, and it will not be shown again.</p><pre>${e(result.url)}</pre><p>Expires ${when(result.expiresAt)}</p><p class="card-foot"><a href="/app/jobs/${e(result.jobId)}#diagnosis">Return to the repair</a></p></section>`,actor,200,{section:'jobs'})
    if(command==='agent.revoke')return redirect('/app/data')
    if(command==='tax.configure')return redirect('/app/tax?saved=1')
+   if(command==='handoff.decline')return redirect('/app/jobs')
    if(['chasePolicy.save','chaseOptOut.record','chaseOptOut.lift'].includes(command)||command==='chaseTask.resolve'&&!input.jobId)return redirect('/app/approvals#'+(command==='chasePolicy.save'?'chase-policy':command==='chaseTask.resolve'?'chase-tasks':'chase-opt-outs'))
    if(command==='approvalChase.recordReply'||command==='chaseTask.resolve')return redirect(`/app/jobs/${encodeURIComponent(String(input.jobId))}#approval-links`)
    if(command==='promise.timeZone')return redirect('/app/jobs#promise-plan')
@@ -193,7 +205,7 @@ export async function malletResponse(request:Request,original:Bindings):Promise<
    return page('Technician efficiency',technicianReportPage(report,actor,(await operators(env.DB)).names),actor,200,frame('jobs',{subtitle:'Sold versus actual hours, productivity and attendance, recomputed from clock events.'}))
   }
   if(path==='/app/time'){if(actor.role==='agent')throw new HttpError(403,'staff_required');return page('Time & attendance',`<div class="narrow">${timePanel(state,actor,(await operators(env.DB)).names)}</div>`,actor,200,frame('jobs'))}
-  if(path==='/app/jobs'){const names=(await operators(env.DB)).names;return page('Repair orders',(actor.role!=='agent'?'<p><a href="/app/time">My time & attendance</a> · <a href="/app/reports/technicians">Technician efficiency</a></p>':'')+promisePlan(state,actor,names)+repairOrders(state,names),actor,200,frame('jobs',{subtitle:'Open repair orders by start time, then invoiced visits.'}))}
+  if(path==='/app/jobs'){const names=(await operators(env.DB)).names;return page('Repair orders',(actor.role!=='agent'?waitingForMe(state,actor)+'<p><a href="/app/time">My time & attendance</a> · <a href="/app/reports/technicians">Technician efficiency</a></p>':'')+promisePlan(state,actor,names)+repairOrders(state,names),actor,200,frame('jobs',{subtitle:'Open repair orders by start time, then invoiced visits.'}))}
   if(path==='/app/customers')return page('Customers',customers(state,actor),actor,200,frame('customers',{subtitle:'Every customer’s vehicle and its visits.'}))
   if(path==='/app/approvals')return page('Approvals',(human(actor)?chasePage(state):'')+approvals(state),actor,200,frame('approvals',{subtitle:'Every price, dispatch plan and invoice a person approved, at its exact revision.'}))
   if(path==='/app/tax'){if(!human(actor))throw new HttpError(403,'manager_required');return page('Shop sales tax',`<div class="narrow">${taxPage(state,url.searchParams.has('saved'))}</div>`,actor,200,frame('tax',{subtitle:'The sales tax rate Mallet applies to new estimates, in USD.'}))}
@@ -207,7 +219,7 @@ export async function malletResponse(request:Request,original:Bindings):Promise<
   const asset=path.match(/^\/app\/assets\/([^/]+)$/),job=path.match(/^\/app\/jobs\/([^/]+)$/)
   const people=asset||job?await operators(env.DB):undefined
   const photos=job&&actor.role!=='agent'&&rows(state,'inspection').some(i=>i.jobId===job[1])?await inspectionPhotos(env.DB,actor,auth.authority,job[1]):[]
-  const view=asset?assetPage(state,asset[1],actor,people!.names,people!.list,Object.fromEntries(bookingFields.filter(k=>url.searchParams.has(k)).map(k=>[k,url.searchParams.get(k)!.slice(0,200)]))):job?jobPage(state,job[1],actor,people!.names,photos,job&&actor.role!=='agent'?await diagnosisMedia(env.DB,actor,auth.authority,job[1]):[]):null
+  const view=asset?assetPage(state,asset[1],actor,people!.names,people!.list,Object.fromEntries(bookingFields.filter(k=>url.searchParams.has(k)).map(k=>[k,url.searchParams.get(k)!.slice(0,200)]))):job?jobPage(state,job[1],actor,people!.names,photos,job&&actor.role!=='agent'?await diagnosisMedia(env.DB,actor,auth.authority,job[1]):[],people!.list):null
   if(view)return page(view.title,view.body,actor,200,frame(asset?'customers':'jobs',{subtitle:view.subtitle}))
   const print=path.match(/^\/app\/estimates\/([^/]+)\/print$/)
   if(print){const estimate=rows(state,'estimate').find(x=>x.id===print[1]);if(!estimate)throw new HttpError(404,'not_found');const rev=estimate.revisions.at(-1);return page('Repair estimate',`<section class="card print-sheet"><p class="sub">${estimate.supplementOf?`Supplement ${e(estimate.sequence)} · incremental scope · `:''}Revision ${e(rev.n)} · ${status(estimate.status)}</p>${estimate.supplementOf?`<p>${e(estimate.reason)}</p><p>Prior accepted scope and completed work remain unchanged. Decide only the incremental lines below.</p>`:''}<ul class="list">${rev.lines.map((l:any)=>`<li class="plain"><span class="row-name">${e(l.description)}</span><span class="row-meta">${e(l.quantity)} × ${money(l.unitCents)} before tax · ${lineTax(l)}</span></li>`).join('')}</ul>${invoiceTotals(rev.totals)}<p>Tell the shop exactly which lines you authorize. The shop records your decision and its evidence against this revision.</p></section>`,actor,200,frame('jobs'))}

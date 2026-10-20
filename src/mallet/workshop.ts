@@ -1,3 +1,4 @@
+import { onCrew } from './collaboration'
 import { approval, bump, event, expectVersion, fail, find, put, rows, selfApproval, text, who, type Context, type Handler, type Row, type State } from './model'
 import { assertQualityReady } from './quality'
 import { quantity } from './money'
@@ -86,7 +87,7 @@ export const workshop: Handler = (c, command, p) => {
     }
     case 'work.record': {
       const job = openJob(c, p)
-      if (c.actor.role === 'member' && job.technicianId !== c.actor.id) fail('FORBIDDEN', 'Technicians record work only on their assigned jobs.', null, 403)
+      if (c.actor.role === 'member' && !onCrew(job, c.actor.id)) fail('FORBIDDEN', 'Technicians record work only on their assigned jobs.', null, 403)
       if (!job.estimateId) fail('NOT_AUTHORISED', 'Approve and record customer authorization before recording work.')
       const { estimate, rev } = estimateForWork(c.s, job, p)
       const lineId = text(p.lineId, 'lineId'), line = rev.lines.find((l: Row) => l.id === lineId)

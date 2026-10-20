@@ -1,3 +1,4 @@
+import {onCrew} from './collaboration'
 import {bump,event,expectVersion,fail,find,integer,put,rows,text,who,type Handler,type Row} from './model'
 import {openJob} from './workshop'
 export const diagnosisCommands=['diagnosis.record','diagnosis.share','diagnosisLink.create','diagnosisLink.revoke'] as const
@@ -22,7 +23,7 @@ export const diagnostics:Handler=(c,command,p)=>{
  if(c.actor.role==='agent')fail('FORBIDDEN','Diagnostics require a native staff session.',null,403)
  if(command==='diagnosis.record') {
   const job=openJob(c,p)
-  if(!manager(c.actor.role)&&job.technicianId!==c.actor.id)fail('FORBIDDEN','Only this repair’s assigned technician, the owner or a service advisor may record diagnostics.',null,403)
+  if(!manager(c.actor.role)&&!onCrew(job,c.actor.id))fail('FORBIDDEN','Only this repair’s assigned technician, the owner or a service advisor may record diagnostics.',null,403)
   const value=content(p)
   if(value.attachments.some((a:any)=>a?.jobId!==job.id))fail('INPUT','Attach only completed media from this repair.',null,400)
   if(p.diagnosisId===undefined||p.diagnosisId===null||p.diagnosisId==='') {

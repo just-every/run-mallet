@@ -1,3 +1,4 @@
+import {onCrew} from './collaboration'
 import {priceRecipe} from './pricing'
 import {bump,choice,event,expectVersion,fail,find,integer,object,put,text,who,type Context,type Handler,type Row} from './model'
 import {quantity} from './money'
@@ -89,7 +90,7 @@ export const inspections:Handler=(c,command,p)=>{
  const item:InspectionItem|undefined=inspection.template.snapshot.items.find((i:InspectionItem)=>i.id===p.itemId)
  if(!item)fail('INPUT','Choose a point on this assigned inspection snapshot.',null,400)
  if(command==='inspection.record') {
-  if(c.actor.id!==job.technicianId)fail('FORBIDDEN','Only this repair’s current assigned technician may record inspection results.',null,403)
+  if(!onCrew(job,c.actor.id))fail('FORBIDDEN','Only this repair’s current crew may record inspection results.',null,403)
   const outcome=choice(p.outcome,['green','yellow','red','not-inspected'],'inspection result'),reason=text(p.reason,'inspection result reason',2000)
   let measurement:null|{name:string;value:number|string;unit:string;grades?:string[]}=null
   const supplied=p.measurementValue!==undefined&&p.measurementValue!==null&&p.measurementValue!==''
