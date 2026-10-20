@@ -26,6 +26,7 @@ export async function estimatePricingJourney(h){
  await h.command('rateProfile.save',{...profileInput,id:profile.id,version:1},{status:409})
  assert.equal(profile.revisions.length,2)
  q=await authorise(h,q)
+ const acceptedRevision=structuredClone(q.revisions[0])
  await h.command('tax.configure',{ratePercent:9,partsTaxable:false,laborTaxable:true})
  for(const line of revision.lines){const j=(await h.state()).records.job.find(j=>j.id===job.id);await h.command('work.record',{jobId:job.id,version:j.version,lineId:line.id,quantity:line.quantity},{as:tech.cookie})}
  let j=(await h.state()).records.job.find(j=>j.id===job.id)
@@ -40,7 +41,7 @@ export async function estimatePricingJourney(h){
  const exported=await h.command('invoice.export',{invoiceId:invoice.id,version:invoice.version})
  const csv=await (await h.request('/api/mallet/exports/'+exported.id)).text()
  assert.match(csv,/"45.00","90.00","6.75","96.75"/);assert.match(csv,/"90.00","225.00","0.00","225.00"/)
- assert.deepEqual((await h.state()).records.estimate[0].revisions[0],revision,'EST-001 the exact original quote remains frozen')
+ assert.deepEqual((await h.state()).records.estimate[0].revisions[0],acceptedRevision,'EST-001 the exact original quote remains frozen')
  await h.api('/auth/operator/status',{operatorId:advisor.id,status:'inactive'})
  const saved=await archive(h),fresh=await installation({bindings:{OWNER_EMAIL:'new-pricing-owner@example.test'}})
  try{await restore(fresh,saved);const before=await h.state(),after=await fresh.state();for(const kind of ['rateProfile','estimate','invoice','export'])assert.deepEqual(after.records[kind],before.records[kind],'EST-001 / OPS-001 exact pricing, consent and invoice evidence restores');await fresh.state({as:advisor.cookie,status:401})}finally{await fresh.close()}
