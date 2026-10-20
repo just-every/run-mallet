@@ -95,7 +95,7 @@ function formInput(data:FormData) {
   if(input.feeDescription)input.lines.push({kind:'fee',description:input.feeDescription,quantity:1,unitCents:Math.round(Number(input.feePrice)*100),feeTaxable:input.feeTaxable==='yes'})
   if(input.rateProfileSource){let source:any;try{source=JSON.parse(input.rateProfileSource)}catch{throw new HttpError(400,'invalid_rate_profile')};input.rateProfileId=source.id;input.rateProfileVersion=source.version}
  }
- if(input.command==='rateProfile.save'){input.laborRateCents=Math.round(Number(input.laborRateUsd)*100);if(!input.id)delete input.id} 
+ if(input.command==='rateProfile.save'){input.laborRateCents=Math.round(Number(input.laborRateUsd)*100);if(!input.id)delete input.id}
  if(input.command==='estimate.prepare'&&input.supplement==='yes')input.supplement=true
  if(input.command==='estimate.prepare'&&input.replacementSource) {
   let source:any;try{source=JSON.parse(input.replacementSource)}catch{throw new HttpError(400,'invalid_replacement')}
