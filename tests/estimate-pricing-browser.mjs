@@ -37,6 +37,7 @@ export async function estimatePricingBrowser(){
   const panel=p.locator('section.card').filter({has:p.getByRole('heading',{name:'Estimate & customer authorization',exact:true})})
   assert.match(await panel.innerText(),/Metro fleet[\s\S]*\$45\.00[\s\S]*\$90\.00[\s\S]*\$12\.50[\s\S]*\$335\.19/)
   await shot('04-priced-estimate',panel)
+  await p.goto(h.origin+'/app?ro='+job.id);assert.match(await p.locator('#ro').innerText(),/2 × \$45\.00[\s\S]*2.5 × \$90\.00/);await shot('07-board-estimate',p.locator('#ro'))
   let q=(await h.state()).records.estimate[0]
   const print=await context.newPage();await print.goto(h.origin+'/app/estimates/'+q.id+'/print');assert.match(await print.locator('main').innerText(),/\$45\.00[\s\S]*\$90\.00[\s\S]*\$335\.19/)
   for(const width of [1440,390]){await print.setViewportSize({width,height:1000});await print.screenshot({path:`.cache/estimate-pricing-browser/05-print-${width}.png`})}await print.close()
@@ -61,7 +62,12 @@ export async function estimatePricingBrowser(){
   const invoice=p.locator('section.card').filter({has:p.getByRole('heading',{name:'Handover invoice',exact:true})})
   assert.match(await invoice.innerText(),/\$45\.00[\s\S]*\$90\.00[\s\S]*\$335\.19/)
   await shot('06-invoice',invoice)
-  await p.goto(h.origin+'/app?q='+encodeURIComponent(job.asset.identifier));await shot('07-board-estimate',p.locator('main'))
+  await p.goto(h.origin+'/app/jobs');await p.getByText('Metro fleet · fleet · $100.00 per hour · revision 1',{exact:true}).click()
+  const edit=form('rateProfile.save');await edit.getByLabel('Labor hourly rate (USD)',{exact:true}).fill('110');await edit.getByLabel('Reason for this revision',{exact:true}).fill('Next-period fleet agreement')
+  await shot('10-rate-revision-form',edit);await submit(edit,'Save rate revision')
+  await p.getByText('Metro fleet · fleet · $110.00 per hour · revision 2',{exact:true}).click();await p.getByText('Rate history',{exact:true}).click()
+  await shot('11-rate-history',p.locator('#rate-profiles'))
+  assert.equal((await h.state()).records.estimate[0].revisions[0].rateProfile.snapshot.laborRateCents,10000,'EST-001 native rate edit keeps the accepted profile snapshot')
   assert.deepEqual(errors,[])
  }finally{await browser?.close();await h.close()}
 }

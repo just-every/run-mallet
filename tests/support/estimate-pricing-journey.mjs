@@ -43,6 +43,12 @@ export async function estimatePricingJourney(h){
  assert.match(csv,/"45.00","90.00","6.75","96.75"/);assert.match(csv,/"90.00","225.00","0.00","225.00"/)
  assert.deepEqual((await h.state()).records.estimate[0].revisions[0],acceptedRevision,'EST-001 the exact original quote remains frozen')
  await h.api('/auth/operator/status',{operatorId:advisor.id,status:'inactive'})
+ const additional=await booking(h,{asset:(await h.state()).records.asset[0],technicianId:tech.id,bayId:'Pricing second bay',startAt:'2026-12-03T09:00:00Z',endAt:'2026-12-03T10:00:00Z'})
+ const household=await h.command('estimate.prepare',{jobId:additional.job.id,version:additional.job.version,rateProfileId:customer.id,rateProfileVersion:customer.version,lines:[{kind:'labor',description:'Household labor',quantity:.333,unitCents:1,unitDiscountCents:1},{kind:'fee',description:'Exempt handling',quantity:1,unitCents:100,feeTaxable:false}]})
+ assert.equal(household.revisions[0].rateProfile.snapshot.kind,'customer')
+ assert.equal(household.revisions[0].lines[0].subtotalCents,3996,'EST-001 customer profile: .333 × ($120.00 − $.01) rounds $39.95667 half up to $39.96')
+ assert.equal(household.revisions[0].lines[0].salesTaxCents,360,'EST-001 the later taxable-labor setting rounds $3.5964 half up to $3.60')
+ assert.equal(household.revisions[0].lines[1].salesTaxCents,0,'EST-001 explicit fee exemption is frozen separately from parts/labor taxability')
  const saved=await archive(h),fresh=await installation({bindings:{OWNER_EMAIL:'new-pricing-owner@example.test'}})
  try{await restore(fresh,saved);const before=await h.state(),after=await fresh.state();for(const kind of ['rateProfile','estimate','invoice','export'])assert.deepEqual(after.records[kind],before.records[kind],'EST-001 / OPS-001 exact pricing, consent and invoice evidence restores');await fresh.state({as:advisor.cookie,status:401})}finally{await fresh.close()}
 }
