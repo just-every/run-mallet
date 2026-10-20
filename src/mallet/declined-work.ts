@@ -21,7 +21,7 @@ export const declinedWork:Handler=(c,command,p)=>{
   const job=find(c.s,'job',p.jobId)
   if(job.assetId!==item.assetId||job.id===item.jobId)fail('INPUT','Reprice on a later visit for this same vehicle.',null,400)
   const reason=text(p.reason,'current need review',2000),unitCents=integer(p.unitCents,'new unit price'),quantity=p.quantity??item.line.quantity
-  const quote=estimates(c,'estimate.prepare',{jobId:job.id,version:p.version,notes:`Repriced declined work: ${reason}`,lines:[{kind:item.line.kind,description:item.line.description,quantity,unitCents,pierItemId:item.line.pierItemId}]})
+  const quote=estimates(c,'estimate.prepare',{jobId:job.id,version:p.version,notes:`Repriced declined work: ${reason}`,lines:[{kind:item.line.kind,description:item.line.description,quantity,unitCents,...(item.line.kind==='fee'?{feeTaxable:item.line.taxable}:{}),pierItemId:item.line.pierItemId}]})
   const row=bump(c.s,'declinedWork',item,{proposals:[...item.proposals,{jobId:job.id,estimateId:quote.id,revision:1,lineId:quote.revisions[0].lines[0].id,by:who(c),at:c.now,reason}]})
   event(c,command,job.id,row.id,{originalEstimateId:item.estimateId,originalRevision:item.revision,newEstimateId:quote.id,reason})
   return {jobId:job.id,item:row,estimate:quote}

@@ -1,3 +1,4 @@
+import {resolveRateProfile} from './rate-profiles'
 import { approval, bump, choice, event, expectVersion, fail, find, integer, put, selfApproval, text, who, type Context, type Handler, type Row } from './model'
 import { lines, totals } from './money'
 import { openJob } from './workshop'
@@ -6,9 +7,11 @@ import { jobEstimates, normalizeReplacements, validateReplacements } from './sup
 
 export const current = (estimate: Row) => estimate.revisions[estimate.revisions.length - 1]
 function revision(c: Context, p: any, n: number, job: Row) {
-  const priced = normalizeReplacements(c, job, p.lines, lines(p.lines, configuredTax(c.s)))
+  const rateProfile = resolveRateProfile(c, p)
+  const raw = rateProfile && Array.isArray(p.lines) ? p.lines.map((line:any)=>line.kind==='labor'||line.kind==='labour'?{...line,unitCents:rateProfile.snapshot.laborRateCents}:line) : p.lines
+  const priced = normalizeReplacements(c, job, raw, lines(raw, configuredTax(c.s)))
   validateReplacements(c, job, priced, p.estimateId)
-  return { n, lines: priced, totals: totals(priced), notes: text(p.notes, 'notes', 4000, true), preparedBy: who(c), preparedAt: c.now, approval: null }
+  return { n, ...(rateProfile?{rateProfile}:{}), lines: priced, totals: totals(priced), notes: text(p.notes, 'notes', 4000, true), preparedBy: who(c), preparedAt: c.now, approval: null }
 }
 function exact(c: Context, p: any) {
   const estimate = find(c.s, 'estimate', p.estimateId)

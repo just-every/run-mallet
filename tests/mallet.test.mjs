@@ -280,3 +280,6 @@ test('PART-006: supplier backorder, approved charge, internal advisor changes, a
 test('PART-006: approved special order, retained delay, advisor review and physical receipt through native forms at 1440/390',specialPartBrowser)
 
 test('FLOW-003 / OPS-001: deterministic routing, closed-day deadlines, durable escalation and resolution through public doors',routingJourney)
+
+test('EST-001 / OPS-001: fleet/customer rates, direct costs, fees and discounts freeze through consent, actuals, invoice and recovery',()=>run(async h=>{const {estimatePricingJourney}=await import('./support/estimate-pricing-journey.mjs');await estimatePricingJourney(h)}))
+test('EST-001: rate profile and discounted mixed estimate through native forms at 1440/390',async()=>{const {estimatePricingBrowser}=await import('./estimate-pricing-browser.mjs');await estimatePricingBrowser()})

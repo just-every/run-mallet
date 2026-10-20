@@ -19,7 +19,7 @@ function suggested(c: Context, job: Row) {
       const billed = { ...line, quantityMilli, quantity: quantityMilli / 1000 }
       priced.push({ ...billed, ...price(billed), sourceEstimateId: estimate.id, sourceRevision: rev.n })
     }
-    decisions.push({estimateId: estimate.id, revision: rev.n, approval: structuredClone(rev.approval), customerAuthorisation: structuredClone(estimate.authorisation), supplementOf: estimate.supplementOf ?? null})
+    decisions.push({...(rev.rateProfile?{rateProfile:structuredClone(rev.rateProfile)}:{}),estimateId: estimate.id, revision: rev.n, approval: structuredClone(rev.approval), customerAuthorisation: structuredClone(estimate.authorisation), supplementOf: estimate.supplementOf ?? null})
   }
   if (!priced.length || job.actuals.some((a: any) => !priced.some(l => l.sourceEstimateId === a.estimateId && l.sourceRevision === a.revision && l.id === a.lineId))) fail('WORK_AUTHORITY', 'Every invoice line must come from authorized actual work.')
   const estimate = find(c.s, 'estimate', job.estimateId), rev = current(estimate)
@@ -29,7 +29,7 @@ const csvCell = (value: unknown) => { const raw = String(value ?? ''), safe = /^
 export const exportColumns = ['InvoiceNumber', 'CustomerName', 'CustomerEmail', 'Vehicle', 'Identifier', 'JobId', 'EstimateRevision', 'Description', 'Kind', 'Quantity', 'UnitUSD', 'SubtotalUSD', 'SalesTaxUSD', 'TotalUSD', 'Currency', 'EstimateId']
 const dollars = (value: number) => `${Math.floor(value / 100)}.${String(value % 100).padStart(2, '0')}`
 function csv(invoice: Row) {
-  return [exportColumns, ...invoice.lines.map((line: any) => [invoice.number, invoice.customer.customerName, invoice.customer.customerEmail, invoice.customer.label, invoice.customer.identifier, invoice.jobId, line.sourceRevision ?? invoice.estimateRevision, line.description, line.kind, line.quantity, dollars(line.unitCents), dollars(line.subtotalCents), dollars(line.salesTaxCents), dollars(line.totalCents), 'USD', line.sourceEstimateId ?? invoice.estimateId])].map(row => row.map(csvCell).join(',')).join('\r\n') + '\r\n'
+  return [exportColumns, ...invoice.lines.map((line: any) => [invoice.number, invoice.customer.customerName, invoice.customer.customerEmail, invoice.customer.label, invoice.customer.identifier, invoice.jobId, line.sourceRevision ?? invoice.estimateRevision, line.description, line.kind, line.quantity, dollars(line.unitCents-(line.unitDiscountCents??0)), dollars(line.subtotalCents), dollars(line.salesTaxCents), dollars(line.totalCents), 'USD', line.sourceEstimateId ?? invoice.estimateId])].map(row => row.map(csvCell).join(',')).join('\r\n') + '\r\n'
 }
 export const invoices: Handler = (c, command, p) => {
   switch (command) {

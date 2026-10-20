@@ -69,7 +69,7 @@ function detail(r:Repair,state:any,names:Names,actor:Actor,picked:boolean) {
  if(auth){
   const yes=rev.lines.filter((l:any)=>auth.lineIds.includes(l.id)),no=rev.lines.filter((l:any)=>!auth.lineIds.includes(l.id)),at=`${when(auth.at,undefined,'short')} · ${e(auth.method)}`
   work=`<section class="worksection"><h3>Approved work</h3>${yes.map((l:any)=>line(l,'yes',`Authorized ${at}`)).join('')}${no.length?`<h3>Declined work</h3>${no.map((l:any)=>line(l,'no',`Declined ${at}`)).join('')}`:''}<p class="total">Authorized total <strong>${money(auth.totals.totalCents)}</strong> including ${taxRate(yes)}</p></section>`
- } else if(estimate) work=`<section class="worksection"><div class="section-head"><h3>Estimate, revision ${e(rev.n)}</h3>${status(estimate.status)}</div>${rev.lines.map((l:any)=>line(l,'',`${e(l.quantity)} × ${money(l.unitCents)} before tax`)).join('')}<p class="total">Total <strong>${money(rev.totals.totalCents)}</strong> including ${taxRate(rev.lines)}</p></section>`
+ } else if(estimate) work=`<section class="worksection"><div class="section-head"><h3>Estimate, revision ${e(rev.n)}</h3>${status(estimate.status)}</div>${rev.lines.map((l:any)=>line(l,'',`${e(l.quantity)} × ${money(l.unitCents-(l.unitDiscountCents??0))} before tax`)).join('')}<p class="total">Total <strong>${money(rev.totals.totalCents)}</strong> including ${taxRate(rev.lines)}</p></section>`
  else work='<section class="worksection"><h3>Estimate</h3><p class="muted">No estimate prepared yet.</p></section>'
  const plan=r.plans[0]
  let decide=''

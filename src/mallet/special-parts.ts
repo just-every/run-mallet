@@ -31,7 +31,7 @@ export const specialParts:Handler=(c,command,p)=>{
   const used=job.actuals.filter((a:any)=>a.estimateId===estimate.id&&a.revision===rev.n&&a.lineId===line.id).reduce((n:number,a:any)=>n+a.quantityMilli,0),remaining=authorizedCap(c.s,estimate,line)-used
   if(remaining<=0)fail('NO_REMAINING_PART','This authorized part has already been consumed or replaced.')
   if(rows(c.s,'specialPart').some(r=>r.estimateId===estimate.id&&r.revision===rev.n&&r.lineId===line.id))fail('DUPLICATE_SPECIAL_PART','This approved part already has a special-order record. Update that record instead.')
-  const part=put(c.s,'specialPart',{jobId:job.id,estimateId:estimate.id,revision:rev.n,lineId:line.id,charge:{description:line.description,quantityMilli:remaining,quantity:remaining/1000,unitCents:line.unitCents,taxable:line.taxable,taxRateMillionths:line.taxRateMillionths,...price({...line,quantityMilli:remaining})},supplier:text(p.supplier,'supplier',200),orderReference:text(p.orderReference,'supplier order reference',200),revisions:[evidence(c,p,1)],receipt:null})
+  const part=put(c.s,'specialPart',{jobId:job.id,estimateId:estimate.id,revision:rev.n,lineId:line.id,charge:{description:line.description,quantityMilli:remaining,quantity:remaining/1000,unitCents:line.unitCents-(line.unitDiscountCents??0),taxable:line.taxable,taxRateMillionths:line.taxRateMillionths,...price({...line,quantityMilli:remaining})},supplier:text(p.supplier,'supplier',200),orderReference:text(p.orderReference,'supplier order reference',200),revisions:[evidence(c,p,1)],receipt:null})
   return synchronize(c,job,part,'backorder')
  }
  const part=find(c.s,'specialPart',p.specialPartId);expectVersion(part,p.partVersion)
