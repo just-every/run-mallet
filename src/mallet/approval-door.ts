@@ -7,20 +7,40 @@ import {sharedDiagnoses} from './diagnostics'
 import {approvalPage,receiptPage} from './ui/approval'
 import {page} from './ui/shell'
 
+const newToken=()=>btoa(String.fromCharCode(...crypto.getRandomValues(new Uint8Array(32)))).replaceAll('+','-').replaceAll('/','_').replaceAll('=','')
+const STOP_NOTE='To stop reminders about estimates, open the link and choose Stop reminders.'
 /** Owner/admin email the link: the token is shown once to the sender and mailed; only its SHA-256 is stored. */
 export async function sendApprovalLink(env:any,actor:Actor,authority:Authority,input:any) {
  const mail=operatorMail(env)
  if(!mail)throw new MalletError('MAIL_UNAVAILABLE','Configure the shop’s mail provider before emailing approval links.',409)
- const token=btoa(String.fromCharCode(...crypto.getRandomValues(new Uint8Array(32)))).replaceAll('+','-').replaceAll('/','_').replaceAll('=','')
+ const token=newToken()
  const link=await execute(env.DB,actor as any,'approvalLink.create',{estimateId:input.estimateId,version:input.version,revision:input.revision,days:input.days},authority)
  await env.DB.prepare('INSERT INTO mallet_approval_links(id,token_hash,estimate_id,created_at) VALUES(?,?,?,?)').bind(link.id,await digest(token),link.estimateId,link.createdAt).run()
  const url=`${env.AUTH_ORIGIN}/approve/${token}`,state=await load(env.DB),job=rows(state,'job').find(j=>j.id===link.jobId)
  let outcome:any
- try{outcome=await mail.send({deliveryId:link.id,from:env.MAIL_FROM,to:[link.to],subject:`Review your repair estimate: ${job?.title??'repair'}`,text:`Your repair shop sent an estimate for you to approve or decline line by line.\n\n${url}\n\nThis link expires ${link.expiresAt} (UTC).`,html:`<p>Your repair shop sent an estimate for you to approve or decline line by line.</p><p><a href="${url}">Review the estimate</a></p><p>This link expires ${link.expiresAt} (UTC).</p>`,headers:{}})}
+ try{outcome=await mail.send({deliveryId:link.id,from:env.MAIL_FROM,to:[link.to],subject:`Review your repair estimate: ${job?.title??'repair'}`,text:`Your repair shop sent an estimate for you to approve or decline line by line.\n\n${url}\n\nThis link expires ${link.expiresAt} (UTC). ${STOP_NOTE}`,html:`<p>Your repair shop sent an estimate for you to approve or decline line by line.</p><p><a href="${url}">Review the estimate</a></p><p>This link expires ${link.expiresAt} (UTC). ${STOP_NOTE}</p>`,headers:{}})}
  catch{outcome={status:'uncertain',provider:String(env.MAIL_PROVIDER??'mail'),providerMessageId:null}}
  const recorded=await execute(env.DB,actor as any,'approvalLink.delivery',{linkId:link.id,version:link.version,status:outcome.status,provider:outcome.provider,providerMessageId:outcome.providerMessageId},authority)
  return {...recorded,url}
 }
+const SCHEDULER={id:'mallet-scheduler',name:'Scheduled reminders',role:'system'} as any
+/** EST-006 cron: claim due steps in one write, then make one provider call per claim and record its answer as given. */
+export async function runApprovalChase(original:Bindings,at:number) {
+ const env:any=runtimeBindings(original),now=new Date(at).toISOString(),mail=operatorMail(env)
+ const claims=await execute(env.DB,SCHEDULER,'approvalChase.sweep',{},undefined,now)
+ for(const claim of claims) {
+  let outcome:any={status:'unavailable',provider:'none',providerMessageId:null}
+  if(mail) {
+   const token=newToken(),url=`${env.AUTH_ORIGIN}/approve/${token}`,job=rows(await load(env.DB),'job').find(j=>j.id===claim.jobId)
+   await env.DB.prepare('INSERT INTO mallet_approval_reminder_tokens(token_hash,link_id,created_at) VALUES(?,?,?)').bind(await digest(token),claim.linkId,now).run()
+   try{outcome=await mail.send({deliveryId:`${claim.chaseId}:${claim.step}`,from:env.MAIL_FROM,to:[claim.to],subject:`Reminder: your repair estimate is waiting: ${job?.title??'repair'}`,text:`Your repair shop is still waiting for your decision on this estimate.\n\n${url}\n\nThis link expires ${claim.expiresAt} (UTC). ${STOP_NOTE}`,html:`<p>Your repair shop is still waiting for your decision on this estimate.</p><p><a href="${url}">Review the estimate</a></p><p>This link expires ${claim.expiresAt} (UTC). ${STOP_NOTE}</p>`,headers:{}})}
+   catch{outcome={status:'uncertain',provider:String(env.MAIL_PROVIDER??'mail'),providerMessageId:null}}
+  }
+  await execute(env.DB,SCHEDULER,'approvalChase.outcome',{chaseId:claim.chaseId,step:claim.step,status:outcome.status,provider:outcome.provider,providerMessageId:outcome.providerMessageId},undefined,now)
+ }
+ return claims.length
+}
+const stopped=()=>page('Reminders stopped','<section class="card"><p>Your repair shop will not send you automatic estimate reminders. You can still use any open approval link, and the shop may still contact you about your repair.</p></section>',undefined,200,{heading:false})
 const unavailable=(status=404)=>page('Link not available','<section class="card"><p>This approval link is not available. Ask your repair shop for a new link.</p></section>',undefined,status,{heading:false})
 // same-origin: the token never leaves in a Referer, while the form's own POST still carries its Origin.
 function noStore(response:Response){response.headers.set('referrer-policy','same-origin');response.headers.set('x-robots-tag','noindex, nofollow');return response}
@@ -32,7 +52,7 @@ export async function approvalResponse(request:Request,original:Bindings):Promis
  if(url.origin!==env.AUTH_ORIGIN)return new Response('Not found',{status:404})
  if(!['GET','HEAD','POST'].includes(request.method))return unavailable(405)
  if(!/^[A-Za-z0-9_-]{43}$/.test(match[1]))return unavailable()
- const found=await env.DB.prepare('SELECT id FROM mallet_approval_links WHERE token_hash=?').bind(await digest(match[1])).first<{id:string}>()
+ const found=await env.DB.prepare('SELECT id FROM mallet_approval_links WHERE token_hash=?1 UNION ALL SELECT link_id AS id FROM mallet_approval_reminder_tokens WHERE token_hash=?1').bind(await digest(match[1])).first<{id:string}>()
  if(!found)return unavailable()
  const s=await load(env.DB),link=rows(s,'approvalLink').find(l=>l.id===found.id)
  if(!link)return unavailable()
@@ -44,6 +64,7 @@ export async function approvalResponse(request:Request,original:Bindings):Promis
  }
  if(request.headers.get('origin')!==env.AUTH_ORIGIN)return unavailable(403)
  const form=new URLSearchParams(await request.text()),revision=estimate.revisions.find((r:any)=>r.n===link.revision)
+ if(form.get('action')==='stop-reminders'){await execute(env.DB,{id:'approval-link:'+link.id,name:'Customer',role:'customer'} as any,'chaseOptOut.customer',{linkId:link.id});return noStore(await stopped())}
  for(const line of revision.lines)if(!['approve','decline'].includes(form.get('line-'+line.id)??''))return noStore(await page('Review your estimate',approvalPage(link,estimate,job,asset,sharedDiagnoses(s,job.id),'Choose approve or decline for every line.'),undefined,400))
  const input={linkId:link.id,approvedLineIds:revision.lines.filter((l:any)=>form.get('line-'+l.id)==='approve').map((l:any)=>l.id),typedName:form.get('typedName')??'',consent:form.get('consent')==='yes'}
  try {

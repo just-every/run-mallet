@@ -9,6 +9,8 @@ import {createLink,customerLinkResponse,diagnosisInput,diagnosisMedia} from './d
 import {diagnosisFormInput} from './ui/diagnostics'
 import {approvalReceipt,approvalResponse,sendApprovalLink} from './approval-door'
 import {internalApprovalCommands} from './approval-links'
+import {internalChaseCommands} from './approval-chasing'
+import {chasePage} from './ui/chasing'
 import {pricingFormInput,pricingOverrideInput} from './ui/pricing'
 import {inspectionFormInput} from './ui/inspections'
 import {inspectionRecordInput,inspectionPhotos} from './inspection-photo'
@@ -66,7 +68,7 @@ function visible(s:State,actor:Actor):State {
  s=scopedTime(s,actor)
  if(actor.role!=='owner'){const {payRate:_rates,...records}=s.records;s={...s,records}}
  // Diagnostic notes and customer links are native staff evidence; agents never receive them.
- if(actor.role==='agent'){const {diagnosis:_d,diagnosisLink:_l,diagnosisLinkView:_v,approvalLink:_a,...records}=s.records;s={...s,records:{...records,event:rows(s,'event').filter(x=>!x.kind.startsWith('diagnosis'))}}}
+ if(actor.role==='agent'){const {diagnosis:_d,diagnosisLink:_l,diagnosisLinkView:_v,approvalLink:_a,approvalChase:_c,chaseOptOut:_o,chaseTask:_t,...records}=s.records;s={...s,records:{...records,event:rows(s,'event').filter(x=>!x.kind.startsWith('diagnosis'))}}}
  if(actor.role==='agent')return withoutInspections(s)
  if(actor.role!=='member')return s
  const jobs=rows(s,'job').filter(j=>j.technicianId===actor.id),ids=new Set(jobs.map(j=>j.id)),assets=new Set(jobs.map(j=>j.assetId))
@@ -91,6 +93,7 @@ function formInput(data:FormData) {
  if(input.command==='decline.reprice')input.unitCents=Math.round(Number(input.unitCents)*100)
  if(input.channel)input.method=input.channel
  if(input.command==='approvalLink.create')input.days=Number(input.days)
+ if(input.command==='chasePolicy.save'){input.linkDays=Number(input.linkDays);input.reminderDays=String(input.reminderDays??'').split(',').map(d=>d.trim()).filter(Boolean).map(Number)}
  if(input.command==='payRate.set'){input.centsPerHour=Math.round(Number(input.rate)*100);delete input.rate}
  return promiseFormInput(data,diagnosisFormInput(data,timeFormInput(data,pricingOverrideInput(data,pricingFormInput(data,inspectionFormInput(data,qualityFormInput(data,input)))))))
 }
@@ -134,7 +137,7 @@ export async function malletResponse(request:Request,original:Bindings):Promise<
    const data=path==='/app/actions'?formInput(await nativeForm(request)):await body(request),command=String(data.command),input=data.input??data
    submitted={command,input}
    let result:any
-   if(internalPromiseCommands.includes(command)||internalApprovalCommands.includes(command))throw new HttpError(404,'unknown_command')
+   if(internalPromiseCommands.includes(command)||internalApprovalCommands.includes(command)||internalChaseCommands.includes(command))throw new HttpError(404,'unknown_command')
    if(command==='promise.approveAndNotify')result=await sendPromiseNotice(env,actor,auth.authority,input)
    else if(command==='approvalLink.create'){if(!human(actor))throw new HttpError(403,'manager_required');result=await sendApprovalLink(env,actor,auth.authority,input)}
    else if(command.startsWith('agent.')) result=await agentKey(env.DB,actor,auth.authority,command,input)
@@ -154,6 +157,8 @@ export async function malletResponse(request:Request,original:Bindings):Promise<
    if(command==='diagnosisLink.create')return page('Customer inspection link',`<section class="card"><p>Copy this read-only link to the customer yourself. Mallet has not sent it, and it will not be shown again.</p><pre>${e(result.url)}</pre><p>Expires ${when(result.expiresAt)}</p><p class="card-foot"><a href="/app/jobs/${e(result.jobId)}#diagnosis">Return to the repair</a></p></section>`,actor,200,{section:'jobs'})
    if(command==='agent.revoke')return redirect('/app/data')
    if(command==='tax.configure')return redirect('/app/tax?saved=1')
+   if(['chasePolicy.save','chaseOptOut.record','chaseOptOut.lift'].includes(command)||command==='chaseTask.resolve'&&!input.jobId)return redirect('/app/approvals#'+(command==='chasePolicy.save'?'chase-policy':command==='chaseTask.resolve'?'chase-tasks':'chase-opt-outs'))
+   if(command==='approvalChase.recordReply'||command==='chaseTask.resolve')return redirect(`/app/jobs/${encodeURIComponent(String(input.jobId))}#approval-links`)
    if(command==='promise.timeZone')return redirect('/app/jobs#promise-plan')
    if(command.startsWith('time.')&&!input.jobId)return redirect('/app/time')
    if(command==='payRate.set')return redirect('/app/reports/technicians#tech-'+encodeURIComponent(input.technicianId))
@@ -189,7 +194,7 @@ export async function malletResponse(request:Request,original:Bindings):Promise<
   if(path==='/app/time'){if(actor.role==='agent')throw new HttpError(403,'staff_required');return page('Time & attendance',`<div class="narrow">${timePanel(state,actor,(await operators(env.DB)).names)}</div>`,actor,200,frame('jobs'))}
   if(path==='/app/jobs'){const names=(await operators(env.DB)).names;return page('Repair orders',(actor.role!=='agent'?'<p><a href="/app/time">My time & attendance</a> · <a href="/app/reports/technicians">Technician efficiency</a></p>':'')+promisePlan(state,actor,names)+repairOrders(state,names),actor,200,frame('jobs',{subtitle:'Open repair orders by start time, then invoiced visits.'}))}
   if(path==='/app/customers')return page('Customers',customers(state,actor),actor,200,frame('customers',{subtitle:'Every customer’s vehicle and its visits.'}))
-  if(path==='/app/approvals')return page('Approvals',approvals(state),actor,200,frame('approvals',{subtitle:'Every price, dispatch plan and invoice a person approved, at its exact revision.'}))
+  if(path==='/app/approvals')return page('Approvals',(human(actor)?chasePage(state):'')+approvals(state),actor,200,frame('approvals',{subtitle:'Every price, dispatch plan and invoice a person approved, at its exact revision.'}))
   if(path==='/app/tax'){if(!human(actor))throw new HttpError(403,'manager_required');return page('Shop sales tax',`<div class="narrow">${taxPage(state,url.searchParams.has('saved'))}</div>`,actor,200,frame('tax',{subtitle:'The sales tax rate Mallet applies to new estimates, in USD.'}))}
   if(path==='/app/move-in')return page('Move into Mallet',moveIn(actor),actor,200,frame('move-in'))
   if(path==='/app/data'){if(!human(actor))throw new HttpError(403,'manager_required');const keys=await env.DB.prepare('SELECT id,label,expires_at,revoked_at FROM mallet_agent_keys ORDER BY created_at DESC').all();return page('Data & access',dataPage(actor,keys.results),actor,200,frame('data'))}

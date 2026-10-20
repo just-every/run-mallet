@@ -6,7 +6,8 @@ import {reportJourney} from './support/report-journey.mjs'
 import {diagnosisJourney} from './support/diagnosis-journey.mjs'
 import {diagnosisBrowser} from './diagnosis-browser.mjs'
 import {approvalJourney} from './support/approval-journey.mjs'
-import {approvalBrowser} from './approval-browser.mjs'
+import {approvalBrowser,chaseBrowser} from './approval-browser.mjs'
+import {chaseJourney} from './support/chase-journey.mjs'
 import {timeJourney} from './support/time-journey.mjs'
 import {pricingBrowser} from './pricing-browser.mjs'
 import {pricingJourney} from './support/pricing-journey.mjs'
@@ -253,6 +254,10 @@ test('DIAG-001: native diagnosis form, advisor sharing and customer link at 1440
 test('EST-003: emailed approval link, signed line decision, replay, stale and revoked links and receipt recovery',()=>run(approvalJourney))
 
 test('EST-003: customer approves and declines lines on a phone with a signed receipt at 390/1440',approvalBrowser)
+
+test('EST-006: scheduled reminders chase only the current undecided revision; reply, decision and opt-out stop them; failures and silence open advisor tasks',chaseJourney)
+
+test('EST-006: native chase policy, reminder history, customer opt-out and advisor task at 1440/390',chaseBrowser)
 
 
 test('FLOW-002: delayed required parts, resource/labor plan, advisor promise notices and archive recovery',()=>run(promiseJourney))

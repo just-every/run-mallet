@@ -3,6 +3,7 @@ import {time,timeCommands,timeMemberCommands} from './time'
 import {payRates,payRateCommands} from './pay-rates'
 import {diagnostics,diagnosisCommands,diagnosisMemberCommands} from './diagnostics'
 import {approvalLinks,approvalLinkCommands} from './approval-links'
+import {approvalChasing,chaseCommands,internalChaseCommands} from './approval-chasing'
 import {pricing,pricingCommands} from './pricing'
 import {inspections,inspectionCommands,inspectionMemberCommands} from './inspections'
 import { quality, qualityCommands } from './quality'
@@ -14,7 +15,7 @@ import { invoices } from './invoices'
 import { tax, migrateSalesTax } from './tax'
 
 export type Row = { id: string; version: number; [key: string]: any }
-export type Actor = { id: string; name: string; role: 'owner' | 'admin' | 'member' | 'agent' | 'customer' }
+export type Actor = { id: string; name: string; role: 'owner' | 'admin' | 'member' | 'agent' | 'customer' | 'system' }
 export type State = { version: number; records: Record<string, Row[]> }
 export type Context = { s: State; actor: Actor; now: string }
 export type Handler = (c: Context, command: string, p: any) => any
@@ -72,16 +73,17 @@ export function approval(c: Context, kind: string, row: Row, revision: number, p
   return put(c.s, 'approval', { subjectKind: kind, subjectId: row.id, revision, subjectVersion: row.version, preparedBy, approvedBy: who(c), decision: 'approved', at: c.now })
 }
 const agentCommands = new Set(['estimate.prepare', 'estimate.revise', 'invoice.prepare', 'dispatch.prepare'])
-const commands = new Set([...promiseCommands,...approvalLinkCommands,...timeCommands,...payRateCommands,...diagnosisCommands,...pricingCommands,...inspectionCommands,...qualityCommands,'decline.record', 'decline.reprice', 'reading.record', 'serviceInterval.save', 'tax.configure', 'asset.create', 'asset.update', 'job.book', 'job.complete', 'work.record', 'estimate.prepare', 'estimate.revise', 'estimate.approve', 'estimate.markSent', 'estimate.authorise', 'invoice.prepare', 'invoice.approve', 'invoice.export', 'dispatch.prepare', 'dispatch.approve'])
+const customerCommands = ['estimate.customerDecide', 'chaseOptOut.customer'], systemCommands = ['approvalChase.sweep', 'approvalChase.outcome']
+const commands = new Set([...promiseCommands,...approvalLinkCommands,...chaseCommands,...internalChaseCommands,...timeCommands,...payRateCommands,...diagnosisCommands,...pricingCommands,...inspectionCommands,...qualityCommands,'decline.record', 'decline.reprice', 'reading.record', 'serviceInterval.save', 'tax.configure', 'asset.create', 'asset.update', 'job.book', 'job.complete', 'work.record', 'estimate.prepare', 'estimate.revise', 'estimate.approve', 'estimate.markSent', 'estimate.authorise', 'invoice.prepare', 'invoice.approve', 'invoice.export', 'dispatch.prepare', 'dispatch.approve'])
 export function reduce(s: State, actor: Actor, command: string, payload: any, now = new Date().toISOString()): any {
-  object(actor, 'actor'); text(actor.id, 'actor.id'); text(actor.name, 'actor.name'); choice(actor.role, ['owner', 'admin', 'member', 'agent', 'customer'], 'role')
-  // A customer link actor exists only to record its own decision.
-  if ((actor.role === 'customer') !== (command === 'estimate.customerDecide')) fail('FORBIDDEN', 'This role cannot perform that command.', null, 403)
+  object(actor, 'actor'); text(actor.id, 'actor.id'); text(actor.name, 'actor.name'); choice(actor.role, ['owner', 'admin', 'member', 'agent', 'customer', 'system'], 'role')
+  // A customer link actor exists only to record its own decision or opt-out; the scheduler only runs reminders.
+  if ((actor.role === 'customer') !== customerCommands.includes(command) || (actor.role === 'system') !== systemCommands.includes(command)) fail('FORBIDDEN', 'This role cannot perform that command.', null, 403)
   if (!commands.has(command)) fail('COMMAND', 'Unknown Mallet command.', null, 400)
   if (actor.role === 'agent' && !agentCommands.has(command) || actor.role === 'member' && ![...promiseMemberCommands,...timeMemberCommands,...diagnosisMemberCommands,...inspectionMemberCommands,'work.record','quality.record','quality.correct','quality.signTechnician'].includes(command)) fail('FORBIDDEN', 'This role cannot perform that command.', null, 403)
   migrateSalesTax(s)
   const c = { s, actor, now }, p = object(payload)
-  for (const handler of [promises, approvalLinks, time, payRates, diagnostics, pricing, tax, workshop, mileage, estimates, declinedWork, invoices, quality, inspections]) {
+  for (const handler of [promises, approvalLinks, approvalChasing, time, payRates, diagnostics, pricing, tax, workshop, mileage, estimates, declinedWork, invoices, quality, inspections]) {
     const result = handler(c, command, p)
     if (result !== undefined) return result
   }
@@ -96,10 +98,10 @@ export async function load(db: Database, normalize = true): Promise<State> {
   if (normalize) migrateSalesTax(s)
   return s
 }
-export async function execute(db: Database, actor: Actor, command: string, payload: any, authority?: { sql: string; params: any[] }): Promise<any> {
+export async function execute(db: Database, actor: Actor, command: string, payload: any, authority?: { sql: string; params: any[] }, now?: string): Promise<any> {
   const s = await load(db, false), before = new Map<string, string>()
   for (const [kind, values] of Object.entries(s.records)) for (const row of values) before.set(`${kind}:${row.id}`, JSON.stringify(row))
-  const result = reduce(s, actor, command, payload)
+  const result = reduce(s, actor, command, payload, now)
   const statements = [db.prepare('INSERT INTO mallet_assert(ok) SELECT CASE WHEN version=? THEN 1 ELSE 0 END FROM mallet_meta WHERE id=1').bind(s.version)]
   if (authority) statements.push(db.prepare(`INSERT INTO mallet_assert(ok) SELECT CASE WHEN (${authority.sql}) THEN 1 ELSE 0 END`).bind(...authority.params))
   for (const [kind, values] of Object.entries(s.records)) for (const row of values) {

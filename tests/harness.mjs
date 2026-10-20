@@ -39,7 +39,9 @@ export async function installation({entry='tests/worker.ts',bindings={},outbound
    const cookie=confirmed.headers.getSetCookie().map(x=>x.split(';')[0]).join('; '),session=await api('/auth/session',undefined,{as:cookie})
    return {cookie,id:session.operator.id,session}
   }
-  return {mf,origin,owner,messages,request,api,command,state,person,async configure(values){Object.assign(bindings,values);await mf.setOptions(options());await mf.ready},async close(){await mf.dispose();await rm(directory,{recursive:true,force:true})}}
+  // The Worker's cron door at a chosen scheduled time (EST-006 reminders).
+  const cron=async at=>{const result=await (await mf.getWorker()).scheduled({scheduledTime:new Date(at),cron:'*/15 * * * *'});assert.equal(result.outcome,'ok')}
+  return {mf,origin,owner,messages,request,api,command,state,person,cron,async configure(values){Object.assign(bindings,values);await mf.setOptions(options());await mf.ready},async close(){await mf.dispose();await rm(directory,{recursive:true,force:true})}}
  }catch(error){await mf.dispose();await rm(directory,{recursive:true,force:true});throw error}
 }
 export async function run(fn,options){const h=await installation(options);try{return await fn(h)}finally{await h.close()}}

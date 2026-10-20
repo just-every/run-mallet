@@ -11,6 +11,7 @@ import { setupStateResponse } from './base/setup-state'
 import { authResponse, runtimeBindings, type Bindings } from './auth.server'
 import { identity } from './identity'
 import { malletResponse } from './mallet/http'
+import { runApprovalChase } from './mallet/approval-door'
 
 const api = new Hono<{ Bindings: Bindings }>()
 api.get('/health', (context) => context.json({ status: 'ok', ...deploymentHealth(context.env) }))
@@ -39,5 +40,9 @@ export default withDemo<Bindings, ExportedHandler<Bindings>>({
     const lobby = await lobbyResponse(request, runtimeBindings(env), identity)
     if (lobby) return lobby
     return rejectedResponse(request, await dispatch(request, () => api.fetch(request, env, execution), async () => noTransform(await start.fetch(request))))
+  },
+  // EST-006: the cron trigger in wrangler.jsonc sends due estimate reminders.
+  async scheduled(controller, env, execution) {
+    execution.waitUntil(runApprovalChase(env, controller.scheduledTime))
   },
 } satisfies ExportedHandler<Bindings>, { seed: seedDemo })
