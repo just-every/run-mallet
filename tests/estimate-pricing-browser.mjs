@@ -55,6 +55,12 @@ export async function estimatePricingBrowser(){
   await customer.close();q=(await h.state()).records.estimate[0]
   const receipt=await h.api('/api/mallet/approval-receipts/'+link.id)
   assert.equal(receipt.receipt.approved[0].unitCents,4500,'EST-001 / EST-003 exact signed receipt retains discounted unit price')
+  let beforeWork=(await h.state()).records.job[0]
+  const part=await h.command('specialPart.record',{jobId:job.id,version:beforeWork.version,estimateId:q.id,revision:1,lineId:q.revisions[0].lines[0].id,supplier:'Metro brake supplier',orderReference:'METRO-413',acknowledgment:'Supplier counter recorded the order reference',eta:new Date(Date.now()+3600000).toISOString(),reason:'Pads ordered for this repair'})
+  assert.equal(part.charge.unitCents,4500);assert.equal(part.charge.totalCents,9675)
+  await p.goto(h.origin+'/app/jobs/'+job.id);assert.match(await p.locator('#special-parts').innerText(),/2 × \$45\.00[\s\S]*\$96\.75/);await shot('12-special-order-discount',p.locator('#special-parts'))
+  beforeWork=(await h.state()).records.job[0]
+  await h.command('specialPart.receive',{jobId:job.id,version:beforeWork.version,specialPartId:part.id,partVersion:part.version,receivedAt:new Date(Date.now()-1000).toISOString(),receiptReference:'Receiving slip METRO-413'})
   for(const line of q.revisions[0].lines){const j=(await h.state()).records.job[0];await h.command('work.record',{jobId:job.id,version:j.version,lineId:line.id,quantity:line.quantity})}
   let j=(await h.state()).records.job[0];await qualityReady(h,j,{reviewer:await publicDoor(h.origin,h.owner).person('independent-pricing-reviewer@example.test','admin')});j=(await h.state()).records.job[0];j=await h.command('job.complete',{jobId:job.id,version:j.version})
   await h.command('invoice.prepare',{jobId:job.id,version:j.version})
@@ -68,6 +74,18 @@ export async function estimatePricingBrowser(){
   await p.getByText('Metro fleet · fleet · $110.00 per hour · revision 2',{exact:true}).click();await p.getByText('Rate history',{exact:true}).click()
   await shot('11-rate-history',p.locator('#rate-profiles'))
   assert.equal((await h.state()).records.estimate[0].revisions[0].rateProfile.snapshot.laborRateCents,10000,'EST-001 native rate edit keeps the accepted profile snapshot')
+  const next=await booking(h,{asset:(await h.state()).records.asset[0],bayId:'Deferred bay',startAt:'2026-12-04T09:00:00Z',endAt:'2026-12-04T10:00:00Z'})
+  let deferred=await h.command('estimate.prepare',{jobId:next.job.id,version:next.job.version,lines:[{kind:'fee',description:'Optional inspection fee',quantity:1,unitCents:2000,unitDiscountCents:500,feeTaxable:false}]})
+  deferred=await authorise(h,deferred,[])
+  const reading=await h.command('reading.record',{jobId:next.job.id,version:(await h.state()).records.job.find(j=>j.id===next.job.id).version,value:60000,unit:'miles',stage:'intake',observedAt:new Date().toISOString()})
+  const decline=await h.command('decline.record',{estimateId:deferred.id,version:deferred.version,lineId:deferred.revisions[0].lines[0].id,readingId:reading.id,reason:'Fleet defers the optional inspection',evidence:'Customer phone decision METRO-414',dueValue:65000})
+  await p.goto(h.origin+'/app/jobs/'+next.job.id)
+  const register=p.locator('section.card').filter({has:p.getByRole('heading',{name:'Declined work',exact:true})})
+  assert.match(await register.innerText(),/1 × \$15\.00 before tax/);await shot('13-declined-discount',register)
+  const later=await booking(h,{asset:(await h.state()).records.asset[0],bayId:'Reprice bay',startAt:'2026-12-05T09:00:00Z',endAt:'2026-12-05T10:00:00Z'})
+  const repriced=await h.command('decline.reprice',{jobId:later.job.id,version:later.job.version,declinedWorkId:decline.id,itemVersion:decline.version,unitCents:1800,reason:'Current quoted optional inspection price'})
+  assert.equal(repriced.estimate.revisions[0].lines[0].taxable,false,'EST-001 / EST-005 a repriced exempt fee retains its explicit tax treatment')
+  assert.equal(repriced.estimate.revisions[0].totals.totalCents,1800)
   assert.deepEqual(errors,[])
  }finally{await browser?.close();await h.close()}
 }
