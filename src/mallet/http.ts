@@ -161,7 +161,8 @@ export async function malletResponse(request:Request,original:Bindings):Promise<
    if(command==='approvalChase.recordReply'||command==='chaseTask.resolve')return redirect(`/app/jobs/${encodeURIComponent(String(input.jobId))}#approval-links`)
    if(command==='promise.timeZone')return redirect('/app/jobs#promise-plan')
    if(command.startsWith('time.')&&!input.jobId)return redirect('/app/time')
-   if(command==='payRate.set')return redirect('/app/reports/technicians#tech-'+encodeURIComponent(input.technicianId))
+   // The saved rate is shown in the period the owner was reviewing, not silently today's.
+   if(command==='payRate.set')return redirect('/app/reports/technicians?'+new URLSearchParams({from:String(input.from??''),to:String(input.to??'')})+'#tech-'+encodeURIComponent(input.technicianId))
    if(command==='asset.create')return redirect(`/app/assets/${result.id}`)
    const jobId=command==='job.book'?result.id:input.jobId??result.jobId??(command==='invoice.export'?rows(await load(env.DB),'invoice').find(i=>i.id===input.invoiceId)?.jobId:undefined)
    return redirect(jobId?`/app/jobs/${jobId}`:'/app')
