@@ -1,3 +1,4 @@
+import {runRouting} from './mallet/routing-door'
 import { withDemo } from './modules/demo/index.mjs'
 import { seedDemo } from './demo'
 import { rejectedResponse } from './base/rejected-response'
@@ -43,6 +44,6 @@ export default withDemo<Bindings, ExportedHandler<Bindings>>({
   },
   // EST-006: the cron trigger in wrangler.jsonc sends due estimate reminders.
   async scheduled(controller, env, execution) {
-    execution.waitUntil(runApprovalChase(env, controller.scheduledTime))
+    execution.waitUntil((async()=>{await runApprovalChase(env, controller.scheduledTime);await runRouting(env, controller.scheduledTime)})())
   },
 } satisfies ExportedHandler<Bindings>, { seed: seedDemo })

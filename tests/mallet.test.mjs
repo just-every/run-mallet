@@ -1,3 +1,4 @@
+import {routingJourney} from './support/routing-journey.mjs'
 import {specialPartJourney} from './support/special-part-journey.mjs'
 import {specialPartBrowser} from './special-part-browser.mjs'
 import {promiseJourney,promiseMailFailureJourney} from './support/promise-journey.mjs'
@@ -277,3 +278,5 @@ test('FLOW-001: native board filters, priority, cancel and recorded collection a
 
 test('PART-006: supplier backorder, approved charge, internal advisor changes, actual receipt, invoice once and fresh-owner archive recovery',()=>run(specialPartJourney))
 test('PART-006: approved special order, retained delay, advisor review and physical receipt through native forms at 1440/390',specialPartBrowser)
+
+test('FLOW-003 / OPS-001: deterministic routing, closed-day deadlines, durable escalation and resolution through public doors',routingJourney)

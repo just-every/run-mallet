@@ -1,3 +1,4 @@
+import {routing,routingCommands} from './routing'
 import {specialParts,specialPartCommands} from './special-parts'
 import {promises,promiseCommands,promiseMemberCommands} from './promises'
 import {flow,flowCommands} from './flow'
@@ -76,8 +77,8 @@ export function approval(c: Context, kind: string, row: Row, revision: number, p
   return put(c.s, 'approval', { subjectKind: kind, subjectId: row.id, revision, subjectVersion: row.version, preparedBy, approvedBy: who(c), decision: 'approved', at: c.now })
 }
 const agentCommands = new Set(['estimate.prepare', 'estimate.revise', 'invoice.prepare', 'dispatch.prepare'])
-const customerCommands = ['estimate.customerDecide', 'chaseOptOut.customer'], systemCommands = ['approvalChase.sweep', 'approvalChase.outcome']
-const commands = new Set([...specialPartCommands,...flowCommands,...promiseCommands,...approvalLinkCommands,...chaseCommands,...internalChaseCommands,...collaborationCommands,...timeCommands,...payRateCommands,...diagnosisCommands,...pricingCommands,...inspectionCommands,...qualityCommands,'decline.record', 'decline.reprice', 'reading.record', 'serviceInterval.save', 'tax.configure', 'asset.create', 'asset.update', 'job.book', 'job.complete', 'work.record', 'estimate.prepare', 'estimate.revise', 'estimate.approve', 'estimate.markSent', 'estimate.authorise', 'invoice.prepare', 'invoice.approve', 'invoice.export', 'dispatch.prepare', 'dispatch.approve'])
+const customerCommands = ['estimate.customerDecide', 'chaseOptOut.customer'], systemCommands = ['routing.sweep', 'approvalChase.sweep', 'approvalChase.outcome']
+const commands = new Set([...routingCommands,...specialPartCommands,...flowCommands,...promiseCommands,...approvalLinkCommands,...chaseCommands,...internalChaseCommands,...collaborationCommands,...timeCommands,...payRateCommands,...diagnosisCommands,...pricingCommands,...inspectionCommands,...qualityCommands,'decline.record', 'decline.reprice', 'reading.record', 'serviceInterval.save', 'tax.configure', 'asset.create', 'asset.update', 'job.book', 'job.complete', 'work.record', 'estimate.prepare', 'estimate.revise', 'estimate.approve', 'estimate.markSent', 'estimate.authorise', 'invoice.prepare', 'invoice.approve', 'invoice.export', 'dispatch.prepare', 'dispatch.approve'])
 export function reduce(s: State, actor: Actor, command: string, payload: any, now = new Date().toISOString()): any {
   object(actor, 'actor'); text(actor.id, 'actor.id'); text(actor.name, 'actor.name'); choice(actor.role, ['owner', 'admin', 'member', 'agent', 'customer', 'system'], 'role')
   // A customer link actor exists only to record its own decision or opt-out; the scheduler only runs reminders.
@@ -86,7 +87,7 @@ export function reduce(s: State, actor: Actor, command: string, payload: any, no
   if (actor.role === 'agent' && !agentCommands.has(command) || actor.role === 'member' && ![...collaborationMemberCommands,...promiseMemberCommands,...timeMemberCommands,...diagnosisMemberCommands,...inspectionMemberCommands,'work.record','quality.record','quality.correct','quality.signTechnician'].includes(command)) fail('FORBIDDEN', 'This role cannot perform that command.', null, 403)
   migrateSalesTax(s)
   const c = { s, actor, now }, p = object(payload)
-  for (const handler of [specialParts,flow, promises, approvalLinks, approvalChasing, collaboration, time, payRates, diagnostics, pricing, tax, workshop, mileage, estimates, declinedWork, invoices, quality, inspections]) {
+  for (const handler of [routing,specialParts,flow, promises, approvalLinks, approvalChasing, collaboration, time, payRates, diagnostics, pricing, tax, workshop, mileage, estimates, declinedWork, invoices, quality, inspections]) {
     const result = handler(c, command, p)
     if (result !== undefined) return result
   }

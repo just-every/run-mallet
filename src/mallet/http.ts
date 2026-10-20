@@ -1,3 +1,4 @@
+import {routingCommand} from './routing-door'
 import {specialPartNotices} from './ui/special-parts'
 import {scopedPromises,internalPromiseCommands} from './promises'
 import {boardFilter,repairBoard,scopedFlow} from './flow'
@@ -70,10 +71,11 @@ async function nativeForm(request:Request) {
 function visible(s:State,actor:Actor):State {
  s=scopedCollaboration(scopedPromises(s,actor),actor)
  s=scopedTime(s,actor)
+ if(!human(actor))s={...s,records:{...s.records,event:rows(s,'event').filter(e=>!e.kind.startsWith('routing.'))}}
  if(actor.role!=='owner'){const {payRate:_rates,...records}=s.records;s={...s,records}}
  // Diagnostic notes and customer links are native staff evidence; agents never receive them.
  if(actor.role==='agent'){const {diagnosis:_d,diagnosisLink:_l,diagnosisLinkView:_v,approvalLink:_a,approvalChase:_c,chaseOptOut:_o,chaseTask:_t,...records}=s.records;s={...s,records:{...records,event:rows(s,'event').filter(x=>!x.kind.startsWith('diagnosis'))}}}
- if(actor.role==='agent'){const {specialPart:_parts,specialPartNotice:_notices,...records}=s.records;return withoutInspections({...s,records})}
+ if(actor.role==='agent'){const {routingPolicy:_routingPolicy,routingCase:_routingCase,routingBlocker:_routingBlocker,specialPart:_parts,specialPartNotice:_notices,...records}=s.records;return withoutInspections({...s,records})}
  if(actor.role!=='member')return s
  const jobs=rows(s,'job').filter(j=>onCrew(j,actor.id)),ids=new Set(jobs.map(j=>j.id)),assets=new Set(jobs.map(j=>j.assetId))
  return {version:s.version,records:{jobNote:rows(s,'jobNote'),subtask:rows(s,'subtask'),handoff:rows(s,'handoff'),promiseSettings:rows(s,'promiseSettings'),promise:rows(s,'promise'),promisePlan:rows(s,'promisePlan'),timeEntry:rows(s,'timeEntry'),timeCorrection:rows(s,'timeCorrection'),job:jobs,asset:rows(s,'asset').filter(a=>assets.has(a.id)).map(a=>({...a,visits:a.visits.filter((id:string)=>ids.has(id))})),estimate:rows(s,'estimate').filter(x=>ids.has(x.jobId)),declinedWork:rows(s,'declinedWork').filter(x=>ids.has(x.jobId)),reading:rows(s,'reading').filter(x=>ids.has(x.jobId)),serviceInterval:rows(s,'serviceInterval').filter(x=>ids.has(x.jobId)),quality:rows(s,'quality').filter(x=>ids.has(x.jobId)),diagnosis:rows(s,'diagnosis').filter(x=>ids.has(x.jobId)),flow:scopedFlow(s,ids),inspection:rows(s,'inspection').filter(x=>ids.has(x.jobId)),event:rows(s,'event').filter(x=>ids.has(x.jobId)||x.kind.startsWith('time.')&&x.data.ownerId===actor.id)}}
@@ -145,8 +147,9 @@ export async function malletResponse(request:Request,original:Bindings):Promise<
    const data=path==='/app/actions'?formInput(await nativeForm(request)):await body(request),command=String(data.command),input=data.input??data
    submitted={command,input}
    let result:any
-   if(internalPromiseCommands.includes(command)||internalApprovalCommands.includes(command)||internalChaseCommands.includes(command))throw new HttpError(404,'unknown_command')
-   if(command==='promise.approveAndNotify')result=await sendPromiseNotice(env,actor,auth.authority,input)
+   if(command==='routing.sweep'||internalPromiseCommands.includes(command)||internalApprovalCommands.includes(command)||internalChaseCommands.includes(command))throw new HttpError(404,'unknown_command')
+   if(command.startsWith('routing.'))result=await routingCommand(env.DB,actor as any,auth.authority,command,input)
+   else if(command==='promise.approveAndNotify')result=await sendPromiseNotice(env,actor,auth.authority,input)
    else if(command==='approvalLink.create'){if(!human(actor))throw new HttpError(403,'manager_required');result=await sendApprovalLink(env,actor,auth.authority,input)}
    else if(command.startsWith('agent.')) result=await agentKey(env.DB,actor,auth.authority,command,input)
    else if(command==='asset.erase') {
