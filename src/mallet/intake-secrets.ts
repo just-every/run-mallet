@@ -6,12 +6,12 @@ import {instant} from './workshop'
 const bytes=(s:string)=>Uint8Array.from(atob(s),x=>x.charCodeAt(0))
 const base64=(b:Uint8Array)=>btoa(String.fromCharCode(...b))
 async function key(env:Bindings){return crypto.subtle.importKey('raw',await crypto.subtle.digest('SHA-256',new TextEncoder().encode('mallet-intake-v1:'+env.SESSION_SECRET)),{name:'AES-GCM'},false,['encrypt','decrypt'])}
-export async function expireIntakeSecrets(env:Bindings,at=new Date().toISOString()){await env.DB.prepare('DELETE FROM mallet_intake_secrets WHERE expires_at<=?').bind(at).run()}
+export async function expireIntakeSecrets(env:Bindings,at=new Date().toISOString()){await env.DB.prepare("DELETE FROM mallet_intake_secrets WHERE expires_at<=? OR job_id IN (SELECT json_extract(value,'$.jobId') FROM mallet_records WHERE kind='handover')").bind(at).run()}
 export async function intakeSecret(env:Bindings,actor:Actor,authority:Authority,command:string,p:any){
  if(actor.role!=='owner')fail('FORBIDDEN','Only the current owner may handle temporary unlock secrets.',null,403)
  const scope=await jobScope(env.DB,actor,authority,text(p.jobId,'jobId')),now=new Date().toISOString()
  await expireIntakeSecrets(env,now)
- let id:string,result:any,queries:any[]=[]
+ let id:string,result:any,queries:any[]=[{sql:"INSERT INTO mallet_assert(ok) SELECT CASE WHEN NOT EXISTS(SELECT 1 FROM mallet_records WHERE kind='handover' AND json_extract(value,'$.jobId')=?) THEN 1 ELSE 0 END",params:[scope.jobId]}]
  if(command==='intake.secretStore'){
   const purpose=text(p.purpose,'explicit unlock purpose',500),value=text(p.secret,'temporary unlock secret',1000),expiresAt=instant(p.expiresAt,'purpose end time')
   if(p.consent!==true||expiresAt<=now||Date.parse(expiresAt)-Date.parse(now)>86400000)fail('SECRET_CONSENT','Obtain explicit consent and set a purpose end within 24 hours.',null,400)

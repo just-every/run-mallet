@@ -11,6 +11,8 @@ import branding from './branding.json'
 const theme = { href: '/rer-theme.css', productName: branding.name, accentColor: branding.primaryColor }
 
 export interface Bindings {
+ /** Optional shop-owned Stripe credential, configured privately; never part of product archives. */
+ STRIPE_SECRET_KEY?: string
  PIER_ORIGIN?: string
  PIER_SESSION?: string
  DB: D1Database

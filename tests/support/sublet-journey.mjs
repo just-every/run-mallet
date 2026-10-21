@@ -1,3 +1,4 @@
+import {handoverInput} from './handover-input.mjs'
 import assert from 'node:assert/strict'
 import {archive,authorise,booking,installation,restore} from '../harness.mjs'
 import {shopSetup} from './diagnosis-journey.mjs'
@@ -122,7 +123,7 @@ export async function subletJourney(h){
  invoice=await h.command('invoice.approve',{invoiceId:invoice.id,version:invoice.version})
  const exported=await h.command('invoice.export',{invoiceId:invoice.id,version:invoice.version}),repeat=await h.command('invoice.export',{invoiceId:invoice.id,version:invoice.version})
  assert.deepEqual(repeat,exported);assert.equal(exported.lines.filter(l=>l.id===line.id).length,1);assert.equal(exported.lines.filter(l=>l.id===extra.id).length,1)
- await h.command('flow.collect',{jobId:job.id,version:(await current()).version,flowVersion:0,collectorName:'Elena Torres',note:'Staff recorded pickup after sublet return and repair quality clearance'})
+ await h.command('flow.collect',{...await handoverInput(h,job.id,'Elena Torres'),note:'Staff recorded pickup after sublet return and repair quality clearance'})
  await h.command('sublet.bill',{...await refs(),...bill},{status:409})
  page=await (await h.request('/app/jobs/'+job.id)).text()
  for(const text of ['Cylinder head CH-17','CM-INVOICE-17',delay.evidence,receipt.reference,'$200.00','33.33%','Current repair quality clearance recorded'])assert.ok(page.includes(text),'SUBLET-001 public repair page retains '+text)

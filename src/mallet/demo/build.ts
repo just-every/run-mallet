@@ -114,7 +114,14 @@ export function buildWorkshop(now: Date, ownerId: string) {
     invoice = run('kayla', 'invoice.approve', { invoiceId: invoice.id, version: invoice.version, revision: 1 }, t += 15 * MIN)
     if (v.invoice === 'approved') return
     const collected = Math.max(end + HOUR, t + 30 * MIN)
-    run('ben', 'flow.collect', { jobId, version: job().version, flowVersion: 0, collectorName: customer, note: 'Picked up at the counter.' }, collected - 10 * MIN)
+    // Sample collection goes through the same explicit custody and owner exception gates.
+    const handoverAt=collected-10*MIN
+    const custody=run('ben','intake.record',{jobId,version:job().version,phase:'before',capturedAt:clock.iso(handoverAt-2*MIN),damage:'Sample condition checklist reviewed with customer; no additional damage noted.',items:[{kind:'key',label:'Vehicle key',quantity:1}],attachments:[],lockHandling:'Customer retains unlock codes; none stored.',signedBy:customer,consent:true},handoverAt-2*MIN)
+    const comparison=run('ben','intake.compare',{jobId,version:job().version,intakeId:custody.id,returned:custody.items.map((x:any)=>({itemId:x.id,quantity:x.quantity})),signedBy:customer,consent:true},handoverAt-MIN)
+    const reading=run('ben','reading.record',{jobId,version:job().version,stage:'out',value:50000+i*100,unit:'miles',observedAt:clock.iso(handoverAt-MIN)},handoverAt-MIN)
+    const delegate=customer===job().asset.customerName?null:run('ben','return.delegate',{jobId,version:job().version,customerName:job().asset.customerName,delegateName:customer,evidence:'Sample business customer authorizes its named contact to collect this repair.',consent:true},handoverAt-MIN)
+    const exception=run('kayla','return.override',{jobId,version:job().version,reason:'Sample owner explicitly permits collection without processor-verified settlement. No payment is inferred.'},handoverAt-MIN)
+    run('ben', 'flow.collect', { jobId, version: job().version, flowVersion: 0, collectorName: customer, delegateId:delegate?.id,comparisonId:comparison.id,readingId:reading.id,overrideId:exception.id,identityEvidence:'Sample staff check of the named collector; no identity document retained.',warrantyAdvice:'Shop warranty advice supplied; ask the shop for a paper receipt.',settlementVersion:s.version,settlementReceipts:[], note: 'Picked up at the counter under explicit owner exception.' }, handoverAt)
     run('ben', 'invoice.export', { invoiceId: invoice.id, version: invoice.version }, collected)
     }
   })

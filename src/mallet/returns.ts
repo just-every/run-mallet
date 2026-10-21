@@ -1,0 +1,43 @@
+import {bump,event,expectVersion,fail,find,integer,put,rows,text,who,type Handler,type Context,type Row} from './model'
+import {assertQualityReady} from './quality'
+import {readings} from './mileage'
+import {invoiceBalance,publicInvoiceSnapshot} from './payments'
+export const returnCommands=['return.delegate','return.revokeDelegate','return.override'] as const
+export const returns:Handler=(c,command,p)=>{
+ if(!(returnCommands as readonly string[]).includes(command))return
+ if(!['owner','admin'].includes(c.actor.role))fail('FORBIDDEN','Only the owner or service advisor records handover authority.',null,403)
+ const job=find(c.s,'job',p.jobId);expectVersion(job,p.version)
+ if(rows(c.s,'flow').some(f=>f.jobId===job.id&&f.collection))fail('COLLECTED','Collection is already recorded; retain its original authority.')
+ if(command==='return.delegate'){
+  const customerName=text(p.customerName,'customer granting authority',200)
+  if(customerName.toLowerCase()!==job.asset.customerName.toLowerCase()||p.consent!==true)fail('DELEGATE_CONSENT','Record explicit authority from the customer on this repair.',null,400)
+  const row=put(c.s,'returnDelegate',{jobId:job.id,customerName,delegateName:text(p.delegateName,'authorized delegate',200),evidence:text(p.evidence,'customer delegate authorization evidence',2000),consent:true,revoked:null,by:who(c),at:c.now});event(c,command,job.id,row.id,{});return row
+ }
+ if(command==='return.revokeDelegate'){
+  const row=find(c.s,'returnDelegate',p.delegateId);expectVersion(row,p.delegateVersion)
+  if(row.jobId!==job.id||row.revoked)fail('DELEGATE_STATE','Use an active delegate authorization on this repair.')
+  const revoked={reason:text(p.reason,'revocation reason',2000),by:who(c),at:c.now},next=bump(c.s,'returnDelegate',row,{revoked});event(c,command,job.id,row.id,revoked);return next
+ }
+ if(c.actor.role!=='owner')fail('FORBIDDEN','Only the current owner may permit release without verified settlement.',null,403)
+ const invoice=find(c.s,'invoice',job.invoiceId)
+ if(!['approved','exported'].includes(invoice.status))fail('INVOICE_REQUIRED','Approve this repair’s invoice before an unpaid-release exception.')
+ const row=put(c.s,'returnOverride',{jobId:job.id,invoiceId:invoice.id,invoiceRevision:invoice.revision,totalCents:invoice.totals.totalCents,balance:structuredClone(invoiceBalance(c.s,invoice)),reason:text(p.reason,'explicit unpaid-release reason',2000),by:who(c),at:c.now,expiresAt:new Date(Date.parse(c.now)+86400000).toISOString(),label:'Owner permits release without processor-verified settlement. This is not payment.'});event(c,command,job.id,row.id,{});return row
+}
+export function handover(c:Context,job:Row,invoice:Row,p:any){
+ const quality=assertQualityReady(c.s,job)
+ if(p.settlementVersion!==c.s.version)fail('CONCURRENT_CHANGE','Refresh and recheck the current invoice and processor evidence before collection.')
+ const receipts=Array.isArray(p.settlementReceipts)?p.settlementReceipts:[],verifiedCents=receipts.reduce((n:number,r:any)=>n+r.amountCents,0),override=p.overrideId?find(c.s,'returnOverride',p.overrideId):null
+ if(override&&(override.jobId!==job.id||override.invoiceId!==invoice.id||override.invoiceRevision!==invoice.revision||override.totalCents!==invoice.totals.totalCents||override.expiresAt<=c.now))fail('RETURN_OVERRIDE','Use a current owner-approved exception for this exact invoice.')
+ if(verifiedCents<invoice.totals.totalCents&&!override)fail('PAYMENT_UNSETTLED','Processor-confirmed captured funds must cover this invoice, or the owner must explicitly approve an unpaid release.')
+ const collectorName=text(p.collectorName,'actual collector',200),delegate=p.delegateId?find(c.s,'returnDelegate',p.delegateId):null
+ if(delegate&&(delegate.jobId!==job.id||delegate.revoked||delegate.delegateName.toLowerCase()!==collectorName.toLowerCase()))fail('DELEGATE_STATE','Use current customer-granted authority for this actual delegate.')
+ if(!delegate&&collectorName.toLowerCase()!==job.asset.customerName.toLowerCase())fail('DELEGATE_REQUIRED','Record the customer’s explicit delegate authority before handing over to another person.')
+ const identityEvidence=text(p.identityEvidence,'staff collector identity check evidence (do not copy identity documents)',1000),comparison=find(c.s,'intakeComparison',p.comparisonId)
+ if(comparison.jobId!==job.id||comparison.signature.name.toLowerCase()!==collectorName.toLowerCase())fail('CUSTODY_CHECKLIST','The actual collector must acknowledge this visit’s custody checklist comparison.')
+ const source=find(c.s,'intake',comparison.intakeId),latest=rows(c.s,'intake').filter(i=>i.jobId===job.id&&i.phase==='before').at(-1)
+ if(source.id!==latest?.id)fail('CUSTODY_CHECKLIST','Compare the latest before-condition custody receipt.')
+ const mileage=readings(c.s,job.assetId).find(r=>r.id===p.readingId)
+ if(!mileage||mileage.jobId!==job.id||mileage.stage!=='out')fail('RETURN_MILEAGE','Record current mileage-out on this visit before handover.')
+ const receipt=put(c.s,'handover',{jobId:job.id,assetId:job.assetId,invoiceId:invoice.id,invoiceNumber:invoice.number,invoice:publicInvoiceSnapshot(invoice),collectorName,delegate:delegate?structuredClone(delegate):null,identityEvidence,identityVerifiedByMallet:false,comparison:structuredClone(comparison),mileage:structuredClone(mileage),quality:{technician:structuredClone(quality.technicianSignoff),reviewer:structuredClone(quality.qualitySignoff)},settlement:{verifiedCents,receipts,override:override?structuredClone(override):null,label:override?'Released under explicit owner exception; settlement is not verified.':'Stripe confirmed captured funds at handover; bank payout is not verified.'},warrantyAdvice:text(p.warrantyAdvice,'warranty advice and paper receipt instructions',4000),by:who(c),at:c.now,label:'Documented handover recorded by staff. Collector identity was checked by staff, not verified by Mallet.'})
+ return receipt
+}

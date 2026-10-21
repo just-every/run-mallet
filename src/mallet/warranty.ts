@@ -1,6 +1,6 @@
 import {bump,choice,event,expectVersion,fail,find,integer,put,rows,text,who,type Handler} from './model'
 import {instant,workshop} from './workshop'
-import {invoiceBalance} from './payments'
+import {invoiceBalance,publicInvoiceSnapshot} from './payments'
 export const warrantyCommands=['warranty.terms','warranty.open','warranty.decide','warranty.cost','warranty.claim','warranty.claimOutcome'] as const
 export const warranty:Handler=(c,command,p)=>{
  if(!(warrantyCommands as readonly string[]).includes(command))return
@@ -24,7 +24,7 @@ export const warranty:Handler=(c,command,p)=>{
   if(p.assetId!==asset.id)fail('WARRANTY_ASSET','A comeback must use the original vehicle or serial.')
   const plan={assetId:asset.id,version:p.assetVersion,title:text(p.title,'rework title'),bayId:p.bayId,technicianId:p.technicianId,startAt:p.startAt,endAt:p.endAt}
   const rework=workshop(c,'job.book',plan)
-  const row=put(c.s,'warranty',{jobId:rework.id,originalJobId:original.id,assetId:asset.id,identifier:invoice.customer.identifier,invoiceId:invoice.id,originalInvoice:structuredClone(invoice),originalPayment:structuredClone(invoiceBalance(c.s,invoice)),terms:structuredClone(terms),installed:installed?structuredClone(installed):null,lot:installed?structuredClone(find(c.s,'stockLot',installed.lotId)):null,failure:text(p.failure,'returned symptom and failure evidence',4000),failureAt,mileage,unit:terms.unit,withinTerms:failureAt>=terms.startsAt&&failureAt<=terms.endsAt&&mileage<=terms.mileageLimit,decision:null,costs:[],claims:[],by:who(c),at:c.now})
+  const row=put(c.s,'warranty',{jobId:rework.id,originalJobId:original.id,assetId:asset.id,identifier:invoice.customer.identifier,invoiceId:invoice.id,originalInvoice:publicInvoiceSnapshot(invoice),originalPayment:structuredClone(invoiceBalance(c.s,invoice)),terms:structuredClone(terms),installed:installed?structuredClone(installed):null,lot:installed?structuredClone(find(c.s,'stockLot',installed.lotId)):null,failure:text(p.failure,'returned symptom and failure evidence',4000),failureAt,mileage,unit:terms.unit,withinTerms:failureAt>=terms.startsAt&&failureAt<=terms.endsAt&&mileage<=terms.mileageLimit,decision:null,costs:[],claims:[],by:who(c),at:c.now})
   event(c,command,rework.id,row.id,{originalJobId:original.id,invoiceId:invoice.id});return row
  }
  const row=find(c.s,'warranty',p.warrantyId);expectVersion(row,p.version)

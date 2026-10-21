@@ -1,3 +1,4 @@
+import {handoverInput} from './handover-input.mjs'
 import {downloadReport} from './report-csv.mjs'
 import assert from 'node:assert/strict'
 import {archive,assetInput,authorise,booking,estimate,installation,restore} from '../harness.mjs'
@@ -45,8 +46,8 @@ export async function flowJourney(h){
  await h.command('flow.collect',{jobId:ro.id,version:(await job(ro.id)).version,flowVersion:0,collectorName:'Dana Cedar'},{...A,status:403})
  const key=await h.command('agent.create',{label:'Board boundary'}),agent={as:'',headers:{authorization:`Bearer ${key.token}`}}
  await h.command('flow.collect',{jobId:ro.id,version:(await job(ro.id)).version,flowVersion:0,collectorName:'Dana Cedar'},{...agent,status:403})
- const flow=await h.command('flow.collect',{jobId:ro.id,version:(await job(ro.id)).version,flowVersion:0,collectorName:'Dana Cedar',note:'Paid at the counter'},ADV)
- assert.equal(flow.collection.invoiceNumber,invoice.number);assert.match(flow.collection.label,/did not record or verify payment/);assert.equal(await stage(ro.id),'collected')
+ const flow=await h.command('flow.collect',{...await handoverInput(h,ro.id,'Dana Cedar'),note:'Owner-approved handover; payment is not inferred'},ADV)
+ assert.equal(flow.collection.invoiceNumber,invoice.number);assert.match(flow.collection.label,/identity was checked by staff, not verified by Mallet/);assert.ok((await h.state()).records.handover.find(r=>r.id===flow.collection.handoverId).settlement.override);assert.equal(await stage(ro.id),'collected')
  await h.command('flow.collect',{jobId:ro.id,version:(await job(ro.id)).version,flowVersion:flow.version,collectorName:'Again'},{...ADV,status:409})
  invoice=(await h.state()).records.invoice.find(i=>i.id===invoice.id);await h.command('invoice.export',{invoiceId:invoice.id,version:invoice.version})
  assert.equal(await stage(ro.id),'closed','FLOW-001 collected and exported repairs close')
