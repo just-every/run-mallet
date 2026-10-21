@@ -195,7 +195,7 @@ Neighboring products stay separate: [Pier](https://github.com/just-every/run-pie
 
 - **MONEY-001 — Payment disputes and settlement close.** Link chargebacks, evidence deadlines, processor fees, refunds, financing remittances and payout adjustments to original repair consent/quality/delivery evidence; managers approve evidence submissions and reconcile gross receipts to net bank deposit. New product data inherits OPS-001 before shipping. **Acceptance evidence:** Open a provider test dispute on a signed repair, assemble and approve its evidence, then compare a payout with fees/refunds to the shop close report.
 
-- **SUBLET-001 — Sublet work and outsourced services.** Track approved outsourced machining, towing, calibration or specialist work with supplier, custody, PO, cost, ETA and customer price; receiving and quality sign-off are required before billing and return. New product data inherits OPS-001 before shipping. **Acceptance evidence:** Send a cylinder head to an outside shop, record delayed return and supplier bill, approve added scope and reconcile sublet margin and custody.
+- **SUBLET-001 — Sublet work and outsourced services.** Track approved outsourced machining, towing, calibration or specialist work with supplier, custody, PO, cost, ETA and customer price; receiving and quality sign-off are required before billing and return. Sublets link existing person-approved, customer-authorized service fee lines with their selected frozen tax treatment; added scope links a separately authorized incremental line without changing earlier decisions. Custody handoffs, ETA revisions and full supplier bill revisions retain recorded evidence, actor and UTC times. A bill predating added scope leaves actual cost and margin pending until a current-scope bill is recorded. Margin is the frozen customer subtotal before customer sales tax less the full supplier bill (including supplier tax/freight), in USD cents; the percentage divides that difference by the customer subtotal and rounds to two decimals, and is unavailable for a zero subtotal. Each sublet change invalidates prior repair quality clearance; receiving and current QUALITY-001 clearance gate completion, which precedes invoice preparation and collection. Supplier/PO and bill entries are staff records, not order submission, payment or accounting-posting claims; BUY-001 and BOOKS-003 keep those existing obligations. New product data inherits OPS-001 before shipping. **Acceptance evidence:** Send a cylinder head to an outside shop, record delayed return and supplier bill, approve added scope and reconcile sublet margin and custody.
 
 ### Customer communication and follow-up
 
@@ -431,15 +431,17 @@ Every capability claim on the approved homepage (`src/site/landing/`, checked ag
 
 ## Status
 
-Judged from the code and tests at commit `d26ff42f6cc1027e3e7dcc5d7616519a68ba1985` (21 October 2026).
+Judged from the code and tests at commit `e44c6ec74b13443d13094d57b15ceccebeaefaf3` (21 October 2026).
+
+SUBLET-001 is updated by its acceptance journeys; other rows retain their prior judgment at `d26ff42f6cc1027e3e7dcc5d7616519a68ba1985`.
 
 OPEN-001 was added on 18 October 2026. Its 19 October acceptance now runs the published command in a clean directory, verifies empty owner setup, inspects the installed MIT source and exercises the app without a Mallet commercial gate (`tests/clone-journey.mjs`, `tests/open-source-journey.mjs`, `tests/browser-journey.mjs`, `tests/site/site.test.mjs`).
 
 | Clauses | Done | Partial | Missing | Total |
 | --- | ---: | ---: | ---: | ---: |
 | Published | 9 | 0 | 0 | 9 |
-| Target and push further | 20 | 23 | 88 | 131 |
-| All | 29 | 23 | 88 | 140 |
+| Target and push further | 21 | 23 | 87 | 131 |
+| All | 30 | 23 | 87 | 140 |
 
 | Clause | Title | Kind | Status | Evidence | Gap |
 | --- | --- | --- | --- | --- | --- |
@@ -520,7 +522,7 @@ OPEN-001 was added on 18 October 2026. Its 19 October acceptance now runs the pu
 | `BOOKS-002` | Xero two-way sync | target | missing |  | No Xero connection or two-way accounting workflow. |
 | `BOOKS-003` | Cost and cash postings to the books | target | missing |  | No accounting connection or posting of supplier bills, vendor credits, sublet cost, processor fees, payouts, drawer movements or inventory journals. |
 | `MONEY-001` | Payment disputes and settlement close | target | missing |  | No disputes, evidence deadlines, payout close or processor-fee accounting. |
-| `SUBLET-001` | Sublet work and outsourced services | target | missing |  | No sublet jobs, outside custody, supplier cost or outsourced-work follow-through. |
+| `SUBLET-001` | Sublet work and outsourced services | target | done | `tests/mallet.test.mjs` — "SUBLET-001 / OPS-001: approved outsourced scope, delayed custody, supplier bills, receiving and quality gates, exact margin and fresh recovery" proves approved scope, supplier/PO, exact customer price, outside and return custody, delayed ETA, supplier bill revisions, separately approved added scope, receiving/quality gates before billing/collection, exact margin, immutable invoice/export and fresh-owner archive recovery; "SUBLET-001: outside handoff, delay, added-scope decision, supplier bill, receipt, quality and margin through native forms at 1440/390" proves those counter forms and visible outcomes at 1440 and 390 (`tests/sublet-browser.mjs`; `tests/support/sublet-journey.mjs`). |  |
 | `MSG-001` | Two-way repair SMS with Twilio | target | missing |  | No repair SMS/MMS adapter, inbox, A2P onboarding or consent/opt-out workflow. |
 | `MSG-002` | Gmail repair conversations | target | missing |  | No Gmail OAuth, ticket threading or repair mail delivery. |
 | `MSG-003` | Microsoft 365 Outlook conversations | target | missing |  | No Microsoft Graph mailbox connection, reply sync or shared mailbox controls. |
