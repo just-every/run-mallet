@@ -1,3 +1,4 @@
+import {salesReportResponse} from './mallet/sales-report-door'
 import {runRouting} from './mallet/routing-door'
 import { withDemo } from './modules/demo/index.mjs'
 import { seedDemo } from './demo'
@@ -32,7 +33,7 @@ export default withDemo<Bindings, ExportedHandler<Bindings>>({
     if (asset) return asset
     const auth = await authResponse(request, env)
     if (auth) return auth
-    const workshop = await malletResponse(request, env)
+    const workshop = await salesReportResponse(request, env) ?? await malletResponse(request, env)
     if (workshop) return rejectedResponse(request, workshop)
     // The installed variant: the Lobby at / and the public claim state it reads.
     // Local dev serves the saved origin's data at its own port (RER_DEV_ORIGIN).
