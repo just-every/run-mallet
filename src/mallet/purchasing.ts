@@ -1,4 +1,4 @@
-import {bump,event,expectVersion,fail,find,integer,put,rows,text,who,type Handler,type Row,type State} from './model'
+import {bump,event,expectVersion,fail,find,integer,object,put,rows,text,who,type Handler,type Row,type State} from './model'
 import {amount,moveStock,reserveStock,scan} from './inventory'
 import {instant} from './workshop'
 export const purchasingCommands=['purchase.create','purchase.approve','purchase.receive','purchase.bill','purchase.close']
@@ -15,7 +15,7 @@ export const purchasing:Handler=(c,command,p)=>{
  if(command==='purchase.create'){
   if(!Array.isArray(p.lines)||!p.lines.length||p.lines.length>50)fail('INPUT','A purchase order needs 1–50 lines.',null,400)
   const lines=p.lines.map((v:any)=>{
-   const item=find(c.s,'stockItem',v.itemId),jobId=v.jobId?text(v.jobId,'waiting repair'):null
+   object(v,'PO line');const item=find(c.s,'stockItem',v.itemId),jobId=v.jobId?text(v.jobId,'waiting repair'):null
    if(jobId&&!['booked','working'].includes(find(c.s,'job',jobId).status))fail('JOB_STATE','Purchase repair demand only for an open repair.')
    return {id:crypto.randomUUID(),itemId:item.id,sku:item.sku,name:item.name,unit:item.unit,quantityMilli:amount(v.quantity),unitCents:cents(v.unitCents,'unit cost'),jobId}
   })
@@ -49,7 +49,7 @@ export const purchasing:Handler=(c,command,p)=>{
  if(command==='purchase.bill'){
   if(!Array.isArray(p.lines)||p.lines.length!==po.lines.length)fail('INPUT','Record every supplier bill line, including zero quantity for omitted goods.',null,400)
   const seen=new Set(),lines=p.lines.map((v:any)=>{
-   const source=po.lines.find((l:any)=>l.id===v.lineId)
+   object(v,'bill line');const source=po.lines.find((l:any)=>l.id===v.lineId)
    if(!source||seen.has(v.lineId))fail('INPUT','Bill lines must identify each PO line exactly once.',null,400)
    seen.add(v.lineId);return {lineId:source.id,itemId:source.itemId,quantityMilli:amount(v.quantity,'billed quantity',true),unitCents:cents(v.unitCents,'billed unit cost')}
   }),taxCents=cents(p.taxCents,'bill tax'),freightCents=cents(p.freightCents,'bill freight'),exceptions:string[]=[]

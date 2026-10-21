@@ -1,3 +1,4 @@
+import {fail} from '../model'
 import {e,field,area,select,form,box,rows,when} from './common'
 import {customerSearch} from '../customers'
 export function accountsPage(state:any,q:string){
@@ -26,6 +27,6 @@ export function accountsPage(state:any,q:string){
 export function customerFormInput(data:FormData,input:any){
  if(input.command==='customer.save')input.contactIds=data.getAll('contactIds')
  for(const k of ['customerVersion','version'])if(k in input)input[k]=Number(input[k])
- if(input.command==='customer.linkAsset'&&input.assetSource){let v:any;try{v=JSON.parse(input.assetSource)}catch{throw Error('Invalid vehicle choice')};input.assetId=v.id;input.version=v.version}
+ if(input.command==='customer.linkAsset'&&input.assetSource){let v:any;try{v=JSON.parse(input.assetSource)}catch{fail('INPUT','Choose a valid vehicle.',null,400)};input.assetId=v.id;input.version=v.version}
  if(input.command==='customer.merge')for(const k of ['source','target']){const [id,version]=String(input[k+'Ref']).split('@');input[k+'Id']=id;input[k+'Version']=Number(version)}
 }

@@ -1,3 +1,4 @@
+import {fail} from '../model'
 import {e,field,area,select,form,box,rows,money,when} from './common'
 import {traceReport} from '../stock-trace'
 import {scanFields} from './inventory'
@@ -14,5 +15,5 @@ export function tracePage(state:any,q:string){
 export function traceFormInput(input:any){
  if(input.command==='stock.catalog'){input.costCents=Math.round(Number(input.costUsd)*100);input.sellCents=Math.round(Number(input.sellUsd)*100)}
  if(input.command==='stock.lot')input.unitCostCents=Math.round(Number(input.costUsd)*100)
- if(input.command==='stock.useLot'&&input.actualSource){let s:any;try{s=JSON.parse(input.actualSource)}catch{throw Error('Invalid part work choice')};input.jobId=s.jobId;input.version=s.version;input.actualId=s.actualId}
+ if(input.command==='stock.useLot'&&input.actualSource){let s:any;try{s=JSON.parse(input.actualSource)}catch{fail('INPUT','Choose valid recorded part work.',null,400)};input.jobId=s.jobId;input.version=s.version;input.actualId=s.actualId}
 }
