@@ -14,9 +14,9 @@ export async function flowJourney(h){
  const job=async id=>(await h.state()).records.job.find(j=>j.id===id),stage=async(id,o)=>stagesOf(await board('',o))[id]
  const first=await booking(h,{technicianId:andre.id}),ro=first.job
  const promisedAt=new Date(Date.now()+86400000).toISOString()
- await h.command('promise.set',{jobId:ro.id,version:ro.version,pickupAt:promisedAt,reason:'Tomorrow pickup after brake service'},ADV)
  const b=await board();assert.deepEqual(b.stages.map(s=>s.id),['intake','diagnosis','approval','parts','work','quality','ready','collected','closed'],'FLOW-001 the nine stages')
  assert.equal(stagesOf(b)[ro.id],'intake');assert.equal(cardOf(b,ro.id).customer,'Cedar Bikes');assert.equal(cardOf(b,ro.id).technicianId,andre.id);assert.equal(cardOf(b,ro.id).priority,'normal');assert.deepEqual(cardOf(b,ro.id).due,{at:ro.endAt,kind:'booking'})
+ await h.command('promise.set',{jobId:ro.id,version:ro.version,pickupAt:promisedAt,reason:'Tomorrow pickup after brake service'},ADV)
  await h.command('diagnosis.record',{jobId:ro.id,version:(await job(ro.id)).version,...coilDiagnosis,dtcs:[{code:'P0301',description:'Cylinder 1 misfire'}],measurements:[],attachmentIds:[]},A)
  assert.equal(await stage(ro.id),'diagnosis','FLOW-001 diagnosis evidence moves the card')
  let quote=await estimate(h,await job(ro.id));assert.equal(await stage(ro.id),'approval')
