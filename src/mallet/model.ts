@@ -1,3 +1,4 @@
+import {retainStageChanges} from './reports/turnaround'
 import {rateProfiles,rateProfileCommands} from './rate-profiles'
 import {routing,routingCommands} from './routing'
 import {specialParts,specialPartCommands} from './special-parts'
@@ -87,10 +88,10 @@ export function reduce(s: State, actor: Actor, command: string, payload: any, no
   if (!commands.has(command)) fail('COMMAND', 'Unknown Mallet command.', null, 400)
   if (actor.role === 'agent' && !agentCommands.has(command) || actor.role === 'member' && ![...collaborationMemberCommands,...promiseMemberCommands,...timeMemberCommands,...diagnosisMemberCommands,...inspectionMemberCommands,'work.record','quality.record','quality.correct','quality.signTechnician'].includes(command)) fail('FORBIDDEN', 'This role cannot perform that command.', null, 403)
   migrateSalesTax(s)
-  const c = { s, actor, now }, p = object(payload)
+  const c = { s, actor, now }, p = object(payload), eventCount = rows(s,'event').length
   for (const handler of [rateProfiles,routing,specialParts,flow, promises, approvalLinks, approvalChasing, collaboration, time, payRates, diagnostics, pricing, tax, workshop, mileage, estimates, declinedWork, invoices, quality, inspections]) {
     const result = handler(c, command, p)
-    if (result !== undefined) return result
+    if (result !== undefined) { retainStageChanges(c,rows(s,'event').slice(eventCount)); return result }
   }
   return fail('COMMAND', 'Unknown Mallet command.', null, 400)
 }
