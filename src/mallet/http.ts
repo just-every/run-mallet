@@ -183,7 +183,7 @@ export async function malletResponse(request:Request,original:Bindings):Promise<
    let result:any
    if(command==='payment.verified'||command==='routing.sweep'||internalPromiseCommands.includes(command)||internalApprovalCommands.includes(command)||internalChaseCommands.includes(command))throw new HttpError(404,'unknown_command')
    if(command==='payment.verifyStripe')result=await verifyStripePayment(env,actor,auth.authority,input)
-   else if(command==='flow.collect'){const checked=await collectionInput(env,actor,input);result=await execute(env.DB,actor as any,command,checked,auth.authority);await env.DB.prepare('DELETE FROM mallet_intake_secrets WHERE job_id=?').bind(input.jobId).run()}
+   else if(command==='flow.collect'){const checked=await collectionInput(env,actor,input,auth.authority);result=await execute(env.DB,actor as any,command,checked.input,checked.authority);await env.DB.prepare('DELETE FROM mallet_intake_secrets WHERE job_id=?').bind(input.jobId).run()}
    else if(['intake.secretStore','intake.secretReveal','intake.secretEnd'].includes(command))result=await intakeSecret(env,actor,auth.authority,command,input)
    else if(command.startsWith('routing.'))result=await routingCommand(env.DB,actor as any,auth.authority,command,input)
    else if(command==='promise.approveAndNotify')result=await sendPromiseNotice(env,actor,auth.authority,input)

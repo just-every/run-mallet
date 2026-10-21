@@ -55,6 +55,8 @@ export async function returnJourney(){
   try{await restore(fresh,backup);const restored=await fresh.state();for(const kind of ['handover','returnDelegate','returnOverride','payment'])assert.deepEqual(restored.records[kind],(await h.state()).records[kind]);assert.ok(!JSON.stringify(backup).includes('synthetic-mallet-91'));assert.ok(!JSON.stringify(backup).includes('synthetic-mallet-95'));await fresh.state({as:h.owner,status:401})}finally{await fresh.close()}
   // The separate owner exception is itself retained and never marks an invoice paid.
   const otherAsset=await h.command('asset.create',{customerName:'Second Customer',label:'Second vehicle',identifier:'synthetic-mallet-97'}),second=await readyInvoice(h,{asset:otherAsset}),unpaid=await handoverInput(h,second.job.id,'Second Customer')
+  const pendingArchive=await archive(h),destination=await installation({bindings:{OWNER_EMAIL:'pending-handover-recovery@example.test'}})
+  try{await restore(destination,pendingArchive);await destination.command('flow.collect',unpaid,{status:409});assert.equal((await destination.state()).records.handover.length,1,'An archived owner exception grants no fresh-installation authority')}finally{await destination.close()}
   const overridden=await h.command('flow.collect',unpaid),r=(await h.state()).records.handover.find(r=>r.id===overridden.collection.handoverId);assert.equal(r.settlement.verifiedCents,0);assert.equal(r.settlement.override.id,unpaid.overrideId);assert.match(r.settlement.label,/not verified/)
  }finally{await h.close()}
 }
