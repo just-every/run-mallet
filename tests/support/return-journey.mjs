@@ -3,8 +3,8 @@ import {booking,estimate,authorise,archive,restore,installation} from '../harnes
 import {qualityReady} from './quality-ready.mjs'
 import {shopSetup} from './diagnosis-journey.mjs'
 import {handoverInput} from './handover-input.mjs'
-export async function readyInvoice(h,{asset,reviewer,technicianId}={}){
- let {job}=await booking(h,{asset,technicianId}),q=await authorise(h,await estimate(h,job));job=(await h.state()).records.job.find(j=>j.id===job.id)
+export async function readyInvoice(h,{asset,reviewer,technicianId,free=false}={}){
+ let {job}=await booking(h,{asset,technicianId}),q=await authorise(h,free?await h.command('estimate.prepare',{jobId:job.id,version:job.version,lines:[{kind:'labor',description:'Covered no-charge labor',quantity:1,unitCents:0}]}):await estimate(h,job));job=(await h.state()).records.job.find(j=>j.id===job.id)
  job=await h.command('work.record',{jobId:job.id,version:job.version,lineId:q.revisions[0].lines[0].id,quantity:1})
  await h.command('job.complete',{jobId:job.id,version:job.version},{status:409})
  await qualityReady(h,job,{reviewer});job=await h.command('job.complete',{jobId:job.id,version:job.version})
@@ -59,5 +59,8 @@ export async function returnJourney(){
   const pendingArchive=await archive(h),destination=await installation({bindings:{OWNER_EMAIL:'pending-handover-recovery@example.test'}})
   try{await restore(destination,pendingArchive);await destination.command('flow.collect',unpaid,{status:409});assert.equal((await destination.state()).records.handover.length,1,'An archived owner exception grants no fresh-installation authority')}finally{await destination.close()}
   const overridden=await h.command('flow.collect',unpaid),r=(await h.state()).records.handover.find(r=>r.id===overridden.collection.handoverId);assert.equal(r.invoice.billing,undefined);assert.ok(!(await h.state({as:advisor.cookie})).records.handover.some(r=>r.invoice.billing));assert.equal(r.settlement.verifiedCents,0);assert.equal(r.settlement.override.id,unpaid.overrideId);assert.match(r.settlement.label,/not verified/)
+  const freeAsset=await h.command('asset.create',{customerName:'Warranty Customer',customerEmail:'free@example.test',label:'No-charge rework vehicle',identifier:'synthetic-mallet-100'}),free=await readyInvoice(h,{asset:freeAsset,free:true}),freeInput=await handoverInput(h,free.job.id,'Warranty Customer');delete freeInput.overrideId
+  const freeFlow=await h.command('flow.collect',freeInput),freeReceipt=(await h.state()).records.handover.find(r=>r.id===freeFlow.collection.handoverId);assert.equal(freeReceipt.invoice.totals.totalCents,0);assert.equal(freeReceipt.settlement.receipts.length,0);assert.match(freeReceipt.settlement.label,/No payment due/);assert.doesNotMatch(freeReceipt.settlement.label,/Stripe confirmed/)
+
  }finally{await h.close()}
 }
