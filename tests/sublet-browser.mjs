@@ -21,8 +21,9 @@ export async function subletBrowser(){
   const directory=process.env.MALLET_SUBLET_PROOF_DIR??'.cache/sublet-browser';await mkdir(directory,{recursive:true})
   const shot=async(name,target=panel())=>{
    for(const width of [1440,390]){
-    await p.setViewportSize({width,height:1000});await target.scrollIntoViewIfNeeded();await p.evaluate(()=>new Promise(requestAnimationFrame))
+    await p.setViewportSize({width,height:1000});const bounds=await target.boundingBox();await p.setViewportSize({width,height:Math.max(1000,Math.ceil(bounds.height)+200)});await target.scrollIntoViewIfNeeded();await p.evaluate(()=>new Promise(requestAnimationFrame))
     assert.ok(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'SUBLET-001 no horizontal overflow '+name+' at '+width)
+    for(const amount of await panel().locator('.row-meta').all()){const b=await amount.boundingBox(),card=await panel().boundingBox();assert.ok(b.x>=card.x&&b.x+b.width<=card.x+card.width,'SUBLET-001 reconciliation values stay inside the card at '+width)}
     await target.screenshot({path:join(directory,name+'-'+width+'.png')})
    }
    await p.setViewportSize({width:1440,height:1000})

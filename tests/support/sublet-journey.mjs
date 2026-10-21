@@ -3,11 +3,11 @@ import {archive,authorise,booking,installation,restore} from '../harness.mjs'
 import {shopSetup} from './diagnosis-journey.mjs'
 import {qualityReady} from './quality-ready.mjs'
 export const at=hours=>new Date(Date.now()+hours*3600000).toISOString()
-export async function subletFixture(h,{person=h.person}={}){
+export async function subletFixture(h,{person=h.person,assignedMember=false}={}){
  await shopSetup(h)
  const advisor=await person('casey-sublet@example.test','admin'),member=await person('jules-sublet@example.test'),other=await person('lee-sublet@example.test'),owner=(await h.state()).actor
  const asset=await h.command('asset.create',{customerName:'Elena Torres',customerEmail:'elena@example.test',label:'2018 Subaru Outback',identifier:'synthetic-mallet-17'})
- const {job}=await booking(h,{asset,technicianId:owner.id,startAt:at(1),endAt:at(3),bayId:'Sublet bay'})
+ const {job}=await booking(h,{asset,technicianId:assignedMember?member.id:owner.id,startAt:at(1),endAt:at(3),bayId:'Sublet bay'})
  const current=async()=>(await h.state()).records.job.find(j=>j.id===job.id)
  let quote=await h.command('estimate.prepare',{jobId:job.id,version:job.version,lines:[{kind:'fee',description:'Cylinder head resurfacing',quantity:1,unitCents:50000,feeTaxable:false},{kind:'labor',description:'Remove and refit cylinder head',quantity:2,unitCents:10000},{kind:'fee',description:'Optional specialist inspection',quantity:1,unitCents:20000,feeTaxable:true}]})
  quote=await authorise(h,quote,quote.revisions[0].lines.slice(0,2).map(l=>l.id))
@@ -16,10 +16,10 @@ export async function subletFixture(h,{person=h.person}={}){
  return {owner,advisor,member,other,asset,job,quote,line,labor,declined,current,ADV,input}
 }
 export async function subletJourney(h){
- const f=await subletFixture(h),{owner,advisor,member,other,job,quote,line,labor,declined,current,ADV,input}=f
+ const f=await subletFixture(h,{assignedMember:true}),{owner,advisor,member,other,job,quote,line,labor,declined,current,ADV,input}=f
  const key=await h.command('agent.create',{label:'Sublet boundary'}),agent={as:'',headers:{authorization:'Bearer '+key.token}}
  // Existing quality clearance must stop applying when outsourced scope/custody changes.
- await qualityReady(h,await current(),{reviewer:advisor})
+ await qualityReady(h,await current(),{technician:member,reviewer:advisor})
  const before=(await h.state()).records
  for(const options of [{as:'',status:401},{as:member.cookie,status:403},{...agent,status:403},{headers:{origin:'https://elsewhere.test'},status:403}])await h.command('sublet.record',input,options)
  for(const change of [{lineId:declined.id},{lineId:labor.id},{revision:2},{version:input.version+1},{estimateId:'synthetic-mallet-unknown'}])await h.command('sublet.record',{...input,...change},{status:409})
@@ -101,14 +101,16 @@ export async function subletJourney(h){
  for(const command of ['sublet.receive','sublet.send','sublet.delay','sublet.addScope'])await h.command(command,{...await refs(),...receipt,...delay,...addition},{status:409})
  assert.deepEqual((await h.state()).records.sublet.find(x=>x.id===sublet.id),received,'SUBLET-001 custody and authorized scope remain immutable after receipt')
  await h.command('job.complete',{jobId:job.id,version:(await current()).version},{status:409})
- await h.command('work.record',{...work,version:(await current()).version})
+ await h.command('work.record',{...work,version:(await current()).version},{as:member.cookie})
  await h.command('work.record',{jobId:job.id,version:(await current()).version,estimateId:supplement.id,revision:1,lineId:extra.id,quantity:1})
  await h.command('job.complete',{jobId:job.id,version:(await current()).version},{status:409})
- quality=await qualityReady(h,await current(),{reviewer:advisor})
+ quality=await qualityReady(h,await current(),{technician:member,reviewer:advisor})
  // Even a changed cost receipt invalidates quality's exact sublet snapshot.
  sublet=await h.command('sublet.bill',{...await refs(),...bill,costCents:40000,reason:'Supplier final freight correction retained for this scope'},ADV)
  await h.command('job.complete',{jobId:job.id,version:(await current()).version},{status:409})
- quality=await qualityReady(h,await current(),{reviewer:advisor})
+ quality=await qualityReady(h,await current(),{technician:member,reviewer:advisor})
+ const technicianPage=await (await h.request('/app/jobs/'+job.id,{as:member.cookie})).text()
+ assert.ok(technicianPage.includes('Current checks and both signatures clear this repair for handover.'),'SUBLET-001 assigned technician sees the same current sublet-bound quality clearance')
  const complete=await h.command('job.complete',{jobId:job.id,version:(await current()).version})
  let invoice=await h.command('invoice.prepare',{jobId:job.id,version:complete.version})
  const billed=invoice.lines.filter(x=>[line.id,extra.id].includes(x.id))
