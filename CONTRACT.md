@@ -129,7 +129,7 @@ Neighboring products stay separate: [Pier](https://github.com/just-every/run-pie
 
 - **PART-001 — Shop parts catalog and traceability.** Maintain SKU, supplier/OEM cross-references, vehicle fitment, unit, locations, serial/lot, cost, selling price, warranty and supersession; trace a consumed lot or serial from receiving to repair and customer. New product data inherits OPS-001 before shipping. **Acceptance evidence:** Receive two lots of the same SKU, install one and search the supplier lot; only affected ROs and vehicles appear.
 
-- **PART-002 — Barcode receiving and stock counts.** Scan parts and storage bins, receive labeled quantities, run blind/cycle counts and approve variance adjustments with reasons; track on-hand, reserved and available separately and prevent silent negative stock. New product data inherits OPS-001 before shipping. **Acceptance evidence:** Scan a shipment and bins, count a shortage and approve its adjustment; stock ledger and receiving/variance reports reconcile.
+- **PART-002 — Barcode receiving and stock counts.** Scan parts and storage bins, receive labeled quantities, run blind/cycle counts and approve variance adjustments with reasons; track on-hand, reserved and available separately and prevent silent negative stock. Stock quantities use integer thousandths of each part’s declared unit without conversion. The append-only movement ledger derives on-hand; active repair reservations are separate and available is on-hand minus reserved. Barcode receiving retains labeled and physically received quantities and their shortage; a unique receipt reference prevents repeated receipt. Blind and cycle count entry screens withhold expected balances; submitting a count proposes no movement. Owner/admin approval retains a reason, actor and UTC time, refuses intervening stock movements or a result below reserved stock, and appends the variance once. Until purchasing roles exist, the owner and service advisor (admin) perform these stock decisions; GOV-001 inherits finer purchasing roles and limits, PART-003 consumption/cost allocation, PART-008 transfers and BOOKS-003 journal posting. New product data inherits OPS-001 before shipping. **Acceptance evidence:** Scan a shipment and bins, count a shortage and approve its adjustment; stock ledger and receiving/variance reports reconcile.
 
 - **PART-003 — Repair reservations and consumption.** Reserve required parts to a repair, commit actual usage/cost on work, release on cancellation and reverse only through a recorded return. Use Mallet’s repair stock ledger or an explicitly selected Pier inventory authority with idempotent commands and conflict reconciliation. New product data inherits OPS-001 before shipping. **Acceptance evidence:** Reserve the last item for one RO, refuse a competing reservation, consume it and cancel another job; retry a Pier movement and prove source and repair ledger agree once.
 
@@ -440,8 +440,8 @@ OPEN-001 was added on 18 October 2026. Its 19 October acceptance now runs the pu
 | Clauses | Done | Partial | Missing | Total |
 | --- | ---: | ---: | ---: | ---: |
 | Published | 9 | 0 | 0 | 9 |
-| Target and push further | 21 | 23 | 87 | 131 |
-| All | 30 | 23 | 87 | 140 |
+| Target and push further | 22 | 23 | 86 | 131 |
+| All | 31 | 23 | 86 | 140 |
 
 | Clause | Title | Kind | Status | Evidence | Gap |
 | --- | --- | --- | --- | --- | --- |
@@ -490,7 +490,7 @@ OPEN-001 was added on 18 October 2026. Its 19 October acceptance now runs the pu
 | `RETURN-001` | Paid and documented handover | target | missing |  | No ready/collected custody, payment gate, delegate authority or handover receipt. |
 | `FLEET-001` | Fleet and commercial repair workflows | target | missing |  | No fleet accounts, authorizer rules, credit terms, statements or downtime workflow. |
 | `PART-001` | Shop parts catalog and traceability | target | partial | `src/mallet/pier.ts`; `src/mallet/money.ts` | Pier SKU/name/unit lookup and part item IDs exist; no fitment, costs, lot/serial inventory or supplier provenance. |
-| `PART-002` | Barcode receiving and stock counts | target | missing |  | No barcode stock ledger, bins, receiving counts, cycle counts or adjustments. |
+| `PART-002` | Barcode receiving and stock counts | target | done | `tests/mallet.test.mjs` — "PART-002 / OPS-001: barcode receiving, separate balances, blind and cycle variances, approval fences, reports and fresh recovery" proves scanning parts/bins, labeled receipts/shortages, separate on-hand/reserved/available balances, both count modes, reasoned approval, stale/negative/reserved-stock refusal, receiving/variance/ledger reconciliation and fresh-owner archive recovery; "PART-002: scan shipment and bins, approve shortage and reconcile through native forms at 1440/390" (`tests/inventory-browser.mjs`) proves the receiving, blind count, approval and reports screens at both widths |  |
 | `PART-003` | Repair reservations and consumption | target | partial | `src/mallet/workshop.ts`; `src/mallet/invoices.ts`; `src/mallet/pier.ts` | Authorized part quantities bill at estimate prices; no reservation, stock movement, cost allocation or Pier write adapter. |
 | `BUY-001` | Purchase orders and goods receipts | target | missing |  | No purchase orders, approvals, goods receipts, backorders or three-way matching. |
 | `BUY-002` | Supplier stock and approved ordering | target | missing |  | No supplier comparison, cart approval, order submission or acknowledgment state. |
