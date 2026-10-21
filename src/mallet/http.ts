@@ -1,3 +1,5 @@
+import {intakePage,intakeFormInput} from './ui/intake'
+import {intakeSecret,expireIntakeSecrets} from './intake-secrets'
 import {tracePage,traceFormInput} from './ui/stock-trace'
 import {traceReport} from './stock-trace'
 import {accountsPage,customerFormInput} from './ui/customers'
@@ -82,6 +84,7 @@ async function nativeForm(request:Request) {
 }
 const withoutSubletCosts=(value:any)=>{if(!value||!('sublets' in value))return value;const {sublets,...rest}=value;return rest}
 function visible(s:State,actor:Actor):State {
+ if(!human(actor))s={...s,records:Object.fromEntries(Object.entries(s.records).map(([k,v])=>[k,k.startsWith('intake')?[]:k==='event'?v.filter(x=>!x.kind.startsWith('intake.')):v]))}
  s=scopedCollaboration(scopedPromises(s,actor),actor)
  s=scopedTime(s,actor)
  if(actor.role!=='owner'){s={...s,records:Object.fromEntries(Object.entries(s.records).filter(([k])=>!['contact','customerAccount','customerMerge','customerBilling'].includes(k)))};s={...s,records:{...s.records,event:rows(s,'event').filter(x=>!x.kind.startsWith('contact.')&&!x.kind.startsWith('customer.')),invoice:rows(s,'invoice').map(i=>{const {billing,...rest}=i;return rest})}}}
@@ -125,6 +128,7 @@ function formInput(data:FormData) {
  if(input.command==='chasePolicy.save'){input.linkDays=Number(input.linkDays);input.reminderDays=String(input.reminderDays??'').split(',').map(d=>d.trim()).filter(Boolean).map(Number)}
  if(input.command.startsWith('specialPart.')){if(input.partVersion!==undefined)input.partVersion=Number(input.partVersion);if(input.source){let source:any;try{source=JSON.parse(input.source)}catch{throw new HttpError(400,'invalid_source')};input.estimateId=source.estimateId;input.revision=source.revision;input.lineId=source.lineId}}
  if(input.command==='payRate.set'){input.centsPerHour=Math.round(Number(input.rate)*100);delete input.rate}
+ intakeFormInput(data,input)
  customerFormInput(data,input)
  purchasingFormInput(input)
  traceFormInput(input)
@@ -173,7 +177,8 @@ export async function malletResponse(request:Request,original:Bindings):Promise<
    submitted={command,input}
    let result:any
    if(command==='routing.sweep'||internalPromiseCommands.includes(command)||internalApprovalCommands.includes(command)||internalChaseCommands.includes(command))throw new HttpError(404,'unknown_command')
-   if(command.startsWith('routing.'))result=await routingCommand(env.DB,actor as any,auth.authority,command,input)
+   if(['intake.secretStore','intake.secretReveal','intake.secretEnd'].includes(command))result=await intakeSecret(env,actor,auth.authority,command,input)
+   else if(command.startsWith('routing.'))result=await routingCommand(env.DB,actor as any,auth.authority,command,input)
    else if(command==='promise.approveAndNotify')result=await sendPromiseNotice(env,actor,auth.authority,input)
    else if(command==='approvalLink.create'){if(!human(actor))throw new HttpError(403,'manager_required');result=await sendApprovalLink(env,actor,auth.authority,input)}
    else if(command.startsWith('agent.')) result=await agentKey(env.DB,actor,auth.authority,command,input)
@@ -183,7 +188,7 @@ export async function malletResponse(request:Request,original:Bindings):Promise<
     const checkpoint=await imports.portabilityCheckpoint(env.DB)
     result=await imports.erase(env.DB,actor,input.assetId,auth.authority,{nativeStatements:[{sql:"DELETE FROM mallet_records WHERE kind='event' AND json_extract(value,'$.assetId')=? AND json_extract(value,'$.jobId') IS NULL",params:[input.assetId]}],checkpoint})
    } else if(command==='diagnosisLink.create'){if(!human(actor))throw new HttpError(403,'manager_required');result=await createLink(env.DB,actor,auth.authority,input,env.AUTH_ORIGIN)}
-   else if(command==='diagnosis.record'&&actor.role!=='agent'){const checked=await diagnosisInput(env.DB,actor,auth.authority,input);result=await execute(env.DB,actor as any,command,checked.input,checked.authority)}
+   else if(['diagnosis.record','intake.record'].includes(command)&&actor.role!=='agent'){if(command==='intake.record'&&!human(actor))throw new HttpError(403,'manager_required');const checked=await diagnosisInput(env.DB,actor,auth.authority,input);result=await execute(env.DB,actor as any,command,checked.input,checked.authority)}
    else if(['crew.add','handoff.propose','note.add'].includes(command)&&actor.role!=='agent'){
     // FLOW-004: people named in a command are resolved here against active operators; client claims are discarded.
     const people=(await operators(env.DB)).list.filter(o=>o.status==='active'),one=(id:unknown)=>people.find(o=>o.id===id)
@@ -193,6 +198,8 @@ export async function malletResponse(request:Request,original:Bindings):Promise<
    else if(command==='inspection.record'&&actor.role!=='agent'){const checked=await inspectionRecordInput(env.DB,actor,auth.authority,input);result=await execute(env.DB,actor as any,command,checked.input,checked.authority)}
    else result=await execute(env.DB,actor as any,command,input,auth.authority)
    if(isApi){if(actor.role!=='owner'&&result&&typeof result==='object'&&'billing' in result){const {billing,...rest}=result;result=rest}return json(actor.role==='agent'?withoutSubletCosts(withoutInspectionSource(result)):result)}
+   if(command==='intake.secretReveal')return page('Temporary unlock secret',`<section class="card"><p>Use only for the recorded purpose. Close this page after use, then end the purpose.</p><pre>${e(result.secret)}</pre><a href="/app/jobs/${e(input.jobId)}/intake">Return to custody</a></section>`,actor,200,{section:'jobs'})
+   if(command.startsWith('intake.'))return redirect(`/app/jobs/${e(input.jobId)}/intake`)
    if(command==='agent.create')return page('Agent key created',`<section class="card"><p>Copy this key once into your agent’s private environment. It will not be shown again.</p><pre>${e(result.token)}</pre><p>Expires ${when(new Date(result.expiresAt).toISOString(),undefined,'date-year')}</p><p class="card-foot"><a href="/app/data">Return to access</a></p></section>`,actor,200,{section:'data'})
    if(command==='asset.erase')return redirect('/app/customers')
    if(command==='approvalLink.create')return page('Approval link sent',`<section class="card"><p>${e(result.delivery?.status==='accepted'?'Handed to the mail provider for '+result.to+'; delivery is not confirmed.':result.delivery?.status==='development'?'Written to the development mail outbox for '+result.to+'; not sent.':'The mail provider did not accept the message for '+result.to+'.')}</p><p>If the customer cannot find the email, share this link yourself. It will not be shown again.</p><pre>${e(result.url)}</pre><p class="card-foot"><a href="/app/jobs/${e(result.jobId)}#approval-links">Return to the repair</a></p></section>`,actor,200,{section:'jobs'})
@@ -260,6 +267,8 @@ export async function malletResponse(request:Request,original:Bindings):Promise<
   if(path==='/app/move-in')return page('Move into Mallet',moveIn(actor),actor,200,frame('move-in'))
   if(path==='/app/data'){if(!human(actor))throw new HttpError(403,'manager_required');const keys=await env.DB.prepare('SELECT id,label,expires_at,revoked_at FROM mallet_agent_keys ORDER BY created_at DESC').all();return page('Data & access',dataPage(actor,keys.results),actor,200,frame('data'))}
   if(path==='/app/backup')throw new HttpError(405,'post_required')
+  const intakeMatch=path.match(/^\/app\/jobs\/([^/]+)\/intake$/)
+  if(intakeMatch){if(!human(actor))throw new HttpError(403,'manager_required');const job=rows(state,'job').find(j=>j.id===intakeMatch[1]);if(!job)throw new HttpError(404,'not_found');await expireIntakeSecrets(env);const secrets=actor.role==='owner'?(await env.DB.prepare('SELECT id,purpose,expires_at FROM mallet_intake_secrets WHERE job_id=? ORDER BY expires_at').bind(job.id).all()).results:[];return page('Condition & custody',intakePage(state,job,actor,await diagnosisMedia(env.DB,actor,auth.authority,job.id),secrets),actor,200,frame('jobs'))}
   const previewMatch=path.match(/^\/app\/jobs\/([^/]+)\/media\/view\/([^/]+)$/)
   if(previewMatch){const job=rows(state,'job').find(j=>j.id===previewMatch[1]);if(!job)throw new HttpError(404,'not_found');const {row}=await uploadScope(env.DB,actor,auth.authority,previewMatch[2]);if(row.job_id!==job.id||!row.complete)throw new HttpError(404,'not_found');return page('Inspection evidence',mediaPreview(job,uploadView(row)),actor,200,frame('jobs',{subtitle:e(job.title),media:true}))}
   const mediaMatch=path.match(/^\/app\/jobs\/([^/]+)\/media$/)

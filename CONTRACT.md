@@ -57,7 +57,7 @@ Neighboring products stay separate: [Pier](https://github.com/just-every/run-pie
 
 - **VEH-003 — CARFAX service history exchange.** With the shop’s eligible CARFAX account, retrieve vehicle service history and submit eligible completed service records; preserve provider attribution, consent, event IDs and submission failures. External history remains distinguished from shop-performed work. New product data inherits OPS-001 before shipping. **Acceptance evidence:** Connect a CARFAX approved test account, read history by VIN, close a qualifying repair and submit once; duplicate events do not duplicate history and a provider refusal remains actionable.
 
-- **INTAKE-001 — Condition media and custody.** Attach timestamped before/after photos and video, damage marks, accessories, keys, valuables, security-lock handling and custody receipts to the asset and visit; private secrets are restricted and removed after their purpose ends. New product data inherits OPS-001 before shipping. **Acceptance evidence:** Check in a vehicle with body damage and spare key and a device with charger, capture signed custody receipt and photos, then compare the actual handover against the same checklist.
+- **INTAKE-001 — Condition media and custody.** Attach timestamped before/after photos and video, damage marks, accessories, keys, valuables, security-lock handling and custody receipts to the asset and visit; private secrets are restricted and removed after their purpose ends. Owner/admin record immutable before/after condition with same-visit completed media, damage locations, keys/accessories/valuables and a typed acknowledgment of the exact checklist; identity is not verified. A comparison retains every original item, returned quantities, discrepancies and explicit electronic-signing/receipt consent with paper-copy instructions; it records no payment or release. Temporary unlock material is owner-only after explicit consent, AES-GCM encrypted under installation configuration, excluded from archives/state/audits, and removed when its purpose is explicitly ended or its at-most-24-hour lifetime expires. Ciphertext is not restored; fresh owners retain only non-secret custody/audit history. New product data inherits OPS-001 before shipping. **Acceptance evidence:** Check in a vehicle with body damage and spare key and a device with charger, capture signed custody receipt and photos, then compare the actual handover against the same checklist.
 
 - **INTAKE-002 — Custom forms and signed shop terms.** Configure forms by vehicle/device type, capture symptom, diagnostic fee, storage/teardown terms and customer consent with exact version, signature and delivery copy; flag missing required fields without losing a draft. New product data inherits OPS-001 before shipping. **Acceptance evidence:** Publish two intake templates, change shop terms after an intake and retrieve its original signed version; a customer completes required fields by phone and receives a copy.
 
@@ -440,8 +440,8 @@ OPEN-001 was added on 18 October 2026. Its 19 October acceptance now runs the pu
 | Clauses | Done | Partial | Missing | Total |
 | --- | ---: | ---: | ---: | ---: |
 | Published | 9 | 0 | 0 | 9 |
-| Target and push further | 24 | 22 | 85 | 131 |
-| All | 33 | 22 | 85 | 140 |
+| Target and push further | 24 | 23 | 84 | 131 |
+| All | 33 | 23 | 84 | 140 |
 
 | Clause | Title | Kind | Status | Evidence | Gap |
 | --- | --- | --- | --- | --- | --- |
@@ -458,7 +458,7 @@ OPEN-001 was added on 18 October 2026. Its 19 October acceptance now runs the pu
 | `VEH-001` | Vehicle identity and VIN decode | target | missing |  | No structured vehicle fields, camera VIN/plate scan or decode provider connection. |
 | `VEH-002` | Mileage and service intervals | target | done | `src/mallet/mileage.ts`; `src/mallet/ui/mileage.ts`; `tests/mallet.test.mjs` |  |
 | `VEH-003` | CARFAX service history exchange | target | missing |  | No CARFAX history or service reporting integration; account/program approval is required engineering work. |
-| `INTAKE-001` | Condition media and custody | target | missing |  | No intake attachments, custody/accessory register, secret handling or receipts. |
+| `INTAKE-001` | Condition media and custody | target | partial | `tests/media.test.mjs` — "INTAKE-001 / OPS-001: signed condition and custody, exact checklist comparison, private temporary secrets and fresh-owner recovery" proves same-visit media, signed condition, every custody item and discrepancy, role/origin restrictions, consent, expiry/removal, no secret export and exact fresh-owner record/media recovery; "INTAKE-001: vehicle and device signed custody and actual checklist comparison at 1440/390" (`tests/intake-browser.mjs`) proves vehicle damage/spare key and device/charger signed receipts and actual checklist comparison at both widths | Privacy/custody policy awaits ct approval. Default ADOPTED: owner/admin custody records; owner-only explicit-consent temporary unlock access, audited without values, maximum 24 hours and explicit purpose-end removal, no secret backups; typed acknowledgments explicitly do not verify identity. |
 | `INTAKE-002` | Custom forms and signed shop terms | target | missing |  | No custom forms, signed terms, signatures or copy delivery. |
 | `INTAKE-003` | Counter and after-hours check-in | target | missing |  | No customer intake door, drop-box workflow or diagnostic-fee agreement. |
 | `BOOK-001` | Online appointment booking | target | missing |  | Only staff booking exists; no customer booking, availability rules or self-service cancellation. |
