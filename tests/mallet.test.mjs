@@ -299,3 +299,7 @@ test('CUS-001: owner creates household and fleet, changes driver, merges duplica
 
 test('PART-001 / OPS-001: declared catalog, two supplier lots, serial identity, exact installed costs, affected repairs, count reconciliation and recovery',async()=>{const {traceJourney}=await import('./support/stock-trace-journey.mjs');await run(traceJourney)})
 test('PART-001: maintain catalog, receive two lots, identify installation and find only affected vehicles at 1440/390',async()=>{const {traceBrowser}=await import('./stock-trace-browser.mjs');await traceBrowser()})
+
+test('WARRANTY-001 / OPS-001: paid original, linked lot and no-charge comeback, coverage decision, supplier claim and preserved invoice recovery',()=>run(async h=>{const {warrantyJourney}=await import('./support/warranty-journey.mjs');await warrantyJourney(h)}))
+
+test('WARRANTY-001: original invoice, linked rework, no-charge costs and supplier claim at 1440/390',async()=>{const {warrantyBrowser}=await import('./warranty-browser.mjs');await warrantyBrowser()})
