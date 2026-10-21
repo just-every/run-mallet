@@ -87,6 +87,8 @@ export async function subletBrowser(){
   await h.command('work.record',{jobId:f.job.id,version:(await f.current()).version,estimateId:f.quote.id,revision:1,lineId:f.labor.id,quantity:2})
   await p.goto(url);await submit(form('job.complete'),'Complete repair')
   assert.ok((await p.locator('main').innerText()).includes('Receive outsourced work back into shop custody'))
+  assert.equal(await p.getByRole('link',{name:'Return to this repair’s sublet work',exact:true}).getAttribute('href'),'/app/jobs/'+f.job.id+'#sublets')
+  assert.ok(!(await p.locator('main').innerText()).includes('subletIds'),'SUBLET-001 counter feedback supplies a recovery action without internal record IDs')
   await shot('06-completion-refused-outside',p.locator('main'))
   await p.goto(url);await panel().locator('summary').filter({hasText:/^Receive\ outsourced\ work$/}).click()
   const receive=form('sublet.receive'),reference='Cylinder head CH-17 and both machining operations physically received; return slip CH-17'

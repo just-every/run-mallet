@@ -266,6 +266,10 @@ export async function malletResponse(request:Request,original:Bindings):Promise<
    const jobId=error.details.jobId??submitted?.input?.jobId
    return page('Quality clearance needed',`<section class="card"><p>${e(error.message)}</p><ul>${error.details.blockers.map((b:any)=>`<li>${e(b.reason)}</li>`).join('')}</ul>${jobId?`<p><a href="/app/jobs/${encodeURIComponent(String(jobId))}#quality">Return to this repair’s quality checks</a></p>`:''}</section>`,actor,status,{section:'jobs'})
   }
+  if(error instanceof MalletError&&['SUBLET_CUSTODY','SUBLET_BILL','SUBLET_WORK'].includes(error.code)&&submitted?.input?.jobId) {
+   const jobId=String(submitted.input.jobId)
+   return page('Sublet work needs review',`<section class="card"><p>${e(error.message)}</p><p><a href="/app/jobs/${encodeURIComponent(jobId)}#sublets">Return to this repair’s sublet work</a></p></section>`,actor,status,{section:'jobs'})
+  }
   const details=error instanceof MalletError&&error.details?`<pre>${e(JSON.stringify(error.details,null,2))}</pre>`:''
   return page('Could not complete that action',refused(known?errorMessage(code,error.message):'The action could not be completed. Check what you entered and try again.',details,path.startsWith('/app/move-in')),actor,status,{section:path.startsWith('/app/move-in')?'move-in':path==='/app/data'?'data':path==='/app/tax'?'tax':path.startsWith('/app/actions')?'board':null})
  }
