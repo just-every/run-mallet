@@ -287,3 +287,6 @@ test('EST-001: rate profile and discounted mixed estimate through native forms a
 test('SUBLET-001 / OPS-001: approved outsourced scope, delayed custody, supplier bills, receiving and quality gates, exact margin and fresh recovery',()=>run(async h=>{const {subletJourney}=await import('./support/sublet-journey.mjs');await subletJourney(h)}))
 
 test('SUBLET-001: outside handoff, delay, added-scope decision, supplier bill, receipt, quality and margin through native forms at 1440/390',async()=>{const {subletBrowser}=await import('./sublet-browser.mjs');await subletBrowser()})
+
+test('PART-002 / OPS-001: barcode receiving, separate balances, blind and cycle variances, approval fences, reports and fresh recovery',async()=>{const {inventoryJourney}=await import('./support/inventory-journey.mjs');await run(inventoryJourney)})
+test('PART-002: scan shipment and bins, approve shortage and reconcile through native forms at 1440/390',async()=>{const {inventoryBrowser}=await import('./inventory-browser.mjs');await inventoryBrowser()})

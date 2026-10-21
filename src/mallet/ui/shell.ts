@@ -6,13 +6,14 @@ import type { Actor } from '../auth'
 import {e,initials,role,when,LOCAL_TIMES} from './common'
 import {ICONS,icon} from './icons'
 
-export type Section='board'|'jobs'|'customers'|'approvals'|'move-in'|'data'|'tax'
+export type Section='board'|'jobs'|'customers'|'approvals'|'move-in'|'data'|'tax'|'inventory'
 // Figures beside a section's name, when the page knows them.
 export type Counts=Partial<Record<Section,number>>
 export type Frame={section?:Section|null,counts?:Counts,subtitle?:string,aside?:string,heading?:boolean,media?:boolean,restore?:boolean,refresh?:number}
 
 const sections:[Section|'settings',string,string,string][]=[
  ['board','/app','Board','board'],['jobs','/app/jobs','Repair orders','document'],['customers','/app/customers','Customers','people'],['approvals','/app/approvals','Approvals','check'],
+ ['inventory','/app/inventory','Stock & receiving','box'],
  ['move-in','/app/move-in','Move in','box'],['data','/app/data','Data & access','key'],['tax','/app/tax','Shop tax','percent'],['settings','/auth/settings/identity','Sign-in settings','gear'],
 ]
 
