@@ -38,6 +38,16 @@ export async function warrantyJourney(h){
  await h.command('warranty.claimOutcome',{warrantyId:w.id,version:w.version,claimId,status:'credited',creditCents:3000,evidence:'Cannot skip external steps'},{status:409})
  for(const status of ['submitted','accepted','credited'])w=await h.command('warranty.claimOutcome',{warrantyId:w.id,version:w.version,claimId,status,creditCents:3000,evidence:'Staff attached external supplier '+status+' reference synthetic-mallet-84'})
  assert.equal(w.costs.reduce((n,x)=>n+x.amountCents,0)-w.claims[0].history.reduce((n,x)=>n+x.creditCents,0),500)
+ // Terms are immutable snapshots; later shop declarations do not change this comeback.
+ const laterTerms=await h.command('warranty.terms',{...termsInput(f.invoice),terms:'Different terms for later cases',mileageLimit:75000});assert.notEqual(laterTerms.id,w.terms.id)
+ for(const [i,responsibility]of ['shop','OEM'].entries()){
+  const source=await openInput(h,f,terms),edge=await h.command('warranty.open',{...source,failureAt:terms.startsAt,mileage:terms.mileageLimit,startAt:new Date(Date.now()+(3+i*2)*3600000).toISOString(),endAt:new Date(Date.now()+(4+i*2)*3600000).toISOString()})
+  assert.equal(edge.withinTerms,true,'Inclusive start time and exact mileage limit are covered')
+  const decided=await h.command('warranty.decide',{warrantyId:edge.id,version:edge.version,outcome:'covered',responsibility,reason:'Explicit '+responsibility+' coverage against saved original terms'});assert.equal(decided.decision.responsibility,responsibility)
+ }
+ const source=await openInput(h,f,terms),outside=await h.command('warranty.open',{...source,mileage:terms.mileageLimit+1,startAt:new Date(Date.now()+7*3600000).toISOString(),endAt:new Date(Date.now()+8*3600000).toISOString()});assert.equal(outside.withinTerms,false)
+ await h.command('warranty.decide',{warrantyId:outside.id,version:outside.version,outcome:'covered',responsibility:'shop',reason:'Outside limit'},{status:409})
+ const declined=await h.command('warranty.decide',{warrantyId:outside.id,version:outside.version,outcome:'declined',responsibility:'shop',reason:'Above the saved mileage limit'});assert.equal(declined.decision.noChargeLabor,false)
  const final=await h.state();assert.deepEqual(final.records.invoice.find(i=>i.id===f.invoice.id),f.invoice);assert.deepEqual(final.records.export.find(i=>i.id===f.exported.id),f.exported);assert.equal(final.records.job.find(j=>j.id===w.jobId).assetId,f.job.assetId);assert.equal(final.records.estimate.find(q=>q.jobId===w.jobId).revisions[0].totals.totalCents,0)
  assert.equal((await h.state(bearer)).records.warranty?.length??0,0);assert.equal((await h.request('/app/jobs/'+f.job.id+'/warranty',bearer)).status,403)
  const fresh=await installation({bindings:{OWNER_EMAIL:'warranty-recovery@example.test'}})
