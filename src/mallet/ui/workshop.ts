@@ -19,7 +19,7 @@ export function customers(state:any,actor:Actor) {
  const assets=[...rows(state,'asset')].sort((a,b)=>a.customerName.localeCompare(b.customerName)||a.label.localeCompare(b.label))
  const list=assets.length?`<section class="card flush">${table(['Customer','Vehicle','Plate or VIN','Visits'],assets.map(a=>[`<span class="strong">${e(a.customerName)}</span><small>${e(a.customerEmail)}</small>`,`<a class="strong" href="/app/assets/${e(a.id)}">${e(a.label)}</a>`,`<span class="mono">${e(a.identifier)}</span>`,`${a.visits?.length??0}`]),'register')}</section>`:box('Customers',empty('Your register of customers’ vehicles starts here.'))
  const add=human(actor)?box('New repair order',`<p class="muted">Step 1 of 2: add the customer’s vehicle. You book its visit on the next screen.</p>${form('asset.create',`<div class="fields">${field('Customer name','customerName','text','','required maxlength="120"')+field('Customer email','customerEmail','email','')+field('Vehicle','label','text','','required placeholder="2019 Honda CR-V EX"')+field('Plate or VIN','identifier','text','','required')}</div>`,'Add vehicle')}`,{id:'add'}):''
- return `<div class="grid wide-left"><div class="col">${list}</div><div class="col">${add}</div></div>`
+ return `${actor.role==='owner'?'<p><a href="/app/accounts">Customer and fleet accounts</a></p>':''}<div class="grid wide-left"><div class="col">${list}</div><div class="col">${add}</div></div>`
 }
 
 // Exact-revision decisions a person made on prepared work.

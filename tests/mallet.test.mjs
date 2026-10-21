@@ -293,3 +293,6 @@ test('PART-002: scan shipment and bins, approve shortage and reconcile through n
 
 test('BUY-001 / OPS-001: approved spend, partial receipt, repair allocation, backorder, bill exceptions, closure and fresh recovery',async()=>{const {purchasingJourney}=await import('./support/purchasing-journey.mjs');await run(purchasingJourney)})
 test('BUY-001: two-line spend approval, partial receiving, backorder and changed bill exception through native forms at 1440/390',async()=>{const {purchasingBrowser}=await import('./purchasing-browser.mjs');await purchasingBrowser()})
+
+test('CUS-001 / OPS-001: owner-reviewed household and fleet contacts, vehicle search, driver changes, duplicate history, frozen invoices and recovery',async()=>{const {customersJourney}=await import('./support/customers-journey.mjs');await run(customersJourney)})
+test('CUS-001: owner creates household and fleet, changes driver, merges duplicate and searches through native forms at 1440/390',async()=>{const {customersBrowser}=await import('./customers-browser.mjs');await customersBrowser()})

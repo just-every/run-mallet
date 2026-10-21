@@ -10,7 +10,7 @@ export function stockBalance(s:State,itemId:string,binId:string){
  const reservedMilli=rows(s,'stockReservation').filter(x=>x.itemId===itemId&&x.binId===binId&&!x.release).reduce((n,x)=>n+x.quantityMilli,0)
  return {itemId,binId,onHandMilli,reservedMilli,availableMilli:onHandMilli-reservedMilli}
 }
-export function stockReport(s:State){return {balances:rows(s,'stockItem').flatMap(item=>rows(s,'stockBin').map(bin=>({...stockBalance(s,item.id,bin.id),sku:item.sku,item:item.name,bin:bin.code}))),receipts:rows(s,'stockReceipt'),counts:rows(s,'stockCount'),movements:rows(s,'stockMovement'),reservations:rows(s,'stockReservation')}}
+export function stockReport(s:State){return {balances:[...rows(s,'stockItem')].sort((a,b)=>a.sku.localeCompare(b.sku)).flatMap(item=>[...rows(s,'stockBin')].sort((a,b)=>a.code.localeCompare(b.code)).map(bin=>({...stockBalance(s,item.id,bin.id),sku:item.sku,item:item.name,bin:bin.code}))),receipts:rows(s,'stockReceipt'),counts:rows(s,'stockCount'),movements:rows(s,'stockMovement'),reservations:rows(s,'stockReservation')}}
 export function scan(s:State,kind:'stockItem'|'stockBin',barcode:unknown){const code=text(barcode,'scanned barcode',100),row=rows(s,kind).find(x=>x.barcode.toLowerCase()===code.toLowerCase());if(!row)fail('NOT_FOUND',`Unknown ${kind==='stockItem'?'part':'bin'} barcode.`,null,404);return row}
 export function moveStock(c:Context,itemId:string,binId:string,deltaMilli:number,source:any,reason:string){
  const balance=stockBalance(c.s,itemId,binId)

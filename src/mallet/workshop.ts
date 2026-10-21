@@ -1,3 +1,4 @@
+import {customerBillingSnapshot} from './customers'
 import {assertSubletsReady,jobSublets} from './sublet'
 import { onCrew } from './collaboration'
 import { approval, bump, event, expectVersion, fail, find, put, rows, selfApproval, text, who, type Context, type Handler, type Row, type State } from './model'
@@ -60,6 +61,7 @@ export const workshop: Handler = (c, command, p) => {
       const plan = slot(p)
       requireFree(c, plan)
       const row = put(c.s, 'job', { assetId: asset.id, asset: { customerName: asset.customerName, customerEmail: asset.customerEmail, label: asset.label, identifier: asset.identifier }, title: text(p.title, 'title'), notes: text(p.notes, 'notes', 4000, true), ...plan, status: 'booked', estimateId: null, invoiceId: null, actuals: [], createdAt: c.now, bookedBy: who(c) })
+      if(asset.customerAccountId)put(c.s,'customerBilling',{jobId:row.id,snapshot:customerBillingSnapshot(c.s,asset),by:who(c),at:c.now})
       bump(c.s, 'asset', asset, { visits: [...asset.visits, row.id] })
       event(c, command, row.id, row.id, plan)
       return row

@@ -37,7 +37,7 @@ export async function purchasingJourney(h){
  await h.command('purchase.close',{...refs(),reason:'Unmatched freight blocks'},{status:409})
  bill=await h.command('purchase.bill',billInput());await refresh();assert.equal(bill.matched,true);assert.deepEqual(bill.exceptions,[]);assert.equal(bill.receiptIds.length,3)
  po=await h.command('purchase.close',{...refs(),reason:'All goods received and corrected invoice matches approved spend'});assert.equal(po.closed.billId,bill.id)
- const final=await h.state();assert.equal(final.records.purchaseBill.length,3);assert.equal(final.records.purchaseBill[0].matched,false);assert.equal(final.records.purchaseOrder[0].approval.totalCents,10250)
+ const final=await h.state();assert.equal(final.records.purchaseBill.length,3);assert.equal(final.records.purchaseBill.find(b=>b.sequence===1).matched,false);assert.equal(final.records.purchaseOrder[0].approval.totalCents,10250)
  for(const c of ['purchase.receive','purchase.bill','purchase.approve','purchase.close'])await h.command(c,{...billInput(),reason:'Closed evidence immutable'},{status:409})
  report=(await h.api('/api/mallet/purchasing'))[0];assert.ok(report.fullyReceived);assert.deepEqual(report.lines.map(l=>l.backorderMilli),[0,0]);assert.equal(report.currentBill.totalCents,10250)
  stock=await h.api('/api/mallet/inventory');assert.deepEqual(stock.balances.map(b=>b.onHandMilli),[2000,4000]);assert.equal(stock.movements.reduce((n,m)=>n+m.deltaMilli,0),6000)

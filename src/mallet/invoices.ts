@@ -45,7 +45,7 @@ export const invoices: Handler = (c, command, p) => {
       const sublets=jobSublets(c.s,job.id)
       if(sublets.length)assertQualityReady(c.s,job)
       const snapshot = {...suggested(c, job),...(sublets.length?{sublets:structuredClone(sublets.map(r=>({...r,reconciliation:subletMargin(r)})))}:{})}
-      const row = put(c.s, 'invoice', { ...snapshot, number: `M-${String(rows(c.s, 'invoice').length + 1).padStart(6, '0')}`, jobId: job.id, jobVersion: job.version, customer: structuredClone(job.asset), actuals: structuredClone(job.actuals), status: 'draft', revision: 1, preparedBy: who(c), preparedAt: c.now, approval: null, exportId: null })
+      const row = put(c.s, 'invoice', { ...snapshot, number: `M-${String(rows(c.s, 'invoice').length + 1).padStart(6, '0')}`, jobId: job.id, jobVersion: job.version, customer: structuredClone(job.asset), ...(rows(c.s,'customerBilling').some(b=>b.jobId===job.id)?{billing:structuredClone(rows(c.s,'customerBilling').find(b=>b.jobId===job.id)!.snapshot)}:{}), actuals: structuredClone(job.actuals), status: 'draft', revision: 1, preparedBy: who(c), preparedAt: c.now, approval: null, exportId: null })
       bump(c.s, 'job', job, { invoiceId: row.id })
       event(c, command, job.id, row.id, { revision: 1, totals: row.totals, estimateId: row.estimateId, estimateRevision: row.estimateRevision })
       return row

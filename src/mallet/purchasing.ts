@@ -5,7 +5,7 @@ export const purchasingCommands=['purchase.create','purchase.approve','purchase.
 const cents=(v:unknown,label:string)=>integer(v,label,0,100_000_000)
 const lineCost=(line:any)=>Math.round(line.quantityMilli*line.unitCents/1000)
 export function purchaseStatus(s:State,po:Row){
- const receipts=rows(s,'purchaseReceipt').filter(r=>r.purchaseId===po.id),bills=rows(s,'purchaseBill').filter(b=>b.purchaseId===po.id)
+ const receipts=rows(s,'purchaseReceipt').filter(r=>r.purchaseId===po.id),bills=rows(s,'purchaseBill').filter(b=>b.purchaseId===po.id).sort((a,b)=>a.sequence-b.sequence)
  const lines=po.lines.map((line:any)=>{const receivedMilli=receipts.filter(r=>r.lineId===line.id).reduce((n,r)=>n+r.quantityMilli,0);return {...line,receivedMilli,backorderMilli:line.quantityMilli-receivedMilli}})
  return {lines,receipts,bills,currentBill:bills.at(-1)??null,fullyReceived:lines.every((l:any)=>l.backorderMilli===0)}
 }
@@ -57,7 +57,7 @@ export const purchasing:Handler=(c,command,p)=>{
   if(taxCents!==po.taxCents)exceptions.push('Supplier tax differs from approved spend')
   if(freightCents!==po.freightCents)exceptions.push('Freight differs from approved spend')
   const totalCents=integer(lines.reduce((n:number,l:any)=>n+lineCost(l),0)+taxCents+freightCents,'bill total',0,1_000_000_000)
-  const bill=put(c.s,'purchaseBill',{purchaseId:po.id,invoiceNumber:text(p.invoiceNumber,'supplier invoice number',200),lines,taxCents,freightCents,totalCents,exceptions,matched:exceptions.length===0,receiptIds:status.receipts.map(r=>r.id),evidence:text(p.evidence,'supplier bill evidence',4000),by:who(c),at:c.now})
+  const bill=put(c.s,'purchaseBill',{purchaseId:po.id,sequence:status.bills.length+1,invoiceNumber:text(p.invoiceNumber,'supplier invoice number',200),lines,taxCents,freightCents,totalCents,exceptions,matched:exceptions.length===0,receiptIds:status.receipts.map(r=>r.id),evidence:text(p.evidence,'supplier bill evidence',4000),by:who(c),at:c.now})
   bump(c.s,'purchaseOrder',po,{status:bill.matched?'matched':'exception'});event(c,command,null,po.id,{billId:bill.id,matched:bill.matched,exceptions});return bill
  }
  if(!status.fullyReceived)fail('BACKORDER','Outstanding backorders must be received before closure.')
