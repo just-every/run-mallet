@@ -2,8 +2,8 @@ import assert from 'node:assert/strict'
 import {mkdir} from 'node:fs/promises'
 import {join} from 'node:path'
 import {chromium} from '@playwright/test'
-import {installation,booking} from './harness.mjs'
-import {custodyPhoto} from './support/intake-journey.mjs'
+import {installation,booking,archive,restore} from './harness.mjs'
+import {custodyPhoto,custodyMedia} from './support/intake-journey.mjs'
 export async function intakeBrowser(){
  const h=await installation({network:true,assets:true,bindings:{AUTH_LOCAL:'true'}});let browser
  try{
@@ -11,6 +11,7 @@ export async function intakeBrowser(){
   browser=await chromium.launch({headless:true,args:['--use-mock-keychain','--password-store=basic']});const context=await browser.newContext();await context.addCookies(h.owner.split('; ').map(pair=>({name:pair.slice(0,pair.indexOf('=')),value:pair.slice(pair.indexOf('=')+1),url:h.origin})))
   const p=await context.newPage(),errors=[];p.on('pageerror',e=>errors.push(e.message));const dir=process.env.MALLET_C19_PROOF_DIR??'.cache/intake-browser';await mkdir(dir,{recursive:true})
   const shot=async name=>{for(const width of [1440,390]){await p.setViewportSize({width,height:1000});assert.ok(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),name+' fits '+width);await p.screenshot({path:join(dir,name+'-'+width+'.png'),fullPage:true})}}
+  const videos=[]
   for(const [i,label,item,kind]of [[1,'2019 Honda CR-V','Spare key','key'],[2,'Repair tablet','Charger','accessory']]){
    const asset=await h.command('asset.create',{customerName:'Dana Brooks',label,identifier:'synthetic-mallet-'+(72+i)}),{job}=await booking(h,{asset,startAt:`2026-10-${10+i}T09:00:00Z`,endAt:`2026-10-${10+i}T10:00:00Z`}),photo=await custodyPhoto(h,job)
    await p.goto(h.origin+'/app/jobs/'+job.id);await p.getByRole('link',{name:'Condition & custody receipts'}).click();await shot('intake-'+i+'-empty')
@@ -21,8 +22,13 @@ export async function intakeBrowser(){
    await record.locator(`input[name="attachmentIds"][value="${photo.id}"]`).check()
    await record.getByLabel('Person acknowledging this checklist').fill('Dana Brooks');await record.locator('[name="consent"]').check();await record.getByRole('button',{name:'Sign custody receipt',exact:true}).click();await p.waitForLoadState('domcontentloaded')
    assert.ok((await p.locator('main').innerText()).includes(item+' × 1'));assert.equal(await p.getByRole('link',{name:'condition.png'}).count(),1);await shot('intake-'+i+'-signed')
+   const encoded=await p.evaluate(async()=>{const canvas=document.createElement('canvas');canvas.width=32;canvas.height=32;const ctx=canvas.getContext('2d'),stream=canvas.captureStream(10),parts=[],recorder=new MediaRecorder(stream,{mimeType:'video/webm'});const done=new Promise(resolve=>{recorder.ondataavailable=e=>parts.push(e.data);recorder.onstop=async()=>{const bytes=new Uint8Array(await new Blob(parts).arrayBuffer());resolve(btoa(String.fromCharCode(...bytes)))}});recorder.start();for(let frame=0;frame<5;frame++){ctx.fillStyle=frame%2?'#2874a6':'#c0392b';ctx.fillRect(0,0,32,32);await new Promise(r=>setTimeout(r,100))}recorder.stop();stream.getTracks().forEach(t=>t.stop());return done})
+   const video=await custodyMedia(h,job,Buffer.from(encoded,'base64'),'after-condition.webm','video/webm','After condition — observed handover');videos.push(video);await p.reload()
+   await record.getByLabel('Condition stage',{exact:true}).selectOption('after');await record.getByLabel('Damage locations and condition',{exact:true}).fill('Original condition unchanged after repair');await record.getByLabel('Security-lock handling',{exact:false}).fill('Customer retains unlock material');await record.locator(`input[name="attachmentIds"][value="${video.id}"]`).check();await record.getByLabel('Person acknowledging this checklist').fill('Dana Brooks');await record.locator('[name="consent"]').check();await record.getByRole('button',{name:'Sign custody receipt',exact:true}).click();await p.waitForLoadState('domcontentloaded');await shot('intake-'+i+'-after-video')
+   await p.getByRole('link',{name:'after-condition.webm',exact:true}).click();await p.locator('video').evaluate(async v=>{await v.play();v.pause()});await shot('intake-'+i+'-playable-after-video');await p.goto(h.origin+'/app/jobs/'+job.id+'/intake')
    await p.getByText('Compare the actual handover checklist',{exact:true}).click();const compare=p.locator('form:has(input[value="intake.compare"])');await compare.getByLabel('Person acknowledging this checklist').fill('Dana Brooks');await compare.locator('[name="consent"]').check();await compare.getByRole('button',{name:'Sign checklist comparison',exact:true}).click();await p.waitForLoadState('domcontentloaded');assert.ok((await p.locator('main').innerText()).includes(item+': 1 of 1 returned · 0 missing'));await shot('intake-'+i+'-compared')
   }
+  const saved=await h.state(),fresh=await installation({bindings:{OWNER_EMAIL:'intake-video-recovery@example.test'}});try{await restore(fresh,await archive(h));assert.deepEqual((await fresh.state()).records.intake,saved.records.intake);for(const video of videos){const bytes=Buffer.from(await(await fresh.request(video.contentUrl)).arrayBuffer());const {createHash}=await import('node:crypto');assert.equal(createHash('sha256').update(bytes).digest('hex'),video.sha256)}}finally{await fresh.close()}
   assert.deepEqual(errors,[])
  }finally{await browser?.close();await h.close()}
 }

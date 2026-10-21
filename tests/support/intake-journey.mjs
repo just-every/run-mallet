@@ -2,13 +2,14 @@ import assert from 'node:assert/strict'
 import {readFile} from 'node:fs/promises'
 import {createHash,randomUUID} from 'node:crypto'
 import {booking,archive,restore,installation} from '../harness.mjs'
-export async function custodyPhoto(h,job){
- const bytes=await readFile('tests/fixtures/dvi/front-brake.png'),hash=b=>createHash('sha256').update(b).digest('hex')
- const finding=await h.api('/api/mallet/media/findings',{jobId:job.id,clientId:randomUUID(),title:'Before condition — left door dent',capturedAt:new Date(Date.now()-1000).toISOString()})
- let upload=await h.api('/api/mallet/media/uploads',{findingId:finding.id,clientId:randomUUID(),variant:'original',filename:'condition.png',mime:'image/png',size:bytes.length,sha256:hash(bytes),capturedAt:finding.capturedAt})
+export async function custodyMedia(h,job,bytes,filename='condition.png',mime='image/png',title='Before condition — left door dent'){
+ const hash=b=>createHash('sha256').update(b).digest('hex')
+ const finding=await h.api('/api/mallet/media/findings',{jobId:job.id,clientId:randomUUID(),title,capturedAt:new Date(Date.now()-1000).toISOString()})
+ let upload=await h.api('/api/mallet/media/uploads',{findingId:finding.id,clientId:randomUUID(),variant:'original',filename,mime,size:bytes.length,sha256:hash(bytes),capturedAt:finding.capturedAt})
  for(let i=0;i<Math.ceil(bytes.length/65536);i++){const part=bytes.subarray(i*65536,(i+1)*65536);await h.api('/api/mallet/media/uploads/'+upload.id+'/chunks/'+i,{base64:part.toString('base64'),sha256:hash(part)},{method:'PUT'})}
  return h.api('/api/mallet/media/uploads/'+upload.id+'/complete',{})
 }
+export async function custodyPhoto(h,job){return custodyMedia(h,job,await readFile('tests/fixtures/dvi/front-brake.png'))}
 export const custodyInput=job=>({jobId:job.id,version:job.version,phase:'before',capturedAt:new Date(Date.now()-1000).toISOString(),damage:'Left front door dent at lower edge; screen uncracked',items:[{kind:'key',label:'Spare key',quantity:1},{kind:'accessory',label:'Charger',quantity:1},{kind:'valuable',label:'Glovebox wallet',quantity:1}],lockHandling:'Customer unlocks in person; any temporary code held only in owner vault',signedBy:'Dana Brooks',consent:true})
 export async function intakeJourney(h){
  let {job}=await booking(h);const other=await booking(h,{asset:await h.command('asset.create',{customerName:'Other customer',label:'Other device',identifier:'synthetic-mallet-72'}),bayId:'Bay 2',technicianId:'Counter 2'}),photo=await custodyPhoto(h,job),alien=await custodyPhoto(h,other.job)
@@ -21,7 +22,7 @@ export async function intakeJourney(h){
  await h.command('intake.record',{...input,attachmentIds:[alien.id]},{status:400})
  const before=await h.command('intake.record',input,{as:admin.cookie});assert.equal(before.attachments[0].sha256,photo.sha256);assert.equal(before.signature.identityVerified,false);assert.equal(before.assetId,job.assetId)
  await h.command('intake.record',input,{status:409});job=(await h.state()).records.job.find(j=>j.id===job.id)
- const after=await h.command('intake.record',{...input,version:job.version,phase:'after',damage:'Door dent unchanged; repair area clean'})
+ const afterPhoto=await custodyPhoto(h,job),after=await h.command('intake.record',{...input,attachmentIds:[afterPhoto.id],version:job.version,phase:'after',damage:'Door dent unchanged; repair area clean'});assert.notEqual(after.attachments[0].id,before.attachments[0].id);assert.equal(after.phase,'after')
  job=(await h.state()).records.job.find(j=>j.id===job.id)
  const compare={jobId:job.id,version:job.version,intakeId:before.id,returned:before.items.map(i=>({itemId:i.id,quantity:i.quantity})),signedBy:'Dana Brooks',consent:true}
  await h.command('intake.compare',{...compare,returned:compare.returned.slice(1)},{status:400})
