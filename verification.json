@@ -64,6 +64,14 @@
       "commands": [
         "node --test --test-concurrency=1 tests/restore.test.mjs"
       ]
+    },
+    {
+      "name": "sales-report",
+      "browser": false,
+      "hosted": false,
+      "commands": [
+        "node --test --test-concurrency=1 tests/sales-report.test.mjs"
+      ]
     }
   ],
   "nightly": [

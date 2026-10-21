@@ -223,7 +223,7 @@ Neighboring products stay separate: [Pier](https://github.com/just-every/run-pie
 
 ### Reporting and multi-shop management
 
-- **REPORT-001 — ARO car count and sales funnel.** Report average repair order, completed vehicle count, estimate approval/close ratio, sold/declined work and advisor performance with explicit denominators, shop timezone, exclusions and date/location filters; every figure drills to source ROs and decisions. New product data inherits OPS-001 before shipping. **Acceptance evidence:** Complete/void/refund a known set of ROs, compare ARO/car count/close ratio with independent arithmetic and drill every component to the underlying record.
+- **REPORT-001 — ARO car count and sales funnel.** Report average repair order, completed vehicle count, estimate approval/close ratio, sold/declined work and advisor performance with explicit denominators, shop timezone, exclusions and date/location filters; every figure drills to source ROs and decisions. New product data inherits OPS-001 before shipping. **Acceptance evidence:** Complete/void/refund a known set of ROs, compare ARO/car count/close ratio with independent arithmetic and drill every component to the underlying record. Current single-installation reporting distinguishes completed repair count from the approved-invoice ARO denominator: pretax discounted invoice sales per approved/exported completed repair, half up to cents; dates are inclusive in the configured shop timezone. Customer-decision volumes use the exact original revision and decision date, with partial approval counting as an accepted decision and percentages half up to tenths; supplements and later canceled/lost repairs retain their original decisions. These volumes are not realized sales or settled payment; void/refund adjustments, the full close funnel, advisor comparisons and multiple locations remain required before DONE.
 
 - **REPORT-002 — Repair and parts profitability.** Show gross profit and margin by repair, parts/labor/sublet, technician, advisor, service, supplier and location using actual purchase cost, loaded labor, discounts, core/refund adjustments and warranty rework; distinguish estimated from realized margin. New product data inherits OPS-001 before shipping. **Acceptance evidence:** Receive a higher-cost part, finish a discounted repair and a comeback, then compare estimated/realized margins and source cost events.
 
@@ -365,7 +365,7 @@ The wider category is evidenced by [Tekmetric shop management](https://www.tekme
 
 ## Homepage claims
 
-Every capability claim on the approved homepage (`src/site/landing/`, checked against br's claims truth table of 18 October 2026, rows 1–59 in page order) maps to the named clauses that promise it. A claim's status is `done` when every mapped clause is done, `missing` when every one is missing, and `partial` otherwise, from the status table below. The sample shop, people, vehicles and figures in the drawings (Buckeye Auto Repair, RO 4127, Ohio's 7.5% sales tax) are illustrations, not claims. 59 claims: 16 done, 17 partial, 26 missing.
+Every capability claim on the approved homepage (`src/site/landing/`, checked against br's claims truth table of 18 October 2026, rows 1–59 in page order) maps to the named clauses that promise it. A claim's status is `done` when every mapped clause is done, `missing` when every one is missing, and `partial` otherwise, from the status table below. The sample shop, people, vehicles and figures in the drawings (Buckeye Auto Repair, RO 4127, Ohio's 7.5% sales tax) are illustrations, not claims. 59 claims: 22 done, 14 partial, 23 missing.
 
 | # | Section | Claim | Clause(s) | Status |
 | --- | --- | --- | --- | --- |
@@ -420,7 +420,7 @@ Every capability claim on the approved homepage (`src/site/landing/`, checked ag
 | 49 | 10 Follow-up | Reminders stopped for a sold vehicle | AUTO-003 | missing |
 | 50 | 11 Week | Emailed weekly report: car count, ARO, sales, on promise | REPORT-001, REPORT-004, REPORT-006 | partial |
 | 51 | 11 Week | Technician sold, clocked and efficiency | REPORT-003 | done |
-| 52 | 11 Week | "Every number opens the repair orders behind it" | REPORT-001 | missing |
+| 52 | 11 Week | "Every number opens the repair orders behind it" | REPORT-001 | partial |
 | 53 | 12 Moving in | "31,906 Tekmetric repair orders, all searchable" | MOVE-001 | missing |
 | 54 | 12 Moving in | "Customers, vehicles, history, canned jobs and open work come across before cutover" | MOVE-001, MOVE-012, MOVE-013 | missing |
 | 55 | 12 Moving in | Reviewed import (preview, apply what was reviewed) | MOVE-010, IMPORT-001 | partial |
@@ -431,15 +431,15 @@ Every capability claim on the approved homepage (`src/site/landing/`, checked ag
 
 ## Status
 
-Judged from the code and tests at commit `88562eb529abd66394171d97778854c4a94fa4b2` (17 October 2026).
+Judged from the code and tests at commit `08b74a3156a4245803fe36bdd3c716673c86fe45` (21 October 2026).
 
 OPEN-001 was added on 18 October 2026. Its 19 October acceptance now runs the published command in a clean directory, verifies empty owner setup, inspects the installed MIT source and exercises the app without a Mallet commercial gate (`tests/clone-journey.mjs`, `tests/open-source-journey.mjs`, `tests/browser-journey.mjs`, `tests/site/site.test.mjs`).
 
 | Clauses | Done | Partial | Missing | Total |
 | --- | ---: | ---: | ---: | ---: |
 | Published | 9 | 0 | 0 | 9 |
-| Target and push further | 20 | 21 | 90 | 131 |
-| All | 29 | 21 | 90 | 140 |
+| Target and push further | 20 | 22 | 89 | 131 |
+| All | 29 | 22 | 89 | 140 |
 
 | Clause | Title | Kind | Status | Evidence | Gap |
 | --- | --- | --- | --- | --- | --- |
@@ -532,7 +532,7 @@ OPEN-001 was added on 18 October 2026. Its 19 October acceptance now runs the pu
 | `AUTO-005` | Review and satisfaction requests | target | missing |  | No review-request integrations, satisfaction capture or response handling. |
 | `AUTO-006` | Warranty and contract renewal follow-up | target | missing |  | No coverage/renewal schedules, issue capture or automated follow-up. |
 | `MSG-004` | Communication controls and searchable history | target | missing |  | No repair communication templates, transcript export, language preferences or shared send-policy enforcement. |
-| `REPORT-001` | ARO car count and sales funnel | target | missing |  | No operational KPI reports, definitions, filters or drill-through. |
+| `REPORT-001` | ARO car count and sales funnel | target | partial | `src/mallet/reports/sales.ts`; `src/mallet/sales-report-door.ts`; `tests/sales-report.test.mjs`; `docs/sales-report.md` | Read-only native JSON/CSV now proves completion-based discounted invoice sales, explicit ARO/approval denominators, original authorized/declined decision values, inclusive shop-local dates, exact source drill-through and fresh-owner archive recovery. Void/refund adjustments, the full close funnel, advisor performance and multiple-location reporting remain unbuilt. |
 | `REPORT-002` | Repair and parts profitability | target | missing |  | No cost ledger, loaded labor, gross-profit/margin reporting or warranty-cost adjustments. |
 | `REPORT-003` | Technician efficiency and productivity | target | done | `src/mallet/reports/technicians.ts`; `src/mallet/pay-rates.ts`; `src/mallet/ui/reports.ts`; `src/mallet/http.ts`; `tests/support/report-journey.mjs`; `tests/report-browser.mjs` |  |
 | `REPORT-004` | Turnaround and customer promises | target | partial | `src/mallet/reports/turnaround.ts`; `src/mallet/model.ts`; `src/mallet/http.ts`; `docs/turnaround.md`; `tests/support/flow-journey.mjs`; `tests/mallet.test.mjs` (REPORT-004 / OPS-001) | Authenticated API reports observed stage intervals, approval/parts waits, booking-to-completion cycle time and promised-versus-actual completion with exact source events and fresh-owner restore. Older repairs explicitly retain incomplete stage coverage. No booking no-shows, DVI completion/engagement, warranty comeback rates, location comparisons or report screen yet. |
