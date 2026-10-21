@@ -1,6 +1,6 @@
 import {lotRemaining} from './stock-trace'
 // Stock is an append-only quantity ledger. Counts propose changes; approval never rewrites a receipt.
-import {bump,choice,event,expectVersion,fail,find,integer,put,rows,text,who,type Context,type Handler,type State} from './model'
+import {bump,choice,event,expectVersion,fail,find,integer,put,rows,text,who,type Context,type Handler,type Row,type State} from './model'
 export const inventoryCommands=['stock.item','stock.bin','stock.receive','stock.reserve','stock.release','stock.count','stock.approveCount']
 export function amount(value:unknown,label='quantity',zero=false){
  if(typeof value!=='number'||!Number.isFinite(value)||value<0||(!zero&&value===0)||Math.abs(value*1000-Math.round(value*1000))>0.000001)fail('INPUT',`${label} must be positive with at most three decimal places.`,null,400)
@@ -11,7 +11,8 @@ export function stockBalance(s:State,itemId:string,binId:string){
  const reservedMilli=rows(s,'stockReservation').filter(x=>x.itemId===itemId&&x.binId===binId&&!x.release).reduce((n,x)=>n+x.quantityMilli,0)
  return {itemId,binId,onHandMilli,reservedMilli,availableMilli:onHandMilli-reservedMilli}
 }
-export function stockReport(s:State){return {balances:[...rows(s,'stockItem')].sort((a,b)=>a.sku.localeCompare(b.sku)).flatMap(item=>[...rows(s,'stockBin')].sort((a,b)=>a.code.localeCompare(b.code)).map(bin=>({...stockBalance(s,item.id,bin.id),sku:item.sku,item:item.name,bin:bin.code}))),receipts:rows(s,'stockReceipt'),counts:rows(s,'stockCount'),movements:rows(s,'stockMovement'),reservations:rows(s,'stockReservation')}}
+export const receiptExists=(s:State,reference:string)=>['stockReceipt','purchaseReceipt'].some(kind=>rows(s,kind).some(r=>r.reference===reference))
+export function stockReport(s:State){return {balances:[...rows(s,'stockItem')].sort((a,b)=>a.sku.localeCompare(b.sku)).flatMap(item=>[...rows(s,'stockBin')].sort((a,b)=>a.code.localeCompare(b.code)).map(bin=>({...stockBalance(s,item.id,bin.id),sku:item.sku,item:item.name,bin:bin.code}))),receipts:[...rows(s,'stockReceipt'),...rows(s,'purchaseReceipt').map((r):Row=>({...r,expectedMilli:r.quantityMilli,shortageMilli:0,reason:'PO goods receipt '+r.reference}))],counts:rows(s,'stockCount'),movements:rows(s,'stockMovement'),reservations:rows(s,'stockReservation')}}
 export function scan(s:State,kind:'stockItem'|'stockBin',barcode:unknown){const code=text(barcode,'scanned barcode',100),row=rows(s,kind).find(x=>x.barcode.toLowerCase()===code.toLowerCase());if(!row)fail('NOT_FOUND',`Unknown ${kind==='stockItem'?'part':'bin'} barcode.`,null,404);return row}
 export function moveStock(c:Context,itemId:string,binId:string,deltaMilli:number,source:any,reason:string){
  const balance=stockBalance(c.s,itemId,binId)
@@ -60,7 +61,7 @@ export const inventory:Handler=(c,command,p)=>{
  }
  if(command==='stock.receive'){
   const reference=text(p.reference,'receiving reference',200)
-  if(rows(c.s,'stockReceipt').some(x=>x.reference===reference))fail('DUPLICATE','This receiving reference is already retained. Do not receive twice.')
+  if(receiptExists(c.s,reference))fail('DUPLICATE','This receiving reference is already retained. Do not receive twice.')
   const expectedMilli=amount(p.expectedQuantity,'labeled quantity'),quantityMilli=amount(p.quantity,'received quantity',true)
   const receipt=put(c.s,'stockReceipt',{itemId:item.id,binId:bin.id,reference,expectedMilli,quantityMilli,shortageMilli:expectedMilli-quantityMilli,reason:text(p.reason,'receiving note',2000),by:who(c),at:c.now})
   moveStock(c,item.id,bin.id,quantityMilli,{kind:'receipt',id:receipt.id},receipt.reason);event(c,command,null,receipt.id,{quantityMilli});return receipt

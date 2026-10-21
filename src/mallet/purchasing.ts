@@ -1,5 +1,5 @@
 import {bump,event,expectVersion,fail,find,integer,object,put,rows,text,who,type Handler,type Row,type State} from './model'
-import {amount,moveStock,reserveStock,scan} from './inventory'
+import {amount,moveStock,receiptExists,reserveStock,scan} from './inventory'
 import {instant} from './workshop'
 export const purchasingCommands=['purchase.create','purchase.approve','purchase.receive','purchase.bill','purchase.close']
 const cents=(v:unknown,label:string)=>integer(v,label,0,100_000_000)
@@ -40,7 +40,7 @@ export const purchasing:Handler=(c,command,p)=>{
   const item=scan(c.s,'stockItem',p.itemBarcode),bin=scan(c.s,'stockBin',p.binBarcode),quantityMilli=amount(p.quantity),reference=text(p.reference,'goods receipt reference',200)
   if(item.id!==line.itemId)fail('WRONG_PART','The scanned part does not match this PO line.')
   if(quantityMilli>line.backorderMilli)fail('OVER_RECEIPT','Receive only the outstanding quantity; surplus needs a separately approved PO.')
-  if(rows(c.s,'purchaseReceipt').some(r=>r.reference===reference))fail('DUPLICATE','That goods receipt is already retained.')
+  if(receiptExists(c.s,reference))fail('DUPLICATE','That goods receipt is already retained.')
   const receipt=put(c.s,'purchaseReceipt',{purchaseId:po.id,lineId:line.id,itemId:line.itemId,binId:bin.id,quantityMilli,reference,by:who(c),at:c.now})
   moveStock(c,line.itemId,bin.id,quantityMilli,{kind:'purchaseReceipt',id:receipt.id,purchaseId:po.id},reference)
   if(line.jobId)reserveStock(c,line.itemId,bin.id,line.jobId,quantityMilli,{kind:'purchaseReceipt',id:receipt.id,purchaseId:po.id})

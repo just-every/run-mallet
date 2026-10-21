@@ -40,7 +40,8 @@ export async function purchasingJourney(h){
  const final=await h.state();assert.equal(final.records.purchaseBill.length,3);assert.equal(final.records.purchaseBill.find(b=>b.sequence===1).matched,false);assert.equal(final.records.purchaseOrder[0].approval.totalCents,10250)
  for(const c of ['purchase.receive','purchase.bill','purchase.approve','purchase.close'])await h.command(c,{...billInput(),reason:'Closed evidence immutable'},{status:409})
  report=(await h.api('/api/mallet/purchasing'))[0];assert.ok(report.fullyReceived);assert.deepEqual(report.lines.map(l=>l.backorderMilli),[0,0]);assert.equal(report.currentBill.totalCents,10250)
- stock=await h.api('/api/mallet/inventory');assert.deepEqual(stock.balances.map(b=>b.onHandMilli),[2000,4000]);assert.equal(stock.movements.reduce((n,m)=>n+m.deltaMilli,0),6000)
+ stock=await h.api('/api/mallet/inventory');assert.deepEqual(stock.balances.map(b=>b.onHandMilli),[2000,4000]);assert.equal(stock.movements.reduce((n,m)=>n+m.deltaMilli,0),6000);assert.equal(stock.receipts.reduce((n,r)=>n+r.quantityMilli,0),6000,'PART-002 / BUY-001 all PO receipts reconcile in the combined receiving report')
+ await h.command('stock.receive',{itemBarcode:item.barcode,binBarcode:bin.barcode,expectedQuantity:2,quantity:2,reference:'synthetic-mallet-13',reason:'The same receipt cannot be received through another door'},{status:409});assert.equal((await h.api('/api/mallet/inventory')).movements.reduce((n,m)=>n+m.deltaMilli,0),6000)
  for(const opts of [{as:member.cookie},agent]){assert.equal((await h.request('/app/purchasing',opts)).status,403);await h.api('/api/mallet/purchasing',undefined,{...opts,status:403});assert.equal((await h.state(opts)).records.purchaseOrder,undefined)}
  assert.equal(h.messages.length,2,'Only staff invitations reached the mail edge; purchasing sends nothing')
  const recovery=await installation({bindings:{OWNER_EMAIL:'final-purchase@example.test'}})

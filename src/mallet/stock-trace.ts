@@ -1,5 +1,5 @@
 import {bump,event,expectVersion,fail,find,integer,put,rows,text,who,type Handler,type State,type Row} from './model'
-import {amount,moveStock,scan,stockBalance} from './inventory'
+import {amount,moveStock,receiptExists,scan,stockBalance} from './inventory'
 import {openJob} from './workshop'
 export const traceCommands=['stock.catalog','stock.lot','stock.useLot']
 export const lotRemaining=(s:State,lot:Row)=>lot.quantityMilli+rows(s,'stockLotAdjustment').filter(a=>a.lotId===lot.id).reduce((n,a)=>n+a.deltaMilli,0)-rows(s,'stockUse').filter(u=>u.lotId===lot.id).reduce((n,u)=>n+u.quantityMilli,0)
@@ -21,7 +21,7 @@ export const stockTrace:Handler=(c,command,p)=>{
  if(command==='stock.lot'){
   const item=scan(c.s,'stockItem',p.itemBarcode),bin=scan(c.s,'stockBin',p.binBarcode),quantityMilli=amount(p.quantity),serial=text(p.serial,'serial',200,true),reference=text(p.reference,'receiving reference',200)
   if(serial&&(quantityMilli!==1000||rows(c.s,'stockLot').some(l=>l.serial.toLowerCase()===serial.toLowerCase())))fail('SERIAL_CONFLICT','A serial identifies one whole unit and must not already be received.')
-  if(rows(c.s,'stockReceipt').some(r=>r.reference===reference)||rows(c.s,'stockLot').some(l=>l.reference===reference))fail('DUPLICATE','This receiving reference was already recorded.')
+  if(receiptExists(c.s,reference))fail('DUPLICATE','This receiving reference was already recorded.')
   const lot=put(c.s,'stockLot',{itemId:item.id,binId:bin.id,quantityMilli,serial,reference,supplier:text(p.supplier,'supplier'),supplierLot:text(p.supplierLot,'supplier lot',200),unitCostCents:integer(p.unitCostCents,'received unit cost',0,100_000_000),evidence:text(p.evidence,'supplier provenance',4000),catalog:structuredClone(item),by:who(c),at:c.now})
   const receipt=put(c.s,'stockReceipt',{itemId:item.id,binId:bin.id,reference,expectedMilli:quantityMilli,quantityMilli,shortageMilli:0,lotId:lot.id,reason:lot.evidence,by:who(c),at:c.now})
   moveStock(c,item.id,bin.id,quantityMilli,{kind:'receipt',id:receipt.id,lotId:lot.id},lot.evidence);event(c,command,null,lot.id,{receiptId:receipt.id,quantityMilli});return lot
