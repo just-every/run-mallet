@@ -1,3 +1,4 @@
+import {assertSubletsReceived} from './sublet'
 import {bump,choice,event,expectVersion,fail,find,integer,object,put,rows,text,who,type Context,type Handler,type Row,type State} from './model'
 
 export type QualityStage = 'pre' | 'post' | 'road-test'
@@ -13,8 +14,9 @@ export const currentChecklist = (q:Row) => q.revisions.at(-1)
 
 // Keep the complete comparison material rather than a lossy checksum. Signatures bind
 // to exactly these immutable checks and work records, including the current assignee.
+// Each sublet mutation advances the repair revision, also visible to its technician.
 export function qualityFingerprint(job:Row,q:Row):string {
- return JSON.stringify([job.id,job.technicianId,job.actuals??[],currentChecklist(q),q.results,q.corrections])
+ return JSON.stringify([job.id,job.technicianId,job.actuals??[],currentChecklist(q),q.results,q.corrections,...(job.subletRevision?[job.subletRevision]:[])])
 }
 export function qualityStatus(s:State,job:Row) {
  const q=qualityRecord(s,job.id)
@@ -113,6 +115,7 @@ export const quality:Handler=(c,command,p)=>{
   return save(c,command,job,q,{corrections:[...q.corrections,correction]},correction)
  }
  if(command==='quality.signTechnician') {
+  assertSubletsReceived(c.s,job)
   technician(c,job)
   const signoff={...evidence,kind:'technician',fingerprint,qualification:text(p.qualification,'technician qualification',500),note:text(p.note,'technician sign-off evidence',2000)}
   return save(c,command,job,q,{signoffs:[...q.signoffs,signoff]},signoff)
@@ -127,6 +130,7 @@ export const quality:Handler=(c,command,p)=>{
   return save(c,command,job,q,{overrides:[...q.overrides,override]},override)
  }
  if(command==='quality.signQuality') {
+  assertSubletsReceived(c.s,job)
   const status=qualityStatus(c.s,job)
   if(!status.technicianSignoff)fail('QUALITY_TECHNICIAN','The assigned technician must sign these current checks and work first.')
   const safetyDecision=choice(p.safetyDecision,['safe','unsafe'],'qualified safety decision')

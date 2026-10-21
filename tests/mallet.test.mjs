@@ -283,3 +283,7 @@ test('FLOW-003 / OPS-001: deterministic routing, closed-day deadlines, durable e
 
 test('EST-001 / OPS-001: fleet/customer rates, direct costs, fees and discounts freeze through consent, actuals, invoice and recovery',()=>run(async h=>{const {estimatePricingJourney}=await import('./support/estimate-pricing-journey.mjs');await estimatePricingJourney(h)}))
 test('EST-001: rate profile and discounted mixed estimate through native forms at 1440/390',async()=>{const {estimatePricingBrowser}=await import('./estimate-pricing-browser.mjs');await estimatePricingBrowser()})
+
+test('SUBLET-001 / OPS-001: approved outsourced scope, delayed custody, supplier bills, receiving and quality gates, exact margin and fresh recovery',()=>run(async h=>{const {subletJourney}=await import('./support/sublet-journey.mjs');await subletJourney(h)}))
+
+test('SUBLET-001: outside handoff, delay, added-scope decision, supplier bill, receipt, quality and margin through native forms at 1440/390',async()=>{const {subletBrowser}=await import('./sublet-browser.mjs');await subletBrowser()})

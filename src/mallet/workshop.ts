@@ -1,3 +1,4 @@
+import {assertSubletsReady,jobSublets} from './sublet'
 import { onCrew } from './collaboration'
 import { approval, bump, event, expectVersion, fail, find, put, rows, selfApproval, text, who, type Context, type Handler, type Row, type State } from './model'
 import { assertQualityReady } from './quality'
@@ -93,6 +94,7 @@ export const workshop: Handler = (c, command, p) => {
       const lineId = text(p.lineId, 'lineId'), line = rev.lines.find((l: Row) => l.id === lineId)
       if (!line || !estimate.authorisation.lineIds.includes(lineId)) fail('NOT_AUTHORISED', 'The customer did not authorize this line.')
       if (rows(c.s, 'specialPart').some(part => part.jobId === job.id && part.estimateId === estimate.id && part.revision === rev.n && part.lineId === lineId && !part.receipt)) fail('PART_NOT_RECEIVED', 'Receiving staff must confirm actual arrival before this special part is used.')
+      if (jobSublets(c.s,job.id).some(r=>!r.receipt&&r.scopes.some((x:any)=>x.estimateId===estimate.id&&x.revision===rev.n&&x.lineId===lineId))) fail('SUBLET_CUSTODY','Receive the outsourced service before recording it as actual work.')
       const quantityMilli = quantity(p.quantity), used = job.actuals.filter((a: any) => a.estimateId === estimate.id && a.revision === rev.n && a.lineId === lineId).reduce((n: number, a: any) => n + a.quantityMilli, 0)
       const cap = authorizedCap(c.s, estimate, line)
       if (used + quantityMilli > cap) fail('QUANTITY_EXCEEDED', 'Actual work cannot exceed the approved, customer authorized quantity.', { lineId, approvedQuantity: cap / 1000, recordedQuantity: used / 1000, remainingQuantity: (cap - used) / 1000 })
@@ -104,6 +106,7 @@ export const workshop: Handler = (c, command, p) => {
     case 'job.complete': {
       const job = openJob(c, p)
       if (!job.actuals.length) fail('NO_WORK', 'Record authorized parts or labor before completing this job.')
+      assertSubletsReady(c.s,job)
       assertQualityReady(c.s,job)
       const row = bump(c.s, 'job', job, { status: 'completed', completedAt: c.now, completedBy: who(c), completionNote: text(p.note, 'note', 2000, true) })
       event(c, command, row.id, row.id, { note: row.completionNote })

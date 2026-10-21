@@ -1,3 +1,5 @@
+import {assertSubletsReady,jobSublets,subletMargin} from './sublet'
+import {assertQualityReady} from './quality'
 import { approval, bump, event, expectVersion, fail, find, put, rows, selfApproval, who, type Context, type Handler, type Row } from './model'
 import { price, totals, type Line } from './money'
 import { current } from './estimates'
@@ -39,7 +41,10 @@ export const invoices: Handler = (c, command, p) => {
       if (job.status !== 'completed') fail('JOB_STATE', 'Complete the job before preparing its invoice.')
       if (job.invoiceId || rows(c.s, 'invoice').some(i => i.jobId === job.id)) fail('DUPLICATE', 'This job already has an immutable invoice.')
       if ('lines' in p || 'totals' in p || 'totalCents' in p) fail('INPUT', 'Invoice prices and quantities come from authorized actual work.', null, 400)
-      const snapshot = suggested(c, job)
+      assertSubletsReady(c.s,job)
+      const sublets=jobSublets(c.s,job.id)
+      if(sublets.length)assertQualityReady(c.s,job)
+      const snapshot = {...suggested(c, job),...(sublets.length?{sublets:structuredClone(sublets.map(r=>({...r,reconciliation:subletMargin(r)})))}:{})}
       const row = put(c.s, 'invoice', { ...snapshot, number: `M-${String(rows(c.s, 'invoice').length + 1).padStart(6, '0')}`, jobId: job.id, jobVersion: job.version, customer: structuredClone(job.asset), actuals: structuredClone(job.actuals), status: 'draft', revision: 1, preparedBy: who(c), preparedAt: c.now, approval: null, exportId: null })
       bump(c.s, 'job', job, { invoiceId: row.id })
       event(c, command, job.id, row.id, { revision: 1, totals: row.totals, estimateId: row.estimateId, estimateRevision: row.estimateRevision })
