@@ -38,7 +38,7 @@ export async function intakeJourney(h){
  const revealed=await h.command('intake.secretReveal',{jobId:job.id,secretId:vault.id,reason:'Diagnosis requires unlock'});assert.equal(revealed.secret,secret)
  assert.ok(!JSON.stringify(await h.state()).includes(secret),'Unlock material never reaches general state or audit')
  const wrongJob={jobId:other.job.id,secretId:vault.id,reason:'Wrong job'};await h.command('intake.secretReveal',wrongJob,{status:404})
- const saved=await h.state(),backup=await archive(h);assert.ok(!JSON.stringify(backup).includes(secret));assert.ok(!JSON.stringify(backup).includes('mallet_intake_secrets'))
+ const saved=await h.state(),backup=await archive(h);assert.ok(!JSON.stringify(backup).includes(secret));assert.ok(backup[0].excludedTables.includes('mallet_intake_secrets'));assert.ok(!backup[0].tables.some(t=>t.name==='mallet_intake_secrets'))
  const fresh=await installation({bindings:{OWNER_EMAIL:'custody-recovery@example.test'}})
  try{await restore(fresh,backup);const restored=await fresh.state();for(const kind of ['intake','intakeComparison','intakeSecretAudit'])assert.deepEqual(restored.records[kind],saved.records[kind]);assert.deepEqual(Buffer.from(await(await fresh.request(photo.contentUrl)).arrayBuffer()),await readFile('tests/fixtures/dvi/front-brake.png'));await fresh.command('intake.secretReveal',{jobId:job.id,secretId:vault.id,reason:'Restore cannot bring secrets'},{status:404});await fresh.state({as:h.owner,status:401})}finally{await fresh.close()}
  await h.command('intake.secretEnd',{jobId:job.id,secretId:vault.id});await h.command('intake.secretReveal',{jobId:job.id,secretId:vault.id,reason:'Purpose ended'},{status:404})
