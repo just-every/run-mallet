@@ -12,7 +12,7 @@ export async function inventoryBrowser(){
   const p=await context.newPage(),errors=[];p.on('pageerror',e=>errors.push(e.message));const directory=process.env.MALLET_INVENTORY_PROOF_DIR??'.cache/inventory-browser';await mkdir(directory,{recursive:true})
   const shot=async name=>{for(const width of [1440,390]){await p.setViewportSize({width,height:1000});assert.ok(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),name+' no overflow at '+width);await p.screenshot({path:join(directory,name+'-'+width+'.png'),fullPage:true})}await p.setViewportSize({width:1440,height:1000})}
   const form=c=>p.locator(`form:has(input[name="command"][value="${c}"])`),fill=async(c,fields,button)=>{const f=form(c);for(const [name,value]of Object.entries(fields))await f.locator(`[name="${name}"]`).fill(String(value));await f.getByRole('button',{name:button,exact:true}).click();await p.waitForLoadState('domcontentloaded')}
-  await p.goto(h.origin+'/app/inventory');await shot('01-empty-and-receiving-forms')
+  await p.goto(h.origin+'/app/inventory');if(new URL(p.url()).pathname==='/setup'){await p.getByLabel('Sales tax rate (%)',{exact:true}).fill('0');await p.getByLabel('I confirm this owner account is ready to use.').check();await p.getByRole('button',{name:'Finish setup',exact:true}).click();await p.waitForLoadState('domcontentloaded');await p.goto(h.origin+'/app/inventory')}await shot('01-empty-and-receiving-forms')
   await fill('stock.item',{sku:'synthetic-mallet-1',barcode:'synthetic-mallet-2',name:'Brake pads',unit:'each'},'Register part')
   await fill('stock.bin',{code:'Shelf A',barcode:'synthetic-mallet-3'},'Register bin')
   const scans={itemBarcode:'synthetic-mallet-2',binBarcode:'synthetic-mallet-3'}
