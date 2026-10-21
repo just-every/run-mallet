@@ -132,3 +132,7 @@ test('DVI-004: second-visit comparison, imported source, declined carry and reso
 test('INTAKE-001 / OPS-001: signed condition and custody, exact checklist comparison, private temporary secrets and fresh-owner recovery',()=>run(async h=>{const {intakeJourney}=await import('./support/intake-journey.mjs');await intakeJourney(h)}))
 
 test('INTAKE-001: vehicle and device signed custody and actual checklist comparison at 1440/390',async()=>{const {intakeBrowser}=await import('./intake-browser.mjs');await intakeBrowser()})
+
+test('INTAKE-002 / OPS-001: two templates, retained required-field draft, original signed terms and exact delivered copy with recovery',()=>run(async h=>{const {intakeFormsJourney}=await import('./support/intake-forms-journey.mjs');await intakeFormsJourney(h)}))
+
+test('INTAKE-002: publish two templates, retain phone draft and retrieve original signed copy after terms change at 1440/390',async()=>{const {intakeFormsBrowser}=await import('./intake-forms-browser.mjs');await intakeFormsBrowser()})

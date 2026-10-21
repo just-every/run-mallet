@@ -1,3 +1,6 @@
+import {intakeFormResponse,createIntakeFormLink} from './intake-form-door'
+import {internalIntakeFormCommands} from './intake-forms'
+import {intakeTemplatesPage,intakeTemplateInput,signedIntakeReceipt} from './ui/intake-forms'
 import {returnPage,returnFormInput,handoverReceipt} from './ui/returns'
 import {collectionInput,verifyStripePayment} from './payment-door'
 import {warrantyPage,warrantyFormInput} from './ui/warranty'
@@ -131,6 +134,8 @@ function formInput(data:FormData) {
  if(input.command==='chasePolicy.save'){input.linkDays=Number(input.linkDays);input.reminderDays=String(input.reminderDays??'').split(',').map(d=>d.trim()).filter(Boolean).map(Number)}
  if(input.command.startsWith('specialPart.')){if(input.partVersion!==undefined)input.partVersion=Number(input.partVersion);if(input.source){let source:any;try{source=JSON.parse(input.source)}catch{throw new HttpError(400,'invalid_source')};input.estimateId=source.estimateId;input.revision=source.revision;input.lineId=source.lineId}}
  if(input.command==='payRate.set'){input.centsPerHour=Math.round(Number(input.rate)*100);delete input.rate}
+ intakeTemplateInput(data,input)
+ if(input.command==='intakeForm.create'&&input.templateSource){let t:any;try{t=JSON.parse(input.templateSource)}catch{throw new HttpError(400,'invalid_template')};input.templateId=t.id;input.templateVersion=t.version}
  returnFormInput(data,input)
  warrantyFormInput(input)
  intakeFormInput(data,input)
@@ -143,6 +148,7 @@ function formInput(data:FormData) {
 }
 export async function malletResponse(request:Request,original:Bindings):Promise<Response|null> {
  const url=new URL(request.url),path=url.pathname
+ const intakeForm=await intakeFormResponse(request,original);if(intakeForm)return intakeForm
  const customer=await customerLinkResponse(request,original);if(customer)return customer
  const decision=await approvalResponse(request,original);if(decision)return decision
  if(path!=='/restore' && path!=='/app' && !path.startsWith('/app/') && !path.startsWith('/api/mallet/') && !path.startsWith('/api/portability/'))return null
@@ -181,8 +187,9 @@ export async function malletResponse(request:Request,original:Bindings):Promise<
    const data=path==='/app/actions'?formInput(await nativeForm(request)):await body(request),command=String(data.command),input=data.input??data
    submitted={command,input}
    let result:any
-   if(command==='payment.verified'||command==='routing.sweep'||internalPromiseCommands.includes(command)||internalApprovalCommands.includes(command)||internalChaseCommands.includes(command))throw new HttpError(404,'unknown_command')
-   if(command==='payment.verifyStripe')result=await verifyStripePayment(env,actor,auth.authority,input)
+   if(internalIntakeFormCommands.includes(command)||command==='payment.verified'||command==='routing.sweep'||internalPromiseCommands.includes(command)||internalApprovalCommands.includes(command)||internalChaseCommands.includes(command))throw new HttpError(404,'unknown_command')
+   if(command==='intakeForm.create')result=await createIntakeFormLink(env,actor,auth.authority,input)
+   else if(command==='payment.verifyStripe')result=await verifyStripePayment(env,actor,auth.authority,input)
    else if(command==='flow.collect'){const checked=await collectionInput(env,actor,input,auth.authority);result=await execute(env.DB,actor as any,command,checked.input,checked.authority);await env.DB.prepare('DELETE FROM mallet_intake_secrets WHERE job_id=?').bind(input.jobId).run()}
    else if(['intake.secretStore','intake.secretReveal','intake.secretEnd'].includes(command))result=await intakeSecret(env,actor,auth.authority,command,input)
    else if(command.startsWith('routing.'))result=await routingCommand(env.DB,actor as any,auth.authority,command,input)
@@ -205,6 +212,9 @@ export async function malletResponse(request:Request,original:Bindings):Promise<
    else if(command==='inspection.record'&&actor.role!=='agent'){const checked=await inspectionRecordInput(env.DB,actor,auth.authority,input);result=await execute(env.DB,actor as any,command,checked.input,checked.authority)}
    else result=await execute(env.DB,actor as any,command,input,auth.authority)
    if(isApi){if(actor.role!=='owner'&&result&&typeof result==='object'&&'billing' in result){const {billing,...rest}=result;result=rest}return json(actor.role==='agent'?withoutSubletCosts(withoutInspectionSource(result)):result)}
+   if(command==='intakeForm.create')return page('Customer intake link',`<section class="card"><p>Share this private seven-day link directly with this customer. Mallet has not sent it. Anyone holding it can use it; it will not be shown again.</p><a href="${e(result.url)}">Open customer intake form</a><pre>${e(result.url)}</pre><a href="/app/jobs/${e(input.jobId)}/intake">Return to custody</a></section>`,actor,200,{section:'jobs'})
+   if(command==='intakeForm.publish')return redirect('/app/intake-templates')
+   if(command==='intakeForm.revoke')return redirect(`/app/jobs/${e(input.jobId)}/intake`)
    if(command==='intake.secretReveal')return page('Temporary unlock secret',`<section class="card"><p>Use only for the recorded purpose. Close this page after use, then end the purpose.</p><pre>${e(result.secret)}</pre><a href="/app/jobs/${e(input.jobId)}/intake">Return to custody</a></section>`,actor,200,{section:'jobs'})
    if(command.startsWith('intake.'))return redirect(`/app/jobs/${e(input.jobId)}/intake`)
    if(command.startsWith('return.')||command==='payment.verifyStripe'||command==='flow.collect')return redirect(`/app/jobs/${e(input.jobId)}/return`)
@@ -276,6 +286,9 @@ export async function malletResponse(request:Request,original:Bindings):Promise<
   if(path==='/app/move-in')return page('Move into Mallet',moveIn(actor),actor,200,frame('move-in'))
   if(path==='/app/data'){if(!human(actor))throw new HttpError(403,'manager_required');const keys=await env.DB.prepare('SELECT id,label,expires_at,revoked_at FROM mallet_agent_keys ORDER BY created_at DESC').all();return page('Data & access',dataPage(actor,keys.results),actor,200,frame('data'))}
   if(path==='/app/backup')throw new HttpError(405,'post_required')
+  if(path==='/app/intake-templates'){if(!human(actor))throw new HttpError(403,'manager_required');return page('Intake templates',intakeTemplatesPage(state),actor,200,frame('jobs'))}
+  const signedFormMatch=path.match(/^\/app\/intake-forms\/([^/]+)\/print$/)
+  if(signedFormMatch){if(!human(actor))throw new HttpError(403,'manager_required');const doc=rows(state,'intakeForm').find(f=>f.id===signedFormMatch[1]);if(!doc?.receipt)throw new HttpError(404,'not_found');return page('Original signed intake',`<div class="narrow">${signedIntakeReceipt(doc.receipt,doc.copy)}</div>`,actor,200,frame('jobs'))}
   const handoverMatch=path.match(/^\/app\/handovers\/([^/]+)\/print$/)
   if(handoverMatch){if(!human(actor))throw new HttpError(403,'manager_required');const receipt=rows(state,'handover').find(r=>r.id===handoverMatch[1]);if(!receipt)throw new HttpError(404,'not_found');return page('Handover receipt',`<div class="narrow">${handoverReceipt(receipt)}</div>`,actor,200,frame('jobs'))}
   const returnMatch=path.match(/^\/app\/jobs\/([^/]+)\/return$/)
