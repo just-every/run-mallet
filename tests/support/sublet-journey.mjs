@@ -35,6 +35,8 @@ export async function subletJourney(h){
  await h.command('work.record',work,{status:409})
  await h.command('estimate.prepare',{jobId:job.id,version:(await current()).version,supplement:true,reason:'Cannot revoke dispatched supplier scope',lines:[{kind:'fee',description:'Prospective replacement',quantity:1,unitCents:60000,feeTaxable:false,replaces:{estimateId:quote.id,revision:1,lineId:line.id}}]},{status:409})
  let quality=(await h.state()).records.quality.find(q=>q.jobId===job.id)
+ const denied=await h.command('quality.signTechnician',{jobId:job.id,version:(await current()).version,qualityVersion:quality.version,qualification:'Unassigned technician',note:'Cannot inspect another repair’s outside custody'},{as:other.cookie,status:403})
+ assert.equal(denied.error,'FORBIDDEN');assert.equal(denied.details,null,'SUBLET-001 another technician receives no outside-custody identifiers')
  await h.command('quality.signQuality',{jobId:job.id,version:(await current()).version,qualityVersion:quality.version,qualification:'Independent reviewer',note:'Not physically returned',safetyDecision:'safe'},{...ADV,status:409})
  await h.command('sublet.receive',{...await refs(),observedAt:at(-1),custodian:'Morgan',handedBy:'Carrier',reference:'Cannot receive before sending'},{status:409})
  await h.command('sublet.bill',{...await refs(),billReference:'CM-17',costCents:31000,evidence:'Invoice copy',reason:'Cannot bill before dispatch'},{status:409})

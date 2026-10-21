@@ -115,8 +115,8 @@ export const quality:Handler=(c,command,p)=>{
   return save(c,command,job,q,{corrections:[...q.corrections,correction]},correction)
  }
  if(command==='quality.signTechnician') {
-  assertSubletsReceived(c.s,job)
   technician(c,job)
+  assertSubletsReceived(c.s,job)
   const signoff={...evidence,kind:'technician',fingerprint,qualification:text(p.qualification,'technician qualification',500),note:text(p.note,'technician sign-off evidence',2000)}
   return save(c,command,job,q,{signoffs:[...q.signoffs,signoff]},signoff)
  }
