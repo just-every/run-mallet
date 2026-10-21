@@ -1,3 +1,5 @@
+import {tracePage,traceFormInput} from './ui/stock-trace'
+import {traceReport} from './stock-trace'
 import {accountsPage,customerFormInput} from './ui/customers'
 import {customerSearch} from './customers'
 import {purchasingPage,purchasingFormInput} from './ui/purchasing'
@@ -125,6 +127,7 @@ function formInput(data:FormData) {
  if(input.command==='payRate.set'){input.centsPerHour=Math.round(Number(input.rate)*100);delete input.rate}
  customerFormInput(data,input)
  purchasingFormInput(input)
+ traceFormInput(input)
  inventoryFormInput(input)
  subletFormInput(data,input)
  return promiseFormInput(data,diagnosisFormInput(data,timeFormInput(data,pricingOverrideInput(data,pricingFormInput(data,inspectionFormInput(data,qualityFormInput(data,input)))))))
@@ -207,6 +210,7 @@ export async function malletResponse(request:Request,original:Bindings):Promise<
    if(command==='rateProfile.save')return redirect('/app/jobs#rate-profiles')
    if(command.startsWith('customer.')||command.startsWith('contact.'))return redirect('/app/accounts')
    if(command.startsWith('purchase.'))return redirect('/app/purchasing')
+   if(['stock.catalog','stock.lot','stock.useLot'].includes(command))return redirect('/app/inventory/trace')
    if(command.startsWith('stock.'))return redirect('/app/inventory')
    if(command==='asset.create')return redirect(`/app/assets/${result.id}`)
    const jobId=command==='job.book'?result.id:input.jobId??result.jobId??(command==='invoice.export'?rows(await load(env.DB),'invoice').find(i=>i.id===input.invoiceId)?.jobId:undefined)
@@ -246,6 +250,7 @@ export async function malletResponse(request:Request,original:Bindings):Promise<
   }
   if(path==='/app/accounts'||path==='/api/mallet/accounts'||/^\/api\/mallet\/accounts\/[^/]+\/billing$/.test(path)){if(actor.role!=='owner')throw new HttpError(403,'owner_required');const q=url.searchParams.get('q')??'';if(path==='/api/mallet/accounts')return json(customerSearch(state,q));if(path.endsWith('/billing')){const id=path.split('/')[4],account=rows(state,'customerAccount').find(a=>a.id===id&&!a.mergedInto);if(!account)throw new HttpError(404,'not_found');return json(rows(state,'invoice').filter(i=>i.billing?.accountId===id))}return page('Customer accounts',accountsPage(state,q),actor,200,frame('customers'))}
   if(['/app/purchasing','/api/mallet/purchasing'].includes(path)){if(!human(actor))throw new HttpError(403,'manager_required');return path.startsWith('/api/')?json(rows(state,'purchaseOrder').map(po=>({...po,...purchaseStatus(state,po)}))):page('Purchase orders',purchasingPage(state),actor,200,frame('inventory'))}
+  if(['/app/inventory/trace','/api/mallet/trace'].includes(path)){if(!human(actor))throw new HttpError(403,'manager_required');const q=url.searchParams.get('q')??'';return path.startsWith('/api/')?json(traceReport(state,q)):page('Parts catalog & traceability',tracePage(state,q),actor,200,frame('inventory'))}
   if(['/app/inventory','/app/inventory/count','/api/mallet/inventory'].includes(path)){if(!human(actor))throw new HttpError(403,'manager_required');if(path.startsWith('/api/'))return json(stockReport(state));return page(path.endsWith('/count')?'Blind stock count':'Stock & receiving',path.endsWith('/count')?countPage():inventoryPage(state),actor,200,frame('inventory'))}
   if(path==='/app/time'){if(actor.role==='agent')throw new HttpError(403,'staff_required');return page('Time & attendance',`<div class="narrow">${timePanel(state,actor,(await operators(env.DB)).names)}</div>`,actor,200,frame('jobs'))}
   if(path==='/app/jobs'){const names=(await operators(env.DB)).names;return page('Repair orders',(actor.role!=='agent'?waitingForMe(state,actor)+'<p><a href="/app/time">My time & attendance</a> · <a href="/app/reports/technicians">Technician efficiency</a></p>':'')+(human(actor)?rateProfilePanel(state,''):'')+specialPartNotices(state,actor)+promisePlan(state,actor,names)+repairOrders(state,names),actor,200,frame('jobs',{subtitle:'Open repair orders by start time, then invoiced visits.'}))}

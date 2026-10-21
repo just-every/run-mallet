@@ -1,3 +1,4 @@
+import {lotRemaining} from './stock-trace'
 // Stock is an append-only quantity ledger. Counts propose changes; approval never rewrites a receipt.
 import {bump,choice,event,expectVersion,fail,find,integer,put,rows,text,who,type Context,type Handler,type State} from './model'
 export const inventoryCommands=['stock.item','stock.bin','stock.receive','stock.reserve','stock.release','stock.count','stock.approveCount']
@@ -42,6 +43,11 @@ export const inventory:Handler=(c,command,p)=>{
   const balance=stockBalance(c.s,count.itemId,count.binId)
   if(rows(c.s,'stockMovement').filter(x=>x.itemId===count.itemId&&x.binId===count.binId).length!==count.movementCount)fail('STALE_COUNT','Stock moved after this count. Count again before approving.')
   const reason=text(p.reason,'approval reason',2000),deltaMilli=count.countedMilli-count.expectedMilli
+  const lots=rows(c.s,'stockLot').filter(l=>l.itemId===count.itemId&&l.binId===count.binId),lot=p.lotId?lots.find(l=>l.id===p.lotId):null
+  if(p.lotId&&!lot)fail('LOT_SCOPE','Choose a lot in this part and bin.')
+  if(lot){const remaining=lotRemaining(c.s,lot)+deltaMilli;if(remaining<0||lot.serial&&remaining>1000)fail('LOT_SHORTAGE','The count variance is not valid for that lot or serial.')}
+  else if(balance.onHandMilli-lots.reduce((n,l)=>n+lotRemaining(c.s,l),0)+deltaMilli<0)fail('LOT_REQUIRED','Choose the affected lot before approving this stock variance.')
+  if(lot)put(c.s,'stockLotAdjustment',{lotId:lot.id,countId:count.id,deltaMilli,by:who(c),at:c.now,reason})
   const movement=moveStock(c,count.itemId,count.binId,deltaMilli,{kind:'count',id:count.id},reason)
   const saved=bump(c.s,'stockCount',count,{approval:{by:who(c),at:c.now,reason,movementId:movement.id},varianceMilli:deltaMilli})
   event(c,command,null,count.id,{varianceMilli:deltaMilli,reason});return saved
