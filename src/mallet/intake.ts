@@ -16,7 +16,7 @@ export const intake:Handler=(c,command,p)=>{
   const items=p.items.map((x:any)=>({id:crypto.randomUUID(),kind:choice(x.kind,['key','accessory','valuable'],'custody item type'),label:text(x.label,'custody item',200),quantity:integer(x.quantity,'custody quantity',1,1000)}))
   const attachments=Array.isArray(p.attachments)?p.attachments:[]
   if(attachments.some((a:any)=>a.jobId!==job.id)||attachments.length>10)fail('INPUT','Use completed media from this visit.',null,400)
-  const receipt=put(c.s,'intake',{jobId:job.id,assetId:job.assetId,asset:structuredClone(job.asset),phase,capturedAt,damage:text(p.damage,'damage locations and condition',4000),items,attachments,lockHandling:text(p.lockHandling,'security-lock handling (no secrets)',1000),signature,by:who(c),at:c.now})
+  const receipt=put(c.s,'intake',{n:rows(c.s,'intake').filter(i=>i.jobId===job.id).length+1,jobId:job.id,assetId:job.assetId,asset:structuredClone(job.asset),phase,capturedAt,damage:text(p.damage,'damage locations and condition',4000),items,attachments,lockHandling:text(p.lockHandling,'security-lock handling (no secrets)',1000),signature,by:who(c),at:c.now})
   bump(c.s,'job',job,{custodyRevision:(job.custodyRevision??0)+1});event(c,command,job.id,receipt.id,{phase});return receipt
  }
  const source=find(c.s,'intake',p.intakeId)
