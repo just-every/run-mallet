@@ -27,8 +27,9 @@ export async function intakeJourney(h){
  const compare={jobId:job.id,version:job.version,intakeId:before.id,returned:before.items.map(i=>({itemId:i.id,quantity:i.quantity})),signedBy:'Dana Brooks',consent:true}
  await h.command('intake.compare',{...compare,returned:compare.returned.slice(1)},{status:400})
  await h.command('intake.compare',{...compare,returned:compare.returned.map((x,i)=>({...x,quantity:i===0?0:x.quantity}))},{status:409})
+ const discrepancyReceipt=await h.command('intake.compare',{...compare,returned:compare.returned.map((x,i)=>({...x,quantity:i===0?0:x.quantity})),discrepancy:'Spare key temporarily retained by the customer; not handed to the shop'});assert.equal(discrepancyReceipt.returned[0].missingQuantity,1);assert.match(discrepancyReceipt.discrepancy,/Spare key/);compare.version=(await h.state()).records.job.find(j=>j.id===job.id).version
  const comparison=await h.command('intake.compare',compare);assert.ok(comparison.returned.every(i=>i.missingQuantity===0));assert.equal(comparison.source.id,before.id);assert.equal(comparison.signature.name,'Dana Brooks')
- const secret='synthetic-mallet-71',store={jobId:job.id,purpose:'Unlock only for diagnosis',secret,expiresAt:new Date(Date.now()+600000).toISOString(),consent:true}
+ const secret=' synthetic-mallet-71 ',store={jobId:job.id,purpose:'Unlock only for diagnosis',secret,expiresAt:new Date(Date.now()+600000).toISOString(),consent:true}
  await h.command('intake.secretStore',store,{as:admin.cookie,status:403});await h.command('intake.secretStore',{...store,consent:false},{status:400})
  await h.command('intake.secretStore',{...store,expiresAt:new Date(Date.now()+86401000).toISOString()},{status:400})
  const vault=await h.command('intake.secretStore',store);assert.equal('secret' in vault,false)

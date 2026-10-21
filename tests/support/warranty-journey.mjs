@@ -2,9 +2,9 @@ import assert from 'node:assert/strict'
 import {booking,estimate,authorise,archive,restore,installation} from '../harness.mjs'
 import {qualityReady} from './quality-ready.mjs'
 import {traceFixture} from './stock-trace-journey.mjs'
-export async function warrantyOriginal(h){
+export async function warrantyOriginal(h,{asset}={}){
  const fixture=await traceFixture(h),lot=await h.command('stock.lot',fixture.lot)
- let {job}=await booking(h),q=await authorise(h,await estimate(h,job));job=(await h.state()).records.job.find(j=>j.id===job.id)
+ let {job}=await booking(h,{asset}),q=await authorise(h,await estimate(h,job));job=(await h.state()).records.job.find(j=>j.id===job.id)
  for(const line of q.revisions[0].lines)job=await h.command('work.record',{jobId:job.id,version:job.version,lineId:line.id,quantity:1})
  await h.command('stock.useLot',{jobId:job.id,version:job.version,actualId:job.actuals[0].id,lotId:lot.id,quantity:1,reference:'synthetic-mallet-81',reason:'Installed supplier-marked pad lot'})
  job=(await h.state()).records.job.find(j=>j.id===job.id);await qualityReady(h,job);job=await h.command('job.complete',{jobId:job.id,version:job.version})
@@ -19,13 +19,14 @@ export async function noChargeWork(h,w){
  job=(await h.state()).records.job.find(j=>j.id===job.id);for(const l of q.revisions[0].lines)job=await h.command('work.record',{jobId:job.id,version:job.version,lineId:l.id,quantity:1});return job
 }
 export async function warrantyJourney(h){
- const f=await warrantyOriginal(h),terms=await h.command('warranty.terms',termsInput(f.invoice)),input=await openInput(h,f,terms),member=await h.person('warranty-tech@example.test'),admin=await h.person('warranty-advisor@example.test','admin'),agent=await h.command('agent.create',{label:'No warranty authority'}),bearer={as:'',headers:{authorization:'Bearer '+agent.token}}
+ const {customersFixture}=await import('./customers-journey.mjs'),cf=await customersFixture(h),account=await h.command('customer.save',cf.input);let asset=await h.command('asset.create',{customerName:'Cedar Fleet',customerEmail:'fleet@example.test',label:'Fleet vehicle',identifier:'synthetic-mallet-87'});asset=await h.command('customer.linkAsset',{assetId:asset.id,version:asset.version,customerId:account.id,customerVersion:account.version,reason:'Owner reviewed the private payer snapshot'})
+ const f=await warrantyOriginal(h,{asset}),terms=await h.command('warranty.terms',termsInput(f.invoice)),input=await openInput(h,f,terms),member=await h.person('warranty-tech@example.test'),admin=await h.person('warranty-advisor@example.test','admin'),agent=await h.command('agent.create',{label:'No warranty authority'}),bearer={as:'',headers:{authorization:'Bearer '+agent.token}}
  const baseline=(await h.state()).records
  for(const opts of [{as:'',status:401},{as:member.cookie,status:403},{...bearer,status:403},{headers:{origin:'https://elsewhere.test'},status:403}])await h.command('warranty.open',input,opts)
  await h.command('warranty.open',input,{status:409});assert.deepEqual((await h.state()).records,baseline)
  const payment={invoiceId:f.invoice.id,version:f.invoice.version,amountCents:f.invoice.totals.totalCents,method:'cash',reference:'synthetic-mallet-82',evidence:'Cash counted against the original invoice; staff declaration only'}
  await h.command('payment.record',{...payment,amountCents:payment.amountCents+1},{status:409});const paid=await h.command('payment.record',payment);assert.equal(paid.verified,false);assert.deepEqual(await h.command('payment.record',payment),paid);await h.command('payment.record',{...payment,amountCents:1},{status:409})
- let w=await h.command('warranty.open',input,{as:admin.cookie});assert.equal(w.identifier,f.invoice.customer.identifier);assert.equal(w.lot.supplierLot,f.lot.supplierLot);assert.equal(w.installed.jobId,f.job.id);assert.equal(w.originalPayment.outstandingCents,0);assert.equal(w.withinTerms,true)
+ let w=await h.command('warranty.open',input,{as:admin.cookie});assert.ok(f.invoice.billing);assert.equal(w.originalInvoice.billing,undefined);assert.equal(w.identifier,f.invoice.customer.identifier);assert.equal(w.lot.supplierLot,f.lot.supplierLot);assert.equal(w.installed.jobId,f.job.id);assert.equal(w.originalPayment.outstandingCents,0);assert.equal(w.withinTerms,true)
  await h.command('warranty.cost',{warrantyId:w.id,version:w.version,actualId:'missing',amountCents:1,evidence:'Not approved'},{status:409})
  w=await h.command('warranty.decide',{warrantyId:w.id,version:w.version,outcome:'covered',responsibility:'supplier',reason:'Within saved term; supplier-marked pad failed; approve no-charge labor'},{as:admin.cookie})
  assert.equal(w.decision.noChargeLabor,true);await h.command('warranty.decide',{warrantyId:w.id,version:w.version,outcome:'declined',responsibility:'shop',reason:'Cannot rewrite'},{status:409})

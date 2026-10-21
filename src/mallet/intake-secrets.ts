@@ -13,8 +13,9 @@ export async function intakeSecret(env:Bindings,actor:Actor,authority:Authority,
  await expireIntakeSecrets(env,now)
  let id:string,result:any,queries:any[]=[{sql:"INSERT INTO mallet_assert(ok) SELECT CASE WHEN NOT EXISTS(SELECT 1 FROM mallet_records WHERE kind='handover' AND json_extract(value,'$.jobId')=?) THEN 1 ELSE 0 END",params:[scope.jobId]}]
  if(command==='intake.secretStore'){
-  const purpose=text(p.purpose,'explicit unlock purpose',500),value=text(p.secret,'temporary unlock secret',1000),expiresAt=instant(p.expiresAt,'purpose end time')
+  const purpose=text(p.purpose,'explicit unlock purpose',500),expiresAt=instant(p.expiresAt,'purpose end time')
   if(p.consent!==true||expiresAt<=now||Date.parse(expiresAt)-Date.parse(now)>86400000)fail('SECRET_CONSENT','Obtain explicit consent and set a purpose end within 24 hours.',null,400)
+  text(p.secret,'temporary unlock secret',1000);const value=p.secret as string
   id=crypto.randomUUID();const iv=crypto.getRandomValues(new Uint8Array(12)),cipher=await crypto.subtle.encrypt({name:'AES-GCM',iv,additionalData:new TextEncoder().encode(scope.jobId+':'+id)},await key(env),new TextEncoder().encode(value))
   queries.push({sql:'INSERT INTO mallet_intake_secrets(id,job_id,purpose,expires_at,cipher,iv) VALUES(?,?,?,?,?,?)',params:[id,scope.jobId,purpose,expiresAt,base64(new Uint8Array(cipher)),base64(iv)]})
   result={id,jobId:scope.jobId,purpose,expiresAt,label:'Owner-only temporary secret; excluded from backups. End the purpose as soon as unlock work finishes.'}

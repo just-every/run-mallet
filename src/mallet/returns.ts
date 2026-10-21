@@ -35,6 +35,8 @@ export function handover(c:Context,job:Row,invoice:Row,p:any){
  const identityEvidence=text(p.identityEvidence,'staff collector identity check evidence (do not copy identity documents)',1000),comparison=find(c.s,'intakeComparison',p.comparisonId)
  if(comparison.jobId!==job.id||comparison.signature.name.toLowerCase()!==collectorName.toLowerCase())fail('CUSTODY_CHECKLIST','The actual collector must acknowledge this visit’s custody checklist comparison.')
  const source=find(c.s,'intake',comparison.intakeId),latest=rows(c.s,'intake').filter(i=>i.jobId===job.id&&i.phase==='before').sort((a,b)=>(a.n??0)-(b.n??0)||a.at.localeCompare(b.at)||a.id.localeCompare(b.id)).at(-1)
+ const latestComparison=rows(c.s,'intakeComparison').filter(r=>r.intakeId===source.id).sort((a,b)=>(a.n??0)-(b.n??0)||a.at.localeCompare(b.at)||a.id.localeCompare(b.id)).at(-1)
+ if(comparison.id!==latestComparison?.id)fail('CUSTODY_CHECKLIST','Use the latest signed comparison of this custody checklist.')
  if(source.id!==latest?.id)fail('CUSTODY_CHECKLIST','Compare the latest before-condition custody receipt.')
  const mileage=readings(c.s,job.assetId).find(r=>r.id===p.readingId)
  if(!mileage||mileage.jobId!==job.id||mileage.stage!=='out')fail('RETURN_MILEAGE','Record current mileage-out on this visit before handover.')

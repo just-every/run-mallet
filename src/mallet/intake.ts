@@ -25,6 +25,6 @@ export const intake:Handler=(c,command,p)=>{
  const returned=source.items.map((item:any)=>{const matches=p.returned.filter((x:any)=>x.itemId===item.id);if(matches.length!==1)fail('CUSTODY_CHECKLIST','Compare every original custody item once.',null,400);const quantity=integer(matches[0].quantity,'returned quantity',0,item.quantity);return {...item,returnedQuantity:quantity,missingQuantity:item.quantity-quantity}})
  const discrepancy=text(p.discrepancy,'discrepancy explanation',2000,true)
  if(returned.some((x:any)=>x.missingQuantity)&&!discrepancy)fail('CUSTODY_DISCREPANCY','Explain every missing custody item.')
- const receipt=put(c.s,'intakeComparison',{jobId:job.id,assetId:job.assetId,intakeId:source.id,source:structuredClone(source),returned,discrepancy,signature,by:who(c),at:c.now,label:'Checklist comparison only; collection and payment are recorded separately.'})
+ const receipt=put(c.s,'intakeComparison',{n:rows(c.s,'intakeComparison').filter(i=>i.intakeId===source.id).length+1,jobId:job.id,assetId:job.assetId,intakeId:source.id,source:structuredClone(source),returned,discrepancy,signature,by:who(c),at:c.now,label:'Checklist comparison only; collection and payment are recorded separately.'})
  bump(c.s,'job',job,{custodyRevision:(job.custodyRevision??0)+1});event(c,command,job.id,receipt.id,{intakeId:source.id});return receipt
 }
