@@ -431,15 +431,15 @@ Every capability claim on the approved homepage (`src/site/landing/`, checked ag
 
 ## Status
 
-Judged from the code and tests at commit `08b74a3156a4245803fe36bdd3c716673c86fe45` (21 October 2026).
+Judged from the code and tests at commit `d26ff42f6cc1027e3e7dcc5d7616519a68ba1985` (21 October 2026).
 
 OPEN-001 was added on 18 October 2026. Its 19 October acceptance now runs the published command in a clean directory, verifies empty owner setup, inspects the installed MIT source and exercises the app without a Mallet commercial gate (`tests/clone-journey.mjs`, `tests/open-source-journey.mjs`, `tests/browser-journey.mjs`, `tests/site/site.test.mjs`).
 
 | Clauses | Done | Partial | Missing | Total |
 | --- | ---: | ---: | ---: | ---: |
 | Published | 9 | 0 | 0 | 9 |
-| Target and push further | 20 | 22 | 89 | 131 |
-| All | 29 | 22 | 89 | 140 |
+| Target and push further | 20 | 23 | 88 | 131 |
+| All | 29 | 23 | 88 | 140 |
 
 | Clause | Title | Kind | Status | Evidence | Gap |
 | --- | --- | --- | --- | --- | --- |
@@ -537,7 +537,7 @@ OPEN-001 was added on 18 October 2026. Its 19 October acceptance now runs the pu
 | `REPORT-003` | Technician efficiency and productivity | target | done | `src/mallet/reports/technicians.ts`; `src/mallet/pay-rates.ts`; `src/mallet/ui/reports.ts`; `src/mallet/http.ts`; `tests/support/report-journey.mjs`; `tests/report-browser.mjs` |  |
 | `REPORT-004` | Turnaround and customer promises | target | partial | `src/mallet/reports/turnaround.ts`; `src/mallet/model.ts`; `src/mallet/http.ts`; `docs/turnaround.md`; `tests/support/flow-journey.mjs`; `tests/mallet.test.mjs` (REPORT-004 / OPS-001) | Authenticated API reports observed stage intervals, approval/parts waits, booking-to-completion cycle time and promised-versus-actual completion with exact source events and fresh-owner restore. Older repairs explicitly retain incomplete stage coverage. No booking no-shows, DVI completion/engagement, warranty comeback rates, location comparisons or report screen yet. |
 | `REPORT-005` | Daily financial and inventory close | target | missing |  | No financial/inventory reports, tender reconciliation or period snapshots. |
-| `REPORT-006` | Scheduled reports and portable data | target | missing |  | No report subscriptions, XLSX exports or imported-history reporting. |
+| `REPORT-006` | Scheduled reports and portable data | target | partial | `src/mallet/reports/csv.ts`; `src/mallet/http.ts`; `docs/report-exports.md`; `tests/support/report-journey.mjs`; `tests/support/flow-journey.mjs`; `tests/mallet.test.mjs` | Current technician and turnaround JSON/CSV exports retain existing report permissions, explicit units, period filters, source references and fresh-owner recovery; CSV downloads neutralize formula text. Saved filters, scheduled permission-scoped delivery, XLSX and imported-history provenance/completeness remain unbuilt. |
 | `SHOP-001` | Multiple shops and location controls | target | missing |  | One workshop installation model; no locations, shared-customer controls, consolidated metrics or per-location provider routing. |
 | `HARDWARE-001` | Labels receipts and scanners | target | missing |  | No printer/scanner adapters, job queue, hardware setup or receipt/label formats. |
 | `CAL-001` | Google Calendar scheduling | target | missing |  | No Google Calendar OAuth or event synchronization. |

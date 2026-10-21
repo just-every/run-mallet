@@ -1,3 +1,4 @@
+import {downloadReport} from './report-csv.mjs'
 import assert from 'node:assert/strict'
 import {archive,assetInput,authorise,booking,estimate,installation,restore} from '../harness.mjs'
 import {coilDiagnosis,shopSetup} from './diagnosis-journey.mjs'
@@ -105,10 +106,26 @@ export async function flowJourney(h){
  await h.api('/api/mallet/reports/turnaround?from=2026-10-22&to=2026-10-21',undefined,{status:400})
  const nextDay=new Date(Date.parse(ro.createdAt.slice(0,10))+86400000).toISOString().slice(0,10)
  assert.deepEqual((await h.api('/api/mallet/reports/turnaround?from='+nextDay+'&to='+nextDay)).repairs,[],'REPORT-004 the inclusive booking-date filter excludes other dates')
+ // REPORT-006: stage CSV retains exact measured intervals, missing values and current job visibility.
+ const exportPath='/api/mallet/reports/turnaround'+reportQuery+'&format=csv',beforeExport=await h.state()
+ const exported=await downloadReport(h,exportPath),ownExport=await downloadReport(h,exportPath,A)
+ const closedRows=exported.filter(x=>x.JobId===ro.id)
+ assert.equal(closedRows.find(x=>x.Metric==='cycleMs').Value,String(measured.cycleMs))
+ for(const interval of measured.intervals){const row=closedRows.find(x=>x.Record==='stage'&&x.SourceId===interval.stageEventId);assert.equal(row.Value,String(interval.durationMs));assert.equal(row.From,interval.from);assert.equal(row.To,interval.to);assert.equal(row.Unit,'milliseconds')}
+ assert.equal(exported.find(x=>x.JobId===late.id&&x.Metric==='cycleMs').Value,'','Unfinished cycle is blank')
+ assert.ok(ownExport.some(x=>x.JobId===ro.id));assert.ok(!ownExport.some(x=>x.JobId===late.id))
+ const variance=closedRows.find(x=>x.Metric==='completionVarianceMs');assert.equal(variance.Value,String(measured.promise.completionVarianceMs),'Negative numeric variance remains a number, without spreadsheet text escaping')
+ assert.equal((await h.request(variance.JobURL,A)).status,200)
+ await h.api(exportPath,undefined,{...agent,status:403});await h.api(exportPath,undefined,{as:'',status:401})
+ for(const bad of ['&format=xlsx','&location=other','&to=2000-01-01'])await h.api('/api/mallet/reports/turnaround'+reportQuery+bad,undefined,{status:400})
+ assert.deepEqual(await h.state(),beforeExport,'REPORT-006 exports do not write product records')
  // OPS-001: board records restore exactly.
  const state=await h.state(),backup=await archive(h),target=await installation()
  try{await restore(target,backup);const restored=await target.state();assert.deepEqual(restored.records.flow,state.records.flow);assert.deepEqual(restored.records.job,state.records.job);assert.deepEqual(restored.records.stageEvent,state.records.stageEvent,'REPORT-004 / OPS-001 stage evidence restores exactly')
   const restoredReport=await target.api('/api/mallet/reports/turnaround'+reportQuery)
+  assert.deepEqual((await downloadReport(target,exportPath)).filter(x=>x.JobId===ro.id),closedRows,'REPORT-006 closed report CSV reproduces exactly after restore')
   assert.deepEqual(restoredReport.repairs.find(r=>r.jobId===ro.id),measured,'REPORT-004 a closed repair report is identical under fresh native authority')
   assert.deepEqual(stagesOf(await target.api('/api/mallet/board')),stagesOf(await board()),'FLOW-001 stages survive restore')}finally{await target.close()}
+ await h.api('/auth/operator/status',{operatorId:advisor.id,status:'inactive'})
+ for(const route of ['technicians','turnaround'])await h.api('/api/mallet/reports/'+route+reportQuery+'&format=csv',undefined,{as:advisor.cookie,status:401})
 }

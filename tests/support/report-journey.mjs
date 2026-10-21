@@ -1,3 +1,4 @@
+import {downloadReport} from './report-csv.mjs'
 import assert from 'node:assert/strict'
 import {archive,authorise,estimate,installation,restore} from '../harness.mjs'
 const day=ms=>new Date(ms).toISOString().slice(0,10)
@@ -8,7 +9,7 @@ export async function reportJourney(h,{person=h.person}={}){
  const setup=await h.mf.dispatchFetch(h.origin+'/setup',{method:'POST',redirect:'manual',headers:{origin:h.origin,cookie:h.owner,'content-type':'application/x-www-form-urlencoded'},body:'confirm=yes&ratePercent=7.5&partsTaxable=yes'});assert.equal(setup.status,303)
  const book=async(technicianId,n,bayId,startAt,endAt)=>{const asset=await h.command('asset.create',{customerName:'Report Fleet',customerEmail:'fleet@example.test',label:'Ford Transit '+n,identifier:'RPT-'+n});return h.command('job.book',{assetId:asset.id,version:asset.version,title:'Brake service '+n,technicianId,bayId,startAt,endAt})}
  const one=await book(a.id,'1','Bay 1','2026-11-02T09:00:00Z','2026-11-02T11:00:00Z'),two=await book(a.id,'2','Bay 2','2026-11-02T12:00:00Z','2026-11-02T13:00:00Z'),three=await book(b.id,'3','Bay 3','2026-11-02T09:00:00Z','2026-11-02T12:00:00Z')
- await authorise(h,await estimate(h,one));await authorise(h,await estimate(h,three))
+ await authorise(h,await h.command('estimate.prepare',{jobId:one.id,version:one.version,lines:[{kind:'part',description:'Brake pads',quantity:2,unitCents:2500},{kind:'labor',description:'=HYPERLINK("example"),\nreplace and tune',quantity:1.5,unitCents:12000}]}));await authorise(h,await estimate(h,three))
  const job=async id=>(await h.state()).records.job.find(j=>j.id===id),entry=async id=>(await h.state()).records.timeEntry.find(e=>e.id===id)
  const start=async(j,category,as)=>h.command('time.start',{jobId:j.id,version:(await job(j.id)).version,category},as)
  const clockA=await h.command('time.clockIn',{},A),billA=await start(one,'billable',A);await h.command('time.pause',{jobId:one.id},A)
@@ -61,8 +62,23 @@ export async function reportJourney(h,{person=h.person}={}){
  assert.match(ownerHtml,/\$225\.00/);assert.match(ownerHtml,/150\.0%/);assert.match(ownerHtml,/Save pay rate/)
  assert.doesNotMatch(advHtml,/\$30\.00|Pay cost|Save pay rate/);assert.match(advHtml,/150\.0%/)
  assert.doesNotMatch(memberHtml,new RegExp(bName));assert.doesNotMatch(memberHtml,/Pay cost/)
+ // REPORT-006: export the same filtered native report, preserving numeric units and role boundaries.
+ const csvPath='/api/mallet/reports/technicians'+q+'&format=csv',beforeExport=await h.state()
+ const exported=await downloadReport(h,csvPath),adminExport=await downloadReport(h,csvPath,ADV),myExport=await downloadReport(h,csvPath,A)
+ const metric=(records,id,key)=>records.find(x=>x.Record==='summary'&&x.TechnicianId===id&&x.Metric===key)
+ assert.equal(metric(exported,a.id,'billableMs').Value,'3600000');assert.equal(metric(exported,a.id,'efficiencyTenths').Value,'1500');assert.equal(metric(exported,a.id,'payCents').Value,'22500');assert.equal(metric(exported,a.id,'payCents').Unit,'USD cents')
+ assert.equal(exported.find(x=>x.Record==='timer'&&x.SourceId===billA.id).Value,'3600000')
+ const soldCsv=exported.find(x=>x.Record==='sold-labor'&&x.JobId===one.id)
+ assert.equal(soldCsv.Value,'1500');assert.equal(soldCsv.Description,"'=HYPERLINK(\"example\"),\nreplace and tune");assert.equal((await h.request(soldCsv.JobURL)).status,200)
+ assert.ok(!adminExport.some(x=>['payCents','unratedMs'].includes(x.Metric)));assert.ok(!myExport.some(x=>['payCents','unratedMs'].includes(x.Metric)))
+ assert.deepEqual([...new Set(myExport.map(x=>x.TechnicianId).filter(Boolean))],[a.id]);assert.ok(!myExport.some(x=>x.JobId===two.id&&x.Record==='assignment'))
+ const emptyCsv=await downloadReport(h,'/api/mallet/reports/technicians?from=2000-01-01&to=2000-01-01&format=csv',A)
+ assert.equal(metric(emptyCsv,a.id,'efficiencyTenths').Value,'','No denominator exports blank, never zero percent')
+ for(const bad of ['&format=xlsx','&location=elsewhere','&from=2000-01-01'])await h.api('/api/mallet/reports/technicians'+q+bad,undefined,{status:400})
+ await h.api(csvPath,undefined,{...agent,status:403});await h.api(csvPath,undefined,{as:'',status:401})
+ assert.deepEqual(await h.state(),beforeExport,'Repeated downloads create no product writes')
  // OPS-001: rates, timers and corrections restore exactly; the fresh owner's report recomputes the same rows.
  const backup=await archive(h),fresh=await installation()
- try{await restore(fresh,backup);const again=await fresh.api('/api/mallet/reports/technicians'+q);assert.deepEqual(again.technicians,r.technicians)}finally{await fresh.close()}
+ try{await restore(fresh,backup);const again=await fresh.api('/api/mallet/reports/technicians'+q);assert.deepEqual(again.technicians,r.technicians);assert.deepEqual((await downloadReport(fresh,csvPath)).filter(x=>x.Metric!=='generatedAt'),exported.filter(x=>x.Metric!=='generatedAt'),'REPORT-006 CSV values reproduce under fresh owner authority')}finally{await fresh.close()}
  return {a,b,advisor,q}
 }

@@ -1,3 +1,4 @@
+import {reportFormat,technicianCsv,turnaroundCsv} from './reports/csv'
 import {turnaroundReport} from './reports/turnaround'
 import {rateProfilePanel} from './ui/rate-profiles'
 import {routingCommand} from './routing-door'
@@ -216,13 +217,14 @@ export async function malletResponse(request:Request,original:Bindings):Promise<
   if(path==='/app'){const board=shopBoard(state,actor,(await operators(env.DB)).names,url.searchParams.get('ro'),boardFilter(url.searchParams));return page('Shop Board',taxNotice(state,actor)+board.body,actor,200,frame('board',{subtitle:board.subtitle,aside:board.aside,refresh:60}))}
   if(path==='/api/mallet/reports/turnaround') {
    if(actor.role==='agent')throw new HttpError(403,'staff_required')
-   const now=new Date().toISOString()
-   return json(turnaroundReport(state,period(url.searchParams.get('from'),url.searchParams.get('to'),now),now))
+   const format=reportFormat(url.searchParams),now=new Date().toISOString()
+   const report=turnaroundReport(state,period(url.searchParams.get('from'),url.searchParams.get('to'),now),now)
+   return format==='csv'?csv(turnaroundCsv(report),`mallet-turnaround-${report.period.from}-${report.period.to}`):json(report)
   }
   if(path==='/api/mallet/reports/technicians'||path==='/app/reports/technicians') {
    if(actor.role==='agent')throw new HttpError(403,'staff_required')
    const report=technicianReport(await load(env.DB),actor,period(url.searchParams.get('from'),url.searchParams.get('to'),new Date().toISOString()))
-   if(path.startsWith('/api/'))return json(report)
+   if(path.startsWith('/api/'))return reportFormat(url.searchParams)==='csv'?csv(technicianCsv(report),`mallet-technicians-${report.period.from}-${report.period.to}`):json(report)
    return page('Technician efficiency',technicianReportPage(report,actor,(await operators(env.DB)).names),actor,200,frame('jobs',{subtitle:'Sold versus actual hours, productivity and attendance, recomputed from clock events.'}))
   }
   if(path==='/app/time'){if(actor.role==='agent')throw new HttpError(403,'staff_required');return page('Time & attendance',`<div class="narrow">${timePanel(state,actor,(await operators(env.DB)).names)}</div>`,actor,200,frame('jobs'))}

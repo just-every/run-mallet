@@ -250,7 +250,7 @@ test('TIME-001: two assigned job timers, breaks, approved corrections, isolation
 
 test('TIME-001: native clocks, reasoned correction decisions and actual board time at 1440/390',timeBrowser)
 
-test('REPORT-003: sold versus actual hours, recomputed corrections, drill-through, owner-only pay rates and recovery',()=>run(reportJourney))
+test('REPORT-003 / REPORT-006: sold versus actual hours, recomputed corrections, drill-through, owner-only pay rates and recovery',()=>run(reportJourney))
 
 test('REPORT-003: native technician report, rate form and role views at 1440/390',reportBrowser)
 
@@ -273,7 +273,7 @@ test('FLOW-002: revised pickup promise and customer notice through native forms 
 
 test('FLOW-004: helper crew, dependent subtasks, mentioned advisor with media, acknowledged handoff, per-person time and recovery',()=>run(collaborationJourney))
 test('FLOW-004: native helper, dependent subtasks, mention and acknowledged handoff at 1440/390',collaborationBrowser)
-test('FLOW-001 / REPORT-004: nine-stage board, measured delays, promises, gated moves, technician/overdue/priority/search filters, canceled and lost retention, recorded collection and recovery',()=>run(flowJourney))
+test('FLOW-001 / REPORT-004 / REPORT-006: nine-stage board, measured delays, promises, gated moves, technician/overdue/priority/search filters, canceled and lost retention, recorded collection and recovery',()=>run(flowJourney))
 test('FLOW-001: native board filters, priority, cancel and recorded collection at 1440/390',flowBrowser)
 
 test('PART-006: supplier backorder, approved charge, internal advisor changes, actual receipt, invoice once and fresh-owner archive recovery',()=>run(specialPartJourney))
