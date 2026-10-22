@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import {createHash,randomUUID} from 'node:crypto'
 import {readFile} from 'node:fs/promises'
-import {archive,booking,estimate,installation,restore} from '../harness.mjs'
+import {archive,booking,installation,restore} from '../harness.mjs'
 import {shopSetup,coilDiagnosis} from './diagnosis-journey.mjs'
 import {inspectionPhoto} from './inspection-photo.mjs'
 export async function reportUpload(h,finding,bytes,mime,variant='original',originalId=null){
@@ -18,7 +18,7 @@ export async function prepareReport(h){
  const template=await h.command('inspectionTemplate.save',{version:0,name:'synthetic-mallet-4 brake check',vehicle:'Passenger vehicle',service:'Brakes',reason:'synthetic-mallet-5',items:[{id:'front-pads',label:'Front brake pads',measurement:{name:'Pad thickness',unit:'mm'}}]})
  let inspection=await h.command('inspection.assign',{jobId:job.id,version:job.version,templateId:template.id,templateVersion:template.version,templateRevision:1,technicianId:(await h.state()).actor.id,reason:'synthetic-mallet-6'})
  inspection=await h.command('inspection.record',{jobId:job.id,version:job.version,inspectionId:inspection.id,inspectionVersion:inspection.version,itemId:'front-pads',outcome:'red',measurementValue:2.5,measurementUnit:'mm',photoUploadId:photo.id,reason:'Measured pad thickness below shop replacement criterion'})
- let q=await estimate(h,job);q=await h.command('estimate.approve',{estimateId:q.id,version:q.version,revision:1})
+ let q=await h.command('estimate.prepare',{jobId:job.id,version:job.version,lines:[{kind:'part',description:'Brake pads',quantity:2,unitCents:2500,unitDiscountCents:500,costCents:1000},{kind:'labor',description:'Replace and tune',quantity:1.5,unitCents:12000}]});q=await h.command('estimate.approve',{estimateId:q.id,version:q.version,revision:1})
  const current=(await h.state()).records.job.find(x=>x.id===job.id)
  await h.command('diagnosis.record',{jobId:job.id,version:current.version,...coilDiagnosis})
  const entry={inspectionId:inspection.id,inspectionVersion:inspection.version,resultId:inspection.results[0].id,estimateId:q.id,estimateVersion:q.version,revision:1,lineIds:[q.revisions[0].lines[0].id],mediaIds:[sharedPhoto.id,sharedVideo.id],explanation:'The front pads measured 2.5 mm. Your advisor recommends the linked pad replacement. Please contact the shop before approving any work.'}
@@ -50,7 +50,7 @@ export async function inspectionReportJourney(h){
  const image=await h.request(path+'/media/'+sharedPhoto.id,{as:''});assert.equal(image.status,200);assert.equal(createHash('sha256').update(Buffer.from(await image.arrayBuffer())).digest('hex'),sharedPhoto.sha256)
  for(const id of [photo.id,originalVideo.id,randomUUID()])assert.equal((await h.request(path+'/media/'+id,{as:''})).status,404)
  assert.equal((await h.request(path+'/media/'+sharedVideo.id,{as:'',method:'POST',body:{}})).status,405)
- const proposal=await h.request(path+'/proposal/'+report.entries[0].id,{as:''}),proposed=await proposal.text();assert.equal(proposal.status,200);assert.ok(proposed.includes(entry.lineIds[0])===false);assert.ok(proposed.includes(ready.quote.revisions[0].lines[0].description));assert.ok(!proposed.includes(ready.quote.revisions[0].lines[1].description));assert.ok(!proposed.includes('costCents'))
+ const proposal=await h.request(path+'/proposal/'+report.entries[0].id,{as:''}),proposed=await proposal.text();assert.equal(proposal.status,200);assert.ok(proposed.includes(entry.lineIds[0])===false);assert.ok(proposed.includes(ready.quote.revisions[0].lines[0].description));assert.ok(!proposed.includes(ready.quote.revisions[0].lines[1].description));assert.ok(!proposed.includes('costCents'));assert.equal(report.entries[0].proposal.lines[0].unitDiscountCents,500);assert.equal(report.entries[0].proposal.lines[0].totalCents,4300);assert.ok(proposed.includes('per-unit discount $5.00'));assert.ok(proposed.includes('line total $43.00'))
  const after=await h.state();for(const kind of ['estimate','approval','job','inspection'])assert.deepEqual(after.records[kind],before.records[kind],'Viewing changes no '+kind)
  assert.equal(after.records.diagnosisLinkView.filter(v=>v.reportId===report.id).length,1)
  assert.equal((await h.state(bearer)).records.inspectionReport,undefined);assert.equal((await h.state(bearer)).records.inspectionReportDelivery,undefined);assert.equal((await h.state({as:member.cookie})).records.inspectionReport,undefined)
