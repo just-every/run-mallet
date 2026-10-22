@@ -74,17 +74,24 @@ export async function checkInJourney(h){
  state=await h.state();assert.equal(state.records.counterIntake.length,1);assert.equal(state.records.job.length,1);assert.equal(state.records.estimate.length,1);assert.deepEqual(state.records.counterIntake[0].receipt,receipt);assert.equal(h.messages.length,sends,'Check-in submits and confirms without outbound messages or payment charges')
  await h.command('checkin.revoke',{requestId:row.id,version:row.version,reason:'Customer requested private invitation withdrawal.'})
  assert.equal((await read()).status,404)
+ for(const channel of ['walk-in','mobile']){
+  const link=await h.command('checkin.issue',{templateId:published.id,templateVersion:published.version})
+  await checkInPost(h,link.url,{...fields,channel,diagnosticTotalCents:link.quote.totals.totalCents})
+  const queued=await requestRow(h,link.id);assert.equal(queued.submission.channel,channel);assert.equal(queued.status,'queued');assert.equal(queued.jobId,null);assert.equal(queued.confirmation,null)
+ }
+ assert.equal((await h.state()).records.job.length,1,'Walk-in and mobile submissions also need separate advisor confirmation')
+ assert.equal(h.messages.length,sends,'No channel sends an automatic message')
  return {row:await requestRow(h,row.id),receipt,invitation,asset,template}
 }
 
 export async function checkInRecoveryJourney(h){
- const {row,invitation}=await checkInJourney(h),backup=await archive(h)
+ const {row,invitation}=await checkInJourney(h),saved=(await h.state()).records.counterIntake,backup=await archive(h)
  assert.ok(backup[0].excludedTables.includes('mallet_checkin_links'))
  assert.ok(!JSON.stringify(backup).includes(new URL(invitation.url).pathname.split('/').at(-1)))
  const fresh=await installation({bindings:{OWNER_EMAIL:'synthetic-mallet-8@example.test'}})
  try{
   await restore(fresh,backup);const state=await fresh.state()
-  assert.deepEqual(state.records.counterIntake,[row]);assert.equal(state.records.job.length,1)
+  assert.deepEqual(state.records.counterIntake,saved);assert.equal(state.records.job.length,1)
   assert.equal((await fresh.mf.dispatchFetch(fresh.origin+new URL(invitation.url).pathname)).status,404)
  }finally{await fresh.close()}
 }
