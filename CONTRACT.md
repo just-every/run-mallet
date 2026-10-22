@@ -440,8 +440,8 @@ OPEN-001 was added on 18 October 2026. Its 19 October acceptance now runs the pu
 | Clauses | Done | Partial | Missing | Total |
 | --- | ---: | ---: | ---: | ---: |
 | Published | 9 | 0 | 0 | 9 |
-| Target and push further | 25 | 28 | 78 | 131 |
-| All | 34 | 28 | 78 | 140 |
+| Target and push further | 26 | 27 | 78 | 131 |
+| All | 35 | 27 | 78 | 140 |
 
 | Clause | Title | Kind | Status | Evidence | Gap |
 | --- | --- | --- | --- | --- | --- |
