@@ -32,19 +32,40 @@ export async function intakeJourney(h){
  const secret=' synthetic-mallet-71 ',store={jobId:job.id,purpose:'Unlock only for diagnosis',secret,expiresAt:new Date(Date.now()+600000).toISOString(),consent:true}
  await h.command('intake.secretStore',store,{as:admin.cookie,status:403});await h.command('intake.secretStore',{...store,consent:false},{status:400})
  await h.command('intake.secretStore',{...store,expiresAt:new Date(Date.now()+86401000).toISOString()},{status:400})
+ await h.command('intake.secretStore',{...store,purpose:'Unlock '+secret+' for diagnosis'},{status:400})
  const vault=await h.command('intake.secretStore',store);assert.equal('secret' in vault,false)
  const key=await h.command('agent.create',{label:'No custody authority'})
  const bearer={as:'',headers:{authorization:'Bearer '+key.token}}
  await h.command('intake.secretReveal',{jobId:job.id,secretId:vault.id,reason:'Diagnosis'},{...bearer,status:403})
  assert.equal((await h.state(bearer)).records.intake?.length??0,0)
+ await h.command('intake.secretReveal',{jobId:job.id,secretId:vault.id,reason:'Read '+secret},{status:400})
  const revealed=await h.command('intake.secretReveal',{jobId:job.id,secretId:vault.id,reason:'Diagnosis requires unlock'});assert.equal(revealed.secret,secret)
  assert.ok(!JSON.stringify(await h.state()).includes(secret),'Unlock material never reaches general state or audit')
  const wrongJob={jobId:other.job.id,secretId:vault.id,reason:'Wrong job'};await h.command('intake.secretReveal',wrongJob,{status:404})
  const saved=await h.state(),backup=await archive(h);assert.ok(!JSON.stringify(backup).includes(secret));assert.ok(backup[0].excludedTables.includes('mallet_intake_secrets'));assert.ok(!backup[0].tables.some(t=>t.name==='mallet_intake_secrets'))
  const fresh=await installation({bindings:{OWNER_EMAIL:'custody-recovery@example.test'}})
  try{await restore(fresh,backup);const restored=await fresh.state();for(const kind of ['intake','intakeComparison','intakeSecretAudit'])assert.deepEqual(restored.records[kind],saved.records[kind]);assert.deepEqual(Buffer.from(await(await fresh.request(photo.contentUrl)).arrayBuffer()),await readFile('tests/fixtures/dvi/front-brake.png'));await fresh.command('intake.secretReveal',{jobId:job.id,secretId:vault.id,reason:'Restore cannot bring secrets'},{status:404});await fresh.state({as:h.owner,status:401})}finally{await fresh.close()}
+ const db=await h.mf.getD1Database('DB'),oldCipher=await db.prepare('SELECT * FROM mallet_intake_secrets WHERE id=?').bind(vault.id).first()
  await h.command('intake.secretEnd',{jobId:job.id,secretId:vault.id});await h.command('intake.secretReveal',{jobId:job.id,secretId:vault.id,reason:'Purpose ended'},{status:404})
+ // Restore the exact pre-purge D1 row: the independently destroyed R2 key stays gone.
+ await db.prepare('INSERT INTO mallet_intake_secrets(id,job_id,purpose,expires_at,cipher,iv) VALUES(?,?,?,?,?,?)').bind(...['id','job_id','purpose','expires_at','cipher','iv'].map(k=>oldCipher[k])).run()
+ await h.command('intake.secretReveal',{jobId:job.id,secretId:vault.id,reason:'Database restored before purge'},{status:404})
+ await h.command('intake.secretEnd',{jobId:job.id,secretId:vault.id})
  const expiring=await h.command('intake.secretStore',{...store,expiresAt:new Date(Date.now()+600000).toISOString()});await h.cron(new Date(Date.now()+700000).toISOString());await h.command('intake.secretReveal',{jobId:job.id,secretId:expiring.id,reason:'Expired'},{status:404})
+ const {customersFixture}=await import('./customers-journey.mjs'),{input:accountInput}=await customersFixture(h),account=await h.command('customer.save',accountInput)
+ let asset=(await h.state()).records.asset.find(a=>a.id===job.assetId)
+ asset=await h.command('customer.linkAsset',{assetId:asset.id,version:asset.version,customerId:account.id,customerVersion:account.version,reason:'Customer confirms asset ownership for erasure request'})
+ const second=(await booking(h,{asset,startAt:'2026-11-01T09:00:00Z',endAt:'2026-11-01T10:00:00Z'})).job
+ const firstKey=await h.command('intake.secretStore',store),secondKey=await h.command('intake.secretStore',{...store,jobId:second.id}),unrelatedKey=await h.command('intake.secretStore',{...store,jobId:other.job.id})
+ await h.command('intake.secretEraseCustomer',{jobId:job.id,confirm:'ERASE',reason:'Customer requested erasure'},{as:admin.cookie,status:403})
+ const erased=await h.command('intake.secretEraseCustomer',{jobId:job.id,confirm:'ERASE',reason:'Customer requested erasure'})
+ assert.equal(erased.erased,2)
+ for(const [visit,key] of [[job,firstKey],[second,secondKey]])await h.command('intake.secretReveal',{jobId:visit.id,secretId:key.id,reason:'Customer erasure completed'},{status:404})
+ assert.equal((await h.command('intake.secretReveal',{jobId:other.job.id,secretId:unrelatedKey.id,reason:'Unrelated customer still needs diagnosis'})).secret,secret)
+ await h.command('intake.secretEnd',{jobId:other.job.id,secretId:unrelatedKey.id})
+ const finalBackup=await archive(h),finalState=await h.state()
+ assert.ok(!JSON.stringify(finalState).includes(secret));assert.ok(!JSON.stringify(finalBackup).includes(secret))
+ assert.ok(finalState.records.intakeSecretAudit.some(a=>a.action==='intake.secretReveal'&&a.reason==='Diagnosis requires unlock'))
  assert.equal((await h.state()).records.flow?.find(f=>f.jobId===job.id)?.collection??null,null,'Checklist comparisons never release a repair')
  return {job,before,after,comparison}
 }

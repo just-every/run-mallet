@@ -7,7 +7,7 @@ import {returnPage,returnFormInput,handoverReceipt} from './ui/returns'
 import {collectionInput,verifyStripePayment} from './payment-door'
 import {warrantyPage,warrantyFormInput} from './ui/warranty'
 import {intakePage,intakeFormInput} from './ui/intake'
-import {intakeSecret,expireIntakeSecrets} from './intake-secrets'
+import {intakeSecret,expireIntakeSecrets,purgeIntakeSecrets} from './intake-secrets'
 import {tracePage,traceFormInput} from './ui/stock-trace'
 import {traceReport} from './stock-trace'
 import {accountsPage,customerFormInput} from './ui/customers'
@@ -196,8 +196,8 @@ export async function malletResponse(request:Request,original:Bindings,execution
    if(command==='intakeForm.create')result=await createIntakeFormLink(env,actor,auth.authority,input)
    else if(command==='refund.submit'||command==='refund.reconcile')result=await refundDoor(env,actor,auth.authority,command,input)
    else if(command==='payment.verifyStripe')result=await verifyStripePayment(env,actor,auth.authority,input)
-   else if(command==='flow.collect'){const checked=await collectionInput(env,actor,input,auth.authority);result=await execute(env.DB,actor as any,command,checked.input,checked.authority);await env.DB.prepare('DELETE FROM mallet_intake_secrets WHERE job_id=?').bind(input.jobId).run()}
-   else if(['intake.secretStore','intake.secretReveal','intake.secretEnd'].includes(command))result=await intakeSecret(env,actor,auth.authority,command,input)
+   else if(command==='flow.collect'){const checked=await collectionInput(env,actor,input,auth.authority);result=await execute(env.DB,actor as any,command,checked.input,checked.authority);await purgeIntakeSecrets(env,'job_id=?',[input.jobId])}
+   else if(['intake.secretStore','intake.secretReveal','intake.secretEnd','intake.secretEraseCustomer'].includes(command))result=await intakeSecret(env,actor,auth.authority,command,input)
    else if(command.startsWith('routing.'))result=await routingCommand(env.DB,actor as any,auth.authority,command,input)
    else if(command==='promise.approveAndNotify')result=await sendPromiseNotice(env,actor,auth.authority,input)
    else if(command==='approvalLink.create'){if(!human(actor))throw new HttpError(403,'manager_required');result=await sendApprovalLink(env,actor,auth.authority,input)}

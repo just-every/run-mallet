@@ -15,6 +15,9 @@ export interface Bindings {
  STRIPE_SECRET_KEY?: string
  PIER_ORIGIN?: string
  PIER_SESSION?: string
+ /** Per-secret data keys, excluded from archives and D1 point-in-time recovery. */
+ INTAKE_VAULT?: R2Bucket
+ INTAKE_VAULT_KEY?: string
  DB: D1Database
  /** Built browser files; hosted deploys run the Worker first (staticAssetResponse). */
  ASSETS?: Fetcher
