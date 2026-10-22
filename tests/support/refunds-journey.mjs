@@ -85,7 +85,7 @@ export async function stripeRefundJourney(){
  let invoice,mode='uncertain',postCount=0,revoke; const provider=[]
  const h=await installation({bindings:{STRIPE_SECRET_KEY:'synthetic-mallet-120'},outboundService:async request=>{
   const url=new URL(request.url);assert.equal(url.hostname,'api.stripe.com')
-  if(url.pathname.startsWith('/v1/payment_intents/'))return Response.json({id:'synthetic-mallet-121',metadata:{mallet_invoice_id:invoice.id},status:'succeeded',currency:'usd',amount_received:541,livemode:false,latest_charge:{paid:true,captured:true,refunded:false,amount_refunded:0,currency:'usd',amount:541}})
+  if(url.pathname.startsWith('/v1/payment_intents/'))return Response.json({id:'synthetic-mallet-121',metadata:{mallet_invoice_id:invoice.id},status:'succeeded',currency:'usd',amount_received:541,livemode:true,latest_charge:{paid:true,captured:true,disputed:false,refunded:false,amount_refunded:0,currency:'usd',amount:541}})
   if(request.method==='POST'){
    postCount++;const form=new URLSearchParams(await request.text());assert.equal(form.get('payment_intent'),'synthetic-mallet-121');assert.equal(request.headers.get('idempotency-key'),'mallet-refund-'+form.get('metadata[mallet_refund_id]'))
    const receipt={id:'synthetic-mallet-'+(122+postCount),payment_intent:form.get('payment_intent'),amount:Number(form.get('amount')),currency:'usd',status:mode==='uncertain'?'succeeded':mode,metadata:{mallet_refund_id:form.get('metadata[mallet_refund_id]')}};provider.push(receipt)

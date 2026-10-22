@@ -72,7 +72,7 @@ export async function refundsBrowser(){
  const h=await installation({entry:'tests/worker.ts',network:true,assets:true,secureNetwork:true,bindings:{STRIPE_SECRET_KEY:'synthetic-mallet-190'},outboundService:async request=>{
   const url=new URL(request.url)
   assert.equal(url.hostname,'api.stripe.com')
-  if(url.pathname.startsWith('/v1/payment_intents/'))return Response.json({id:'synthetic-mallet-191',metadata:{mallet_invoice_id:stripeInvoice.id},status:'succeeded',currency:'usd',amount_received:541,livemode:false,latest_charge:{paid:true,captured:true,refunded:false,amount_refunded:0,currency:'usd',amount:541}})
+  if(url.pathname.startsWith('/v1/payment_intents/'))return Response.json({id:'synthetic-mallet-191',metadata:{mallet_invoice_id:stripeInvoice.id},status:'succeeded',currency:'usd',amount_received:541,livemode:true,latest_charge:{paid:true,captured:true,disputed:false,refunded:false,amount_refunded:0,currency:'usd',amount:541}})
   assert.equal(request.method,'POST');const form=new URLSearchParams(await request.text()),receipt={id:'synthetic-mallet-'+(192+receipts.length),payment_intent:form.get('payment_intent'),amount:Number(form.get('amount')),currency:'usd',status:'failed',metadata:{mallet_refund_id:form.get('metadata[mallet_refund_id]')}};receipts.push(receipt);return Response.json(receipt)
  }});let browser
  try{

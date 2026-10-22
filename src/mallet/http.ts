@@ -225,6 +225,7 @@ export async function malletResponse(request:Request,original:Bindings,execution
    if(command==='intake.secretReveal')return page('Temporary unlock secret',`<section class="card"><p>Use only for the recorded purpose. Close this page after use, then end the purpose.</p><pre>${e(result.secret)}</pre><a href="/app/jobs/${e(input.jobId)}/intake">Return to custody</a></section>`,actor,200,{section:'jobs'})
    if(command.startsWith('intake.'))return redirect(`/app/jobs/${e(input.jobId)}/intake`)
    if(command.startsWith('return.')||command==='payment.verifyStripe'||command==='flow.collect')return redirect(`/app/jobs/${e(input.jobId)}/return`)
+   if(command==='payment.record'&&input.returnTo==='return')return redirect(`/app/jobs/${e(input.jobId)}/return`)
    if(command.startsWith('warranty.')||command==='payment.record')return redirect(`/app/jobs/${e(command==='warranty.open'?result.jobId:input.jobId)}/warranty`)
    if(command==='agent.create')return page('Agent key created',`<section class="card"><p>Copy this key once into your agent’s private environment. It will not be shown again.</p><pre>${e(result.token)}</pre><p>Expires ${when(new Date(result.expiresAt).toISOString(),undefined,'date-year')}</p><p class="card-foot"><a href="/app/data">Return to access</a></p></section>`,actor,200,{section:'data'})
    if(command==='asset.erase')return redirect('/app/customers')
