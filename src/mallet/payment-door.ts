@@ -1,12 +1,14 @@
 import type {Bindings} from '../auth.server'
 import type {Actor,Authority} from './auth'
 import {handoverTender} from './payments'
+import {connectorSecret} from './connectors/secrets'
 import {execute,expectVersion,fail,find,load,rows,text} from './model'
 async function stripeReceipt(env:Bindings,id:string,invoice:any){
- if(!env.STRIPE_SECRET_KEY)fail('PAYMENT_CONFIGURATION','Configure the shop-owned Stripe secret privately before checking processor evidence.',null,503)
+ const key=await connectorSecret(env,'stripe','STRIPE_SECRET_KEY')
+ if(!key)fail('PAYMENT_CONFIGURATION','Configure the shop-owned Stripe secret privately before checking processor evidence.',null,503)
  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),5000)
  try{
-  const response=await fetch('https://api.stripe.com/v1/payment_intents/'+encodeURIComponent(id)+'?expand%5B%5D=latest_charge',{headers:{authorization:'Bearer '+env.STRIPE_SECRET_KEY},signal:controller.signal,redirect:'manual'})
+  const response=await fetch('https://api.stripe.com/v1/payment_intents/'+encodeURIComponent(id)+'?expand%5B%5D=latest_charge',{headers:{authorization:'Bearer '+key},signal:controller.signal,redirect:'manual'})
   if(!response.ok)fail('PAYMENT_PROVIDER','The processor could not confirm this payment. No settlement was recorded.',null,502)
   const reader=response.body?.getReader();if(!reader)fail('PAYMENT_PROVIDER','The processor returned no receipt.',null,502)
   const parts:Uint8Array[]=[];let size=0

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import {createHash,createHmac,randomBytes,randomUUID} from 'node:crypto'
 import {readFile} from 'node:fs/promises'
-import {archive,booking,installation,restore} from '../harness.mjs'
+import {archive,assetInput,booking,installation,restore} from '../harness.mjs'
 import {shopSetup,coilDiagnosis} from './diagnosis-journey.mjs'
 import {inspectionPhoto} from './inspection-photo.mjs'
 export async function reportUpload(h,finding,bytes,mime,variant='original',originalId=null){
@@ -60,6 +60,9 @@ export async function inspectionReportJourney(h){
  assert.deepEqual((await h.state()).records.inspectionReport.find(r=>r.id===report.id),report)
  const backup=await archive(h),saved=await h.state(),fresh=await installation({bindings:{OWNER_EMAIL:'synthetic-mallet-11@example.test'}})
  try{await restore(fresh,backup);const recovered=await fresh.state();for(const kind of ['inspectionReport','inspectionReportDelivery','diagnosisLink','diagnosisLinkView'])assert.deepEqual(recovered.records[kind],saved.records[kind]);assert.equal((await fresh.request(path,{as:''})).status,404);const original=await fresh.request('/api/mallet/media/uploads/'+originalVideo.id+'/content');assert.deepEqual(Buffer.from(await original.arrayBuffer()),bytes);const sourceDb=await h.mf.getD1Database('DB'),targetDb=await fresh.mf.getD1Database('DB');for(const table of ['rer_mail_event_receipts','rer_mail_event_states'])assert.deepEqual((await targetDb.prepare('SELECT * FROM '+table+' ORDER BY '+(table==='rer_mail_event_receipts'?'provider,tenant_id,event_namespace,event_id':'provider,tenant_id,event_namespace,provider_message_id,recipient')).all()).results,(await sourceDb.prepare('SELECT * FROM '+table+' ORDER BY '+(table==='rer_mail_event_receipts'?'provider,tenant_id,event_namespace,event_id':'provider,tenant_id,event_namespace,provider_message_id,recipient')).all()).results,'Durable downstream '+table+' survives recovery')}finally{await fresh.close()}
+ // GOV-005: another customer's private media is not reachable through this customer's link.
+ const stranger=await booking(h,{asset:await h.command('asset.create',assetInput('GOV5-OTHER')),startAt:'2026-10-26T09:00:00Z',endAt:'2026-10-26T10:00:00Z'}),strangerPhoto=await inspectionPhoto(h,stranger.job.id,h.owner,'Other customer pads')
+ assert.equal((await h.request(path+'/media/'+strangerPhoto.id,{as:''})).status,404,'GOV-005 another customer media is not served through this link')
  const link=(await h.state()).records.diagnosisLink.find(l=>l.id===delivery.linkId);await h.command('diagnosisLink.revoke',{linkId:link.id,version:link.version})
  const revoked=await h.request(path,{as:''}),unknown=await h.request('/inspection/'+'A'.repeat(43),{as:''});assert.equal(revoked.status,404);assert.equal(await revoked.text(),await unknown.text());assert.equal((await h.request(path+'/media/'+sharedVideo.id,{as:''})).status,404)
  return ready

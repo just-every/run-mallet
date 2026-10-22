@@ -35,10 +35,13 @@ export async function agentKey(db:D1Database, actor:Actor, authority:Authority, 
  if(command==='agent.revoke') {
   await db.batch([guard,db.prepare('UPDATE mallet_agent_keys SET revoked_at=? WHERE id=?').bind(Date.now(),String(input.id)),db.prepare('DELETE FROM mallet_assert')]); return {revoked:true}
  }
- if(command!=='agent.create') throw new HttpError(404,'unknown_command')
- const label=String(input.label??'').trim();if(!label || label.length>100) throw new HttpError(400,'agent_label_required')
+ if(command!=='agent.create'&&command!=='agent.rotate') throw new HttpError(404,'unknown_command')
+ // Rotation keeps the label and authority shape: the new key is created and the old one revoked in one transaction.
+ const previous=command==='agent.rotate'?await db.prepare('SELECT label FROM mallet_agent_keys WHERE id=? AND revoked_at IS NULL AND expires_at>?').bind(String(input.id??''),Date.now()).first<{label:string}>():null
+ if(command==='agent.rotate'&&!previous) throw new HttpError(404,'not_found')
+ const label=String((previous?.label??input.label)??'').trim();if(!label || label.length>100) throw new HttpError(400,'agent_label_required')
  const token=btoa(String.fromCharCode(...crypto.getRandomValues(new Uint8Array(32)))).replaceAll('+','-').replaceAll('/','_').replaceAll('=','')
  const id=crypto.randomUUID(),now=Date.now(),expiresAt=now+30*86400000
- await db.batch([guard,db.prepare('INSERT INTO mallet_agent_keys SELECT ?,?,?,id,version,?,NULL,? FROM oa_operators WHERE id=?').bind(id,await digest(token),label,expiresAt,now,actor.id),db.prepare('DELETE FROM mallet_assert')])
- return {id,label,token,expiresAt}
+ await db.batch([guard,...(previous?[db.prepare('INSERT INTO mallet_assert(ok) SELECT CASE WHEN EXISTS(SELECT 1 FROM mallet_agent_keys WHERE id=? AND revoked_at IS NULL) THEN 1 ELSE 0 END').bind(String(input.id))]:[]),db.prepare('INSERT INTO mallet_agent_keys SELECT ?,?,?,id,version,?,NULL,? FROM oa_operators WHERE id=?').bind(id,await digest(token),label,expiresAt,now,actor.id),...(previous?[db.prepare('UPDATE mallet_agent_keys SET revoked_at=? WHERE id=? AND revoked_at IS NULL').bind(now,String(input.id)),db.prepare('INSERT INTO oa_auth_audit(id,actor_id,action,value,created_at) VALUES(?,?,?,?,?)').bind(crypto.randomUUID(),actor.id,'mallet:agent.rotated',JSON.stringify({replaced:String(input.id),id}),now)]:[]),db.prepare('DELETE FROM mallet_assert')])
+ return {id,label,token,expiresAt,...(previous?{replaced:String(input.id)}:{})}
 }

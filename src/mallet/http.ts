@@ -5,6 +5,9 @@ import {waitlistCommand} from './waitlist-door'
 import {internalWaitlistCommands} from './booking-waitlist'
 import {waitlistFormInput} from './ui/waitlist'
 import {securityResponse} from './strong-auth/door'
+import {connectorsResponse} from './connectors/door'
+import {saveSecret,revokeSecret} from './connectors/secrets'
+import {connectorSecret} from './connectors/secrets'
 import {requireStepUp,needsStepUp} from './strong-auth/gate'
 import {guardLinks} from './strong-auth/link-guard'
 import {inspectionReportEventResponse} from './inspection-report-events'
@@ -185,6 +188,7 @@ export async function malletResponse(request:Request,original:Bindings,execution
   return approvalResponse(request,original)
  });if(customerDoor)return customerDoor
  const security=await securityResponse(request,original);if(security)return security
+ const connectors=await connectorsResponse(request,original);if(connectors)return connectors
  if(path!=='/restore' && path!=='/app' && !path.startsWith('/app/') && !path.startsWith('/api/mallet/') && !path.startsWith('/api/portability/'))return null
  const env=runtimeBindings(original),isApi=path.startsWith('/api/')
  let actor:Actor|undefined,submitted:any
@@ -228,6 +232,8 @@ export async function malletResponse(request:Request,original:Bindings,execution
    else if(command==='inspectionReport.review'){const checked=await inspectionReportInput(env.DB,actor,auth.authority,input);result=await execute(env.DB,actor as any,command,checked.input,checked.authority)}
    else if(command==='inspectionReport.send')result=await sendInspectionReport(env,actor,auth.authority,input)
    else if(command==='booking.publish'){if(!human(actor))throw new HttpError(403,'manager_required');const active=(await operators(env.DB)).list.filter(x=>x.status==='active');if(!Array.isArray(input.windows)||input.windows.some((w:any)=>!active.some(x=>x.id===w.technicianId)))throw new HttpError(400,'active_staff_required');const technicians=[...new Set(input.windows.map((w:any)=>String(w.technicianId)))];const guard={sql:'('+auth.authority.sql+') AND '+technicians.map(()=>"EXISTS(SELECT 1 FROM oa_operators WHERE id=? AND status='active')").join(' AND '),params:[...auth.authority.params,...technicians]};result=await execute(env.DB,actor as any,command,input,guard)}
+   else if(command==='connector.save')result=await saveSecret(env,actor,auth.authority,input)
+   else if(command==='connector.revoke')result=await revokeSecret(env,actor,auth.authority,input)
    else if(command==='booking.revokeLink')result=await revokeBookingLink(env,actor,auth.authority,input)
    else if(command==='checkin.issue')result=await createCheckInLink(env,actor,auth.authority,input)
    else if(command==='intakeForm.create')result=await createIntakeFormLink(env,actor,auth.authority,input)
@@ -260,6 +266,7 @@ export async function malletResponse(request:Request,original:Bindings,execution
    if(command.startsWith('calendar.')||command.startsWith('waitlist.'))return redirect('/app/calendar')
    if(command==='promise.timeZone'&&input.calendarReturn)return redirect('/app/calendar')
    if(command==='booking.publish'||command==='booking.revokeLink')return redirect('/app/bookings')
+   if(command.startsWith('connector.'))return redirect('/app/connectors')
    if(command==='checkin.issue')return page('Customer check-in link',`<section class="card"><p>Share this private seven-day, one-request link directly with the customer. No message, booking or payment has been sent. Anyone holding the link can use it.</p><a href="${e(result.url)}">Open customer check-in</a><pre>${e(result.url)}</pre><p><a href="/app/check-ins">Return to check-in queue</a></p></section>`,actor,200,{section:'jobs'})
    if(command==='checkin.confirm'||command==='checkin.revoke')return redirect('/app/check-ins')
    if(command==='intakeForm.create')return page('Customer intake link',`<section class="card"><p>Share this private seven-day link directly with this customer. Mallet has not sent it. Anyone holding it can use it; it will not be shown again.</p><a href="${e(result.url)}">Open customer intake form</a><pre>${e(result.url)}</pre><a href="/app/jobs/${e(input.jobId)}/intake">Return to custody</a></section>`,actor,200,{section:'jobs'})
@@ -270,7 +277,7 @@ export async function malletResponse(request:Request,original:Bindings,execution
    if(command.startsWith('return.')||command==='payment.verifyStripe'||command==='flow.collect')return redirect(`/app/jobs/${e(input.jobId)}/return`)
    if(command==='payment.record'&&input.returnTo==='return')return redirect(`/app/jobs/${e(input.jobId)}/return`)
    if(command.startsWith('warranty.')||command==='payment.record')return redirect(`/app/jobs/${e(command==='warranty.open'?result.jobId:input.jobId)}/warranty`)
-   if(command==='agent.create')return page('Agent key created',`<section class="card"><p>Copy this key once into your agent’s private environment. It will not be shown again.</p><pre>${e(result.token)}</pre><p>Expires ${when(new Date(result.expiresAt).toISOString(),undefined,'date-year')}</p><p class="card-foot"><a href="/app/data">Return to access</a></p></section>`,actor,200,{section:'data'})
+   if(command==='agent.create'||command==='agent.rotate')return page('Agent key created',`<section class="card"><p>Copy this key once into your agent’s private environment. It will not be shown again.</p><pre>${e(result.token)}</pre><p>Expires ${when(new Date(result.expiresAt).toISOString(),undefined,'date-year')}</p><p class="card-foot"><a href="/app/data">Return to access</a></p></section>`,actor,200,{section:'data'})
    if(command==='asset.erase')return redirect('/app/customers')
    if(command==='approvalLink.create')return page('Approval link sent',`<section class="card"><p>${e(result.delivery?.status==='accepted'?'Handed to the mail provider for '+result.to+'; delivery is not confirmed.':result.delivery?.status==='development'?'Written to the development mail outbox for '+result.to+'; not sent.':'The mail provider did not accept the message for '+result.to+'.')}</p><p>If the customer cannot find the email, share this link yourself. It will not be shown again.</p><pre>${e(result.url)}</pre><p class="card-foot"><a href="/app/jobs/${e(result.jobId)}#approval-links">Return to the repair</a></p></section>`,actor,200,{section:'jobs'})
    if(command==='diagnosisLink.create')return page('Customer inspection link',`<section class="card"><p>Copy this read-only link to the customer yourself. Mallet has not sent it, and it will not be shown again.</p><pre>${e(result.url)}</pre><p>Expires ${when(result.expiresAt)}</p><p class="card-foot"><a href="/app/jobs/${e(result.jobId)}#diagnosis">Return to the repair</a></p></section>`,actor,200,{section:'jobs'})
@@ -302,7 +309,7 @@ export async function malletResponse(request:Request,original:Bindings,execution
   }
   if(request.method!=='GET' && request.method!=='HEAD')throw new HttpError(405,'method_not_allowed')
   const state=visible(await load(env.DB),actor)
-  if(path==='/api/mallet/catalogue'){if(actor.role==='member')throw new HttpError(403,'manager_required');return json(await catalogue(env))}
+  if(path==='/api/mallet/catalogue'){if(actor.role==='member')throw new HttpError(403,'manager_required');return json(await catalogue(env,await connectorSecret(env,'pier','PIER_SESSION')))}
   if(path==='/app/calendar'){if(!human(actor))throw new HttpError(403,'manager_required');return page('Resource calendar',calendarPage(state,(await operators(env.DB)).names,url.searchParams),actor,200,{section:'jobs'})}
   if(path==='/app/bookings'){if(!human(actor))throw new HttpError(403,'manager_required');return page('Online appointments',bookingStaff(state,(await operators(env.DB)).names),actor,200,{section:'jobs'})}
   if(path==='/api/mallet/state')return json({actor,...state})

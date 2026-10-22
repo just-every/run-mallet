@@ -1,10 +1,11 @@
 import type {Bindings} from '../auth.server'
 import type {Actor,Authority} from './auth'
 import {execute,expectVersion,fail,find,load} from './model'
-async function stripe(env:Bindings,path:string,init:RequestInit={}){
+import {connectorSecret} from './connectors/secrets'
+async function stripe(key:string,path:string,init:RequestInit={}){
  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),5000)
  try{
-  const response=await fetch('https://api.stripe.com/v1/refunds'+path,{...init,headers:{authorization:'Bearer '+env.STRIPE_SECRET_KEY,...init.headers},signal:controller.signal,redirect:'manual'})
+  const response=await fetch('https://api.stripe.com/v1/refunds'+path,{...init,headers:{authorization:'Bearer '+key,...init.headers},signal:controller.signal,redirect:'manual'})
   if(!response.ok)throw Error('unconfirmed')
   const reader=response.body?.getReader();if(!reader)throw Error('empty')
   let size=0;const parts:Uint8Array[]=[]
@@ -15,7 +16,8 @@ async function stripe(env:Bindings,path:string,init:RequestInit={}){
 }
 export async function refundDoor(env:Bindings,actor:Actor,authority:Authority,command:string,p:any){
  if(actor.role!=='owner')fail('FORBIDDEN','Only the current owner sends or reconciles refunds.',null,403)
- if(!env.STRIPE_SECRET_KEY)fail('REFUND_CONFIGURATION','Configure the shop-owned Stripe connection privately first.',null,503)
+ const key=await connectorSecret(env,'stripe','STRIPE_SECRET_KEY')
+ if(!key)fail('REFUND_CONFIGURATION','Configure the shop-owned Stripe connection privately first.',null,503)
  let s=await load(env.DB),refund=find(s,'refund',p.refundId);expectVersion(refund,p.version)
  if(refund.redirect)fail('REFUND_FINAL','A redirected refund cannot be submitted or reconciled again.')
  const payment=find(s,'payment',refund.paymentId)
@@ -25,8 +27,8 @@ export async function refundDoor(env:Bindings,actor:Actor,authority:Authority,co
  let status='uncertain',receipt=null
  try{
   const value=command==='refund.submit'
-   ?await stripe(env,'',{method:'POST',headers:{'content-type':'application/x-www-form-urlencoded','idempotency-key':'mallet-refund-'+refund.id},body:new URLSearchParams({payment_intent:payment.receipt.paymentIntentId,amount:String(refund.amountCents),'metadata[mallet_refund_id]':refund.id})})
-   :refund.providerId?await stripe(env,'/'+encodeURIComponent(refund.providerId)):await stripe(env,'?'+new URLSearchParams({payment_intent:payment.receipt.paymentIntentId,limit:'100'}))
+   ?await stripe(key,'',{method:'POST',headers:{'content-type':'application/x-www-form-urlencoded','idempotency-key':'mallet-refund-'+refund.id},body:new URLSearchParams({payment_intent:payment.receipt.paymentIntentId,amount:String(refund.amountCents),'metadata[mallet_refund_id]':refund.id})})
+   :refund.providerId?await stripe(key,'/'+encodeURIComponent(refund.providerId)):await stripe(key,'?'+new URLSearchParams({payment_intent:payment.receipt.paymentIntentId,limit:'100'}))
   const matches=Array.isArray(value.data)?value.data.filter((r:any)=>r.metadata?.mallet_refund_id===refund.id):[value]
   if(matches.length!==1)throw Error('unconfirmed')
   const r=matches[0]

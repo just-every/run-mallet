@@ -1,5 +1,6 @@
 import {createDeliveryEventIntake,createD1EventStore} from './inspection-report-mail.mjs'
 import {runtimeBindings,type Bindings} from '../auth.server'
+import {connectorSecret} from './connectors/secrets'
 
 const namespace='inspection-report-v1'
 const maximumBytes=1024*1024
@@ -12,14 +13,15 @@ export async function inspectionReportEventResponse(request:Request,original:Bin
  const env=runtimeBindings(original),provider=match[1]
  if(url.origin!==env.AUTH_ORIGIN||(request.headers.has('host')&&request.headers.get('host')?.toLowerCase()!==url.host.toLowerCase())||env.MAIL_PROVIDER!==provider)return reply(404)
  if(request.method!=='POST')return reply(405)
- if(!env.MAIL_EVENT_KEY)return reply(503)
+ const eventKey=await connectorSecret(env,'mail-events','MAIL_EVENT_KEY')
+ if(!eventKey)return reply(503)
  if(Number(request.headers.get('content-length'))>maximumBytes)return reply(413)
  const reader=request.body?.getReader();if(!reader)return reply(400)
  const chunks:Uint8Array[]=[],deliveries=new Map<string,any>();let length=0
  try{
   while(true){const {done,value}=await reader.read();if(done)break;length+=value.byteLength;if(length>maximumBytes){await reader.cancel();return reply(413)}chunks.push(value)}
   const rawBody=new Uint8Array(length);let offset=0;for(const chunk of chunks){rawBody.set(chunk,offset);offset+=chunk.length}
-  const intake=createDeliveryEventIntake({provider,tenantId:env.AUTH_ORIGIN,eventNamespace:namespace,key:env.MAIL_EVENT_KEY,store:createD1EventStore({db:env.DB}),authorize:async(event:any)=>{
+  const intake=createDeliveryEventIntake({provider,tenantId:env.AUTH_ORIGIN,eventNamespace:namespace,key:eventKey,store:createD1EventStore({db:env.DB}),authorize:async(event:any)=>{
    // A signature alone cannot authorize another product, mailbox or message.
    if(event.recipients.length!==1)return false
    const result=await env.DB.prepare("SELECT value FROM mallet_records WHERE kind='inspectionReportDelivery' AND json_extract(value,'$.provider')=? AND json_extract(value,'$.providerMessageId')=? AND json_extract(value,'$.to')=?").bind(provider,event.providerMessageId,event.recipients[0]).all<{value:string}>()
