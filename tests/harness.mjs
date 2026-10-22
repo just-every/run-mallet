@@ -7,6 +7,7 @@ import {tmpdir} from 'node:os'
 import {join} from 'node:path'
 import assert from 'node:assert/strict'
 import {totpCode} from './support/second-factor.mjs'
+import {localHttps} from './support/local-https.mjs'
 const bundles={}
 // entry: the Worker under test; bindings: extra Worker bindings (the demo test sets RER_DEMO).
 export async function installation({entry='tests/worker.ts',bindings={},outboundService,mailService,network=false,assets=false,secureNetwork=false,localhost=false}={}) {
@@ -27,7 +28,7 @@ export async function installation({entry='tests/worker.ts',bindings={},outbound
   const db=await mf.getD1Database('DB')
   for(const file of (await readdir('migrations/core')).filter(f=>f.endsWith('.sql')).sort())await db.batch(unstable_splitSqlQuery(await readFile(join('migrations/core',file),'utf8')).map(sql=>db.prepare(sql)))
   let owner=''
-  const request=(path,{method='GET',body,as=owner,headers={}}={})=>(network&&!secureNetwork?fetch:mf.dispatchFetch.bind(mf))(origin+path,{method,redirect:'manual',headers:{origin,host:new URL(origin).host,'content-type':'application/json',...(as?{cookie:as}:{}),...headers},...(body===undefined?{}:{body:JSON.stringify(body)})})
+  const request=(path,{method='GET',body,as=owner,headers={}}={})=>(network&&secureNetwork&&localhost?localHttps:network&&!secureNetwork?fetch:mf.dispatchFetch.bind(mf))(origin+path,{method,redirect:'manual',headers:{origin,host:new URL(origin).host,'content-type':'application/json',...(as?{cookie:as}:{}),...headers},...(body===undefined?{}:{body:JSON.stringify(body)})})
   const boot=await request('/auth/bootstrap',{method:'POST',body:{token:setup,displayName:'Morgan Workshop'}});assert.equal(boot.status,303,await boot.text())
   owner=boot.headers.getSetCookie().map(x=>x.split(';')[0]).join('; ')
   if(bindings.RER_DEV_KEY){const gate=await request('/__dev/key',{method:'POST',body:{key:bindings.RER_DEV_KEY}});assert.equal(gate.status,204);owner+='; '+gate.headers.getSetCookie().map(x=>x.split(';')[0]).join('; ')}
