@@ -16,7 +16,19 @@ async function input(request:Request){
  try{for(;;){const {value,done}=await reader.read();if(done)break;size+=value.length;if(size>4096)return null;parts.push(value)}}finally{await reader.cancel();reader.releaseLock()}
  try{const form=new URLSearchParams(new TextDecoder('utf-8',{fatal:true}).decode(new Uint8Array(parts.flatMap(p=>[...p]))));if([...form.keys()].some((k,i,keys)=>keys.indexOf(k)!==i))return null;return form}catch{return null}
 }
-export async function portalResponse(request:Request,original:Bindings):Promise<Response|null>{
+async function sendSignIn(env:Bindings,email:string,now:number,window:number){
+   await env.DB.batch([env.DB.prepare('DELETE FROM mallet_portal_requests WHERE window<?').bind(window-1),env.DB.prepare('DELETE FROM mallet_portal_tokens WHERE expires_at<?').bind(now)])
+   const s=await load(env.DB),contacts=rows(s,'contact').filter(c=>c.email.toLowerCase()===email),mail=operatorMail(env)
+   for(const account of rows(s,'customerAccount').filter(a=>!a.mergedInto)){
+    const matching=contacts.filter(c=>account.contactIds.includes(c.id));if(matching.length!==1)continue
+    const contact=matching[0]
+    if(!mail||!env.MAIL_FROM)continue
+    const token=portalToken(),link=env.AUTH_ORIGIN+'/portal/confirm/'+token
+    await env.DB.prepare("INSERT INTO mallet_portal_tokens VALUES(?,'link',?,?,?,?,?,?,NULL)").bind(await digest(token),account.id,contact.id,account.payerRevision??1,contact.version,now,now+15*60000).run()
+    try{await mail.send({deliveryId:crypto.randomUUID(),from:env.MAIL_FROM,to:[email],subject:'Your Mallet customer account sign-in',text:`You requested sign-in for ${account.name}. Open the link, then confirm sign-in. It expires in 15 minutes and can be used once.\n\n${link}`,html:`<p>You requested sign-in for ${e(account.name)}.</p><p><a href="${e(link)}">Confirm customer sign-in</a></p><p>Expires in 15 minutes. If you did not request this email, ignore it.</p>`,headers:{}})}catch{await env.DB.prepare('DELETE FROM mallet_portal_tokens WHERE token_hash=?').bind(await digest(token)).run()}
+   }
+}
+export async function portalResponse(request:Request,original:Bindings,execution:Pick<ExecutionContext,'waitUntil'>):Promise<Response|null>{
  const url=new URL(request.url),path=url.pathname
  if(path!=='/portal'&&!path.startsWith('/portal/')&&!path.startsWith('/api/mallet/portal/'))return null
  const env=runtimeBindings(original)
@@ -35,17 +47,14 @@ export async function portalResponse(request:Request,original:Bindings):Promise<
    const limits=await env.DB.batch<{count:number}>([address,client].map(key=>env.DB.prepare('INSERT INTO mallet_portal_requests(key,window,count) VALUES(?,?,1) ON CONFLICT(key) DO UPDATE SET window=excluded.window,count=CASE WHEN mallet_portal_requests.window=excluded.window THEN mallet_portal_requests.count+1 ELSE 1 END RETURNING count').bind(key,window)))
    const accepted=()=>screen('Check your email',box('Sign-in requested','<p>If this email belongs to a customer account, a one-time sign-in email is on its way. The link expires in 15 minutes. Only the current payer can view billing.</p>'))
    if(Number(limits[0].results[0].count)>3||Number(limits[1].results[0].count)>20)return accepted()
-   await env.DB.batch([env.DB.prepare('DELETE FROM mallet_portal_requests WHERE window<?').bind(window-1),env.DB.prepare('DELETE FROM mallet_portal_tokens WHERE expires_at<?').bind(now)])
-   const s=await load(env.DB),contacts=rows(s,'contact').filter(c=>c.email.toLowerCase()===email),mail=operatorMail(env)
-   for(const account of rows(s,'customerAccount').filter(a=>!a.mergedInto)){
-    const matching=contacts.filter(c=>account.contactIds.includes(c.id));if(matching.length!==1)continue
-    const contact=matching[0]
-    if(!mail||!env.MAIL_FROM)continue
-    const token=portalToken(),link=env.AUTH_ORIGIN+'/portal/confirm/'+token
-    await env.DB.prepare("INSERT INTO mallet_portal_tokens VALUES(?,'link',?,?,?,?,?,?,NULL)").bind(await digest(token),account.id,contact.id,account.payerRevision??1,contact.version,now,now+15*60000).run()
-    try{await mail.send({deliveryId:crypto.randomUUID(),from:env.MAIL_FROM,to:[email],subject:'Your Mallet customer account sign-in',text:`You requested sign-in for ${account.name}. Open the link, then confirm sign-in. It expires in 15 minutes and can be used once.\n\n${link}`,html:`<p>You requested sign-in for ${e(account.name)}.</p><p><a href="${e(link)}">Confirm customer sign-in</a></p><p>Expires in 15 minutes. If you did not request this email, ignore it.</p>`,headers:{}})}catch{await env.DB.prepare('DELETE FROM mallet_portal_tokens WHERE token_hash=?').bind(await digest(token)).run()}
-   }
-   return accepted()
+   // Finish the generic page before scheduling any account-dependent work.
+   // The timer yields this fetch; waitUntil retains delivery after its response.
+   const response=await accepted()
+   execution.waitUntil((async()=>{
+    await new Promise(resolve=>setTimeout(resolve,0))
+    await sendSignIn(env,email,now,window)
+   })().catch(()=>{console.error('Customer sign-in delivery could not be processed')}))
+   return response
   }
   const confirm=path.match(/^\/portal\/confirm\/([A-Za-z0-9_-]{43})$/)
   if(confirm&&form.get('confirm')==='yes'){

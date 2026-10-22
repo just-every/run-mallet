@@ -34,7 +34,7 @@ export default withDemo<Bindings, ExportedHandler<Bindings>>({
     if (asset) return asset
     const auth = await authResponse(request, env)
     if (auth) return auth
-    const workshop = await salesReportResponse(request, env) ?? await malletResponse(request, env)
+    const workshop = await salesReportResponse(request, env) ?? await malletResponse(request, env, execution)
     if (workshop) return rejectedResponse(request, workshop)
     // The installed variant: the Lobby at / and the public claim state it reads.
     // Local dev serves the saved origin's data at its own port (RER_DEV_ORIGIN).

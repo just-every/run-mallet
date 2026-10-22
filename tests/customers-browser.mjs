@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 import {mkdir} from 'node:fs/promises'
 import {join} from 'node:path'
+import {portalMail} from './support/portal-journey.mjs'
 import {qualityReady} from './support/quality-ready.mjs'
 import {chromium} from '@playwright/test'
 import {installation,assetInput,booking,estimate,authorise} from './harness.mjs'
@@ -40,9 +41,15 @@ export async function customersBrowser(){
   invoice=await h.command('invoice.approve',{invoiceId:invoice.id,version:invoice.version});await h.command('payment.record',{invoiceId:invoice.id,version:invoice.version,amountCents:100,method:'cash',reference:'synthetic-mallet-23',evidence:'Counter tender'})
   const customerContext=await browser.newContext({ignoreHTTPSErrors:true,viewport:{width:1440,height:1000}}),customer=await customerContext.newPage()
   const customerShot=async(name)=>{for(const width of [1440,390]){await customer.setViewportSize({width,height:1000});assert.ok(await customer.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),name+' no overflow at '+width);await customer.locator('main').screenshot({path:join(directory,name+'-'+width+'.png')})}}
-  const customerLogin=async(email)=>{await customer.goto(h.origin+'/portal');await customer.getByLabel('Your email',{exact:true}).fill(email);await customer.getByRole('checkbox').check();await customer.getByRole('button',{name:'Send sign-in email',exact:true}).click();await customer.waitForLoadState('domcontentloaded');const message=h.messages.findLast(m=>JSON.stringify(m.to).includes(email)&&m.text.includes('Cedar Fleet')&&m.subject==='Your Mallet customer account sign-in');assert.ok(message,'Sign-in request reached mail edge: '+await customer.locator('main').innerText());const url=message.text.match(/https?:\/\/[^\s<>]+\/portal\/confirm\/[A-Za-z0-9_-]+/)[0];await customer.goto(url);await customerShot('07b-confirm-customer-signin');await customer.getByRole('button',{name:'Confirm sign-in',exact:true}).click();await customer.waitForLoadState('domcontentloaded')}
+  const customerLogin=async(email)=>{const before=h.messages.length;await customer.goto(h.origin+'/portal');await customer.getByLabel('Your email',{exact:true}).fill(email);await customer.getByRole('checkbox').check();await customer.getByRole('button',{name:'Send sign-in email',exact:true}).click();await customer.waitForLoadState('domcontentloaded');await customerShot('07a-signin-requested');const message=await portalMail(h,email,'Cedar Fleet',before);const url=message.text.match(/https?:\/\/[^\s<>]+\/portal\/confirm\/[A-Za-z0-9_-]+/)[0];await customer.goto(url);await customer.reload();assert.ok(!(await customer.locator('main').innerText()).includes(invoice.number));await customerShot('07b-confirm-customer-signin');await customer.getByRole('button',{name:'Confirm sign-in',exact:true}).click();await customer.waitForLoadState('domcontentloaded')}
   await customer.goto(h.origin+'/portal');await customerShot('07-customer-signin')
   await customerLogin(payer.email);assert.ok((await customer.locator('main').innerText()).includes(invoice.number));assert.ok((await customer.locator('main').innerText()).includes('Staff-recorded tender'));await customerShot('08-payer-billing-statement')
+  await customer.getByRole('button',{name:'Sign out',exact:true}).click();await customer.waitForLoadState('domcontentloaded');await customer.goto(h.origin+'/portal/billing');assert.ok((await customer.locator('main').innerText()).includes('Billing unavailable'));await customerShot('08a-signed-out-denied')
+  await customerLogin(payer.email)
+  let editedPayer=await h.command('contact.save',{...payer,contactId:payer.id,version:payer.version,email:'changed-payer@example.test'})
+  await customer.reload();assert.ok((await customer.locator('main').innerText()).includes('Billing unavailable'));assert.ok(!(await customer.locator('main').innerText()).includes(invoice.number));await customerShot('08b-changed-contact-denied')
+  await h.command('contact.save',{...editedPayer,contactId:editedPayer.id,version:editedPayer.version,email:payer.email})
+  await customerLogin(payer.email)
   fleet=(await h.state()).records.customerAccount.find(a=>a.id===fleet.id)
   const changed=await h.command('customer.save',{...fleet,customerId:fleet.id,version:fleet.version,payerId:authorizer.id,billingContactId:authorizer.id})
   await customer.reload();assert.ok((await customer.locator('main').innerText()).includes('Billing unavailable'));assert.ok(!(await customer.locator('main').innerText()).includes(invoice.number));await customerShot('09-old-payer-denied')

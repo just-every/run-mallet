@@ -307,3 +307,7 @@ test('WARRANTY-001: original invoice, linked rework, no-charge costs and supplie
 test('RETURN-001 / PAY-004 / OPS-001: quality and unpaid gates, fresh processor split receipts, authorized delegate, keys, mileage, receipt and recovery',async()=>{const {returnJourney}=await import('./support/return-journey.mjs');await returnJourney()})
 
 test('RETURN-001: unpaid refusal, processor confirmation, delegate handover and owner-exception receipt at 1440/390',async()=>{const {returnBrowser}=await import('./return-browser.mjs');await returnBrowser()})
+
+test('PORTAL-001: known and unknown requests answer before mail; address and client limits disclose nothing',async()=>{const {portalRequestJourney}=await import('./support/portal-journey.mjs');await portalRequestJourney()})
+
+test('PORTAL-001: confirmation, separate sessions, sign-out and contact changes fence account access',async()=>{const {portalSessionJourney}=await import('./support/portal-journey.mjs');await portalSessionJourney()})
