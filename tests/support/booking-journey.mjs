@@ -7,7 +7,7 @@ export async function bookingService(h,overrides={}){
  return h.command('booking.publish',{name:'synthetic-mallet-1 inspection',location:'synthetic-mallet-2 workshop',skill:'inspection',durationMinutes:60,leadMinutes:60,holdSeconds:600,active:true,windows:[{startAt,endAt,bayId:'synthetic-mallet-3',technicianId:(await h.state()).actor.id,skills:['inspection']}],...overrides})
 }
 export async function bookingPost(h,path,fields){return h.mf.dispatchFetch(h.origin+path,{method:'POST',redirect:'manual',headers:{origin:h.origin,'content-type':'application/x-www-form-urlencoded'},body:new URLSearchParams(fields)})}
-export const slotId=(service,slot)=>createHash('sha256').update(JSON.stringify([service.id,slot.startAt,slot.bayId,slot.technicianId])).digest('hex')
+export const slotId=(service,slot)=>createHash('sha256').update(JSON.stringify([service.id,service.version,slot.startAt,slot.bayId,slot.technicianId])).digest('hex')
 export const holdFields=service=>({action:'hold',serviceId:service.id,...service.windows[0],slotId:slotId(service,service.windows[0]),name:'synthetic-mallet-4',email:'synthetic-mallet-4@example.test',consent:'yes'})
 export async function onlineBookingJourney(h){
  await shopSetup(h);const service=await bookingService(h),input=holdFields(service),before=await h.state()
@@ -41,6 +41,7 @@ export async function bookingAvailabilityJourney(h){
  await new Promise(r=>setTimeout(r,1150));assert.equal((await bookingPost(h,path,{action:'confirm',version:1})).status,409)
  assert.equal((await bookingPost(h,'/book',input)).status,303,'Expired tentative hold frees capacity')
  const wrong={...input,slotId:slotId(service,{...input,startAt:input.startAt.replace('09:','08:')})};assert.equal((await bookingPost(h,'/book',wrong)).status,409,'Opening bounds enforced')
+ await h.command('booking.publish',{...service,serviceId:service.id,version:service.version,name:'Changed service',durationMinutes:30});assert.equal((await bookingPost(h,'/book',input)).status,409,'Changing published service semantics invalidates old public slot references')
  assert.equal((await bookingPost(h,'/book',{...input,slotId:slotId(service,{...input,startAt:input.startAt.replace('09:','09:30')})})).status,409)
  const unskilled=await bookingService(h,{name:'synthetic-mallet-11',windows:[{...service.windows[0],skills:['different']} ]});assert.equal((await bookingPost(h,'/book',holdFields(unskilled))).status,409)
  const lead=await bookingService(h,{name:'synthetic-mallet-12',leadMinutes:525600});assert.equal((await bookingPost(h,'/book',holdFields(lead))).status,409)

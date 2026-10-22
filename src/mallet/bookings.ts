@@ -21,7 +21,7 @@ export function bookingSlots(s:State,service:any,now=new Date().toISOString(),ex
  }
  return result
 }
-export const bookingSlotId=(service:any,slot:any)=>createHash('sha256').update(JSON.stringify([service.id,slot.startAt,slot.bayId,slot.technicianId])).digest('hex')
+export const bookingSlotId=(service:any,slot:any)=>createHash('sha256').update(JSON.stringify([service.id,service.version,slot.startAt,slot.bayId,slot.technicianId])).digest('hex')
 function available(s:State,service:any,p:any,now:string,exceptId?:string){
  const slot=bookingSlots(s,service,now,exceptId).find(x=>bookingSlotId(service,x)===p.slotId)
  if(!slot)fail('BOOKING_CAPACITY','That appointment is no longer available. Choose another time.')

@@ -7,7 +7,7 @@ import {chromium} from '@playwright/test'
 import {installation} from './harness.mjs'
 import {shopSetup} from './support/diagnosis-journey.mjs'
 export async function bookingsBrowser(){
- const h=await installation({network:true,assets:true,bindings:{AUTH_LOCAL:'true'}});let browser
+ const h=await installation({network:true,assets:true,bindings:{AUTH_LOCAL:'true'}});let browser,embedServer
  try{
   await shopSetup(h);browser=await chromium.launch({headless:true,args:['--use-mock-keychain','--password-store=basic']})
   const owner=await browser.newContext(),customer=await browser.newContext();await owner.addCookies(h.owner.split('; ').map(pair=>({name:pair.slice(0,pair.indexOf('=')),value:pair.slice(pair.indexOf('=')+1),url:h.origin})))
@@ -17,12 +17,14 @@ export async function bookingsBrowser(){
   const fields={name:'Brake inspection',location:'Main workshop',skill:'brakes',skills:'brakes, inspection',bayId:'Bay 1',startAt:new Date(Date.now()+86400000).toISOString().slice(0,10)+'T09:00:00Z',endAt:new Date(Date.now()+86400000).toISOString().slice(0,10)+'T12:00:00Z',durationMinutes:'60',leadMinutes:'60'}
   for(const [name,value]of Object.entries(fields))await p.locator(`[name="${name}"]`).fill(value)
   await shot(p,'booking-01-publish');await p.getByRole('button',{name:'Publish service'}).click();await p.waitForLoadState('domcontentloaded');await shot(p,'booking-02-staff-appointments')
-  const embedServer=createServer((req,res)=>{res.writeHead(200,{'content-type':'text/html'});res.end('<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1"><iframe title="Shop booking" style="width:100%;height:900px;box-sizing:border-box" src="'+h.origin+'/book"></iframe>')});embedServer.listen(0,'127.0.0.1');await once(embedServer,'listening')
-  try{const embedded=await customer.newPage();await embedded.goto('http://127.0.0.1:'+embedServer.address().port);await embedded.frameLocator('iframe').getByRole('heading',{name:'Choose a service'}).waitFor();await shot(embedded,'booking-02b-embedded-form');await embedded.close()}finally{await new Promise(resolve=>embedServer.close(resolve))}
-  await c.goto(h.origin+'/book');await c.setViewportSize({width:390,height:1000});await shot(c,'booking-03-customer-times')
-  const first=c.locator('form:has(input[value="hold"])').first();await first.getByLabel('Your name').fill('Dana Brooks');await first.getByLabel('Confirmation email',{exact:true}).fill('dana@example.test');await first.getByRole('checkbox').check();await first.getByRole('button',{name:'Hold this time'}).click();await c.waitForLoadState('domcontentloaded');await shot(c,'booking-04-tentative')
-  assert.match(await c.locator('main').innerText(),/held/);await c.getByRole('button',{name:'Confirm appointment',exact:true}).click();await c.waitForLoadState('domcontentloaded');await shot(c,'booking-05-confirmed');assert.match(await c.locator('main').innerText(),/confirmed/)
+  const service=(await h.state()).records.bookingService.find(x=>x.name==='Brake inspection')
+  await h.command('booking.publish',{...service,name:'Air conditioning diagnosis',durationMinutes:30,location:'Second workshop'})
+  embedServer=createServer((req,res)=>{res.writeHead(200,{'content-type':'text/html'});res.end('<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1"><iframe title="Shop booking" style="width:100%;height:900px;box-sizing:border-box" src="'+h.origin+'/book"></iframe>')});embedServer.listen(0,'127.0.0.1');await once(embedServer,'listening')
+  await c.goto('http://127.0.0.1:'+embedServer.address().port);const embedded=c.frameLocator('iframe');await embedded.getByRole('heading',{name:'Choose a service'}).waitFor();await shot(c,'booking-02b-embedded-form')
+  await embedded.getByRole('combobox',{name:/Service/}).selectOption({label:'Brake inspection'});await embedded.getByRole('button',{name:'Show available times'}).click();await embedded.getByRole('heading',{name:'Brake inspection',exact:true}).waitFor();await c.setViewportSize({width:390,height:1000});await shot(c,'booking-03-customer-times')
+  const first=embedded.locator('form:has(input[value="hold"])').first();await first.getByLabel('Your name').fill('Dana Brooks');await first.getByLabel('Confirmation email',{exact:true}).fill('dana@example.test');await first.getByRole('checkbox').check();await first.getByRole('button',{name:'Hold this time'}).click();await c.waitForURL(/\/book\/[A-Za-z0-9_-]{43}$/);await c.waitForLoadState('domcontentloaded');await shot(c,'booking-04-tentative')
+  assert.match(await c.locator('main').innerText(),/held/);await c.getByRole('button',{name:'Confirm appointment',exact:true}).click();await c.waitForLoadState('domcontentloaded');await shot(c,'booking-05-confirmed');assert.match(await c.locator('main').innerText(),/confirmed/);assert.match(await c.locator('main').innerText(),/Brake inspection/);assert.doesNotMatch(await c.locator('main').innerText(),/Second workshop/)
   await c.getByRole('button',{name:'Move appointment'}).first().click();await c.waitForLoadState('domcontentloaded');await shot(c,'booking-06-rescheduled');await c.getByRole('button',{name:'Cancel appointment',exact:true}).click();await c.waitForLoadState('domcontentloaded');await shot(c,'booking-07-canceled');assert.match(await c.locator('main').innerText(),/canceled/)
   await p.reload();assert.match(await p.locator('main').innerText(),/canceled/);await shot(p,'booking-08-staff-cancellation')
- }finally{await browser?.close();await h.close()}
+ }finally{await browser?.close();if(embedServer)await new Promise(resolve=>embedServer.close(resolve));await h.close()}
 }
