@@ -6,6 +6,7 @@ import {mkdtemp,readFile,readdir,rm} from 'node:fs/promises'
 import {tmpdir} from 'node:os'
 import {join} from 'node:path'
 import assert from 'node:assert/strict'
+import {totpCode} from './support/second-factor.mjs'
 const bundles={}
 // entry: the Worker under test; bindings: extra Worker bindings (the demo test sets RER_DEMO).
 export async function installation({entry='tests/worker.ts',bindings={},outboundService,mailService,network=false,assets=false,secureNetwork=false}={}) {
@@ -28,7 +29,20 @@ export async function installation({entry='tests/worker.ts',bindings={},outbound
   const boot=await request('/auth/bootstrap',{method:'POST',body:{token:setup,displayName:'Morgan Workshop'}});assert.equal(boot.status,303,await boot.text())
   owner=boot.headers.getSetCookie().map(x=>x.split(';')[0]).join('; ')
   if(bindings.RER_DEV_KEY){const gate=await request('/__dev/key',{method:'POST',body:{key:bindings.RER_DEV_KEY}});assert.equal(gate.status,204);owner+='; '+gate.headers.getSetCookie().map(x=>x.split(';')[0]).join('; ')}
-  const api=async(path,body,{status=200,...options}={})=>{const response=await request(path,{...(body===undefined?{}:{method:'POST',body}),...options});const value=await response.json();assert.equal(response.status,status,JSON.stringify(value));return value}
+  // A second factor held by each cookie that asked for one, and the fresh proof a privileged command needs (GOV-004).
+  const secrets=new Map()
+  const stepUp=async(as=owner)=>{
+   const known=secrets.get(as)
+   if(!known){
+    const begun=await (await request('/api/mallet/security/totp/begin',{method:'POST',as,body:{}})).json(),confirmed=await request('/api/mallet/security/totp/confirm',{method:'POST',as,body:{code:totpCode(begun.secret)}}),value=await confirmed.json()
+    assert.equal(confirmed.status,200,JSON.stringify(value));secrets.set(as,begun.secret);return {secret:begun.secret,recoveryCodes:value.recoveryCodes}
+   }
+   // The same authenticator again: a code is single-use per thirty-second step, so clear the replay fence the clock would.
+   await (await mf.getD1Database('DB')).prepare('UPDATE mallet_factors SET last_step=NULL WHERE kind=?').bind('totp').run()
+   const verified=await request('/api/mallet/security/verify/totp',{method:'POST',as,body:{code:totpCode(known)}});assert.equal(verified.status,200,await verified.text());return {secret:known}
+  }
+  // A privileged command asks for a fresh proof; the shared harness gives it unless a test is asserting the refusal.
+  const api=async(path,body,{status=200,...options}={})=>{const response=await request(path,{...(body===undefined?{}:{method:'POST',body}),...options});const value=await response.json();if(response.status===403&&value.error==='step_up_required'&&status!==403&&!options.refuseStepUp){await stepUp(options.as??owner);return api(path,body,{status,...options,refuseStepUp:true})}assert.equal(response.status,status,JSON.stringify(value));return value}
   const command=(command,input={},options={})=>api('/api/mallet/commands',{command,input},options)
   const state=(options={})=>api('/api/mallet/state',undefined,options)
   const person=async(email,role='member')=>{
@@ -41,7 +55,7 @@ export async function installation({entry='tests/worker.ts',bindings={},outbound
   }
   // The Worker's cron door at a chosen scheduled time (EST-006 reminders).
   const cron=async at=>{const result=await (await mf.getWorker()).scheduled({scheduledTime:new Date(at),cron:'*/15 * * * *'});assert.equal(result.outcome,'ok')}
-  return {mf,origin,owner,messages,request,api,command,state,person,cron,async configure(values){Object.assign(bindings,values);await mf.setOptions(options());await mf.ready},async close(){await mf.dispose();await rm(directory,{recursive:true,force:true})}}
+  return {mf,origin,owner,messages,request,api,command,state,person,cron,stepUp,async configure(values){Object.assign(bindings,values);await mf.setOptions(options());await mf.ready},async close(){await mf.dispose();await rm(directory,{recursive:true,force:true})}}
  }catch(error){await mf.dispose();await rm(directory,{recursive:true,force:true});throw error}
 }
 export async function run(fn,options){const h=await installation(options);try{return await fn(h)}finally{await h.close()}}

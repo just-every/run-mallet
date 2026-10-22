@@ -31,6 +31,7 @@ export async function firstRunResponse(request:Request,bindings:any,auth:any,opt
   return request.method==='HEAD'?new Response(null,response):response
  } catch(error) {
   if(error instanceof HttpError&&error.status===401)return new Response(null,{status:303,headers:{location:'/signin?returnTo=%2Fsetup','cache-control':'no-store'}})
+  if(error instanceof HttpError&&error.code==='second_factor_required')return new Response(null,{status:303,headers:{location:'/app/security?returnTo=%2Fsetup','cache-control':'no-store'}})
   const known=error instanceof HttpError||error instanceof MalletError
   return Response.json({error:known?error.code:'setup_unavailable',message:known?error.message:'Setup is unavailable.'},{status:known?error.status:503,headers:{'cache-control':'no-store'}})
  }

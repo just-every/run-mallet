@@ -2,11 +2,13 @@ import {shopTime} from './promise-zone'
 import {bookingSlots,bookingSlotId} from './bookings'
 import {e} from './ui/common'
 import {runtimeBindings,type Bindings} from '../auth.server'
-import {digest} from './auth'
+import {digest,HttpError,human,type Actor,type Authority} from './auth'
 import {execute,load,fail,MalletError,rows} from './model'
 import {operatorMail} from '../mail.server.mjs'
 import {publicBooking,manageBooking} from './ui/bookings'
 import {page} from './ui/shell'
+// A manage link lapses a day after its appointment ends; staff can also withdraw it sooner.
+const LINK_GRACE_MS=86400000
 const actor={id:'customer-booking',name:'Customer booking link',role:'customer' as const}
 const token=()=>btoa(String.fromCharCode(...crypto.getRandomValues(new Uint8Array(32)))).replaceAll('+','-').replaceAll('/','_').replaceAll('=','')
 async function view(body:string,status=200,embed=false){const response=await page('Book with Mallet',body,undefined,status);response.headers.set('cache-control','private, no-store');response.headers.set('referrer-policy','same-origin');response.headers.set('x-robots-tag','noindex, nofollow');if(embed){response.headers.delete('x-frame-options');response.headers.set('content-security-policy',(response.headers.get('content-security-policy')??'').replace(/frame-ancestors[^;]*/g,'frame-ancestors *'))}return response}
@@ -27,8 +29,8 @@ export async function bookingResponse(request:Request,original:Bindings):Promise
  let row:any,authority:any
  if(manage){
   if(!/^[A-Za-z0-9_-]{43}$/.test(manage))return view('<p>Not available.</p>',404)
-  const hash=await digest(manage),found=await env.DB.prepare('SELECT appointment_id FROM mallet_booking_tokens WHERE token_hash=?').bind(hash).first<{appointment_id:string}>()
-  row=found&&rows(await load(env.DB),'appointment').find(x=>x.id===found.appointment_id);if(!row)return view('<p>Not available.</p>',404)
+  const hash=await digest(manage),found=await env.DB.prepare('SELECT appointment_id FROM mallet_booking_tokens WHERE token_hash=? AND revoked_at IS NULL').bind(hash).first<{appointment_id:string}>()
+  row=found&&rows(await load(env.DB),'appointment').find(x=>x.id===found.appointment_id);if(!row||Date.parse(row.endAt)+LINK_GRACE_MS<=Date.now())return view('<p>Not available.</p>',404)
   authority={sql:'EXISTS(SELECT 1 FROM mallet_booking_tokens WHERE appointment_id=? AND token_hash=?)',params:[row.id,hash]}
  }
  try{
@@ -58,4 +60,12 @@ export async function bookingResponse(request:Request,original:Bindings):Promise
   }
   const s=await bookingState(env);return view(manage?manageBooking(s,row,url.pathname):publicBooking(s,url.pathname,url.searchParams.get('serviceId')??''),200,!manage)
  }catch(error){if(!(error instanceof MalletError))throw error;const s=await bookingState(env);return view(manage?manageBooking(s,rows(s,'appointment').find(x=>x.id===row.id),url.pathname,error.message):publicBooking(s,url.pathname,url.searchParams.get('serviceId')??'',error.message),error.status,!manage)}
+}
+
+/** Staff withdraw a customer's manage link; its holder then sees the same page as for an unknown link. */
+export async function revokeBookingLink(env:Bindings,who:Actor,authority:Authority,input:any){
+ if(!human(who))throw new HttpError(403,'manager_required')
+ const id=String(input.appointmentId??''),guard=env.DB.prepare(`INSERT INTO mallet_assert(ok) SELECT CASE WHEN (${authority.sql}) AND EXISTS(SELECT 1 FROM mallet_booking_tokens WHERE appointment_id=? AND revoked_at IS NULL) THEN 1 ELSE 0 END`).bind(...authority.params,id)
+ await env.DB.batch([guard,env.DB.prepare('UPDATE mallet_booking_tokens SET revoked_at=? WHERE appointment_id=? AND revoked_at IS NULL').bind(Date.now(),id),env.DB.prepare('INSERT INTO oa_auth_audit(id,actor_id,action,value,created_at) VALUES(?,?,?,?,?)').bind(crypto.randomUUID(),who.id,'mallet:booking.link.revoked',JSON.stringify({appointmentId:id}),Date.now()),env.DB.prepare('DELETE FROM mallet_assert')])
+ return {revoked:id}
 }

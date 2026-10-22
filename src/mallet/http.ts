@@ -4,11 +4,14 @@ import {calendarFormInput} from './ui/calendar-forms'
 import {waitlistCommand} from './waitlist-door'
 import {internalWaitlistCommands} from './booking-waitlist'
 import {waitlistFormInput} from './ui/waitlist'
+import {securityResponse} from './strong-auth/door'
+import {requireStepUp,STEP_UP_COMMANDS} from './strong-auth/gate'
+import {guardLinks} from './strong-auth/link-guard'
 import {inspectionReportEventResponse} from './inspection-report-events'
 import {inspectionReportInput,sendInspectionReport} from './inspection-report-door'
 import {internalReportCommands} from './inspection-reports'
 import {reportFormInput} from './ui/inspection-reports'
-import {bookingResponse} from './booking-door'
+import {bookingResponse,revokeBookingLink} from './booking-door'
 import {internalBookingCommands} from './bookings'
 import {bookingStaff,bookingFormInput} from './ui/bookings'
 import {checkInResponse,createCheckInLink} from './check-in-door'
@@ -173,12 +176,15 @@ function formInput(data:FormData) {
 export async function malletResponse(request:Request,original:Bindings,execution:Pick<ExecutionContext,'waitUntil'>):Promise<Response|null> {
  const url=new URL(request.url),path=url.pathname
  const deliveryEvent=await inspectionReportEventResponse(request,original);if(deliveryEvent)return deliveryEvent
- const booking=await bookingResponse(request,original);if(booking)return booking
- const checkIn=await checkInResponse(request,original);if(checkIn)return checkIn
- const portal=await portalResponse(request,original,execution);if(portal)return portal
- const intakeForm=await intakeFormResponse(request,original);if(intakeForm)return intakeForm
- const customer=await customerLinkResponse(request,original);if(customer)return customer
- const decision=await approvalResponse(request,original);if(decision)return decision
+ const customerDoor=await guardLinks(request,original,async()=>{
+  const booking=await bookingResponse(request,original);if(booking)return booking
+  const checkIn=await checkInResponse(request,original);if(checkIn)return checkIn
+  const portal=await portalResponse(request,original,execution);if(portal)return portal
+  const intakeForm=await intakeFormResponse(request,original);if(intakeForm)return intakeForm
+  const customer=await customerLinkResponse(request,original);if(customer)return customer
+  return approvalResponse(request,original)
+ });if(customerDoor)return customerDoor
+ const security=await securityResponse(request,original);if(security)return security
  if(path!=='/restore' && path!=='/app' && !path.startsWith('/app/') && !path.startsWith('/api/mallet/') && !path.startsWith('/api/portability/'))return null
  const env=runtimeBindings(original),isApi=path.startsWith('/api/')
  let actor:Actor|undefined,submitted:any
@@ -215,12 +221,14 @@ export async function malletResponse(request:Request,original:Bindings,execution
    const data=path==='/app/actions'?formInput(await nativeForm(request)):await body(request),command=String(data.command),input=data.input??data
    submitted={command,input}
    let result:any
+   if(STEP_UP_COMMANDS.has(command))auth.authority=requireStepUp(auth)
    if(internalWaitlistCommands.includes(command)||internalReportCommands.includes(command)||internalBookingCommands.includes(command)||internalCheckInCommands.includes(command)||internalRefundCommands.includes(command)||internalIntakeFormCommands.includes(command)||command==='payment.verified'||command==='routing.sweep'||internalPromiseCommands.includes(command)||internalApprovalCommands.includes(command)||internalChaseCommands.includes(command))throw new HttpError(404,'unknown_command')
    if(command.startsWith('waitlist.'))result=await waitlistCommand(env,request,actor,auth.authority,command,input)
    else if(command.startsWith('calendar.')||['job.book','dispatch.approve'].includes(command))result=await execute(env.DB,actor as any,command,input,await calendarAuthority(env,command,input,auth.authority))
    else if(command==='inspectionReport.review'){const checked=await inspectionReportInput(env.DB,actor,auth.authority,input);result=await execute(env.DB,actor as any,command,checked.input,checked.authority)}
    else if(command==='inspectionReport.send')result=await sendInspectionReport(env,actor,auth.authority,input)
    else if(command==='booking.publish'){if(!human(actor))throw new HttpError(403,'manager_required');const active=(await operators(env.DB)).list.filter(x=>x.status==='active');if(!Array.isArray(input.windows)||input.windows.some((w:any)=>!active.some(x=>x.id===w.technicianId)))throw new HttpError(400,'active_staff_required');const technicians=[...new Set(input.windows.map((w:any)=>String(w.technicianId)))];const guard={sql:'('+auth.authority.sql+') AND '+technicians.map(()=>"EXISTS(SELECT 1 FROM oa_operators WHERE id=? AND status='active')").join(' AND '),params:[...auth.authority.params,...technicians]};result=await execute(env.DB,actor as any,command,input,guard)}
+   else if(command==='booking.revokeLink')result=await revokeBookingLink(env,actor,auth.authority,input)
    else if(command==='checkin.issue')result=await createCheckInLink(env,actor,auth.authority,input)
    else if(command==='intakeForm.create')result=await createIntakeFormLink(env,actor,auth.authority,input)
    else if(command==='refund.submit'||command==='refund.reconcile')result=await refundDoor(env,actor,auth.authority,command,input)
@@ -359,6 +367,11 @@ export async function malletResponse(request:Request,original:Bindings,execution
   const kitCode=error instanceof Error && /^[A-Z][A-Z0-9_]{1,100}$/.test(error.message)?error.message:null
   const known=error instanceof HttpError || error instanceof MalletError || typeof error?.code==='string' || !!kitCode,status=known?(error.status??409):500,code=error.code??kitCode??'operation_failed'
   if(isApi)return json({error:code,message:known?error.message:'The operation failed.',details:error instanceof MalletError?error.details:undefined},status)
+  if(code==='second_factor_required'||code==='step_up_required') {
+   // A person is taken to confirm, then returns to the page they were on to repeat the action.
+   let back=request.method==='GET'?path+url.search:'/app';try{const from=new URL(request.headers.get('referer')??'');if(request.method!=='GET'&&from.origin===env.AUTH_ORIGIN&&from.pathname.startsWith('/app'))back=from.pathname+from.search}catch{}
+   return redirect('/app/security?'+(code==='step_up_required'?'stepUp=1&':'')+'returnTo='+encodeURIComponent(back))
+  }
   if(status===401)return redirect('/signin?returnTo='+encodeURIComponent(path))
   const clashes=error instanceof MalletError&&error.code==='DISPATCH_CONFLICT'?error.details?.conflicts:null
   if(Array.isArray(clashes)&&submitted) {

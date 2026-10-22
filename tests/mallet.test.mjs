@@ -25,6 +25,7 @@ import {qualityReady} from './support/quality-ready.mjs'
 import {test} from 'node:test'
 import assert from 'node:assert/strict'
 import {portableRepair} from './support/portable-repair.mjs'
+import {secondFactorJourney,policyRecoveryJourney,stepUpJourney} from './support/strong-auth-journey.mjs'
 import {run,installation,assetInput,booking,estimate,authorise,archive,restore,snapshots} from './harness.mjs'
 
 test('native sign-in, CSRF, member isolation and immediate session revocation',()=>run(async h=>{
@@ -346,3 +347,7 @@ test('BOOK-002: failed or uncertain waitlist mail never automatically retries',w
 
 const {calendarBrowser}=await import('./calendar-browser.mjs')
 test('BOOK-002: native day week resources and cancellation offers at 1440 and 390',calendarBrowser)
+
+test('GOV-004: authenticator app, passkey and recovery-code sign-in with replay, clone, origin and guessing fences',()=>run(secondFactorJourney))
+test('GOV-004: owner-required policy, lost-device reset and deployment owner recovery',()=>run(policyRecoveryJourney))
+test('GOV-004: refunds, agent keys, erasure and custody reveals need a fresh second factor and refusals write nothing',()=>run(stepUpJourney))

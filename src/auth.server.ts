@@ -5,6 +5,7 @@ import { firstRunResponse } from './mallet/setup'
 import { fontDocumentResponse } from './base/font-response'
 import { createOperatorAuth, createAuthHandler, createSignInHandler, type AuthConfig } from './modules/operator-auth/index.mjs'
 import { operatorMail } from './mail.server.mjs'
+import { authGate } from './mallet/strong-auth/base-gate'
 import branding from './branding.json'
 
 // The edition's declared theme (public/rer-theme.css), as Base frames link it.
@@ -74,8 +75,10 @@ async function handleAuthResponse(request: Request, original: Bindings): Promise
   })(request)
   if (page) return fontDocumentResponse(page)
  }
+ const held = await authGate(request, env, req => operatorAuth(env).getSession(req))
+ if (held) return held
  if (url.pathname.startsWith('/auth/')) return fontDocumentResponse(await createAuthHandler(operatorAuth(env))(request))
- if (url.pathname === '/setup' || url.pathname === '/app' || url.pathname.startsWith('/app/')) {
+ if (url.pathname === '/setup' || url.pathname === '/app' || (url.pathname.startsWith('/app/') && !url.pathname.startsWith('/app/security'))) {
   const setup = await firstRunResponse(request, env, operatorAuth(env), { theme })
   if (setup) return setup
  }

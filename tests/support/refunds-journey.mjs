@@ -44,6 +44,10 @@ export async function refundsJourney(){
   assert.deepEqual((await h.state()).records,before,'Unauthorized calls have no effects')
   const review=await h.command('credit.preview',input);assert.equal(review.totals.totalCents,109);assert.equal(review.totals.salesTaxCents,8)
   assert.deepEqual((await h.state()).records,before,'A credit preview writes nothing')
+  // GOV-004: even the signed-in owner needs a fresh second-factor proof to issue a refund credit; the refusal writes nothing.
+  await (await h.mf.getD1Database('DB')).prepare('UPDATE mallet_session_proofs SET step_up_until=0').run()
+  const stale=await h.request('/api/mallet/commands',{method:'POST',body:{command:'credit.issue',input:{...input,review,confirm:'issue-credit'}}});assert.equal(stale.status,403);assert.equal((await stale.json()).error,'step_up_required')
+  assert.deepEqual((await h.state()).records,before,'A refund without a fresh proof writes nothing')
   await h.command('credit.issue',{...input,review},{status:409})
   await h.command('credit.issue',{...input,review:{...review,totals:{...review.totals,totalCents:1}},confirm:'issue-credit'},{status:409})
   await h.command('contact.save',{...contact,contactId:contact.id,version:contact.version,notes:'Updated review'})

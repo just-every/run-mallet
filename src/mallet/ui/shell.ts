@@ -2,6 +2,7 @@
 // New repair order) and the page heading. Visual authority: the owner-picked Shop Board (desk 17 Oct).
 import {RESTORE_SCRIPT} from '../restore/browser'
 import {MEDIA_SCRIPT} from './media'
+import {SECURITY_SCRIPT} from './security-script'
 import type { Actor } from '../auth'
 import {e,initials,role,when,LOCAL_TIMES} from './common'
 import {ICONS,icon} from './icons'
@@ -9,7 +10,7 @@ import {ICONS,icon} from './icons'
 export type Section='board'|'jobs'|'customers'|'approvals'|'move-in'|'data'|'tax'|'inventory'
 // Figures beside a section's name, when the page knows them.
 export type Counts=Partial<Record<Section,number>>
-export type Frame={section?:Section|null,counts?:Counts,subtitle?:string,aside?:string,heading?:boolean,media?:boolean,restore?:boolean,refresh?:number}
+export type Frame={section?:Section|null,counts?:Counts,subtitle?:string,aside?:string,heading?:boolean,media?:boolean,restore?:boolean,security?:boolean,refresh?:number}
 
 const sections:[Section|'settings',string,string,string][]=[
  ['board','/app','Board','board'],['jobs','/app/jobs','Repair orders','document'],['customers','/app/customers','Customers','people'],['approvals','/app/approvals','Approvals','check'],
@@ -21,6 +22,7 @@ const digest=async(text:string)=>btoa(String.fromCharCode(...new Uint8Array(awai
 let scriptHash:Promise<string>|undefined
 let mediaHash:Promise<string>|undefined
 let restoreHash:Promise<string>|undefined
+let securityHash:Promise<string>|undefined
 
 function rail(actor:Actor,current:Section|null,counts:Counts) {
  const links=sections.map(([id,href,label,glyph])=>`<a href="${href}"${id===current?' aria-current="page"':''}>${icon(glyph)}<span>${e(label)}</span>${counts[id as Section]?`<span class="count">${counts[id as Section]}</span>`:''}</a>`).join('')
@@ -31,6 +33,7 @@ export async function page(title:string,body:string,actor?:Actor,status=200,fram
  scriptHash??=digest(LOCAL_TIMES)
  if(frame.media)mediaHash??=digest(MEDIA_SCRIPT)
  if(frame.restore)restoreHash??=digest(RESTORE_SCRIPT)
+ if(frame.security)securityHash??=digest(SECURITY_SCRIPT)
  const {counts={},subtitle='',aside='',heading=true}=frame,section=frame.section===undefined?'board':frame.section
  const top=actor?`<header class="topbar"><p class="date">${when(new Date().toISOString(),undefined,'today')}</p>${actor.role==='member'?'':`<a class="button primary new" href="/app/customers#add">${icon('plus')}<span>New repair order</span></a>`}</header>`:''
  const head=heading?`<header class="heading"><h1>${e(title)}</h1>${subtitle?`<p>${subtitle}</p>`:''}</header>`:''
@@ -38,6 +41,6 @@ export async function page(title:string,body:string,actor?:Actor,status=200,fram
  const lockup=actor?'':`<a class="brand" href="/"><img src="/brand/mark.svg" alt="" width="40" height="40"><span data-rer-name>Mallet</span></a>`
  const main=`<main class="main">${lockup}${head}${body}</main>`
  const html=`<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">${frame.refresh?`<meta http-equiv="refresh" content="${frame.refresh}">`:''}<title>${e(title)} · Mallet</title><link rel="icon" href="/favicon.ico" sizes="32x32"><link rel="icon" type="image/svg+xml" href="/brand/favicon-32.svg"><link rel="preload" href="/fonts/inter/inter-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin><link rel="preload" href="/fonts/inter-tight/inter-tight-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin><link rel="stylesheet" href="/site/tokens.css"><link rel="stylesheet" href="/app/shell.css"><link rel="stylesheet" href="/app/forms.css"><link rel="stylesheet" href="/app/board.css">${frame.media?'<link rel="stylesheet" href="/app/media.css">':''}</head>`
-  +`<body class="app">${ICONS}<div class="shell${actor?'':' bare'}">${actor?rail(actor,section,counts):''}<div class="workspace">${top}${aside?`<div class="layout">${main}${aside}</div>`:main}</div></div><script>${LOCAL_TIMES}</script>${frame.media?`<script>${MEDIA_SCRIPT}</script>`:''}${frame.restore?`<script>${RESTORE_SCRIPT}</script>`:''}</body></html>`
- return new Response(html,{status,headers:{'content-type':'text/html; charset=utf-8','cache-control':'no-store','referrer-policy':'strict-origin','x-content-type-options':'nosniff','content-security-policy':`default-src 'none'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'; style-src 'self'; font-src 'self'; img-src 'self'${frame.media?' blob:':''}; ${frame.media?"connect-src 'self'; media-src 'self' blob:; ":frame.restore?"connect-src 'self'; ":''}script-src 'sha256-${await scriptHash}'${frame.media?` 'sha256-${await mediaHash}'`:''}${frame.restore?` 'sha256-${await restoreHash}'`:''}`}})
+  +`<body class="app">${ICONS}<div class="shell${actor?'':' bare'}">${actor?rail(actor,section,counts):''}<div class="workspace">${top}${aside?`<div class="layout">${main}${aside}</div>`:main}</div></div><script>${LOCAL_TIMES}</script>${frame.media?`<script>${MEDIA_SCRIPT}</script>`:''}${frame.restore?`<script>${RESTORE_SCRIPT}</script>`:''}${frame.security?`<script>${SECURITY_SCRIPT}</script>`:''}</body></html>`
+ return new Response(html,{status,headers:{'content-type':'text/html; charset=utf-8','cache-control':'no-store','referrer-policy':'strict-origin','x-content-type-options':'nosniff','content-security-policy':`default-src 'none'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'; style-src 'self'; font-src 'self'; img-src 'self'${frame.media?' blob:':''}; ${frame.media?"connect-src 'self'; media-src 'self' blob:; ":frame.restore||frame.security?"connect-src 'self'; ":''}script-src 'sha256-${await scriptHash}'${frame.media?` 'sha256-${await mediaHash}'`:''}${frame.restore?` 'sha256-${await restoreHash}'`:''}${frame.security?` 'sha256-${await securityHash}'`:''}`}})
 }

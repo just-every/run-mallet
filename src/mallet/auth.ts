@@ -1,10 +1,13 @@
 import { operatorAuth, runtimeBindings, type Bindings } from '../auth.server'
+import {blocked,gateState,proofAuthority,type Gate} from './strong-auth/gate'
 export type Actor = { id: string; name: string; role: 'owner'|'admin'|'member'|'agent' }
 export type Authority = { sql: string; params: any[] }
 export class HttpError extends Error { constructor(public status: number, public code: string, message = code) { super(message) } }
 export const digest = async (value: string) => Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(value))), x => x.toString(16).padStart(2,'0')).join('')
 export const human = (actor: Actor) => ['owner','admin'].includes(actor.role)
-export async function identity(request: Request, original: Bindings): Promise<{actor:Actor;authority:Authority;bearer:boolean}> {
+export type Identity={actor:Actor;authority:Authority;bearer:boolean;session?:{id:string;kind?:string};gate?:Gate}
+// pending: the second-factor door itself, which must work before this session has shown its factor.
+export async function identity(request: Request, original: Bindings, options:{pending?:boolean}={}): Promise<Identity> {
  const env=runtimeBindings(original), bearer=request.headers.get('authorization')
  if(bearer) {
   if(!/^Bearer [A-Za-z0-9_-]{43}$/.test(bearer)) throw new HttpError(401,'invalid_agent_key')
@@ -16,8 +19,10 @@ export async function identity(request: Request, original: Bindings): Promise<{a
  }
  const session=await operatorAuth(env).getSession(request)
  if(!session) throw new HttpError(401,'sign_in_required')
- const {operator:o}=session
- return {actor:{id:o.id,name:o.displayName,role:o.role},bearer:false,authority:{sql:"EXISTS(SELECT 1 FROM oa_sessions s JOIN oa_operators o ON o.id=s.operator_id WHERE s.id=? AND s.revoked_at IS NULL AND s.expires_at>? AND s.operator_version=o.version AND o.version=? AND o.status='active' AND o.role=?)",params:[session.id,Date.now(),o.version,o.role]}}
+ const {operator:o}=session,gate=await gateState(env,session,o.id)
+ if(blocked(gate)&&!options.pending)throw new HttpError(403,'second_factor_required','Confirm with your second factor first.')
+ const base:Authority={sql:"EXISTS(SELECT 1 FROM oa_sessions s JOIN oa_operators o ON o.id=s.operator_id WHERE s.id=? AND s.revoked_at IS NULL AND s.expires_at>? AND s.operator_version=o.version AND o.version=? AND o.status='active' AND o.role=?)",params:[session.id,Date.now(),o.version,o.role]}
+ return {actor:{id:o.id,name:o.displayName,role:o.role},bearer:false,session:{id:session.id,kind:session.kind},gate,authority:gate.required||gate.enrolled?proofAuthority(base,session.id):base}
 }
 export function originGuard(request:Request, env:Bindings, bearer=false) {
  const url=new URL(request.url), origin=runtimeBindings(env).AUTH_ORIGIN
