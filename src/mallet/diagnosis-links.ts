@@ -38,7 +38,7 @@ export async function customerLinkResponse(request:Request,original:Bindings):Pr
  const url=new URL(request.url),match=url.pathname.match(/^\/inspection\/([^/]*)(\/.*)?$/)
  if(!match)return null
  const env=runtimeBindings(original)
- if(url.origin!==env.AUTH_ORIGIN)return new Response('Not found',{status:404})
+ if(url.origin!==env.AUTH_ORIGIN||(request.headers.has('host')&&request.headers.get('host')?.toLowerCase()!==url.host.toLowerCase()))return new Response('Not found',{status:404})
  if(!['GET','HEAD'].includes(request.method))return unavailable(405)
  if(!/^[A-Za-z0-9_-]{43}$/.test(match[1]))return unavailable()
  const found=await env.DB.prepare('SELECT id FROM mallet_customer_links WHERE token_hash=?').bind(await digest(match[1])).first<{id:string}>()

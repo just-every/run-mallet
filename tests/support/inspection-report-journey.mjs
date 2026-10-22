@@ -40,6 +40,7 @@ export async function inspectionReportJourney(h){
  const delivery=await h.command('inspectionReport.send',send),path=new URL(delivery.url).pathname
  assert.equal(delivery.status,'accepted');assert.equal(h.messages.filter(m=>m.subject==='Your reviewed inspection report').length,1);assert.ok(h.messages.at(-1).text.includes(delivery.url));assert.ok(h.messages.at(-1).html.includes('href="'+delivery.url+'"'),'HTML email has a usable private report link')
  await h.command('inspectionReport.send',send,{status:409});assert.equal(h.messages.filter(m=>m.subject==='Your reviewed inspection report').length,1,'One durable claim prevents a replayed outbound send')
+ assert.equal((await h.request(path,{as:'',headers:{host:'other.test'}})).status,404,'Customer report enforces the configured host')
  const before=await h.state(),response=await h.request(path,{as:''}),html=await response.text();assert.equal(response.status,200)
  for(const shown of ['Front brake pads','Urgency: red','Pad thickness: 2.5 mm',entry.explanation,'does not approve or decline'])assert.ok(html.includes(shown),'Report shows '+shown)
  for(const hidden of [coilDiagnosis.staffNote,'38.12',photo.id,originalVideo.id,'cedar@example.test','Cedar Bikes','costCents','originalId','Morgan Workshop'])assert.ok(!html.includes(hidden),'Report hides '+hidden)

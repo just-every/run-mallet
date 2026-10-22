@@ -22,7 +22,7 @@ async function staffGuard(env:Bindings,serviceId:string,slotId:string,exceptId?:
 export async function bookingResponse(request:Request,original:Bindings):Promise<Response|null>{
  const url=new URL(request.url),match=url.pathname.match(/^\/book(?:\/([A-Za-z0-9_-]+))?$/);if(!match)return null
  const env=runtimeBindings(original),manage=match[1]
- if(url.origin!==env.AUTH_ORIGIN)return view('<p>Not available.</p>',404)
+ if(url.origin!==env.AUTH_ORIGIN||(request.headers.has('host')&&request.headers.get('host')?.toLowerCase()!==url.host.toLowerCase()))return view('<p>Not available.</p>',404)
  if(!['GET','HEAD','POST'].includes(request.method))return view('<p>Not available.</p>',405)
  let row:any,authority:any
  if(manage){
