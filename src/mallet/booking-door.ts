@@ -6,7 +6,7 @@ import {publicBooking,manageBooking} from './ui/bookings'
 import {page} from './ui/shell'
 const actor={id:'customer-booking',name:'Customer booking link',role:'customer' as const}
 const token=()=>btoa(String.fromCharCode(...crypto.getRandomValues(new Uint8Array(32)))).replaceAll('+','-').replaceAll('/','_').replaceAll('=','')
-async function view(body:string,status=200,embed=false){const response=await page('Book with Mallet',body,undefined,status);response.headers.set('cache-control','private, no-store');response.headers.set('referrer-policy','no-referrer');response.headers.set('x-robots-tag','noindex, nofollow');if(embed){response.headers.delete('x-frame-options');response.headers.set('content-security-policy',(response.headers.get('content-security-policy')??'').replace(/frame-ancestors[^;]*/g,'frame-ancestors *'))}return response}
+async function view(body:string,status=200,embed=false){const response=await page('Book with Mallet',body,undefined,status);response.headers.set('cache-control','private, no-store');response.headers.set('referrer-policy','same-origin');response.headers.set('x-robots-tag','noindex, nofollow');if(embed){response.headers.delete('x-frame-options');response.headers.set('content-security-policy',(response.headers.get('content-security-policy')??'').replace(/frame-ancestors[^;]*/g,'frame-ancestors *'))}return response}
 export async function bookingResponse(request:Request,original:Bindings):Promise<Response|null>{
  const url=new URL(request.url),match=url.pathname.match(/^\/book(?:\/([A-Za-z0-9_-]+))?$/);if(!match)return null
  const env=runtimeBindings(original),manage=match[1]
