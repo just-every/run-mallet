@@ -19,6 +19,7 @@ export async function connectorsResponse(request:Request,original:Bindings):Prom
   const auth=await identity(request,env);originGuard(request,env,auth.bearer)
   if(!human(auth.actor))throw new HttpError(403,'manager_required')
   if(!['GET','HEAD'].includes(request.method))throw new HttpError(405,'method_not_allowed')
+  if(path==='/app/connectors'&&auth.actor.role==='owner'&&!auth.gate?.enrolled)return new Response(null,{status:303,headers:{...headers,location:'/app/security?returnTo=%2Fapp%2Fconnectors'}})
   const status=await connectorStatus(env)
   if(path.startsWith('/api/'))return Response.json({declarations:CONNECTORS,secrets:Object.values(status).map((s:any)=>({connector:s.connector,name:s.name,status:s.status,version:s.version,fingerprint:s.fingerprint,changedAt:s.changedAt}))},{headers})
   return page('Connectors',connectorsPage(auth.actor,status),auth.actor,200,{section:'data'})
