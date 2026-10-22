@@ -94,9 +94,10 @@ export async function searchAccounts(db:D1Database,actor:Actor,authority:Authori
  const [state]=await checked<{version:number;native_count:number;indexed_count:number}>(db,actor,authority,`SELECT version,(SELECT COUNT(*) FROM mallet_records WHERE kind IN ('customerAccount','contact','asset')) AS native_count,(SELECT COUNT(*) FROM mallet_search_documents) AS indexed_count FROM mallet_meta WHERE id=1`)
  if(!state||state.native_count!==state.indexed_count)throw new HttpError(503,'search_reindex_required')
  if(previous&&previous.version!==state.version)throw new HttpError(409,'search_cursor_changed')
+ // A full substring match necessarily contains its final trigram too.
  const grams:string[]=[]
- if(/^[\x00-\x7f]+$/.test(q)&&q.length>=3)grams.push(q.slice(0,3))
- if(digits.length>=3)grams.push(digits.slice(0,3))
+ if(/^[\x00-\x7f]+$/.test(q)&&q.length>=3)grams.push(q.slice(-3))
+ if(digits.length>=3&&!grams.includes(digits.slice(-3)))grams.push(digits.slice(-3))
  const base=matchingSql(!q,grams.length>0,!/^[\x00-\x7f]*$/.test(q)&&digits.length<3),bindings:unknown[]=[q,digits,JSON.stringify(grams),previous?.name??'',previous?.id??'',previous?1:0]
  const read=<T>(sql:string,params:unknown[]=[])=>checked<T>(db,actor,authority,sql,params,state.version)
  const [count]=await read<{count:number}>(base+`SELECT COUNT(*) AS count FROM mallet_search_documents a WHERE ${active} AND a.source_id IN (SELECT id FROM ascii_owners)`,bindings)
