@@ -136,3 +136,8 @@ test('INTAKE-001: vehicle and device signed custody and actual checklist compari
 test('INTAKE-002 / OPS-001: two templates, retained required-field draft, original signed terms and exact delivered copy with recovery',()=>run(async h=>{const {intakeFormsJourney}=await import('./support/intake-forms-journey.mjs');await intakeFormsJourney(h)}))
 
 test('INTAKE-002: publish two templates, retain phone draft and retrieve original signed copy after terms change at 1440/390',async()=>{const {intakeFormsBrowser}=await import('./intake-forms-browser.mjs');await intakeFormsBrowser()})
+
+
+test('INTAKE-003 / OPS-001: private after-hours request, exact diagnostic consent, advisor-confirmed match, duplicate refusal and recovery',()=>run(async h=>{const {checkInRecoveryJourney}=await import('./support/check-in-journey.mjs');await checkInRecoveryJourney(h)}))
+
+test('INTAKE-003: after-hours customer request, counter match and diagnostic-only booking at 1440/390',async()=>{const {checkInBrowser}=await import('./check-in-browser.mjs');await checkInBrowser()})
