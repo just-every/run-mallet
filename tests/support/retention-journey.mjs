@@ -60,7 +60,7 @@ export async function retentionJourney(h){
  assert.equal(receipt.phase,'complete');assert.equal(receipt.counts.uploads,3);assert.equal(receipt.counts.incompleteUploads,1);assert.equal(receipt.counts.findings,2);assert.equal(receipt.counts.unlockKeys,1);assert.ok(preview.held.some(x=>x.id===financial.id));assert.ok(preview.held.some(x=>x.id===mediaHold.id))
  assert.equal(await keyBucket.get('unlock-keys/'+vault.id),null)
  for(const media of [photo,shared,incomplete])assert.equal((await h.request('/api/mallet/media/uploads/'+media.id+'/content')).status,404)
- assert.equal((await h.request(heldPhoto.contentUrl)).status,200,'Explicit media hold retains private bytes')
+ const retainedBytes=await h.request(heldPhoto.contentUrl);assert.equal(retainedBytes.status,200,'Explicit media hold retains private bytes');assert.deepEqual(Buffer.from(await retainedBytes.arrayBuffer()),bytes)
  assert.equal((await h.api('/api/mallet/media/findings?jobId='+first.job.id)).findings.length,0)
  assert.equal((await db.prepare('SELECT count(*) AS n FROM mallet_media_chunks WHERE upload_id IN (?,?,?)').bind(photo.id,shared.id,incomplete.id).first()).n,0)
  const after=await h.state();for(const kind of ['invoice','estimate','approval','export','payment'])assert.deepEqual(after.records[kind],before.records[kind],'Financial/authorization '+kind+' remains exact')
@@ -72,7 +72,7 @@ export async function retentionJourney(h){
  const stale=await installation({bindings:{OWNER_EMAIL:'synthetic-mallet-29@example.test'}})
  try{const refused=await restore(stale,old,{laterJournal:{sourceIdentity:postErase[0].sourceIdentity,epoch:postErase[0].epoch,journal:postErase[0].journal},status:400});assert.equal(refused.error,'erasure_epoch')}finally{await stale.close()}
  const fresh=await installation({bindings:{OWNER_EMAIL:'synthetic-mallet-30@example.test'}})
- try{await restore(fresh,postErase);assert.equal((await fresh.request(photo.contentUrl)).status,404);assert.equal((await fresh.request(heldPhoto.contentUrl)).status,200);assert.ok((await fresh.state()).records.retentionHold.some(h=>h.id===mediaHold.id));assert.ok((await fresh.state()).records.retentionReceipt.some(r=>r.id===receipt.id));assert.equal(await(await fresh.request('/api/mallet/exports/'+first.exported.id)).text(),first.csv)}finally{await fresh.close()}
+ try{await restore(fresh,postErase);assert.equal((await fresh.request(photo.contentUrl)).status,404);const heldResponse=await fresh.request(heldPhoto.contentUrl);assert.equal(heldResponse.status,200);assert.deepEqual(Buffer.from(await heldResponse.arrayBuffer()),bytes);assert.ok((await fresh.state()).records.retentionHold.some(h=>h.id===mediaHold.id));assert.ok((await fresh.state()).records.retentionReceipt.some(r=>r.id===receipt.id));assert.equal(await(await fresh.request('/api/mallet/exports/'+first.exported.id)).text(),first.csv)}finally{await fresh.close()}
  const policy=await h.command('retention.policy',{version:0,mediaDays:0,personalDays:null,consent:true,reason:'synthetic-mallet-31'})
  assert.equal(policy.mode,'manual');assert.equal((await h.command('retention.preview',{customerId:account.id,mode:'retention',categories:['media']})).counts.uploads,0)
  await h.command('retention.release',{holdId:mediaHold.id,version:mediaHold.version,consent:true,reason:'synthetic-mallet-32'})
