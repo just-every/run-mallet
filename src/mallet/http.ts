@@ -1,3 +1,5 @@
+import {retentionCommand,retentionCommands} from './retention'
+import {retentionPage} from './ui/retention'
 import {calendarAuthority} from './calendar-door'
 import {calendarPage} from './ui/calendar'
 import {calendarFormInput} from './ui/calendar-forms'
@@ -116,6 +118,7 @@ async function nativeForm(request:Request) {
 }
 const withoutSubletCosts=(value:any)=>{if(!value||!('sublets' in value))return value;const {sublets,...rest}=value;return rest}
 function visible(s:State,actor:Actor):State {
+ if(actor.role!=='owner')s={...s,records:Object.fromEntries(Object.entries(s.records).filter(([kind])=>!['retentionPolicy','retentionHold','retentionReceipt'].includes(kind)))}
  if(!human(actor))s={...s,records:Object.fromEntries(Object.entries(s.records).map(([k,v])=>[k,(k.startsWith('calendar')||k==='bookingWaitlist'||k==='waitlistOffer'||k==='appointment'||k==='bookingService'||k==='counterIntake'||k.startsWith('intake')||['warranty','warrantyTerms','payment','handover','returnDelegate','returnOverride'].includes(k))?[]:k==='event'?v.filter(x=>!x.kind.startsWith('calendar.')&&!x.kind.startsWith('waitlist.')&&!x.kind.startsWith('booking.')&&!x.kind.startsWith('checkin.')&&!x.kind.startsWith('intake.')&&!x.kind.startsWith('warranty.')&&!x.kind.startsWith('payment.')&&!x.kind.startsWith('return.')):v]))}
  s=scopedCollaboration(scopedPromises(s,actor),actor)
  s=scopedTime(s,actor)
@@ -137,6 +140,7 @@ async function operators(db:D1Database) {
 const bookingFields=['title','bayId','technicianId','startAt','endAt']
 function formInput(data:FormData) {
  const input:any=Object.fromEntries(data)
+ if(retentionCommands.includes(input.command)){input.consent=input.consent==='yes';if(['retention.preview','customer.erase','retention.run'].includes(input.command))input.categories=data.getAll('categories');for(const key of ['mediaDays','personalDays'])if(key in input)input[key]=input[key]===''?null:Number(input[key])}
  for(const name of ['flowVersion','version','itemVersion','revision','quantity','value','dueValue'])if(input[name]!==undefined&&input[name]!=='')input[name]=Number(input[name])
  if(data.has('lineIds') || input.command==='estimate.authorise')input.lineIds=data.getAll('lineIds')
  if(['estimate.prepare','estimate.revise'].includes(input.command)) {
@@ -228,7 +232,8 @@ export async function malletResponse(request:Request,original:Bindings,execution
    if(['connector.save','connector.revoke'].includes(command)&&actor.role==='owner'&&!auth.gate?.enrolled)throw new HttpError(403,'step_up_required','Enrol your own second factor before opening the credential door.')
    if(needsStepUp(command,actor.role))auth.authority=requireStepUp(auth)
    if(internalWaitlistCommands.includes(command)||internalReportCommands.includes(command)||internalBookingCommands.includes(command)||internalCheckInCommands.includes(command)||internalRefundCommands.includes(command)||internalIntakeFormCommands.includes(command)||command==='payment.verified'||command==='routing.sweep'||internalPromiseCommands.includes(command)||internalApprovalCommands.includes(command)||internalChaseCommands.includes(command))throw new HttpError(404,'unknown_command')
-   if(command.startsWith('waitlist.'))result=await waitlistCommand(env,request,actor,auth.authority,command,input)
+   if(retentionCommands.includes(command))result=await retentionCommand(env,actor,auth.authority,command,input)
+   else if(command.startsWith('waitlist.'))result=await waitlistCommand(env,request,actor,auth.authority,command,input)
    else if(command.startsWith('calendar.')||['job.book','dispatch.approve'].includes(command))result=await execute(env.DB,actor as any,command,input,await calendarAuthority(env,command,input,auth.authority))
    else if(command==='inspectionReport.review'){const checked=await inspectionReportInput(env.DB,actor,auth.authority,input);result=await execute(env.DB,actor as any,command,checked.input,checked.authority)}
    else if(command==='inspectionReport.send')result=await sendInspectionReport(env,actor,auth.authority,input)
@@ -262,6 +267,7 @@ export async function malletResponse(request:Request,original:Bindings,execution
    else if(command==='inspection.record'&&actor.role!=='agent'){const checked=await inspectionRecordInput(env.DB,actor,auth.authority,input);result=await execute(env.DB,actor as any,command,checked.input,checked.authority)}
    else result=await execute(env.DB,actor as any,command,input,auth.authority)
    if(isApi){if(!human(actor)&&result&&typeof result==='object'&&'billing' in result){const {billing,...rest}=result;result=rest}return json(actor.role==='agent'?withoutSubletCosts(withoutInspectionSource(result)):result)}
+   if(retentionCommands.includes(command)){if(command==='customer.export')return new Response(JSON.stringify(result,null,2),{headers:{...headers,'content-type':'application/json','content-disposition':'attachment; filename="customer-data.json"'}});return page('Retention & erasure',retentionPage(await load(env.DB),input.customerId??'',command==='retention.preview'?result:undefined,input,['customer.erase','retention.run'].includes(command)?result:undefined),actor,200,{section:'data'})}
    if(command==='customer.mergePreview')return page('Review duplicate merge',mergePreviewPage(result,input),actor,200,{section:'customers'})
    if(command==='inspectionReport.send')return page('Inspection report email',`<section class="card"><p>${e(result.status==='accepted'?'Handed to the mail provider; delivery is not confirmed.':result.status==='development'?'Saved to the development outbox; not sent.':'Send failed or is uncertain. Contact the customer; no automatic retry will occur.')}</p><a href="${e(result.url)}">Open reviewed customer report</a><p><a href="/app/jobs/${e(result.jobId)}#inspection-reports">Return to repair</a></p></section>`,actor,200,{section:'jobs'})
    if(command.startsWith('calendar.')||command.startsWith('waitlist.'))return redirect('/app/calendar')
@@ -310,6 +316,7 @@ export async function malletResponse(request:Request,original:Bindings,execution
   }
   if(request.method!=='GET' && request.method!=='HEAD')throw new HttpError(405,'method_not_allowed')
   const state=visible(await load(env.DB),actor)
+  if(path==='/app/retention'){if(actor.role!=='owner')throw new HttpError(403,'owner_required');return page('Retention & erasure',retentionPage(state,url.searchParams.get('customerId')??''),actor,200,{section:'data'})}
   if(path==='/api/mallet/catalogue'){if(actor.role==='member')throw new HttpError(403,'manager_required');return json(await catalogue(env,await connectorSecret(env,'pier','PIER_SESSION')))}
   if(path==='/app/calendar'){if(!human(actor))throw new HttpError(403,'manager_required');return page('Resource calendar',calendarPage(state,(await operators(env.DB)).names,url.searchParams),actor,200,{section:'jobs'})}
   if(path==='/app/bookings'){if(!human(actor))throw new HttpError(403,'manager_required');return page('Online appointments',bookingStaff(state,(await operators(env.DB)).names),actor,200,{section:'jobs'})}
@@ -377,7 +384,7 @@ export async function malletResponse(request:Request,original:Bindings,execution
   if(isApi)return json({error:code,message:known?error.message:'The operation failed.',details:error instanceof MalletError?error.details:undefined},status)
   if(code==='second_factor_required'||code==='step_up_required') {
    // A person is taken to confirm, then returns to the page they were on to repeat the action.
-   const input=submitted?.input??{},back=request.method==='GET'?path+url.search:typeof input.jobId==='string'?'/app/jobs/'+encodeURIComponent(input.jobId):String(submitted?.command).startsWith('agent.')?'/app/data':submitted?.command==='asset.erase'?'/app/customers':'/app'
+   const input=submitted?.input??{},back=request.method==='GET'?path+url.search:typeof input.jobId==='string'?'/app/jobs/'+encodeURIComponent(input.jobId):retentionCommands.includes(String(submitted?.command))?'/app/retention':String(submitted?.command).startsWith('agent.')?'/app/data':submitted?.command==='asset.erase'?'/app/customers':'/app'
    return redirect('/app/security?'+(code==='step_up_required'?'stepUp=1&':'')+'returnTo='+encodeURIComponent(back))
   }
   if(status===401)return redirect('/signin?returnTo='+encodeURIComponent(path))

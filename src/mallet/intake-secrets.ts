@@ -34,6 +34,7 @@ export async function intakeSecret(env:Bindings,actor:Actor,authority:Authority,
   const count=jobs.length?await purgeIntakeSecrets(env,'job_id IN ('+jobs.map(()=>'?').join(',')+')',jobs):0
   id=crypto.randomUUID();result={id,jobId:scope.jobId,customerId,erased:count,reason}
  }else if(command==='intake.secretStore'){
+  queries.push({sql:`INSERT INTO mallet_assert(ok) SELECT CASE WHEN NOT EXISTS(SELECT 1 FROM mallet_records r WHERE r.kind='retentionReceipt' AND json_extract(r.value,'$.phase') IN ('started','keys-purged','profiles') AND json_extract(r.value,'$.customerId') IN (WITH RECURSIVE account(id) AS (SELECT json_extract(a.value,'$.customerAccountId') FROM mallet_records a JOIN mallet_records j ON json_extract(j.value,'$.assetId')=a.id WHERE a.kind='asset' AND j.kind='job' AND j.id=? UNION SELECT json_extract(a.value,'$.mergedInto') FROM mallet_records a JOIN account c ON a.id=c.id WHERE a.kind='customerAccount' AND json_extract(a.value,'$.mergedInto') IS NOT NULL) SELECT id FROM account)) THEN 1 ELSE 0 END`,params:[scope.jobId]})
   const purpose=text(p.purpose,'explicit unlock purpose',500),expiresAt=instant(p.expiresAt,'purpose end time')
   if(p.consent!==true||expiresAt<=now||Date.parse(expiresAt)-Date.parse(now)>86400000)fail('SECRET_CONSENT','Obtain explicit consent and set a purpose end within 24 hours.',null,400)
   text(p.secret,'temporary unlock secret',1000);const value=p.secret as string

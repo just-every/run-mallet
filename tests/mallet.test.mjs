@@ -357,3 +357,7 @@ test('GOV-004: refunds, agent keys, erasure and custody reveals need a fresh sec
 test('GOV-004: stolen, revoked and expired customer links look unknown on every door, misses are paced and no link grants payer authority',()=>run(linkProtectionJourney))
 test('GOV-004 / GOV-005: authenticator app, passkey, sign-in confirmation, step-up and sealed connector credentials through native forms at 1440/390',securityBrowser)
 test('GOV-005: sealed provider secrets rotate and revoke behind a fresh proof, webhooks prove their origin, and no secret reaches a response, archive, audit row or log',connectorJourney)
+
+ test('GOV-006: explicit holds, customer erasure, import custody and manual retention survive fresh-owner recovery without resurrecting media',async()=>{const {retentionJourney}=await import('./support/retention-journey.mjs');await run(retentionJourney)})
+
+test('GOV-006: owner reviews financial and media holds, erases eligible photos and releases a hold for manual retention at 1440/390',async()=>{const {retentionBrowser}=await import('./retention-browser.mjs');await retentionBrowser()})
