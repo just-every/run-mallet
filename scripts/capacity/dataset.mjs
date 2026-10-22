@@ -10,9 +10,20 @@ const actor={id:syntheticId('historical-actor',1),name:'Synthetic capacity fixtu
 const record=(kind,value)=>({kind,id:value.id,revision:value.version,value:JSON.stringify(value)})
 const contact=n=>({id:syntheticId('contact',n),version:1,name:`Synthetic capacity customer ${n}`,email:`synthetic-mallet-${n}@example.test`,phone:`+1 202 555 ${String(n).padStart(6,'0')}`,communication:'none',notes:'Synthetic capacity fixture; no real person.',history:[],by:actor,at})
 const account=n=>({id:syntheticId('account',n),version:1,payerRevision:1,name:`Synthetic capacity customer ${n}`,kind:'person',contactIds:[syntheticId('contact',n)],payerId:syntheticId('contact',n),billingContactId:syntheticId('contact',n),driverId:null,authorizerId:null,taxStatus:'standard',notes:'Synthetic capacity fixture.',history:[],mergedInto:null,by:actor,at})
+// Fixture identifiers only; this assigns no real manufacturer/vehicle identity.
+// Check-digit weights: https://www.nhtsa.gov/sites/nhtsa.dot.gov/files/fmvss/VIN_Final_Rule_April_08.pdf
+export function searchIdentifier(n){
+ if(!Number.isSafeInteger(n)||n<1||n>999999)throw new Error('Invalid synthetic vehicle ordinal.')
+ if(n%2)return 'S'+String(n).padStart(6,'0')
+ const raw='1ZZAA00A0TA'+String(n).padStart(6,'0'),weights=[8,7,6,5,4,3,2,10,0,9,8,7,6,5,4,3,2]
+ const groups=['','AJ','BKS','CLT','DMU','ENV','FW','GPX','HY','RZ']
+ const value=c=>/^[0-9]$/.test(c)?Number(c):groups.findIndex(chars=>chars.includes(c))
+ const remainder=[...raw].reduce((sum,c,i)=>sum+value(c)*weights[i],0)%11
+ return raw.slice(0,8)+(remainder===10?'X':String(remainder))+raw.slice(9)
+}
 const asset=(n,spec)=>{
  const visits=[];for(let i=n;i<=spec.repairOrders;i+=spec.vehicles)visits.push(syntheticId('job',i))
- return {id:syntheticId('asset',n),version:1,customerAccountId:syntheticId('account',(n-1)%spec.customers+1),customerName:`Synthetic capacity customer ${(n-1)%spec.customers+1}`,customerEmail:`synthetic-mallet-${(n-1)%spec.customers+1}@example.test`,driverContactId:null,label:`Synthetic capacity vehicle ${n}`,identifier:`SYNTHETIC-CAPACITY-${n}`,visits,createdAt:'2019-01-01T00:00:00.000Z'}
+ return {id:syntheticId('asset',n),version:1,customerAccountId:syntheticId('account',(n-1)%spec.customers+1),customerName:`Synthetic capacity customer ${(n-1)%spec.customers+1}`,customerEmail:`synthetic-mallet-${(n-1)%spec.customers+1}@example.test`,driverContactId:null,label:`Synthetic capacity vehicle ${n}`,identifier:spec.identifierFormat==='plate-and-vin'?searchIdentifier(n):`SYNTHETIC-CAPACITY-${n}`,visits,createdAt:'2019-01-01T00:00:00.000Z'}
 }
 export function* businessRecords(spec,{searchOnly=false}={}){
  for(let n=1;n<=spec.vehicles;n++)yield record('asset',asset(n,spec))
@@ -26,12 +37,14 @@ export function* businessRecords(spec,{searchOnly=false}={}){
  for(let n=1;n<=spec.stockedSkus;n++)yield record('stockItem',{id:syntheticId('sku',n),version:1,sku:`SYNTHETIC-SKU-${n}`,barcode:`SYNTHETIC-BARCODE-${n}`,name:`Synthetic capacity part ${n}`,unit:'each',by:actor,at})
 }
 
-export async function capacityDataset({scale='smoke',shops=1,photoPath=new URL('../../tests/fixtures/dvi/front-brake.png',import.meta.url),videoPath=new URL('../../tests/fixtures/dvi/synthetic-inspection.webm',import.meta.url),...overrides}={}){
+export async function capacityDataset({scale='smoke',shops=1,identifierFormat='synthetic',photoPath=new URL('../../tests/fixtures/dvi/front-brake.png',import.meta.url),videoPath=new URL('../../tests/fixtures/dvi/synthetic-inspection.webm',import.meta.url),...overrides}={}){
  if(shops!==1)throw new Error('Unsupported multi-shop dataset: Mallet has no shop identity or isolation model. Declared OPS-002 requires ten shops; this generator supports one shop only.')
+ if(!['synthetic','plate-and-vin'].includes(identifierFormat))throw new Error('Unknown fixture identifier format.')
  if(!['smoke','single-shop'].includes(scale))throw new Error('Choose smoke or single-shop.')
  const spec={shops:1,customers:scale==='single-shop'?30000:6,vehicles:scale==='single-shop'?40000:8,repairOrders:scale==='single-shop'?56000:10,photosPerRepairOrder:scale==='single-shop'?25:1,videosPerRepairOrder:1,stockedSkus:scale==='single-shop'?2500:5,...overrides}
  if(Object.keys(overrides).some(k=>!['customers','vehicles','repairOrders','photosPerRepairOrder','videosPerRepairOrder','stockedSkus'].includes(k)))throw new Error('Unknown dataset option.')
  for(const [key,value] of Object.entries(spec))if(!Number.isSafeInteger(value)||value<(key==='photosPerRepairOrder'||key==='videosPerRepairOrder'||key==='stockedSkus'?0:1))throw new Error('Invalid dataset count: '+key)
+ if(identifierFormat!=='synthetic')spec.identifierFormat=identifierFormat
  const photo=await readFile(photoPath),video=await readFile(videoPath)
  if(!photo.subarray(0,8).equals(Buffer.from([137,80,78,71,13,10,26,10]))||photo.length>8388608)throw new Error('Photo must be a real PNG of at most 8 MiB.')
  if(!video.subarray(0,4).equals(Buffer.from([26,69,223,163]))||video.length>33554432)throw new Error('Video must be a real WebM of at most 32 MiB.')

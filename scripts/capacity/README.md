@@ -72,9 +72,9 @@ populated destination and preserves erasure freshness rules.
 
 `tests/support/capacity-import-journey.mjs` exports one public HTTP journey for
 the main test file to register. A small coherent fixture restores and its media
-bytes remain readable. Six fully rehashed archives prove that unknown record
+bytes remain readable. Fully rehashed archives prove that unknown record
 kinds, invalid RO status, dangling RO/asset/payer/media relationships and
-corrupted media bytes are refused without publishing business records.
+corrupted media bytes and a self-consistently repriced invoice with unchanged approved source prices are refused without publishing business records.
 
 Remaining proof requires real ten-shop identity/isolation, full declared
 historical graphs and live authorization contexts, the exact candidate SHA,
@@ -89,3 +89,13 @@ a bounded cursor read for each upload/chunk. Total SQL work grows with the
 dataset; this is not proof that a full media archive fits one hosted Worker
 invocation's query/time limits. Resumable finalization needs separate runtime
 work before claiming this complete declared-capacity import.
+
+`search-load.mjs --output /absolute/outside/repo/search.json` is a separate,
+committed-HEAD load journey. It imports one shop’s full 30,000-customer/40,000-vehicle
+search register through native streaming routes, with only one canceled RO and
+no photos or videos, then provisions 30 native admin sessions and measures 600
+queries for name, phone, plate and VIN stored in the native identifier field.
+It reports server response/log p95 and explicit dataset gaps, never complete
+OPS-002 proof. Use the heavy-slot wrapper. The default 15-minute deadline bounds
+the owned child process and cleanup. It refuses uncommitted source and output
+inside the checkout; result files are private and contain no session credentials.

@@ -38,7 +38,7 @@
       "browser": true,
       "hosted": false,
       "commands": [
-        "pnpm run test:mallet"
+        "node --test --test-concurrency=1 --test-skip-pattern='^(?:GOV-004|GOV-005|GOV-006|OPS-002)' tests/mallet.test.mjs tests/demo.test.mjs tests/sales-tax.test.mjs"
       ]
     },
     {
@@ -71,6 +71,14 @@
       "hosted": false,
       "commands": [
         "node --test --test-concurrency=1 tests/sales-report.test.mjs"
+      ]
+    },
+    {
+      "name": "security-and-operations",
+      "browser": true,
+      "hosted": false,
+      "commands": [
+        "node --test --test-concurrency=1 --test-name-pattern='^(?:GOV-004|GOV-005|GOV-006|OPS-002)' tests/mallet.test.mjs"
       ]
     }
   ],
