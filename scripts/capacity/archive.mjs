@@ -25,7 +25,7 @@ export async function readEmptyTemplate(source){
  return {manifest,retained}
 }
 
-const PART_BYTES=1024*1024,PART_ROWS=250
+const PART_BYTES=1024*1024,PART_ROWS=5000
 async function* parts(items,{hashed=true}={}){
  let batch=[],bytes=100,index=0
  for(const item of items()){
