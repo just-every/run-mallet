@@ -1,3 +1,4 @@
+import {appointmentConflicts} from './bookings'
 import {customerBillingSnapshot} from './customers'
 import {assertSubletsReady,jobSublets} from './sublet'
 import { onCrew } from './collaboration'
@@ -18,8 +19,9 @@ export function slot(p: any) {
   if (endAt <= startAt || Date.parse(endAt) - Date.parse(startAt) > 7 * 86400000) fail('INPUT', 'A booking must end after it starts and last no more than seven days.', null, 400)
   return { bayId: text(p.bayId, 'bayId', 100), technicianId: text(p.technicianId, 'technicianId', 100), startAt, endAt }
 }
-export function conflicts(s: State, plan: ReturnType<typeof slot>, exceptJobId?: string) {
-  return rows(s, 'job').filter(j => j.id !== exceptJobId && !['completed', 'invoiced', 'canceled', 'lost'].includes(j.status) && plan.startAt < j.endAt && plan.endAt > j.startAt && (plan.bayId === j.bayId || plan.technicianId === j.technicianId)).map(j => ({ jobId: j.id, title: j.title, bayId: j.bayId, technicianId: j.technicianId, startAt: j.startAt, endAt: j.endAt, resources: [j.bayId === plan.bayId ? 'bay' : '', j.technicianId === plan.technicianId ? 'technician' : ''].filter(Boolean) }))
+export function conflicts(s: State, plan: ReturnType<typeof slot>, exceptJobId?: string, includeAppointments = true) {
+  const appointments=includeAppointments?appointmentConflicts(s,plan):[]
+  return [...appointments.map(a=>({jobId:a.id,title:'Customer appointment',bayId:a.bayId,technicianId:a.technicianId,startAt:a.startAt,endAt:a.endAt,resources:['appointment']})),...rows(s, 'job').filter(j => j.id !== exceptJobId && !['completed', 'invoiced', 'canceled', 'lost'].includes(j.status) && plan.startAt < j.endAt && plan.endAt > j.startAt && (plan.bayId === j.bayId || plan.technicianId === j.technicianId)).map(j => ({ jobId: j.id, title: j.title, bayId: j.bayId, technicianId: j.technicianId, startAt: j.startAt, endAt: j.endAt, resources: [j.bayId === plan.bayId ? 'bay' : '', j.technicianId === plan.technicianId ? 'technician' : ''].filter(Boolean) }))]
 }
 function requireFree(c: Context, plan: ReturnType<typeof slot>, jobId?: string) {
   const found = conflicts(c.s, plan, jobId)

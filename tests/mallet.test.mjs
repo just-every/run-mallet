@@ -318,3 +318,9 @@ test('PAY-005: one approved Stripe refund, uncertain recovery and duplicate or f
 test('PAY-005: full original cash, check and other manual refunds preserve issued invoices and zero the balance',async()=>{const {fullRefundJourney}=await import('./support/refunds-journey.mjs');await fullRefundJourney()})
 
 test('PAY-005: payer refund and credit statements at 1440/390',async()=>{const {refundsBrowser}=await import('./customers-browser.mjs');await refundsBrowser()})
+
+const {onlineBookingJourney,bookingAvailabilityJourney}=await import('./support/booking-journey.mjs')
+const {bookingsBrowser}=await import('./bookings-browser.mjs')
+test('BOOK-001: customer appointments contend, confirm, reschedule, cancel and recover with fresh authority',()=>run(onlineBookingJourney))
+test('BOOK-001: opening windows, skills, duration, lead time and expiring tentative capacity',()=>run(bookingAvailabilityJourney))
+test('BOOK-001: native publication and customer phone booking at 1440 and 390',bookingsBrowser)
