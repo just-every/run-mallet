@@ -316,3 +316,5 @@ test('PAY-005 / OPS-001: reviewed original-tender refunds, exact tax credits, ex
 test('PAY-005: one approved Stripe refund, uncertain recovery and duplicate or failed provider outcomes',async()=>{const {stripeRefundJourney}=await import('./support/refunds-journey.mjs');await stripeRefundJourney()})
 
 test('PAY-005: full original cash, check and other manual refunds preserve issued invoices and zero the balance',async()=>{const {fullRefundJourney}=await import('./support/refunds-journey.mjs');await fullRefundJourney()})
+
+test('PAY-005: payer refund and credit statements at 1440/390',async()=>{const {refundsBrowser}=await import('./customers-browser.mjs');await refundsBrowser()})
