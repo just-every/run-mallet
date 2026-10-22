@@ -65,7 +65,8 @@ export async function flowJourney(h){
  assert.deepEqual(ids(await board('stage=closed')),[ro.id]);assert.deepEqual(ids(await board('',M)),[late.id],'FLOW-001 a technician board holds only their repairs')
  const html=await (await h.request('/app?technician='+mei.id+'&due=overdue')).text()
  assert.match(html,/Rivera Plumbing/);assert.doesNotMatch(html,/Cedar Bikes/);for(const label of ['Intake','Diagnosis','Approval','Parts','Work','Quality','Ready','Collected','Closed'])assert.match(html,new RegExp(`<h2>${label} <span>`))
- assert.match(html,/Urgent/);assert.match(html,/Promise overdue/);assert.match(html,/http-equiv="refresh" content="60"/,'FLOW-001 the board re-reads current records every minute')
+ assert.match(html,/Urgent/);assert.match(html,/Promise overdue/)
+ // Native peer-board updates and retained drafts/focus are proved by board-live-journey.mjs.
  // Canceled and lost work is retained under Closed and frees its bay and technician.
  const cancel=await booking(h,{technicianId:mei.id,asset:await h.command('asset.create',assetInput('3')),bayId:'Bay 3',startAt:'2026-10-21T09:00:00-04:00',endAt:'2026-10-21T11:00:00-04:00'})
  await h.command('flow.close',{jobId:cancel.job.id,version:cancel.job.version,outcome:'canceled',reason:'Customer sold the car'},{...M,status:403})
