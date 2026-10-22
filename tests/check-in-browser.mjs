@@ -17,10 +17,11 @@ export async function checkInBrowser(){
   await owner.addCookies(h.owner.split('; ').map(pair=>({name:pair.slice(0,pair.indexOf('=')),value:pair.slice(pair.indexOf('=')+1),url:h.origin})))
   const p=await owner.newPage(),c=await customer.newPage(),errors=[];for(const page of [p,c])page.on('pageerror',e=>errors.push(e.message))
   const dir=process.env.MALLET_CHECKIN_PROOF_DIR??'.cache/check-in-browser';await mkdir(dir,{recursive:true})
-  const shot=async(page,name)=>{for(const width of [1440,390]){await page.setViewportSize({width,height:1000});assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),name+' fits '+width);await page.screenshot({path:join(dir,name+'-'+width+'.png'),fullPage:true})}}
+  const shot=async(page,name,mask=[])=>{for(const width of [1440,390]){await page.setViewportSize({width,height:1000});assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),name+' fits '+width);await page.screenshot({path:join(dir,name+'-'+width+'.png'),fullPage:true,mask})}}
   const form=command=>p.locator(`form:has(input[name="command"][value="${command}"])`)
   await p.goto(h.origin+'/app/jobs');await shot(p,'checkin-01-repair-orders-door');await p.getByRole('link',{name:'Counter & after-hours check-in queue'}).click();await shot(p,'checkin-02-staff-queue')
   await form('checkin.issue').locator('[name="templateSource"]').selectOption(JSON.stringify({id:template.id,version:template.version}));await form('checkin.issue').getByRole('button',{name:'Create check-in link'}).click();await p.waitForLoadState('domcontentloaded')
+  await shot(p,'checkin-02b-private-link-issued',[p.locator('pre')])
   const url=await p.getByRole('link',{name:'Open customer check-in',exact:true}).getAttribute('href')
   // The one-time bearer URL is never retained in a screenshot.
   await c.goto(url);await shot(c,'checkin-03-customer-after-hours')
