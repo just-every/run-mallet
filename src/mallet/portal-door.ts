@@ -6,7 +6,7 @@ import {portalCookie,portalCookieName,portalRecords,portalToken,currentPortal} f
 import {portalSignIn,portalBilling} from './ui/portal'
 import {box,e,hidden} from './ui/common'
 import {page} from './ui/shell'
-const privateResponse=(r:Response)=>{r.headers.set('cache-control','no-store');r.headers.set('referrer-policy','no-referrer');r.headers.set('x-robots-tag','noindex, nofollow');return r}
+const privateResponse=(r:Response)=>{r.headers.set('cache-control','no-store');r.headers.set('referrer-policy','same-origin');r.headers.set('x-robots-tag','noindex, nofollow');return r}
 const screen=async(title:string,body:string,status=200)=>privateResponse(await page(title,body,undefined,status))
 const unavailable=()=>screen('Customer sign-in needed',box('Billing unavailable','<p>Sign in with a current link. Only the current payer can view account billing.</p><p><a href="/portal">Customer sign-in</a></p>'),403)
 async function input(request:Request){

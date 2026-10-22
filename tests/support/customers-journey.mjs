@@ -11,11 +11,13 @@ export async function customersFixture(h){
 export async function customersJourney(h){
  const {driver,authorizer,payer,input}=await customersFixture(h),admin=await h.person('customer-advisor@example.test','admin'),member=await h.person('customer-technician@example.test'),key=await h.command('agent.create',{label:'Customer boundary'}),agent={as:'',headers:{authorization:'Bearer '+key.token}}
  const before=(await h.state()).records
- for(const cmd of ['contact.save','customer.save','customer.linkAsset','customer.driver','customer.merge'])for(const opts of [{as:'',status:401},{as:member.cookie,status:403},{...agent,status:403},{headers:{origin:'https://elsewhere.test'},status:403}])await h.command(cmd,input,opts)
+ for(const cmd of ['contact.save','customer.save','customer.linkAsset','customer.driver','customer.mergePreview','customer.merge'])for(const opts of [{as:'',status:401},{as:member.cookie,status:403},{...agent,status:403},{headers:{origin:'https://elsewhere.test'},status:403}])await h.command(cmd,input,opts)
  await h.command('contact.save',{name:'Invalid',email:'not-email',phone:'',communication:'email'},{status:400});await h.command('customer.save',{...input,payerId:'synthetic-mallet-unknown'},{status:409})
  assert.deepEqual((await h.state()).records,before)
  await h.command('contact.save',{name:'Alex Admin Intake',phone:'6145550190',email:'intake@example.test',communication:'none',notes:'Admin intake'},{as:admin.cookie})
  let account=await h.command('customer.save',input,{as:admin.cookie}),duplicate=await h.command('customer.save',{...input,name:'Cedar Fleet duplicate'}),household=await h.command('customer.save',{...input,name:'Dana Household',kind:'household',contactIds:[driver.id],payerId:driver.id,billingContactId:driver.id,authorizerId:null})
+ account=await h.command('customer.save',{...input,customerId:account.id,version:account.version,notes:'Admin reviewed account identity and roles'},{as:admin.cookie})
+ assert.equal(account.notes,'Admin reviewed account identity and roles');assert.equal(account.history.length,1)
  assert.equal(account.contactIds.length,3);assert.equal(account.payerId,payer.id);assert.equal(account.authorizerId,authorizer.id)
  let a=await h.command('asset.create',{...assetInput('fleet-a'),identifier:'OH-CEDAR-17'}),b=await h.command('asset.create',{...assetInput('fleet-b'),identifier:'OH-CEDAR-18'})
  const link=async(asset,target)=>h.command('customer.linkAsset',{assetId:asset.id,version:asset.version,customerId:target.id,customerVersion:target.version,reason:'Admin checked customer instructions'},{as:admin.cookie})
