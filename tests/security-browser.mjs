@@ -8,18 +8,22 @@ import {totpCode} from './support/second-factor.mjs'
 const cookies=(h,cookie)=>cookie.split('; ').map(pair=>({name:pair.slice(0,pair.indexOf('=')),value:pair.slice(pair.indexOf('=')+1),url:h.origin}))
 export async function securityBrowser(){
  // A real hostname: browsers refuse an IP address as a passkey's relying party.
- const h=await installation({network:true,assets:true,localhost:true,bindings:{AUTH_LOCAL:'true'}});let browser
+ const h=await installation({network:true,assets:true,localhost:true});let browser
  try{
-  const setup=await fetch(h.origin+'/setup',{method:'POST',redirect:'manual',headers:{Origin:h.origin,Cookie:h.owner,'Content-Type':'application/x-www-form-urlencoded'},body:'confirm=yes&ratePercent=7.5&partsTaxable=yes'});assert.equal(setup.status,303);browser=await chromium.launch({headless:true,args:['--use-mock-keychain','--password-store=basic']})
-  const db=await h.mf.getD1Database('DB'),dir=process.env.MALLET_SECURITY_PROOF_DIR??'.cache/security-browser';await mkdir(dir,{recursive:true})
+  browser=await chromium.launch({headless:true,args:['--use-mock-keychain','--password-store=basic']})
+  const admin=await h.person('synthetic-mallet-27-admin@example.test','admin');const db=await h.mf.getD1Database('DB'),dir=process.env.MALLET_SECURITY_PROOF_DIR??'.cache/security-browser';await mkdir(dir,{recursive:true})
   const context=await browser.newContext();await context.addCookies(cookies(h,h.owner));const p=await context.newPage()
   const shot=async name=>{for(const width of [1440,390]){await p.setViewportSize({width,height:1000});assert.ok(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),name+' fits '+width);await p.screenshot({path:join(dir,name+'-'+width+'.png'),fullPage:true})}}
+  await p.goto(h.origin+'/setup');await p.getByRole('link',{name:'enrol your own authenticator app or passkey'}).waitFor();await shot('setup-01-factor-prompt');await p.getByLabel('Sales tax rate (%)',{exact:true}).fill('7.5');await p.getByLabel('I confirm this owner account is ready to use.').check();await p.getByRole('button',{name:'Finish setup'}).click();await p.waitForURL('**/app/jobs');
   const cdp=await context.newCDPSession(p);await cdp.send('WebAuthn.enable');await cdp.send('WebAuthn.addVirtualAuthenticator',{options:{protocol:'ctap2',transport:'internal',hasResidentKey:true,hasUserVerification:true,isUserVerified:true,automaticPresenceSimulation:true}})
   // Authenticator app: the key is shown to the person, the code proves they hold it, recovery codes appear once.
+  await p.goto(h.origin+'/app/security?stepUp=1&returnTo=%2Fapp%2Fdata');await p.getByRole('link',{name:'Sign in to confirm'}).waitFor();await shot('security-00-fresh-sign-in');
   await p.goto(h.origin+'/app/data');await p.getByRole('link',{name:'Open security'}).click();await shot('security-01-none')
   await p.getByRole('button',{name:'Set up an authenticator app'}).click();const key=await p.locator('[data-totp-key]').innerText();await shot('security-02-authenticator-key')
   await p.getByLabel('Six-digit code').fill(totpCode(key));await p.getByRole('button',{name:'Confirm authenticator app'}).click()
-  assert.match(await p.locator('main').innerText(),/Save your recovery codes/);assert.equal((await p.locator('pre').innerText()).trim().split('\n').length,8);await shot('security-03-recovery-codes')
+  assert.match(await p.locator('main').innerText(),/Save your recovery codes/);const recoveryCodes=(await p.locator('pre').innerText()).trim().split('\n');assert.equal(recoveryCodes.length,8);await shot('security-03-recovery-codes')
+  const recoveredCookie=await h.signInAs((await h.api('/auth/session')).operator.email);assert.equal((await h.request('/api/mallet/security/verify/recovery',{method:'POST',as:recoveredCookie,body:{code:recoveryCodes[0]}})).status,200)
+  const adminContext=await browser.newContext();await adminContext.addCookies(cookies(h,admin.cookie));const adminPage=await adminContext.newPage();await adminPage.goto(h.origin+'/app/security');await adminPage.getByRole('heading',{name:'Account recovery notices'}).waitFor();for(const width of [1440,390]){await adminPage.setViewportSize({width,height:1000});assert.ok(await adminPage.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));await adminPage.screenshot({path:join(dir,'security-03-admin-recovery-'+width+'.png'),fullPage:true})}await adminContext.close()
   await p.getByRole('link',{name:'Continue'}).click()
   // Passkey: the browser's authenticator signs; the page needs no secret typed.
   await p.getByLabel('Passkey name').fill('Work laptop');await p.getByRole('button',{name:'Add a passkey'}).click();await p.getByText('Work laptop · Passkey').waitFor();await shot('security-04-two-factors')

@@ -17,10 +17,10 @@ export async function chaseJourney(){
   // Configure expiry and reminder steps (owner/advisor only, validated before expiry).
   await h.command('chasePolicy.save',{linkDays:10,reminderDays:[2,5]},{...T,status:403})
   await h.command('chasePolicy.save',{linkDays:5,reminderDays:[2,5]},{...ADV,status:400})
-  const policy=await h.command('chasePolicy.save',{linkDays:10,reminderDays:[2,5]},ADV);assert.deepEqual([policy.linkDays,policy.reminderDays],[10,[2,5]])
+  await h.command('chasePolicy.save',{linkDays:10,reminderDays:[2,5]},{...ADV,status:400});const policy=await h.command('chasePolicy.save',{linkDays:7,reminderDays:[2,5]},ADV);assert.deepEqual([policy.linkDays,policy.reminderDays],[7,[2,5]])
   const {asset,job}=await booking(h,{technicianId:tech.id});let q=await quote(job)
   const sent=await h.command('approvalLink.create',{estimateId:q.id,version:q.version,revision:1},ADV),email=asset.customerEmail
-  assert.equal(Date.parse(sent.expiresAt)-Date.parse(sent.createdAt),10*DAY,'EST-006 the configured expiry applies to a new link')
+  assert.equal(Date.parse(sent.expiresAt)-Date.parse(sent.createdAt),7*DAY,'EST-006 the configured expiry applies to a new link')
   let chase=await chaseOf(sent.id);assert.deepEqual(chase.steps.map(s=>[s.dueAt,s.status]),[[new Date(at(sent.createdAt,2,0)).toISOString(),'pending'],[new Date(at(sent.createdAt,5,0)).toISOString(),'pending']],'EST-006 the link snapshots its reminder schedule')
   assert.match(h.messages.findLast(m=>m.text?.includes(sent.url)).text,/Stop reminders/,'EST-006 every approval email offers a way to stop reminders')
   await h.cron(at(sent.createdAt,1));assert.equal(reminders(email).length,0,'EST-006 nothing is sent before a step is due')

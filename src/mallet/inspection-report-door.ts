@@ -5,6 +5,7 @@ import {execute,fail,load,rows} from './model'
 import {uploadScope} from './media/storage'
 import type {ChunkRow,UploadRow} from './media/types'
 import {streamMedia} from './media/http'
+import {byteURL,authorizedBytes} from './media/scoped-bytes'
 import {createLink} from './diagnosis-links'
 import {operatorMail} from '../mail.server.mjs'
 import {page} from './ui/shell'
@@ -43,8 +44,11 @@ export async function reportLinkView(request:Request,env:Bindings,s:any,link:any
  const mediaMatch=suffix.match(/^\/media\/([^/]+)$/)
  if(mediaMatch){
   const selected=report.entries.flatMap((entry:any)=>entry.media).find((m:any)=>m.id===mediaMatch[1]);if(!selected)return new Response('Not available',{status:404})
+  const url=new URL(request.url)
+  if(!url.search)return new Response(null,{status:303,headers:{location:await byteURL(env,base,link,selected),'cache-control':'private, no-store','referrer-policy':'no-referrer'}})
+  if(!await authorizedBytes(env,url,link,selected))return new Response('Not available',{status:404,headers:{'cache-control':'no-store'}})
   const guard="EXISTS(SELECT 1 FROM mallet_records WHERE kind='diagnosisLink' AND id=? AND json_extract(value,'$.revokedAt') IS NULL AND json_extract(value,'$.expiresAt')>?) AND EXISTS(SELECT 1 FROM mallet_media_uploads WHERE id=? AND job_id=? AND variant='shared' AND complete=1 AND sha256=?)"
-  const checked=async(sql:string,params:any[])=>{const result=await env.DB.batch([env.DB.prepare('INSERT INTO mallet_assert(ok) SELECT CASE WHEN ('+guard+') THEN 1 ELSE 0 END').bind(link.id,new Date().toISOString(),selected.id,link.jobId,selected.sha256),env.DB.prepare(sql).bind(...params),env.DB.prepare('DELETE FROM mallet_assert')]);return result[1].results}
+  const checked=async(sql:string,params:any[])=>{if(!await authorizedBytes(env,url,link,selected))throw Error('expired');const result=await env.DB.batch([env.DB.prepare('INSERT INTO mallet_assert(ok) SELECT CASE WHEN ('+guard+') THEN 1 ELSE 0 END').bind(link.id,new Date().toISOString(),selected.id,link.jobId,selected.sha256),env.DB.prepare(sql).bind(...params),env.DB.prepare('DELETE FROM mallet_assert')]);return result[1].results}
   try{const uploads=await checked('SELECT * FROM mallet_media_uploads WHERE id=?',[selected.id]),row=uploads[0] as unknown as UploadRow
    return await streamMedia(request,row,async(first,last)=>(await checked('SELECT ordinal,sha256,byte_length,base64 FROM mallet_media_chunks WHERE upload_id=? AND ordinal>=? AND ordinal<=? ORDER BY ordinal LIMIT 12',[selected.id,first,last])) as unknown as ChunkRow[])
   }catch{return new Response('Not available',{status:404,headers:{'cache-control':'no-store'}})}

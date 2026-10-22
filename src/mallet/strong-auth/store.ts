@@ -5,6 +5,7 @@ import {HttpError} from '../auth'
 import {b64,open,seal} from './secret-box'
 import {base32,matchStep,otpauth} from './totp'
 import {challengeBytes,PasskeyError,verifyAssertion,verifyRegistration} from './webauthn'
+import {notifyRecovery} from './recovery-notice'
 export const STEP_UP_MS=5*60*1000
 const ATTEMPT_LIMIT=8,ATTEMPT_WINDOW=15*60*1000,CHALLENGE_MS=5*60*1000,PENDING_MS=15*60*1000
 export type Who={id:string;name:string;email?:string;role:string}
@@ -25,7 +26,7 @@ const live=(session:string,operator:string,now:string)=>`EXISTS(SELECT 1 FROM oa
 /** Record a proof on a still-live session. Only a factor (not a recovery code) refreshes the step-up window. */
 export async function prove(db:D1Database,sessionId:string,operatorId:string,method:string,stepUp:boolean){
  const now=Date.now(),until=stepUp?now+STEP_UP_MS:0
- const result=await db.prepare(`INSERT INTO mallet_session_proofs(session_id,operator_id,method,proven_at,step_up_until) SELECT ?1,?2,?4,?3,?5 WHERE ${live('?1','?2','?3')} ON CONFLICT(session_id) DO UPDATE SET step_up_until=MAX(mallet_session_proofs.step_up_until,excluded.step_up_until)`).bind(sessionId,operatorId,now,method,until).run()
+ const result=await db.prepare(`INSERT INTO mallet_session_proofs(session_id,operator_id,method,proven_at,step_up_until) SELECT ?1,?2,?4,?3,?5 WHERE ${live('?1','?2','?3')} ON CONFLICT(session_id) DO UPDATE SET method=excluded.method,proven_at=excluded.proven_at,step_up_until=MAX(mallet_session_proofs.step_up_until,excluded.step_up_until)`).bind(sessionId,operatorId,now,method,until).run()
  if(!result.meta.changes)throw new HttpError(401,'sign_in_required')
 }
 async function endOtherSessions(db:D1Database,operatorId:string,keep:string){
@@ -131,6 +132,7 @@ export async function verifyRecovery(env:Bindings,who:Who,sessionId:string,code:
  if(!used.meta.changes)throw new HttpError(403,'invalid_code','That code is not valid.')
  await prove(env.DB,sessionId,who.id,'recovery',false);await clearAttempts(env.DB,key)
  await audit(env.DB,who.id,'recovery.used',{remaining:await recoveryRemaining(env.DB,who.id)}).run()
+ await notifyRecovery(env,who,who,'single-use recovery code')
  return {proven:true,method:'recovery',recoveryRemaining:await recoveryRemaining(env.DB,who.id)}
 }
 // ---- management (callers have already required a fresh step-up)
@@ -157,5 +159,6 @@ export async function resetFactors(env:Bindings,by:Who,target:Who,keepSession:st
   env.DB.prepare('UPDATE oa_sessions SET revoked_at=? WHERE operator_id=? AND id IS NOT ? AND revoked_at IS NULL').bind(Date.now(),target.id,keepSession),
   audit(env.DB,by.id,'factors.reset',{targetId:target.id,reason}),
  ])
+ await notifyRecovery(env,by,target,reason)
  return {reset:target.id}
 }

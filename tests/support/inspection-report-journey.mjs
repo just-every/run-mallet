@@ -46,9 +46,10 @@ export async function inspectionReportJourney(h){
  for(const shown of ['Front brake pads','Urgency: red','Pad thickness: 2.5 mm',entry.explanation,'does not approve or decline'])assert.ok(html.includes(shown),'Report shows '+shown)
  for(const hidden of [coilDiagnosis.staffNote,'38.12',photo.id,originalVideo.id,'cedar@example.test','Cedar Bikes','costCents','originalId','Morgan Workshop'])assert.ok(!html.includes(hidden),'Report hides '+hidden)
  assert.equal(response.headers.get('cache-control'),'private, no-store');assert.match(response.headers.get('content-security-policy'),/media-src 'self'/)
- const media=await h.request(path+'/media/'+sharedVideo.id,{as:'',headers:{range:'bytes=0-99'}});assert.equal(media.status,206);assert.deepEqual(Buffer.from(await media.arrayBuffer()),bytes.subarray(0,100))
- const all=await h.request(path+'/media/'+sharedVideo.id,{as:''});assert.deepEqual(Buffer.from(await all.arrayBuffer()),bytes)
- const image=await h.request(path+'/media/'+sharedPhoto.id,{as:''});assert.equal(image.status,200);assert.equal(createHash('sha256').update(Buffer.from(await image.arrayBuffer())).digest('hex'),sharedPhoto.sha256)
+ const grant=await h.request(path+'/media/'+sharedVideo.id,{as:''});assert.equal(grant.status,303);const bytePath=grant.headers.get('location');assert.ok(Number(new URL(bytePath,h.origin).searchParams.get('until'))<=Date.now()+5*60*1000);assert.equal((await h.request(bytePath.replace(/proof=[^&]+/,'proof='+'A'.repeat(43)),{as:''})).status,404);assert.equal((await h.request(bytePath.replace(/until=[0-9]+/,'until=1'),{as:''})).status,404);
+ const media=await h.request(bytePath,{as:'',headers:{range:'bytes=0-99'}});assert.equal(media.status,206);assert.deepEqual(Buffer.from(await media.arrayBuffer()),bytes.subarray(0,100))
+ const all=await h.request(bytePath,{as:''});assert.deepEqual(Buffer.from(await all.arrayBuffer()),bytes)
+ const imageGrant=await h.request(path+'/media/'+sharedPhoto.id,{as:''});assert.equal(imageGrant.status,303);const image=await h.request(imageGrant.headers.get('location'),{as:''});assert.equal(image.status,200);assert.equal(createHash('sha256').update(Buffer.from(await image.arrayBuffer())).digest('hex'),sharedPhoto.sha256)
  for(const id of [photo.id,originalVideo.id,randomUUID()])assert.equal((await h.request(path+'/media/'+id,{as:''})).status,404)
  assert.equal((await h.request(path+'/media/'+sharedVideo.id,{as:'',method:'POST',body:{}})).status,405)
  const proposal=await h.request(path+'/proposal/'+report.entries[0].id,{as:''}),proposed=await proposal.text();assert.equal(proposal.status,200);assert.ok(proposed.includes(entry.lineIds[0])===false);assert.ok(proposed.includes(ready.quote.revisions[0].lines[0].description));assert.ok(!proposed.includes(ready.quote.revisions[0].lines[1].description));assert.ok(!proposed.includes('costCents'));assert.equal(report.entries[0].proposal.lines[0].unitDiscountCents,500);assert.equal(report.entries[0].proposal.lines[0].totalCents,4300);assert.ok(proposed.includes('per-unit discount $5.00'));assert.ok(proposed.includes('line total $43.00'))
@@ -64,7 +65,7 @@ export async function inspectionReportJourney(h){
  const stranger=await booking(h,{asset:await h.command('asset.create',assetInput('GOV5-OTHER')),startAt:'2026-10-26T09:00:00Z',endAt:'2026-10-26T10:00:00Z'}),strangerPhoto=await inspectionPhoto(h,stranger.job.id,h.owner,'Other customer pads')
  assert.equal((await h.request(path+'/media/'+strangerPhoto.id,{as:''})).status,404,'GOV-005 another customer media is not served through this link')
  const link=(await h.state()).records.diagnosisLink.find(l=>l.id===delivery.linkId);await h.command('diagnosisLink.revoke',{linkId:link.id,version:link.version})
- const revoked=await h.request(path,{as:''}),unknown=await h.request('/inspection/'+'A'.repeat(43),{as:''});assert.equal(revoked.status,404);assert.equal(await revoked.text(),await unknown.text());assert.equal((await h.request(path+'/media/'+sharedVideo.id,{as:''})).status,404)
+ const revoked=await h.request(path,{as:''}),unknown=await h.request('/inspection/'+'A'.repeat(43),{as:''});assert.equal(revoked.status,404);assert.equal(await revoked.text(),await unknown.text());assert.equal((await h.request(path+'/media/'+sharedVideo.id,{as:''})).status,404);assert.equal((await h.request(bytePath,{as:''})).status,404)
  return ready
 }
 

@@ -17,7 +17,7 @@ async function input(request:Request){
  if(type.startsWith('application/x-www-form-urlencoded'))return {form:true,value:Object.fromEntries(new URLSearchParams(text)) as any}
  throw new HttpError(415,'json_required')
 }
-const localPath=(value:unknown)=>typeof value==='string'&&/^\/app(\/[A-Za-z0-9._~%\-/]*)?(\?[A-Za-z0-9._~%\-=&]*)?(#[A-Za-z0-9\-_]*)?$/.test(value)?value:'/app/security'
+const localPath=(value:unknown)=>value==='/setup'?'/setup':typeof value==='string'&&/^\/app(\/[A-Za-z0-9._~%\-/]*)?(\?[A-Za-z0-9._~%\-=&]*)?(#[A-Za-z0-9\-_]*)?$/.test(value)?value:'/app/security'
 async function who(env:Bindings,auth:Identity):Promise<Who&{email?:string}>{
  const row=await env.DB.prepare('SELECT email FROM oa_operators WHERE id=?').bind(auth.actor.id).first<{email:string}>()
  return {id:auth.actor.id,name:auth.actor.name,role:auth.actor.role,email:row?.email}
@@ -28,7 +28,8 @@ async function status(env:Bindings,auth:Identity){
  const operators=auth.actor.role==='owner'?(await env.DB.prepare("SELECT o.id,o.display_name AS name,o.role,(SELECT COUNT(*) FROM mallet_factors f WHERE f.operator_id=o.id AND f.revoked_at IS NULL) AS factors FROM oa_operators o WHERE o.status='active' ORDER BY o.created_at,o.id").all()).results:undefined
  return {actor:{id:me,name:auth.actor.name,role:auth.actor.role},policy:await policy(env.DB),factors:list,recoveryCodesRemaining:await recoveryRemaining(env.DB,me),
   session:{proven:!!auth.gate?.proven,required:!!(auth.gate?.required||auth.gate?.enrolled),stepUpUntil:auth.gate?.stepUpUntil&&auth.gate.stepUpUntil!==Infinity?auth.gate.stepUpUntil:0,deploymentRecovery:!!auth.gate?.recovery},
-  pendingTotp:pending?{secret:pending.secret,uri:pending.uri}:null,operators}
+  pendingTotp:pending?{secret:pending.secret,uri:pending.uri}:null,operators,
+  notices:auth.actor.role==='owner'||auth.actor.role==='admin'?(await env.DB.prepare("SELECT value,created_at AS at FROM oa_auth_audit WHERE action='mallet:recovery.notice' AND json_extract(value,'$.recipientId')=? ORDER BY created_at DESC LIMIT 20").bind(me).all<{value:string;at:number}>()).results.map(row=>({...JSON.parse(row.value),at:row.at})):[]}
 }
 async function act(env:Bindings,auth:Identity,action:string,body:any){
  const me=await who(env,auth),session=auth.session!,gate=auth.gate!,enrolled=gate.enrolled

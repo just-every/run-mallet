@@ -225,6 +225,7 @@ export async function malletResponse(request:Request,original:Bindings,execution
    const data=path==='/app/actions'?formInput(await nativeForm(request)):await body(request),command=String(data.command),input=data.input??data
    submitted={command,input}
    let result:any
+   if(['connector.save','connector.revoke'].includes(command)&&actor.role==='owner'&&!auth.gate?.enrolled)throw new HttpError(403,'step_up_required','Enrol your own second factor before opening the credential door.')
    if(needsStepUp(command,actor.role))auth.authority=requireStepUp(auth)
    if(internalWaitlistCommands.includes(command)||internalReportCommands.includes(command)||internalBookingCommands.includes(command)||internalCheckInCommands.includes(command)||internalRefundCommands.includes(command)||internalIntakeFormCommands.includes(command)||command==='payment.verified'||command==='routing.sweep'||internalPromiseCommands.includes(command)||internalApprovalCommands.includes(command)||internalChaseCommands.includes(command))throw new HttpError(404,'unknown_command')
    if(command.startsWith('waitlist.'))result=await waitlistCommand(env,request,actor,auth.authority,command,input)

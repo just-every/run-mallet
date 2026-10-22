@@ -76,7 +76,7 @@ export async function secondFactorJourney(h) {
  const exported=JSON.stringify(await archive(h));for(const secret of [begun.secret,code,device.credentialId,'secret_box'])assert.ok(!exported.includes(secret),'GOV-004 archives carry no second-factor material: '+secret)
 }
 export async function policyRecoveryJourney(h) {
- const db=await h.mf.getD1Database('DB'),owner=await h.api('/auth/session'),email=owner.operator.email,member=await h.person('synthetic-mallet-gov4-1@example.test'),ownerSecond=await signIn(h,email)
+ const db=await h.mf.getD1Database('DB'),owner=await h.api('/auth/session'),email=owner.operator.email,member=await h.person('synthetic-mallet-gov4-1@example.test'),ownerSecond=await signIn(h,email),admin=await h.person('synthetic-mallet-27-admin@example.test','admin')
  await refusal(await posted(h,'policy',{requireAll:true}),409,'owner_factor_required') // an owner without a factor cannot lock everyone out
  const {secret,recoveryCodes}=await h.stepUp();await h.state({as:ownerSecond,status:401})
  await refusal(await posted(h,'policy',{requireAll:true},member.cookie),403,'owner_required')
@@ -89,7 +89,7 @@ export async function policyRecoveryJourney(h) {
  await refusal(await posted(h,'factors/remove',{id:(await h.api(SECURITY.slice(0,-1),undefined,{as:member.cookie})).factors[0].id},member.cookie),409,'last_factor')
  // Lost device: the owner resets that person; their sessions end and old codes verify nothing.
  await refusal(await posted(h,'operators/reset',{operatorId:owner.operator.id},member.cookie),403,'owner_required')
- assert.equal((await posted(h,'operators/reset',{operatorId:member.id})).status,200);await h.state({as:member.cookie,status:401})
+ assert.equal((await posted(h,'operators/reset',{operatorId:member.id})).status,200);const notice=(await h.api('/api/mallet/security',undefined,{as:admin.cookie})).notices.find(n=>n.targetId===member.id);assert.ok(notice,'other admins receive a durable recovery notice');assert.ok(h.messages.some(m=>JSON.stringify(m.to).includes('synthetic-mallet-27-admin@example.test')&&m.subject==='Mallet account recovery notice'));assert.ok((await db.prepare("SELECT value FROM oa_auth_audit WHERE action='mallet:recovery.noticeDelivery'").all()).results.some(r=>JSON.parse(r.value).status==='accepted'));await h.state({as:member.cookie,status:401})
  const again=await signIn(h,'synthetic-mallet-gov4-1@example.test');await refusal(await posted(h,'verify/totp',{code:totpCode(mine.secret,Date.now(),1)},again),409,'no_factor');await h.state({as:again,status:403})
  // Session recovery by mail does not reveal who exists and is paced per address.
  const unknown=await h.request('/auth/magic-link',{method:'POST',as:'',body:{email:'nobody-gov4@example.test'}}),known=await h.request('/auth/magic-link',{method:'POST',as:'',body:{email}});assert.deepEqual([unknown.status,await unknown.json()],[known.status,await known.json()])
@@ -110,7 +110,14 @@ export async function policyRecoveryJourney(h) {
 }
 export async function stepUpJourney(h) {
  await shopSetup(h)
- const db=await h.mf.getD1Database('DB'),owner=await h.stepUp(),expire=()=>db.prepare('UPDATE mallet_session_proofs SET step_up_until=0').run()
+ const db=await h.mf.getD1Database('DB'),email=(await h.api('/auth/session')).operator.email
+ const unfactored=await h.request('/api/mallet/commands',{method:'POST',body:{command:'agent.create',input:{label:'synthetic-mallet-27'}}});assert.equal((await unfactored.json()).error,'step_up_required','No factor never silently passes step-up')
+ const fresh=await signIn(h,email),key=await h.command('agent.create',{label:'synthetic-mallet-27'},{as:fresh});assert.ok(key.token);await h.command('agent.revoke',{id:key.id},{as:fresh})
+ assert.equal((await h.api('/api/mallet/security',undefined,{as:fresh})).factors.length,0,'fresh sign-in confirms without requiring enrollment')
+ await db.prepare('UPDATE mallet_session_proofs SET step_up_until=0').run();const expired=await h.request('/api/mallet/commands',{method:'POST',as:fresh,body:{command:'agent.create',input:{label:'synthetic-mallet-27'}}});assert.equal((await expired.json()).error,'step_up_required')
+ const credential=await h.request('/api/mallet/commands',{method:'POST',as:await signIn(h,email),body:{command:'connector.save',input:{connector:'stripe',name:'STRIPE_SECRET_KEY',credential:'synthetic-mallet-27',acknowledge:1}}});assert.equal((await credential.json()).error,'step_up_required','credentials require enrollment even after fresh sign-in')
+ await db.prepare('DELETE FROM mallet_agent_keys').run()
+ const owner=await h.stepUp(),expire=()=>db.prepare('UPDATE mallet_session_proofs SET step_up_until=0').run()
  const commands=['credit.issue','credit.apply','credit.exchange','refund.record','refund.redirect','refund.submit','refund.reconcile','agent.create','asset.erase','intake.secretReveal','return.override']
  const send=(command,input={},options={})=>h.request('/api/mallet/commands',{method:'POST',body:{command,input},...options})
  await expire();const before=JSON.stringify((await h.state()).records),keys=()=>db.prepare('SELECT COUNT(*) AS n FROM mallet_agent_keys').first()

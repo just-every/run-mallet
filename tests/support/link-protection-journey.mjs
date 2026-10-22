@@ -14,6 +14,7 @@ export async function linkProtectionJourney(h) {
  const setField=(kind,id,field,value)=>db.prepare(`UPDATE mallet_records SET value=json_set(value,'$.${field}',?) WHERE kind=? AND id=?`).bind(value,kind,id).run()
  let q=await estimate(h,job);q=await h.command('estimate.approve',{estimateId:q.id,version:q.version,revision:1})
  const form=await h.command('intakeForm.publish',templateInput()),checkTemplate=await h.command('intakeForm.publish',checkInTemplate)
+ const advisor=await h.person('synthetic-mallet-27-link-advisor@example.test','admin');await h.command('diagnosisLink.create',{jobId:job.id,days:8},{as:advisor.cookie,status:403});await h.command('diagnosisLink.create',{jobId:job.id,days:31});await h.command('diagnosisLink.create',{jobId:job.id,days:32},{status:400})
  let day=2
  const doors=[
   {name:'approve',make:async()=>{const l=await h.command('approvalLink.create',{estimateId:q.id,version:(await read('estimate',q.id)).version,revision:1,days:7});return {id:l.id,path:new URL(l.url).pathname}},

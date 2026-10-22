@@ -3,7 +3,7 @@ import {bump,event,expectVersion,fail,find,integer,put,rows,text,who,type Handle
 import {openJob} from './workshop'
 export const diagnosisCommands=['diagnosis.record','diagnosis.share','diagnosisLink.create','diagnosisLink.revoke'] as const
 export const diagnosisMemberCommands=['diagnosis.record'] as const
-export const LINK_DAYS={min:1,max:30,default:7}
+export const LINK_DAYS={min:1,max:31,default:7}
 const DTC=/^[PBCU][0-3][0-9A-F]{3}$/
 const optional=(v:unknown,label:string,max:number)=>text(v,label,max,true)
 function list(value:unknown,label:string,max:number):any[] {
@@ -42,6 +42,7 @@ export const diagnostics:Handler=(c,command,p)=>{
  }
  if(command==='diagnosisLink.create') {
   const job=find(c.s,'job',p.jobId),days=integer(p.days??LINK_DAYS.default,'link lifetime in days',LINK_DAYS.min,LINK_DAYS.max)
+  if(days>7&&c.actor.role!=='owner')fail('FORBIDDEN','Only the owner may extend a media link beyond seven days.',null,403)
   if(p.reportId){const report=find(c.s,'inspectionReport',p.reportId);if(report.jobId!==job.id)fail('REPORT_SCOPE','This report belongs to another repair.',null,400)}
   const row=put(c.s,'diagnosisLink',{jobId:job.id,...(p.reportId?{reportId:p.reportId}:{}),createdBy:who(c),createdAt:c.now,expiresAt:new Date(Date.parse(c.now)+days*86_400_000).toISOString(),revokedAt:null,revokedBy:null,sentByMallet:false});event(c,command,job.id,row.id,{expiresAt:row.expiresAt});return row
  }

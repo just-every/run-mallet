@@ -6,6 +6,7 @@ import { fontDocumentResponse } from './base/font-response'
 import { createOperatorAuth, createAuthHandler, createSignInHandler, type AuthConfig } from './modules/operator-auth/index.mjs'
 import { operatorMail } from './mail.server.mjs'
 import { authGate } from './mallet/strong-auth/base-gate'
+import { confirmFreshSignIn } from './mallet/strong-auth/sign-in-proof'
 import branding from './branding.json'
 
 // The edition's declared theme (public/rer-theme.css), as Base frames link it.
@@ -87,5 +88,6 @@ async function handleAuthResponse(request: Request, original: Bindings): Promise
 
 export async function authResponse(request: Request, original: Bindings): Promise<Response | null> {
  const response = await handleAuthResponse(request, original)
+ if(response)await confirmFreshSignIn(request,original,response)
  return response ? rejectedResponse(request, response) : null
 }
