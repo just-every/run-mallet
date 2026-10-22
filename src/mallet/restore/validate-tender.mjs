@@ -23,10 +23,12 @@ export async function validateTender({db,records,get,each}){
    const spent=await aggregate('payment','creditNoteId',note.id,"json_extract(value,'$.amountCents')")
    insist(spent<=note.totals.totalCents,'credit_overspent')
   }else{
-   insist(payment.invoiceRevision===invoice.revision&&payment.invoiceTotalCents===invoice.totals.totalCents,'payment_snapshot')
+   // Historical tender keeps its original invoice snapshot. The collection
+   // door separately requires an exact current revision/total before release.
+   insist(whole(payment.invoiceRevision,1,invoice.revision)&&whole(payment.invoiceTotalCents,1)&&payment.amountCents<=payment.invoiceTotalCents&&(payment.invoiceRevision!==invoice.revision||payment.invoiceTotalCents===invoice.totals.totalCents),'payment_snapshot')
    if(payment.method==='stripe'){
     const r=payment.receipt
-    insist(payment.verified===true&&r&&r.provider==='stripe'&&r.invoiceRevision===invoice.revision&&r.amountCents===payment.amountCents&&r.currency==='USD'&&r.status==='succeeded'&&r.captured===true&&r.disputed===false&&r.refunded===false&&typeof r.livemode==='boolean'&&payment.reference==='stripe:'+r.paymentIntentId,'payment_receipt')
+    insist(payment.verified===true&&r&&r.provider==='stripe'&&r.invoiceRevision===payment.invoiceRevision&&r.amountCents===payment.amountCents&&r.currency==='USD'&&r.status==='succeeded'&&r.captured===true&&r.disputed===false&&r.refunded===false&&typeof r.livemode==='boolean'&&payment.reference==='stripe:'+r.paymentIntentId,'payment_receipt')
    }else insist(payment.verified===false,'unverified_tender')
   }
  }
