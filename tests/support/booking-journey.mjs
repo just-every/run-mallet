@@ -11,7 +11,7 @@ export const slotId=(service,slot)=>createHash('sha256').update(JSON.stringify([
 export const holdFields=service=>({action:'hold',serviceId:service.id,...service.windows[0],slotId:slotId(service,service.windows[0]),name:'synthetic-mallet-4',email:'synthetic-mallet-4@example.test',consent:'yes'})
 export async function onlineBookingJourney(h){
  await shopSetup(h);const service=await bookingService(h),input=holdFields(service),before=await h.state()
- assert.equal((await h.request('/book',{as:'',headers:{host:'other.test'}})).status,404,'The public form checks the exact configured host')
+ assert.equal((await h.mf.dispatchFetch('https://other.test/book')).status,404,'The public form checks the exact configured host')
  const page=await h.request('/book',{as:''});assert.equal(page.status,200);assert.match(page.headers.get('content-security-policy'),/frame-ancestors \*/);assert.ok(!(await page.text()).includes(service.windows[0].technicianId),'Staff identity not exposed')
  const member=await h.person('synthetic-mallet-5@example.test'),agent=await h.command('agent.create',{label:'synthetic-mallet-6'})
  await h.command('booking.publish',service,{as:member.cookie,status:403});await h.command('booking.hold',input,{status:404})
