@@ -5,9 +5,9 @@ import {qualityReady} from './support/quality-ready.mjs'
 import {chromium} from '@playwright/test'
 import {installation,assetInput,booking,estimate,authorise} from './harness.mjs'
 export async function customersBrowser(){
- const h=await installation({entry:'tests/worker.ts',network:true,assets:true});let browser
+ const h=await installation({entry:'tests/worker.ts',network:true,assets:true,secureNetwork:true});let browser
  try{
-  browser=await chromium.launch({headless:true,args:['--use-mock-keychain','--password-store=basic']});const context=await browser.newContext({viewport:{width:1440,height:1000}})
+  browser=await chromium.launch({headless:true,args:['--use-mock-keychain','--password-store=basic']});const context=await browser.newContext({ignoreHTTPSErrors:true,viewport:{width:1440,height:1000}})
   const admin=await h.person('customer-browser-admin@example.test','admin')
   await context.addCookies(admin.cookie.split('; ').map(pair=>({name:pair.slice(0,pair.indexOf('=')),value:pair.slice(pair.indexOf('=')+1),url:h.origin})));const p=await context.newPage(),errors=[];p.on('pageerror',e=>errors.push(e.message))
   const directory=process.env.MALLET_CUSTOMERS_PROOF_DIR??'.cache/customers-browser';await mkdir(directory,{recursive:true})
@@ -37,7 +37,7 @@ export async function customersBrowser(){
   current=await h.command('work.record',{jobId:job.id,version:current.version,lineId:q.revisions[0].lines[0].id,quantity:2});await qualityReady(h,current)
   current=await h.command('job.complete',{jobId:job.id,version:current.version});let invoice=await h.command('invoice.prepare',{jobId:job.id,version:current.version})
   invoice=await h.command('invoice.approve',{invoiceId:invoice.id,version:invoice.version});await h.command('payment.record',{invoiceId:invoice.id,version:invoice.version,amountCents:100,method:'cash',reference:'synthetic-mallet-23',evidence:'Counter tender'})
-  const customerContext=await browser.newContext({viewport:{width:1440,height:1000}}),customer=await customerContext.newPage()
+  const customerContext=await browser.newContext({ignoreHTTPSErrors:true,viewport:{width:1440,height:1000}}),customer=await customerContext.newPage()
   const customerShot=async(name)=>{for(const width of [1440,390]){await customer.setViewportSize({width,height:1000});assert.ok(await customer.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),name+' no overflow at '+width);await customer.locator('main').screenshot({path:join(directory,name+'-'+width+'.png')})}}
   const customerLogin=async(email)=>{await customer.goto(h.origin+'/portal');await customer.getByLabel('Your email',{exact:true}).fill(email);await customer.getByRole('checkbox').check();await customer.getByRole('button',{name:'Send sign-in email',exact:true}).click();await customer.waitForLoadState('domcontentloaded');const message=h.messages.findLast(m=>JSON.stringify(m.to).includes(email)&&m.text.includes('Cedar Fleet')&&m.subject==='Your Mallet customer account sign-in');assert.ok(message);const url=message.text.match(/https?:\/\/[^\s<>]+\/portal\/confirm\/[A-Za-z0-9_-]+/)[0];await customer.goto(url);await customerShot('07b-confirm-customer-signin');await customer.getByRole('button',{name:'Confirm sign-in',exact:true}).click();await customer.waitForLoadState('domcontentloaded')}
   await customer.goto(h.origin+'/portal');await customerShot('07-customer-signin')
