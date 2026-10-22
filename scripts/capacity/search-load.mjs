@@ -44,7 +44,7 @@ async function workload(config){
   check()
   const target=await install()
   phase='streamed_native_import'
-  const imported=await importCapacity(fixture.lines(),async(path,options)=>{check();return target.request(path,options)},{onProgress:progress=>{completedParts=progress.completed;if(completedParts%250===0)process.send?.({type:'progress',phase,completedParts});check()}})
+  const imported=await importCapacity(fixture.lines(),async(path,options)=>{check();return target.request(path,options)},{onProgress:progress=>{completedParts=progress.completed;phase=progress.phase==='finalizing'?'native_finalize':'streamed_native_import';if(completedParts%250===0||progress.phase==='finalizing')process.send?.({type:'progress',phase,completedParts});check()}})
   if(imported.phase!=='complete')fail('native_import_incomplete')
   phase='native_admin_invite_confirm'
   const sessions=[]
@@ -83,7 +83,7 @@ async function workload(config){
   const report={kind:'mallet-reduced-search-load',gitHead:config.gitHead,node:process.versions.node,incomplete:true,completed:true,gaps,dataset:{...counts,identifierFormat:'plate-and-vin',syntheticPlateIdentifiers:20000,syntheticVinIdentifiers:20000,nativeArchiveRows:fixture.manifest.tables.reduce((n,t)=>n+t.count,0),nativeArchiveParts:fixture.manifest.partCount,completedNativeParts:completedParts},sessions:{concurrent:30,role:'admin',authentication:'native invite/email confirmation',uniqueNativeSessionIds:new Set(ids).size,uniqueOperatorIds:new Set(sessions.map(s=>s.id)).size,sessionIdSetSha256:createHash('sha256').update([...ids].sort().join('\n')).digest('hex')},measurement:{rounds:config.rounds,expectedSamples,firstPageLimit:50,includesColdRequests:true,queryGroups:'name, phone, plate/VIN-in-native-identifier',serverTiming:summary(all),workerRequestLogs:summary(logged),perQueryGroup:Object.fromEntries(Object.entries(groups).map(([group,values])=>[group,summary(values)])),clientWallClockForContextOnly:summary(client),serverP95Within500Ms:p95(all)<=500&&p95(logged)<=500},elapsedMs:Date.now()-config.started}
   report.cleanupCompleted=await cleanup()
   return report
- }catch(error){const cleanupCompleted=await cleanup();return {kind:'mallet-reduced-search-load',gitHead:config.gitHead,incomplete:true,completed:false,dataset:counts,gaps,phase,error:cancelled?'cancelled':error.publicCode??'workload_failed',completedNativeParts:completedParts,cleanupCompleted,elapsedMs:Date.now()-config.started}}
+ }catch(error){const cleanupCompleted=await cleanup();return {kind:'mallet-reduced-search-load',gitHead:config.gitHead,incomplete:true,completed:false,dataset:counts,gaps,phase,error:cancelled?'cancelled':error.publicCode??error.code??error.name??'workload_failed',completedNativeParts:completedParts,cleanupCompleted,elapsedMs:Date.now()-config.started}}
 }
 
 async function main(){
@@ -112,9 +112,14 @@ async function main(){
  if(!result.cleanupCompleted){
   // The detached group and scratch directories were recorded from this child.
   // A failed workload remains failed even after its resources are removed.
-  try{if(process.platform!=='win32')process.kill(-child.pid,'SIGKILL')}catch(error){if(error.code!=='ESRCH')throw error}
+  // The child has exited. Never signal its old group here: its numeric ID may
+  // have been reused. Verify absence before claiming its resources are gone.
+  let groupAbsent=false
+  try{if(process.platform!=='win32')groupAbsent=!execFileSync('ps',['-axo','pgid='],{encoding:'utf8',stdio:['ignore','pipe','ignore']}).trim().split(/\s+/).some(id=>Number(id)===child.pid)}catch{}
   const cleaned=await Promise.allSettled([...resources].map(path=>rm(path,{recursive:true,force:true})))
-  result.cleanupCompleted=resources.size>0&&cleaned.every(r=>r.status==='fulfilled')
+  result.scratchCleanupCompleted=resources.size>0&&cleaned.every(r=>r.status==='fulfilled')
+  result.processGroupAbsent=groupAbsent
+  result.cleanupCompleted=groupAbsent&&result.scratchCleanupCompleted
  }
  const serialized=JSON.stringify(result,null,2)+'\n'
  if(options.output)await writeFile(options.output,serialized,{flag:'wx',mode:0o600})

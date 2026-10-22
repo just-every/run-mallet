@@ -21,6 +21,7 @@ export async function importCapacity(lines,request,{laterJournal,onProgress=()=>
    onProgress({completed:++completed,phase:'staging'})
   }else if(line.kind==='closing'){
    if(!id)throw new Error('Manifest required before closing.')
+   onProgress({completed,phase:'finalizing'})
    const result=await json(`/api/portability/imports/${id}/finalize`,'POST',{archiveHash:line.archiveHash,contentHash:line.contentHash,...(laterJournal?{laterJournal}:{})})
    onProgress({completed,phase:'complete'})
    return result
