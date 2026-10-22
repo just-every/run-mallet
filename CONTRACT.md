@@ -373,7 +373,7 @@ The wider category is evidenced by [Tekmetric shop management](https://www.tekme
 
 ## Homepage claims
 
-Every capability claim on the approved homepage (`src/site/landing/`, checked against br's claims truth table of 18 October 2026, rows 1–59 in page order) maps to the named clauses that promise it. A claim's status is `done` when every mapped clause is done, `missing` when every one is missing, and `partial` otherwise, from the status table below. The sample shop, people, vehicles and figures in the drawings (Buckeye Auto Repair, RO 4127, Ohio's 7.5% sales tax) are illustrations, not claims. 59 claims: 22 done, 16 partial, 21 missing.
+Every capability claim on the approved homepage (`src/site/landing/`, checked against br's claims truth table of 18 October 2026, rows 1–59 in page order) maps to the named clauses that promise it. A claim's status is `done` when every mapped clause is done, `missing` when every one is missing, and `partial` otherwise, from the status table below. The sample shop, people, vehicles and figures in the drawings (Buckeye Auto Repair, RO 4127, Ohio's 7.5% sales tax) are illustrations, not claims. 59 claims: 22 done, 18 partial, 19 missing.
 
 | # | Section | Claim | Clause(s) | Status |
 | --- | --- | --- | --- | --- |
