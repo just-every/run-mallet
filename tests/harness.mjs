@@ -10,11 +10,12 @@ import {totpCode} from './support/second-factor.mjs'
 import {localHttps} from './support/local-https.mjs'
 const bundles={}
 // entry: the Worker under test; bindings: extra Worker bindings (the demo test sets RER_DEMO).
-export async function installation({entry='tests/worker.ts',bindings={},outboundService,mailService,network=false,assets=false,secureNetwork=false,localhost=false}={}) {
+export async function installation({entry='tests/worker.ts',bindings={},outboundService,mailService,network=false,assets=false,secureNetwork=false,localhost=false,onScratch}={}) {
  const bundle=bundles[entry]??=await build({entryPoints:[entry],bundle:true,write:false,format:'esm',platform:'neutral',target:'es2022',external:['node:*','cloudflare:*']})
  const directory=await mkdtemp(join(tmpdir(),'mallet-api-')),setup=randomBytes(32).toString('hex'),messages=[]
  let origin='https://127.0.0.1'
  // Everything the Worker logs, kept for tests that prove a secret never reaches a log.
+ onScratch?.(directory)
  const logs=[];class Capture extends Log{log(message){logs.push(String(message));if(!String(message).startsWith('[mf:'))super.log(message)}}
  const secret=randomBytes(32).toString('hex'),randomVaultKey=randomBytes(32).toString('hex')
  const options=()=>({...convertV4MiniflareOptions({host:'127.0.0.1',...(secureNetwork?{https:true}:{}),port:Number(new URL(origin).port),modules:true,script:bundle.outputFiles[0].text,compatibilityDate:'2026-09-08',compatibilityFlags:['nodejs_compat'],...(assets?{assets:{directory:'public',binding:'ASSETS',run_worker_first:true,routerConfig:{has_user_worker:true}}}:{}),d1Databases:['DB'],r2Buckets:['INTAKE_VAULT'],bindings:{AUTH_ORIGIN:origin,OWNER_EMAIL:'owner@example.test',SESSION_SECRET:secret,INTAKE_VAULT_KEY:randomVaultKey,SETUP_TOKEN:setup,MAIL_PROVIDER:'resend',MAIL_API_KEY:'test-mail-edge',MAIL_FROM:'auth@example.test',...bindings},log:new Capture(LogLevel.INFO),handleStructuredLogs:({message})=>logs.push(String(message)),outboundService:async request=>{if(outboundService&&new URL(request.url).hostname!=='api.resend.com')return outboundService(request);assert.equal(new URL(request.url).hostname,'api.resend.com');const message=await request.json();messages.push(message);return mailService?mailService(message):Response.json({id:randomUUID()})}}),resourcePersistencePath:directory})

@@ -4,9 +4,10 @@
 // The supervisor owns its child process group and enforces a hard deadline;
 // credentials and arbitrary Worker/error output never reach stdout or artifacts.
 import { fork, execFileSync } from 'node:child_process'
-import { writeFile, realpath } from 'node:fs/promises'
+import { writeFile, realpath, rm } from 'node:fs/promises'
 import { dirname, isAbsolute, relative, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import {tmpdir} from 'node:os'
 import { createHash } from 'node:crypto'
 
 const filename=fileURLToPath(import.meta.url),root=resolve(dirname(filename),'../..')
@@ -27,7 +28,7 @@ async function workload(config){
  const cleanup=()=>cleanupPromise??=(async()=>{const all=[...owned];owned.clear();return (await Promise.allSettled(all.map(h=>h.close()))).every(r=>r.status==='fulfilled')})()
  const check=()=>{if(cancelled)fail('cancelled');if(Date.now()>config.deadline)fail('deadline_exceeded')}
  process.once('SIGTERM',()=>{cancelled=true;void cleanup()})
- const install=async()=>{check();const h=await installation();if(cancelled){await h.close();fail('cancelled')}owned.add(h);check();return h}
+ const install=async()=>{check();const h=await installation({onScratch:path=>process.send?.({type:'resource',path})});if(cancelled){await h.close();fail('cancelled')}owned.add(h);check();return h}
  try{
   const source=await install()
   phase='empty_native_export'
@@ -43,7 +44,7 @@ async function workload(config){
   check()
   const target=await install()
   phase='streamed_native_import'
-  const imported=await importCapacity(fixture.lines(),async(path,options)=>{check();return target.request(path,options)},{onProgress:progress=>{completedParts=progress.completed;check()}})
+  const imported=await importCapacity(fixture.lines(),async(path,options)=>{check();return target.request(path,options)},{onProgress:progress=>{completedParts=progress.completed;if(completedParts%250===0)process.send?.({type:'progress',phase,completedParts});check()}})
   if(imported.phase!=='complete')fail('native_import_incomplete')
   phase='native_admin_invite_confirm'
   const sessions=[]
@@ -97,17 +98,24 @@ async function main(){
  if(options.output){options.output=resolve(options.output);const directory=await realpath(dirname(options.output));if(within(await realpath(root),directory))fail('output_must_be_outside_repository');options.output=resolve(directory,options.output.split(/[\\/]/).at(-1))}
  const config={...options,gitHead,started:Date.now()};config.deadline=config.started+options.timeoutMs
  const child=fork(filename,['--worker',JSON.stringify(config)],{cwd:root,detached:process.platform!=='win32',execArgv:[],stdio:['ignore','ignore','ignore','ipc']})
- let result,cancelled=false,hardKill,timer
+ let result,cancelled=false,hardKill,timer;const resources=new Set();let progress={phase:'bootstrap',completedParts:0}
  const stop=()=>{if(cancelled)return;cancelled=true;child.kill('SIGTERM');hardKill=setTimeout(()=>{try{if(process.platform==='win32')child.kill('SIGKILL');else process.kill(-child.pid,'SIGKILL')}catch{}},5000)}
  const interrupt=()=>stop();process.once('SIGINT',interrupt);process.once('SIGTERM',interrupt)
  await new Promise(resolveDone=>{
   timer=setTimeout(stop,options.timeoutMs)
-  child.on('message',message=>{result=message})
+  child.on('message',message=>{if(message?.type==='resource'){const path=resolve(message.path);if(dirname(path)===resolve(tmpdir())&&path.split(/[\\/]/).at(-1).startsWith('mallet-api-'))resources.add(path)}else if(message?.type==='progress'){progress={phase:message.phase,completedParts:message.completedParts};process.stdout.write(JSON.stringify(progress)+'\n')}else result=message})
   child.once('error',()=>resolveDone())
   child.once('exit',()=>resolveDone())
  })
  clearTimeout(timer);clearTimeout(hardKill);process.removeListener('SIGINT',interrupt);process.removeListener('SIGTERM',interrupt)
- if(cancelled||!result)result={kind:'mallet-reduced-search-load',gitHead,incomplete:true,completed:false,dataset:counts,gaps,error:cancelled?'deadline_or_interrupt':'worker_exited_without_result',cleanupCompleted:result?.cleanupCompleted??false,elapsedMs:Date.now()-config.started}
+ if(cancelled||!result)result={kind:'mallet-reduced-search-load',gitHead,incomplete:true,completed:false,dataset:counts,gaps,error:cancelled?'deadline_or_interrupt':'worker_exited_without_result',cleanupCompleted:result?.cleanupCompleted??false,...progress,elapsedMs:Date.now()-config.started}
+ if(!result.cleanupCompleted){
+  // The detached group and scratch directories were recorded from this child.
+  // A failed workload remains failed even after its resources are removed.
+  try{if(process.platform!=='win32')process.kill(-child.pid,'SIGKILL')}catch(error){if(error.code!=='ESRCH')throw error}
+  const cleaned=await Promise.allSettled([...resources].map(path=>rm(path,{recursive:true,force:true})))
+  result.cleanupCompleted=resources.size>0&&cleaned.every(r=>r.status==='fulfilled')
+ }
  const serialized=JSON.stringify(result,null,2)+'\n'
  if(options.output)await writeFile(options.output,serialized,{flag:'wx',mode:0o600})
  process.stdout.write(serialized);if(!result.completed||!result.cleanupCompleted)process.exitCode=1
