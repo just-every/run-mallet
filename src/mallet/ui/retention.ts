@@ -2,7 +2,8 @@ import {box,e,field,form,hidden,rows,select,when} from './common'
 import {retainedNotice} from '../retention/store'
 const scopes:[string,string][]=[['financial','Financial records'],['media','Inspection media'],['personal','Personal profiles'],['import','Import originals'],['all','All customer data']]
 const approved=(label:string)=>`<label class="check"><input type="checkbox" name="consent" value="yes" required> ${e(label)}</label>`
-const countList=(counts:Record<string,unknown>)=>`<dl>${Object.entries(counts).map(([key,value])=>`<dt>${e(key.replace(/([A-Z])/g,' $1'))}</dt><dd>${e(value)}</dd>`).join('')}</dl>`
+const countLabels:Record<string,string>={findings:'Inspection findings',uploads:'Media files',incompleteUploads:'Incomplete uploads',bytes:'Stored bytes',personalProfiles:'Personal profiles',importProfiles:'Imported profiles',unlockKeys:'Unlock keys destroyed',metadataRecords:'Snapshot records redacted',accounts:'Account profiles',contacts:'Contact profiles',sharedContactsRetained:'Shared contacts preserved',records:'Customer records',importJournals:'Import histories'}
+const countList=(counts:Record<string,unknown>)=>`<dl>${Object.entries(counts).filter(([key])=>countLabels[key]).map(([key,value])=>`<dt>${e(countLabels[key])}</dt><dd>${e(value)}</dd>`).join('')}</dl>`
 export function retentionPage(state:any,customerId='',preview?:any,input?:any,result?:any){
  const accounts=rows(state,'customerAccount').filter(a=>!a.mergedInto),account=accounts.find(a=>a.id===customerId),policy=rows(state,'retentionPolicy')[0]
  const selector=`<form method="get" action="/app/retention">${select('Customer account','customerId',accounts.map(a=>[a.id,a.name]),customerId)}<button>Open customer retention</button></form>`
