@@ -85,7 +85,7 @@ export const credits:Handler=(c,command,p)=>{
   if(rows(c.s,'refund').some(r=>r.history.some((h:any)=>h.reference===reference)))fail('REFUND_REPLAY','This reference already records another refund outcome.')
   const note=find(c.s,'creditNote',refund.creditNoteId),currentAccount=creditAccount(c.s,note.accountId)
   if(destination==='account-credit'&&(!currentAccount||accountId!==currentAccount))fail('CREDIT_ACCOUNT','Redirect credit only to the invoice’s same current account.')
-  const redirect={...request,request,status:destination==='account-credit'?'available':'unsubmitted',by:who(c),at:c.now,label:'Owner-recorded failed-refund redirect; no money moved or verified by Mallet.'}
+  const redirect={...request,request,status:destination==='account-credit'?'credited':'unsubmitted',by:who(c),at:c.now,label:'Owner-recorded failed-refund redirect; no money moved or verified by Mallet.'}
   const next=bump(c.s,'refund',refund,{status:'redirected',redirect,history:[...refund.history,{status:'redirected',reference,by:who(c),at:c.now}]})
   event(c,command,refund.jobId,refund.id,{destination,method,amountCents:refund.amountCents});return next
  }

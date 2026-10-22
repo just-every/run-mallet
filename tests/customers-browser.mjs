@@ -102,13 +102,13 @@ export async function refundsBrowser(){
   await p.reload();assert.ok((await p.locator('main').innerText()).includes('stripe · failed'));await shot('16-payer-failed-stripe-refund')
   await h.command('refund.redirect',{refundId:failed.id,version:failed.version,destination:'account-credit',accountId:account.id,reference:'synthetic-mallet-195',consentEvidence:'Private new instruction to redirect to customer credit',confirm:'redirect-refund'})
   await h.command('credit.apply',{creditNoteId:stripeCredit.id,invoiceId:stripeReplacement.invoice.id,version:stripeReplacement.invoice.version,amountCents:326,reference:'synthetic-mallet-196',reason:'Private customer instruction for the second repair',confirm:'apply-credit'})
-  await p.reload();assert.ok((await p.locator('main').innerText()).includes('account-credit · available'));assert.ok(!(await p.locator('main').innerText()).includes('Private new instruction'));await shot('17-payer-redirected-credit-applied')
+  await p.reload();assert.ok((await p.locator('main').innerText()).includes('account-credit · credited'));assert.ok(!(await p.locator('main').innerText()).includes('Private new instruction'));await shot('17-payer-redirected-credit-applied')
   const manualCredit=await issueCredit(h,creditInput(stripeInvoice,stripePayment,'synthetic-mallet-197',stripeInvoice.lines[1]));let manual=(await h.state()).records.refund.find(r=>r.creditNoteId===manualCredit.id)
   manual=await h.command('refund.submit',{refundId:manual.id,version:manual.version,confirm:'send-refund'})
   manual=await h.command('refund.redirect',{refundId:manual.id,version:manual.version,destination:'manual-tender',method:'cash',reference:'synthetic-mallet-198',consentEvidence:'Private new customer cash instruction',confirm:'redirect-refund'})
   await p.reload();assert.ok((await p.locator('main').innerText()).includes('cash · unsubmitted'));await shot('18-payer-redirected-manual-pending')
   await h.command('refund.record',{refundId:manual.id,version:manual.version,status:'refunded',reference:'synthetic-mallet-199',evidence:'Private owner record of cash handed over',confirm:'record-refund'})
-  await p.reload();const recovered=await p.locator('main').innerText();assert.ok(recovered.includes('cash · refunded'));assert.ok(recovered.includes('Refunded $2.15'));assert.ok(!recovered.includes('Private'));await shot('19-payer-redirected-manual-refunded')
+  await p.reload();const recovered=await p.locator('main').innerText();assert.ok(recovered.includes('cash · refunded'));assert.ok(recovered.includes('Refunded $2.15'));assert.ok(recovered.includes('Staff-recorded manual refund'));assert.ok(!recovered.includes('Private'));await shot('19-payer-redirected-manual-refunded')
   assert.deepEqual(errors,[]);await context.close()
  }finally{await browser?.close();await h.close()}
 }
