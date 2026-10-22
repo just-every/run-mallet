@@ -355,5 +355,5 @@ test('GOV-004: authenticator app, passkey and recovery-code sign-in with replay,
 test('GOV-004: owner-required policy, lost-device reset and deployment owner recovery',()=>run(policyRecoveryJourney))
 test('GOV-004: refunds, agent keys, erasure and custody reveals need a fresh second factor and refusals write nothing',()=>run(stepUpJourney))
 test('GOV-004: stolen, revoked and expired customer links look unknown on every door, misses are paced and no link grants payer authority',()=>run(linkProtectionJourney))
-test('GOV-004: authenticator app, passkey, sign-in confirmation and step-up through native forms at 1440/390',securityBrowser)
+test('GOV-004 / GOV-005: authenticator app, passkey, sign-in confirmation, step-up and sealed connector credentials through native forms at 1440/390',securityBrowser)
 test('GOV-005: sealed provider secrets rotate and revoke behind a fresh proof, webhooks prove their origin, and no secret reaches a response, archive, audit row or log',connectorJourney)

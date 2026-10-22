@@ -25,7 +25,7 @@ function target(input:any){
 }
 /** Owner-only, behind a fresh proof: save or rotate. The previous sealed value is overwritten and cannot be recovered. */
 export async function saveSecret(env:Bindings,actor:Actor,authority:Authority,input:any){
- const {c,secret}=target(input),value=String(input.value??'')
+ const {c,secret}=target(input),value=String(input.credential??'')
  if(actor.role!=='owner')throw new HttpError(403,'owner_required')
  if(value.length<8||value.length>4096||/[\s\u0000-\u001f]/.test(value))throw new HttpError(400,'invalid_secret','Enter the credential exactly as your provider issued it.')
  if(Number(input.acknowledge)!==c.version)throw new HttpError(409,'declaration_not_acknowledged',`Read the ${c.name} data-flow declaration (version ${c.version}) and acknowledge it first.`)

@@ -1,4 +1,4 @@
-// GOV-004: the owner sets up an authenticator app and a passkey, a new sign-in confirms before anything opens, and a refund-grade action asks again.
+// GOV-004 / GOV-005: the owner sets up an authenticator app and a passkey, a new sign-in confirms before anything opens, and a refund-grade action asks again.
 import assert from 'node:assert/strict'
 import {mkdir} from 'node:fs/promises'
 import {join} from 'node:path'
@@ -33,5 +33,9 @@ export async function securityBrowser(){
   await db.prepare('UPDATE mallet_factors SET last_step=NULL').run();await p.getByLabel('Six-digit code').fill(totpCode(key));await p.getByRole('button',{name:'Confirm with authenticator app'}).click();await p.waitForURL('**/app/data')
   // Owner policy and the staff list.
   await p.goto(h.origin+'/app/security');await p.getByLabel('Second factor at sign-in').selectOption('yes');await p.getByRole('button',{name:'Save policy'}).click();assert.match(await p.locator('main').innerText(),/Shop policy saved/);await shot('security-07-policy')
+ // GOV-005: declarations are public; the owner saves a sealed payment credential after reading them and never sees it again.
+  await p.goto(h.origin+'/connectors');assert.match(await p.locator('main').innerText(),/What Mallet sends/);await shot('connectors-01-published')
+  await p.goto(h.origin+'/app/connectors');await p.getByLabel('New credential').first().fill('synthetic-mallet-gov5-ui-key');await p.getByLabel(/I have read the Stripe declaration/).check();await p.getByRole('button',{name:'Save credential'}).first().click();await p.waitForLoadState('domcontentloaded')
+assert.match(await p.locator('main').innerText(),/Saved version 1, fingerprint/);assert.ok(!(await p.content()).includes('synthetic-mallet-gov5-ui-key'));await shot('connectors-02-saved')
  }finally{await browser?.close();await h.close()}
 }

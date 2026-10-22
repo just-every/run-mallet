@@ -17,13 +17,13 @@ export async function connectorJourney() {
   const catalogue=()=>h.api('/api/mallet/catalogue'),pier=(n=1)=>assert.equal(calls.filter(c=>c.host==='pier.example.test').at(-n).cookie,current)
   let current=env.PIER;await catalogue();pier()
   // Rotate the supplier credential: refused without the owner, the declaration or a sane value; then the next call uses it and the old one is gone.
-  const save=(value,options={},extra={})=>h.command('connector.save',{connector:'pier',name:'PIER_SESSION',value,acknowledge:1,...extra},options)
+  const save=(value,options={},extra={})=>h.command('connector.save',{connector:'pier',name:'PIER_SESSION',credential:value,acknowledge:1,...extra},options)
   await save('synthetic-mallet-gov5-pier-2',{as:'',status:401});await save('synthetic-mallet-gov5-pier-2',{as:member.cookie,status:403});await save('synthetic-mallet-gov5-pier-2',{as:admin.cookie,status:403})
   await save('synthetic-mallet-gov5-pier-2',{status:409},{acknowledge:0});await save('short',{status:400});await save('has space inside',{status:400})
-  await h.command('connector.save',{connector:'mail',name:'MAIL_API_KEY',value:'synthetic-mallet-gov5-mail',acknowledge:1},{status:409});await h.command('connector.save',{connector:'nobody',name:'X',value:'synthetic-mallet-gov5-x',acknowledge:1},{status:404})
+  await h.command('connector.save',{connector:'mail',name:'MAIL_API_KEY',credential:'synthetic-mallet-gov5-mail',acknowledge:1},{status:409});await h.command('connector.save',{connector:'nobody',name:'X',credential:'synthetic-mallet-gov5-x',acknowledge:1},{status:404})
   const key=await h.command('agent.create',{label:'synthetic-mallet-gov5 agent'});await save('synthetic-mallet-gov5-pier-2',{as:'',headers:{authorization:'Bearer '+key.token},status:403})
   await h.stepUp();await (await h.mf.getD1Database('DB')).prepare('UPDATE mallet_session_proofs SET step_up_until=0').run()
-  const unproven=await h.request('/api/mallet/commands',{method:'POST',body:{command:'connector.save',input:{connector:'pier',name:'PIER_SESSION',value:'synthetic-mallet-gov5-pier-2',acknowledge:1}}});assert.equal((await unproven.json()).error,'step_up_required');await catalogue();pier()
+  const unproven=await h.request('/api/mallet/commands',{method:'POST',body:{command:'connector.save',input:{connector:'pier',name:'PIER_SESSION',credential:'synthetic-mallet-gov5-pier-2',acknowledge:1}}});assert.equal((await unproven.json()).error,'step_up_required');await catalogue();pier()
   const saved=await save('synthetic-mallet-gov5-pier-2');assert.equal(saved.version,1);current='synthetic-mallet-gov5-pier-2';await catalogue();pier()
   const rotated=await save('synthetic-mallet-gov5-pier-3');assert.equal(rotated.version,2);current='synthetic-mallet-gov5-pier-3';await catalogue();pier();assert.ok(!calls.slice(calls.findIndex(c=>c.cookie==='synthetic-mallet-gov5-pier-3')).some(c=>c.cookie===env.PIER||c.cookie==='synthetic-mallet-gov5-pier-2'),'GOV-005 a rotated secret is never used again')
   assert.notEqual(saved.fingerprint,rotated.fingerprint)
@@ -33,17 +33,17 @@ export async function connectorJourney() {
   const refundAttempt=()=>h.command('refund.submit',{refundId:'synthetic-mallet-gov5',version:1},{status:404}).catch(error=>error)
   assert.equal((await h.request('/api/mallet/commands',{method:'POST',body:{command:'refund.submit',input:{refundId:'x',version:1}}})).status,404)
   await h.command('connector.revoke',{connector:'stripe',name:'STRIPE_SECRET_KEY'});assert.equal((await h.api('/api/mallet/commands',{command:'refund.submit',input:{refundId:'x',version:1}},{status:503})).error,'REFUND_CONFIGURATION')
-  await h.command('connector.save',{connector:'stripe',name:'STRIPE_SECRET_KEY',value:'synthetic-mallet-gov5-stripe-2',acknowledge:1});assert.equal((await h.request('/api/mallet/commands',{method:'POST',body:{command:'refund.submit',input:{refundId:'x',version:1}}})).status,404);void refundAttempt
+  await h.command('connector.save',{connector:'stripe',name:'STRIPE_SECRET_KEY',credential:'synthetic-mallet-gov5-stripe-2',acknowledge:1});assert.equal((await h.request('/api/mallet/commands',{method:'POST',body:{command:'refund.submit',input:{refundId:'x',version:1}}})).status,404);void refundAttempt
   // Webhook origin: only the current signing secret opens the door; an old, bad or stale signature opens nothing.
   const endpoint='/api/mallet/inspection-report-events/resend',event={type:'email.delivered',created_at:new Date().toISOString(),data:{email_id:'synthetic-mallet-gov5-msg',to:['synthetic-mallet-gov5@example.test']}}
   const post=(key,options={})=>h.request(endpoint,{method:'POST',as:'',body:event,headers:options.headers??signed(key,event)})
   assert.equal((await post(first)).status,400,'the deployment secret signs until the owner rotates it')
-  await h.command('connector.save',{connector:'mail-events',name:'MAIL_EVENT_KEY',value:second,acknowledge:1})
+  await h.command('connector.save',{connector:'mail-events',name:'MAIL_EVENT_KEY',credential:second,acknowledge:1})
   assert.equal((await post(first)).status,401,'GOV-005 the replaced signing secret opens nothing');assert.equal((await post(second)).status,400)
   assert.equal((await post(second,{headers:{...signed(second,event),'svix-signature':'v1,'+Buffer.alloc(32).toString('base64')}})).status,401,'GOV-005 a bad signature is refused');assert.equal((await post(second,{headers:signed(second,event,randomUUID(),'1')})).status,401,'GOV-005 a stale timestamp is refused')
   const replayed=signed(second,event);assert.equal((await post(second,{headers:replayed})).status,400);assert.equal((await post(second,{headers:replayed})).status,400,'a replay carries no new authority')
   await h.command('connector.revoke',{connector:'mail-events',name:'MAIL_EVENT_KEY'});assert.equal((await post(second)).status,503,'GOV-005 a revoked signing secret fails closed')
-  await h.command('connector.save',{connector:'mail-events',name:'MAIL_EVENT_KEY',value:third,acknowledge:1});assert.equal((await post(third)).status,400)
+  await h.command('connector.save',{connector:'mail-events',name:'MAIL_EVENT_KEY',credential:third,acknowledge:1});assert.equal((await post(third)).status,400)
   // Agent grants rotate too: the new key replaces the old in one step.
   const agent=await h.command('agent.create',{label:'synthetic-mallet-gov5 prep'}),read=token=>h.request('/api/mallet/state',{as:'',headers:{authorization:'Bearer '+token}})
   assert.equal((await read(agent.token)).status,200);await h.command('agent.rotate',{id:agent.id},{as:member.cookie,status:403})
