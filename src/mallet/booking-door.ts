@@ -53,7 +53,7 @@ export async function bookingResponse(request:Request,original:Bindings):Promise
    if(action!=='cancel'){
     const mail=operatorMail(env);let outcome:any={status:'failed',provider:'mail'}
     try{if(mail){const text=`Your appointment is confirmed.\n${row.service.name}\n${row.service.location}\n${shopTime(row.startAt,row.service.timeZone??'America/New_York')} – ${shopTime(row.endAt,row.service.timeZone??'America/New_York')}\nReference: ${row.id}\nManage or cancel: ${env.AUTH_ORIGIN+url.pathname}\nNo repair work or payment is authorized.`;outcome=await mail.send({deliveryId:row.delivery.id,from:String(env.MAIL_FROM??''),to:[row.email],subject:'Your confirmed appointment',text,html:'<p>'+e(text).replaceAll('\n','<br>')+'</p><p><a href="'+e(env.AUTH_ORIGIN+url.pathname)+'">Manage or cancel your appointment</a></p>',headers:{}})}}catch{outcome={status:'uncertain',provider:'mail'}}
-    row=await execute(env.DB,actor,'booking.outcome',{appointmentId:row.id,version:row.version,deliveryId:row.delivery.id,status:outcome.status==='rejected'?'failed':outcome.status,provider:outcome.provider??'mail'},authority)
+    row=await execute(env.DB,actor,'booking.outcome',{appointmentId:row.id,version:row.version,deliveryId:row.delivery.id,status:['rejected','rate_limited'].includes(outcome.status)?'failed':outcome.status,provider:outcome.provider??'mail'},authority)
    }
   }
   const s=await bookingState(env);return view(manage?manageBooking(s,row,url.pathname):publicBooking(s,url.pathname,url.searchParams.get('serviceId')??''),200,!manage)

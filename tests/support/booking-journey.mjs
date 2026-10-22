@@ -59,7 +59,7 @@ export async function bookingFailureJourney(){
  const h=await installation({outboundService:async request=>{assert.equal(new URL(request.url).hostname,'api.sendgrid.com');calls++;return new Response(null,{status:providerStatus})}})
  try{
   await shopSetup(h);const service=await bookingService(h);await h.configure({MAIL_PROVIDER:'sendgrid'})
-  for(const [index,[status,expected]]of [[422,'failed'],[503,'uncertain']].entries()){
+  for(const [index,[status,expected]]of [[422,'failed'],[429,'failed'],[503,'uncertain']].entries()){
    providerStatus=status;const fields=holdFields(service),startAt=new Date(Date.parse(fields.startAt)+index*3600000).toISOString(),slot=slotId(service,{...fields,startAt})
    const held=await bookingPost(h,'/book',{...fields,slotId:slot});assert.equal(held.status,303);const path=held.headers.get('location'),before=calls
    const response=await bookingPost(h,path,{action:'confirm',version:1});assert.equal(response.status,200);assert.match(await response.text(),/email failed or is uncertain; this appointment remains confirmed/)
