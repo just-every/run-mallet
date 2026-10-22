@@ -5,7 +5,7 @@ import {waitlistCommand} from './waitlist-door'
 import {internalWaitlistCommands} from './booking-waitlist'
 import {waitlistFormInput} from './ui/waitlist'
 import {securityResponse} from './strong-auth/door'
-import {requireStepUp,STEP_UP_COMMANDS} from './strong-auth/gate'
+import {requireStepUp,needsStepUp} from './strong-auth/gate'
 import {guardLinks} from './strong-auth/link-guard'
 import {inspectionReportEventResponse} from './inspection-report-events'
 import {inspectionReportInput,sendInspectionReport} from './inspection-report-door'
@@ -221,7 +221,7 @@ export async function malletResponse(request:Request,original:Bindings,execution
    const data=path==='/app/actions'?formInput(await nativeForm(request)):await body(request),command=String(data.command),input=data.input??data
    submitted={command,input}
    let result:any
-   if(STEP_UP_COMMANDS.has(command))auth.authority=requireStepUp(auth)
+   if(needsStepUp(command,actor.role))auth.authority=requireStepUp(auth)
    if(internalWaitlistCommands.includes(command)||internalReportCommands.includes(command)||internalBookingCommands.includes(command)||internalCheckInCommands.includes(command)||internalRefundCommands.includes(command)||internalIntakeFormCommands.includes(command)||command==='payment.verified'||command==='routing.sweep'||internalPromiseCommands.includes(command)||internalApprovalCommands.includes(command)||internalChaseCommands.includes(command))throw new HttpError(404,'unknown_command')
    if(command.startsWith('waitlist.'))result=await waitlistCommand(env,request,actor,auth.authority,command,input)
    else if(command.startsWith('calendar.')||['job.book','dispatch.approve'].includes(command))result=await execute(env.DB,actor as any,command,input,await calendarAuthority(env,command,input,auth.authority))
@@ -259,7 +259,7 @@ export async function malletResponse(request:Request,original:Bindings,execution
    if(command==='inspectionReport.send')return page('Inspection report email',`<section class="card"><p>${e(result.status==='accepted'?'Handed to the mail provider; delivery is not confirmed.':result.status==='development'?'Saved to the development outbox; not sent.':'Send failed or is uncertain. Contact the customer; no automatic retry will occur.')}</p><a href="${e(result.url)}">Open reviewed customer report</a><p><a href="/app/jobs/${e(result.jobId)}#inspection-reports">Return to repair</a></p></section>`,actor,200,{section:'jobs'})
    if(command.startsWith('calendar.')||command.startsWith('waitlist.'))return redirect('/app/calendar')
    if(command==='promise.timeZone'&&input.calendarReturn)return redirect('/app/calendar')
-   if(command==='booking.publish')return redirect('/app/bookings')
+   if(command==='booking.publish'||command==='booking.revokeLink')return redirect('/app/bookings')
    if(command==='checkin.issue')return page('Customer check-in link',`<section class="card"><p>Share this private seven-day, one-request link directly with the customer. No message, booking or payment has been sent. Anyone holding the link can use it.</p><a href="${e(result.url)}">Open customer check-in</a><pre>${e(result.url)}</pre><p><a href="/app/check-ins">Return to check-in queue</a></p></section>`,actor,200,{section:'jobs'})
    if(command==='checkin.confirm'||command==='checkin.revoke')return redirect('/app/check-ins')
    if(command==='intakeForm.create')return page('Customer intake link',`<section class="card"><p>Share this private seven-day link directly with this customer. Mallet has not sent it. Anyone holding it can use it; it will not be shown again.</p><a href="${e(result.url)}">Open customer intake form</a><pre>${e(result.url)}</pre><a href="/app/jobs/${e(input.jobId)}/intake">Return to custody</a></section>`,actor,200,{section:'jobs'})
@@ -369,7 +369,7 @@ export async function malletResponse(request:Request,original:Bindings,execution
   if(isApi)return json({error:code,message:known?error.message:'The operation failed.',details:error instanceof MalletError?error.details:undefined},status)
   if(code==='second_factor_required'||code==='step_up_required') {
    // A person is taken to confirm, then returns to the page they were on to repeat the action.
-   let back=request.method==='GET'?path+url.search:'/app';try{const from=new URL(request.headers.get('referer')??'');if(request.method!=='GET'&&from.origin===env.AUTH_ORIGIN&&from.pathname.startsWith('/app'))back=from.pathname+from.search}catch{}
+   const input=submitted?.input??{},back=request.method==='GET'?path+url.search:typeof input.jobId==='string'?'/app/jobs/'+encodeURIComponent(input.jobId):String(submitted?.command).startsWith('agent.')?'/app/data':submitted?.command==='asset.erase'?'/app/customers':'/app'
    return redirect('/app/security?'+(code==='step_up_required'?'stepUp=1&':'')+'returnTo='+encodeURIComponent(back))
   }
   if(status===401)return redirect('/signin?returnTo='+encodeURIComponent(path))

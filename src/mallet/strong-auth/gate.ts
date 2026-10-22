@@ -23,5 +23,7 @@ export function requireStepUp(auth:{authority:Authority;session?:{id:string};gat
  if(auth.gate.stepUpUntil<=Date.now())throw new HttpError(403,'step_up_required','Confirm with your second factor, then repeat this action.')
  return stepUpAuthority(auth.authority,auth.session.id)
 }
-/** Commands that move money, mint standing authority, reveal custody secrets or destroy records need a fresh proof. */
-export const STEP_UP_COMMANDS=new Set(['credit.issue','credit.apply','credit.exchange','refund.record','refund.redirect','refund.submit','refund.reconcile','agent.create','asset.erase','intake.secretReveal'])
+/** Commands that move money, release a vehicle unpaid, mint standing authority, reveal custody secrets or destroy records need a fresh proof. */
+// The role each command's own rules already admit: anyone else meets that refusal, not a request to confirm.
+export const STEP_UP_COMMANDS=new Map<string,'owner'|'human'>([...['credit.issue','credit.apply','credit.exchange','refund.record','refund.redirect','refund.submit','refund.reconcile','asset.erase','intake.secretReveal','return.override'].map(c=>[c,'owner'] as const),['agent.create','human']])
+export const needsStepUp=(command:string,role:string)=>{const who=STEP_UP_COMMANDS.get(command);return who==='owner'?role==='owner':who==='human'?role==='owner'||role==='admin':false}

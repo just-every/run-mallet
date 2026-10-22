@@ -25,6 +25,8 @@ import {qualityReady} from './support/quality-ready.mjs'
 import {test} from 'node:test'
 import assert from 'node:assert/strict'
 import {portableRepair} from './support/portable-repair.mjs'
+import {securityBrowser} from './security-browser.mjs'
+import {linkProtectionJourney} from './support/link-protection-journey.mjs'
 import {secondFactorJourney,policyRecoveryJourney,stepUpJourney} from './support/strong-auth-journey.mjs'
 import {run,installation,assetInput,booking,estimate,authorise,archive,restore,snapshots} from './harness.mjs'
 
@@ -351,3 +353,5 @@ test('BOOK-002: native day week resources and cancellation offers at 1440 and 39
 test('GOV-004: authenticator app, passkey and recovery-code sign-in with replay, clone, origin and guessing fences',()=>run(secondFactorJourney))
 test('GOV-004: owner-required policy, lost-device reset and deployment owner recovery',()=>run(policyRecoveryJourney))
 test('GOV-004: refunds, agent keys, erasure and custody reveals need a fresh second factor and refusals write nothing',()=>run(stepUpJourney))
+test('GOV-004: stolen, revoked and expired customer links look unknown on every door, misses are paced and no link grants payer authority',()=>run(linkProtectionJourney))
+test('GOV-004: authenticator app, passkey, sign-in confirmation and step-up through native forms at 1440/390',securityBrowser)

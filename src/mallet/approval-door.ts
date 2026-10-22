@@ -63,6 +63,8 @@ export async function approvalResponse(request:Request,original:Bindings):Promis
   return noStore(await page('Review your estimate',approvalPage(link,estimate,job,asset,sharedDiagnoses(s,job.id))))
  }
  if(request.headers.get('origin')!==env.AUTH_ORIGIN)return unavailable(403)
+ // An expired, revoked or superseded link answers a post as it answers a read: nothing of the estimate is shown.
+ if(state!=='active'&&state!=='decided')return unavailable()
  const form=new URLSearchParams(await request.text()),revision=estimate.revisions.find((r:any)=>r.n===link.revision)
  if(form.get('action')==='stop-reminders'){await execute(env.DB,{id:'approval-link:'+link.id,name:'Customer',role:'customer'} as any,'chaseOptOut.customer',{linkId:link.id});return noStore(await stopped())}
  for(const line of revision.lines)if(!['approve','decline'].includes(form.get('line-'+line.id)??''))return noStore(await page('Review your estimate',approvalPage(link,estimate,job,asset,sharedDiagnoses(s,job.id),'Choose approve or decline for every line.'),undefined,400))

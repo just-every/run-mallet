@@ -1,7 +1,7 @@
 import {Miniflare,convertV4MiniflareOptions} from 'miniflare'
 import {unstable_splitSqlQuery} from 'wrangler'
 import {build} from 'esbuild'
-import {randomBytes,randomUUID} from 'node:crypto'
+import {createHmac,randomBytes,randomUUID} from 'node:crypto'
 import {mkdtemp,readFile,readdir,rm} from 'node:fs/promises'
 import {tmpdir} from 'node:os'
 import {join} from 'node:path'
@@ -9,7 +9,7 @@ import assert from 'node:assert/strict'
 import {totpCode} from './support/second-factor.mjs'
 const bundles={}
 // entry: the Worker under test; bindings: extra Worker bindings (the demo test sets RER_DEMO).
-export async function installation({entry='tests/worker.ts',bindings={},outboundService,mailService,network=false,assets=false,secureNetwork=false}={}) {
+export async function installation({entry='tests/worker.ts',bindings={},outboundService,mailService,network=false,assets=false,secureNetwork=false,localhost=false}={}) {
  const bundle=bundles[entry]??=await build({entryPoints:[entry],bundle:true,write:false,format:'esm',platform:'neutral',target:'es2022',external:['node:*','cloudflare:*']})
  const directory=await mkdtemp(join(tmpdir(),'mallet-api-')),setup=randomBytes(32).toString('hex'),messages=[]
  let origin='https://127.0.0.1'
@@ -17,7 +17,7 @@ export async function installation({entry='tests/worker.ts',bindings={},outbound
  const options=()=>({...convertV4MiniflareOptions({host:'127.0.0.1',...(secureNetwork?{https:true}:{}),port:Number(new URL(origin).port),modules:true,script:bundle.outputFiles[0].text,compatibilityDate:'2026-09-08',compatibilityFlags:['nodejs_compat'],...(assets?{assets:{directory:'public',binding:'ASSETS',run_worker_first:true,routerConfig:{has_user_worker:true}}}:{}),d1Databases:['DB'],r2Buckets:['INTAKE_VAULT'],bindings:{AUTH_ORIGIN:origin,OWNER_EMAIL:'owner@example.test',SESSION_SECRET:secret,INTAKE_VAULT_KEY:randomVaultKey,SETUP_TOKEN:setup,MAIL_PROVIDER:'resend',MAIL_API_KEY:'test-mail-edge',MAIL_FROM:'auth@example.test',...bindings},outboundService:async request=>{if(outboundService&&new URL(request.url).hostname!=='api.resend.com')return outboundService(request);assert.equal(new URL(request.url).hostname,'api.resend.com');const message=await request.json();messages.push(message);return mailService?mailService(message):Response.json({id:randomUUID()})}}),resourcePersistencePath:directory})
  const mf=new Miniflare(options())
  try {
-  origin=(network&&!secureNetwork?'http://':'https://')+(await mf.ready).host
+  origin=(network&&!secureNetwork?'http://':'https://')+(localhost?'localhost:'+(await mf.ready).port:(await mf.ready).host)
   await mf.setOptions(options())
   await mf.ready
  }catch(error){await mf.dispose();await rm(directory,{recursive:true,force:true});throw error}
@@ -29,6 +29,12 @@ export async function installation({entry='tests/worker.ts',bindings={},outbound
   const boot=await request('/auth/bootstrap',{method:'POST',body:{token:setup,displayName:'Morgan Workshop'}});assert.equal(boot.status,303,await boot.text())
   owner=boot.headers.getSetCookie().map(x=>x.split(';')[0]).join('; ')
   if(bindings.RER_DEV_KEY){const gate=await request('/__dev/key',{method:'POST',body:{key:bindings.RER_DEV_KEY}});assert.equal(gate.status,204);owner+='; '+gate.headers.getSetCookie().map(x=>x.split(';')[0]).join('; ')}
+  // A further sign-in for an existing person, as a confirmed email link would open it, for browsers that run with mail suppressed.
+  const signInAs=async email=>{
+   const db=await mf.getD1Database('DB'),token=randomBytes(32).toString('base64url'),person=await db.prepare('SELECT id,version FROM oa_operators WHERE email=?').bind(email).first(),now=Date.now(),name=owner.split('; ').map(x=>x.split('=')[0]).find(x=>/operator_session/.test(x))
+   await db.prepare("INSERT INTO oa_sessions(id,token_hash,operator_id,operator_version,kind,created_at,expires_at) VALUES(?,?,?,?,'native',?,?)").bind(randomUUID(),createHmac('sha256',secret).update('session\0'+token).digest('hex'),person.id,person.version,now,now+3600000).run()
+   return name+'='+token
+  }
   // A second factor held by each cookie that asked for one, and the fresh proof a privileged command needs (GOV-004).
   const secrets=new Map()
   const stepUp=async(as=owner)=>{
@@ -55,7 +61,7 @@ export async function installation({entry='tests/worker.ts',bindings={},outbound
   }
   // The Worker's cron door at a chosen scheduled time (EST-006 reminders).
   const cron=async at=>{const result=await (await mf.getWorker()).scheduled({scheduledTime:new Date(at),cron:'*/15 * * * *'});assert.equal(result.outcome,'ok')}
-  return {mf,origin,owner,messages,request,api,command,state,person,cron,stepUp,async configure(values){Object.assign(bindings,values);await mf.setOptions(options());await mf.ready},async close(){await mf.dispose();await rm(directory,{recursive:true,force:true})}}
+  return {mf,origin,owner,messages,request,api,command,state,person,cron,stepUp,signInAs,async configure(values){Object.assign(bindings,values);await mf.setOptions(options());await mf.ready},async close(){await mf.dispose();await rm(directory,{recursive:true,force:true})}}
  }catch(error){await mf.dispose();await rm(directory,{recursive:true,force:true});throw error}
 }
 export async function run(fn,options){const h=await installation(options);try{return await fn(h)}finally{await h.close()}}

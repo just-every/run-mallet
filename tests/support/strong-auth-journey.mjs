@@ -111,18 +111,18 @@ export async function policyRecoveryJourney(h) {
 export async function stepUpJourney(h) {
  await shopSetup(h)
  const db=await h.mf.getD1Database('DB'),owner=await h.stepUp(),expire=()=>db.prepare('UPDATE mallet_session_proofs SET step_up_until=0').run()
- const commands=['credit.issue','credit.apply','credit.exchange','refund.record','refund.redirect','refund.submit','refund.reconcile','agent.create','asset.erase','intake.secretReveal']
+ const commands=['credit.issue','credit.apply','credit.exchange','refund.record','refund.redirect','refund.submit','refund.reconcile','agent.create','asset.erase','intake.secretReveal','return.override']
  const send=(command,input={},options={})=>h.request('/api/mallet/commands',{method:'POST',body:{command,input},...options})
  await expire();const before=JSON.stringify((await h.state()).records),keys=()=>db.prepare('SELECT COUNT(*) AS n FROM mallet_agent_keys').first()
  for(const command of commands){const response=await send(command,{label:'synthetic-mallet-key',assetId:'x',confirm:'ERASE'}),value=await response.json();assert.equal(response.status,403,command);assert.deepEqual(Object.keys(value).sort(),['error','message'],'GOV-004 a refusal carries no shop data');assert.equal(value.error,'step_up_required',command)}
  assert.equal(JSON.stringify((await h.state()).records),before,'GOV-004 refused privileged commands write nothing');assert.equal((await keys()).n,0)
  // A person at a form is taken to confirm and returned to the page they were on.
- const form=await h.mf.dispatchFetch(h.origin+'/app/actions',{method:'POST',redirect:'manual',headers:{origin:h.origin,cookie:h.owner,referer:h.origin+'/app/data','content-type':'application/x-www-form-urlencoded'},body:new URLSearchParams({command:'agent.create',label:'synthetic-mallet-key'}).toString()});assert.equal(form.status,303);assert.equal(form.headers.get('location'),'/app/security?stepUp=1&returnTo=%2Fapp%2Fdata')
+ const form=await h.mf.dispatchFetch(h.origin+'/app/actions',{method:'POST',redirect:'manual',headers:{origin:h.origin,cookie:h.owner,'content-type':'application/x-www-form-urlencoded'},body:new URLSearchParams({command:'agent.create',label:'synthetic-mallet-key'}).toString()});assert.equal(form.status,303);assert.equal(form.headers.get('location'),'/app/security?stepUp=1&returnTo=%2Fapp%2Fdata')
  // Preview is read-only and not gated; an agent key can never hold the proof.
  assert.notEqual((await (await send('credit.preview',{})).json()).error,'step_up_required')
  const agent=await h.stepUp().then(()=>h.command('agent.create',{label:'synthetic-mallet-key'}));assert.equal((await keys()).n,1)
  for(const command of commands.filter(c=>c!=='agent.create'))assert.notEqual((await (await send(command,{})).json()).error,'step_up_required','GOV-004 a fresh proof lifts the gate for '+command)
  await expire()
- const bearer={as:'',headers:{authorization:'Bearer '+agent.token}};for(const command of commands)assert.equal((await send(command,{},bearer)).status,403,'GOV-004 an agent key cannot refund, erase, reveal or mint keys: '+command)
+ const member=await h.person('synthetic-mallet-gov4-3@example.test'),bearer={as:'',headers:{authorization:'Bearer '+agent.token}};for(const command of commands)assert.equal((await (await send(command,{},{as:member.cookie})).json()).error==='step_up_required',false,'GOV-004 a member meets the command’s own refusal, not a confirmation prompt');for(const command of commands)assert.equal((await send(command,{},bearer)).status,403,'GOV-004 an agent key cannot refund, erase, reveal or mint keys: '+command)
  void owner
 }
