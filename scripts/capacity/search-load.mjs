@@ -13,7 +13,7 @@ import { createHash } from 'node:crypto'
 const filename=fileURLToPath(import.meta.url),root=resolve(dirname(filename),'../..')
 const counts={shops:1,customers:30000,contacts:30000,vehicles:40000,repairOrders:1,photos:0,videos:0,stockedSkus:2500}
 const gaps=['Incomplete OPS-002 dataset: one canceled RO, not 56,000 historical ROs per shop; no inspection/media/estimate/decision histories.','One shop only; ten-shop identity/isolation and 300 native staff sessions are unsupported.','No 50 open customer links, board/RO/photo measurements, restart or provider-job timing is exercised.','Plate/VIN queries share the native opaque asset.identifier field; generated identifiers prove neither manufacturer identity nor VIN decoding.','Local Miniflare/D1 evidence does not establish deployed Cloudflare/D1 performance.']
-function fail(code){const error=new Error(code);error.publicCode=code;throw error}
+function fail(code,context){const error=new Error(code);error.publicCode=code;if(context)error.publicContext=context;throw error}
 function git(...args){return execFileSync('git',args,{cwd:root,encoding:'utf8',stdio:['ignore','pipe','ignore']}).trim()}
 const p95=values=>values.length?[...values].sort((a,b)=>a-b)[Math.ceil(values.length*.95)-1]:null
 const summary=values=>({samples:values.length,p95Ms:p95(values),maxMs:values.length?Math.max(...values):null})
@@ -23,7 +23,8 @@ async function workload(config){
  const {installation}=await import('../../tests/harness.mjs')
  const {readEmptyTemplate,capacityArchive}=await import('./archive.mjs')
  const {importCapacity}=await import('./import.mjs')
- const {searchIdentifier,syntheticId}=await import('./dataset.mjs')
+ const {searchIdentifier,businessRecords}=await import('./dataset.mjs')
+ const {buildSearchOracle}=await import('./search-oracle.mjs')
  const owned=new Set();let cancelled=false,phase='bootstrap',completedParts=0,cleanupPromise
  const cleanup=()=>cleanupPromise??=(async()=>{const all=[...owned];owned.clear();return (await Promise.allSettled(all.map(h=>h.close()))).every(r=>r.status==='fulfilled')})()
  const check=()=>{if(cancelled)fail('cancelled');if(Date.now()>config.deadline)fail('deadline_exceeded')}
@@ -42,6 +43,21 @@ async function workload(config){
   phase='bounded_archive_planning'
   const fixture=await capacityArchive(template,{scale:'single-shop',identifierFormat:'plate-and-vin',customers:counts.customers,vehicles:counts.vehicles,repairOrders:1,photosPerRepairOrder:0,videosPerRepairOrder:0,stockedSkus:counts.stockedSkus})
   check()
+  phase='search_oracle_planning'
+  const oracle=buildSearchOracle(businessRecords(fixture.report.generated)),cases=[]
+  if(oracle.accountCount!==counts.customers)fail('oracle_account_inventory_invalid')
+  // All matching/sorting work finishes before native sessions and measured
+  // requests start. Keep every original query, including phone-digit OR hits.
+  for(let round=0;round<config.rounds;round++)for(const group of ['name','phone','plate','vin']){
+   const requests=[]
+   for(let index=0;index<30;index++){
+    check()
+    const customer=(index*997+round*37)%counts.customers+1,vehicle=(index*2+round*1994)%counts.vehicles+1+(group==='vin'?1:0)
+    const query=group==='name'?`Synthetic capacity customer ${customer}`:group==='phone'?`1202555${String(customer).padStart(6,'0')}`:searchIdentifier(vehicle)
+    requests.push({query,expected:oracle.page(query)})
+   }
+   cases.push({round,group,requests})
+  }
   const target=await install()
   phase='streamed_native_import'
   const imported=await importCapacity(fixture.lines(),async(path,options)=>{check();return target.request(path,options)},{onProgress:progress=>{completedParts=progress.completed;phase=progress.phase==='finalizing'?'native_finalize':'streamed_native_import';if(completedParts%250===0||progress.phase==='finalizing')process.send?.({type:'progress',phase,completedParts});check()}})
@@ -60,18 +76,20 @@ async function workload(config){
   const expectedSamples=30*4*config.rounds
   // Every round is a 30-client barrier. Each session has at most one request
   // in flight; all rounds/groups, including cold requests, are measured.
-  for(let round=0;round<config.rounds;round++)for(const group of Object.keys(groups)){
+  for(const {round,group,requests} of cases){
    await Promise.all(sessions.map(async(session,index)=>{
     check()
-    const customer=(index*997+round*37)%counts.customers+1,vehicle=(index*2+round*1994)%counts.vehicles+1+(group==='vin'?1:0)
-    const query=group==='name'?`Synthetic capacity customer ${customer}`:group==='phone'?`1202555${String(customer).padStart(6,'0')}`:searchIdentifier(vehicle)
-    const expected=syntheticId('account',group==='name'||group==='phone'?customer:(vehicle-1)%counts.customers+1)
+    const {query,expected}=requests[index]
     const start=performance.now(),response=await target.request('/api/mallet/accounts?'+new URLSearchParams({q:query}),{as:session.cookie})
     if(response.status!==200){await response.body?.cancel();fail('search_http_'+response.status)}
     const match=/(?:^|,)\s*mallet\s*;\s*dur=([0-9]+(?:\.[0-9]+)?)/i.exec(response.headers.get('server-timing')??'')
     if(!match||!Number.isFinite(Number(match[1])))fail('server_timing_required')
     const result=await response.json()
-    if(!Array.isArray(result.accounts)||result.accounts.length>50||!result.accounts.some(a=>a.id===expected))fail('native_first_page_result_invalid')
+    const actualCount=Array.isArray(result.accounts)?result.accounts.length:null
+    const idsMatch=actualCount===expected.ids.length&&result.accounts.every((account,i)=>account?.id===expected.ids[i])
+    const actualTotal=Number.isSafeInteger(result.total)&&result.total>=0?result.total:null,actualNextPage=Boolean(result.nextCursor)
+    const cursorTypeValid=result.nextCursor===null||typeof result.nextCursor==='string'&&result.nextCursor.length>0
+    if(!idsMatch||actualTotal!==expected.total||actualNextPage!==expected.hasNextPage||!cursorTypeValid)fail('native_first_page_result_invalid',{round,group,sessionIndex:index,expectedCount:expected.ids.length,actualCount,expectedTotal:expected.total,actualTotal,idsMatch,expectedNextPage:expected.hasNextPage,actualNextPage,cursorTypeValid})
     groups[group].push(Number(match[1]));all.push(Number(match[1]));client.push(performance.now()-start)
    }))
   }
@@ -80,10 +98,10 @@ async function workload(config){
   let logged=requestLogs(),waited=0
   while(logged.length<expectedSamples&&waited<2000){check();await new Promise(r=>setTimeout(r,25));waited+=25;logged=requestLogs()}
   if(logged.length!==expectedSamples||all.length!==expectedSamples)fail('captured_worker_timing_count_mismatch')
-  const report={kind:'mallet-reduced-search-load',gitHead:config.gitHead,node:process.versions.node,incomplete:true,completed:true,gaps,dataset:{...counts,identifierFormat:'plate-and-vin',syntheticPlateIdentifiers:20000,syntheticVinIdentifiers:20000,nativeArchiveRows:fixture.manifest.tables.reduce((n,t)=>n+t.count,0),nativeArchiveParts:fixture.manifest.partCount,completedNativeParts:completedParts},sessions:{concurrent:30,role:'admin',authentication:'native invite/email confirmation',uniqueNativeSessionIds:new Set(ids).size,uniqueOperatorIds:new Set(sessions.map(s=>s.id)).size,sessionIdSetSha256:createHash('sha256').update([...ids].sort().join('\n')).digest('hex')},measurement:{rounds:config.rounds,expectedSamples,firstPageLimit:50,includesColdRequests:true,queryGroups:'name, phone, plate/VIN-in-native-identifier',serverTiming:summary(all),workerRequestLogs:summary(logged),perQueryGroup:Object.fromEntries(Object.entries(groups).map(([group,values])=>[group,summary(values)])),clientWallClockForContextOnly:summary(client),serverP95Within500Ms:p95(all)<=500&&p95(logged)<=500},elapsedMs:Date.now()-config.started}
+  const report={kind:'mallet-reduced-search-load',gitHead:config.gitHead,node:process.versions.node,incomplete:true,completed:true,gaps,dataset:{...counts,identifierFormat:'plate-and-vin',syntheticPlateIdentifiers:20000,syntheticVinIdentifiers:20000,nativeArchiveRows:fixture.manifest.tables.reduce((n,t)=>n+t.count,0),nativeArchiveParts:fixture.manifest.partCount,completedNativeParts:completedParts},sessions:{concurrent:30,role:'admin',authentication:'native invite/email confirmation',uniqueNativeSessionIds:new Set(ids).size,uniqueOperatorIds:new Set(sessions.map(s=>s.id)).size,sessionIdSetSha256:createHash('sha256').update([...ids].sort().join('\n')).digest('hex')},measurement:{rounds:config.rounds,expectedSamples,firstPageLimit:50,includesColdRequests:true,expectedPagesPrecomputed:true,oracleSource:'generator business records; ASCII NOCASE name/id order and substring OR phone digits',queryGroups:'name, phone, plate/VIN-in-native-identifier',serverTiming:summary(all),workerRequestLogs:summary(logged),perQueryGroup:Object.fromEntries(Object.entries(groups).map(([group,values])=>[group,summary(values)])),clientWallClockForContextOnly:summary(client),serverP95Within500Ms:p95(all)<=500&&p95(logged)<=500},elapsedMs:Date.now()-config.started}
   report.cleanupCompleted=await cleanup()
   return report
- }catch(error){const cleanupCompleted=await cleanup();return {kind:'mallet-reduced-search-load',gitHead:config.gitHead,incomplete:true,completed:false,dataset:counts,gaps,phase,error:cancelled?'cancelled':error.publicCode??error.code??error.name??'workload_failed',completedNativeParts:completedParts,cleanupCompleted,elapsedMs:Date.now()-config.started}}
+ }catch(error){const cleanupCompleted=await cleanup();return {kind:'mallet-reduced-search-load',gitHead:config.gitHead,incomplete:true,completed:false,dataset:counts,gaps,phase,error:cancelled?'cancelled':error.publicCode??error.code??error.name??'workload_failed',completedNativeParts:completedParts,...(error.publicContext?{failureContext:error.publicContext}:{}),cleanupCompleted,elapsedMs:Date.now()-config.started}}
 }
 
 async function main(){
