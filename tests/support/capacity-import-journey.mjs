@@ -28,7 +28,10 @@ export async function capacityImportJourney(){
  try{
   const template=await readEmptyTemplate((async function*(){for(const line of await archive(source))yield Buffer.from(JSON.stringify(line)+'\n')})())
   const fixture=await capacityArchive(template,{customers:2,vehicles:2,repairOrders:2,photosPerRepairOrder:1,videosPerRepairOrder:1,stockedSkus:2})
+  let replacedGram=false
   const mutations=[
+   ['search gram',(table,row)=>{if(table==='mallet_search_grams'&&!replacedGram){row.gram='☃☃☃';replacedGram=true}}],
+   ['search membership',(table,row)=>{if(table==='mallet_search_members')row.contact_id='missing-contact'}],
    ['unknown kind',(table,row)=>{if(table==='mallet_records'&&row.kind==='job')row.kind='unknownRepair'}],
    ['status',(table,row)=>{if(table==='mallet_records'&&row.kind==='job'){const value=JSON.parse(row.value);value.status='invented';row.value=JSON.stringify(value)}}],
    ['dangling asset',(table,row)=>{if(table==='mallet_records'&&row.kind==='job'){const value=JSON.parse(row.value);value.assetId='missing';row.value=JSON.stringify(value)}}],

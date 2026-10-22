@@ -11,3 +11,5 @@ Customer erasure destroys temporary unlock keys in R2 before processing profiles
 The receipt records actor, consent evidence, counts, held scope and partial progress. A failure requires a fresh review; no destructive action retries in the background. Export a fresh workshop backup after erasure and retain it as the later journal for older backups. A known later epoch or supplied later journal refuses an older archive. A fresh destination without later source evidence cannot establish freshness and labels that history unverified.
 
 GOV-006 remains partial pending ct approval of these conservative retention and eligibility defaults.
+
+Private customer exports also include related reminder/payment-check business jobs and human recovery history. Live lease fencing and excluded customer-link credentials are omitted; financial/authorization audit history remains preserved.

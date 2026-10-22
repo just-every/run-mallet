@@ -1,3 +1,4 @@
+import {workshopPortabilityResponse} from './portability-door'
 import {timedMalletResponse} from './request-timing'
 import {loadRepairState} from './read-model/repair'
 import {searchAccounts} from './read-model/search'
@@ -76,7 +77,7 @@ import type { Bindings } from '../auth.server'
 import { runtimeBindings } from '../auth.server'
 import {boundedJson} from '@runeditrun/rer/modules/portability/http'
 import {MAX_LINE_BYTES} from '@runeditrun/rer/modules/portability/format'
-import { createPortability, createPortabilityHandler } from '@runeditrun/rer/modules/portability'
+import { createPortability } from '@runeditrun/rer/modules/portability'
 import policy from './archive-policy.mjs'
 import {identity,originGuard,human,agentKey,HttpError,type Actor} from './auth'
 import {execute,load,MalletError,type State} from './model'
@@ -214,9 +215,8 @@ async function workshopResponse(request:Request,original:Bindings,execution:Pick
   if(!['GET','POST','PUT','HEAD'].includes(request.method))throw new HttpError(405,'method_not_allowed')
   if(path.startsWith('/api/portability/')) {
    if(actor.role!=='owner')throw new HttpError(403,'owner_required')
-   const handler=await createPortabilityHandler({db:env.DB,policy,appOrigin:env.AUTH_ORIGIN,authorize:async req=>{const current=await identity(req,env);originGuard(req,env,current.bearer);return current.actor.role==='owner'?current.actor.id:null}})
    const finalizing=request.method==='POST'&&/^\/api\/portability\/imports\/[^/]+\/finalize$/.test(path),input:any=finalizing?await boundedJson(request.clone(),MAX_LINE_BYTES):null
-   const response=await handler(request)
+   const response=await workshopPortabilityResponse(request,env)
    if(finalizing&&response?.ok){const result=await response.json() as Record<string,unknown>;return json({...result,erasureHistory:input?.laterJournal?'journal-supplied':'unverified',erasureNotice:input?.laterJournal?'Erasure journal supplied; freshness depends on this being the latest trusted source archive.':UNVERIFIED_ERASURE_HISTORY})}
    return response
   }

@@ -43,8 +43,8 @@ Private staged validation checks record/reference graphs, financial source
 snapshots, exact search projections, media metadata/chunks/digests and job
 recovery authority before publication. Memory is bounded, but native finalization
 still processes all parts in a single invocation. Legacy schema bridging also
-requires Base to pass migration replay into its HTTP portability wrapper; the
-current wrapper rejects an older schema before the product hook is reached.
+requires migration replay in the HTTP portability adapter; the current adapter
+rejects an older schema before the product hook is reached.
 
 Remaining work includes shop identities/isolation, complete declared-volume
 history/media and active sessions, resumable full-volume import, bounded native
