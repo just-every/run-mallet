@@ -1,7 +1,11 @@
 import {event,expectVersion,fail,find,integer,put,rows,text,who,choice,type Handler,type State,type Row} from './model'
 export const paymentCommands=['payment.record','payment.verified'] as const
 export const publicInvoiceSnapshot=(invoice:Row)=>{const {billing,...snapshot}=invoice;return structuredClone(snapshot)}
-export const invoiceBalance=(s:State,i:Row)=>{const payments=rows(s,'payment').filter(p=>p.invoiceId===i.id),paidCents=payments.reduce((n,p)=>n+p.amountCents,0);return {totalCents:i.totals.totalCents,paidCents,outstandingCents:Math.max(0,i.totals.totalCents-paidCents),payments}}
+export const invoiceBalance=(s:State,i:Row)=>{
+ const payments=rows(s,'payment').filter(p=>p.invoiceId===i.id),credits=rows(s,'creditNote').filter(n=>n.invoiceId===i.id),refunds=rows(s,'refund').filter(r=>r.invoiceId===i.id)
+ const creditedCents=credits.reduce((n,r)=>n+r.totals.totalCents,0),refundedCents=refunds.filter(r=>r.status==='refunded').reduce((n,r)=>n+r.amountCents,0),accountCreditCents=credits.filter(n=>n.destination==='account-credit').reduce((n,r)=>n+r.totals.totalCents,0),paidCents=payments.reduce((n,p)=>n+p.amountCents,0)-refundedCents-accountCreditCents
+ return {totalCents:i.totals.totalCents,creditedCents,refundedCents,adjustedTotalCents:i.totals.totalCents-creditedCents,paidCents,outstandingCents:Math.max(0,i.totals.totalCents-creditedCents-paidCents),payments}
+}
 export const payments:Handler=(c,command,p)=>{
  if(!(paymentCommands as readonly string[]).includes(command))return
  if(!['owner','admin'].includes(c.actor.role))fail('FORBIDDEN','Only an owner or service advisor records tender.',null,403)

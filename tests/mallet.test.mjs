@@ -311,3 +311,8 @@ test('RETURN-001: unpaid refusal, processor confirmation, delegate handover and 
 test('PORTAL-001: known and unknown requests answer before mail; address and client limits disclose nothing',async()=>{const {portalRequestJourney}=await import('./support/portal-journey.mjs');await portalRequestJourney()})
 
 test('PORTAL-001: confirmation, separate sessions, sign-out and contact changes fence account access',async()=>{const {portalSessionJourney}=await import('./support/portal-journey.mjs');await portalSessionJourney()})
+
+test('PAY-005 / OPS-001: reviewed original-tender refunds, exact tax credits, exchanges, account isolation and recovery',async()=>{const {refundsJourney}=await import('./support/refunds-journey.mjs');await refundsJourney()})
+test('PAY-005: one approved Stripe refund, uncertain recovery and duplicate or failed provider outcomes',async()=>{const {stripeRefundJourney}=await import('./support/refunds-journey.mjs');await stripeRefundJourney()})
+
+test('PAY-005: full original cash, check and other manual refunds preserve issued invoices and zero the balance',async()=>{const {fullRefundJourney}=await import('./support/refunds-journey.mjs');await fullRefundJourney()})

@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 import {mkdir} from 'node:fs/promises'
 import {join} from 'node:path'
+import {creditInput,issueCredit} from './support/refunds-journey.mjs'
 import {portalMail} from './support/portal-journey.mjs'
 import {qualityReady} from './support/quality-ready.mjs'
 import {chromium} from '@playwright/test'
@@ -44,6 +45,14 @@ export async function customersBrowser(){
   const customerLogin=async(email)=>{const before=h.messages.length;await customer.goto(h.origin+'/portal');await customer.getByLabel('Your email',{exact:true}).fill(email);await customer.getByRole('checkbox').check();await customer.getByRole('button',{name:'Send sign-in email',exact:true}).click();await customer.waitForLoadState('domcontentloaded');await customerShot('07a-signin-requested');const message=await portalMail(h,email,'Cedar Fleet',before);const url=message.text.match(/https?:\/\/[^\s<>]+\/portal\/confirm\/[A-Za-z0-9_-]+/)[0];await customer.goto(url);await customer.reload();assert.ok(!(await customer.locator('main').innerText()).includes(invoice.number));await customerShot('07b-confirm-customer-signin');await customer.getByRole('button',{name:'Confirm sign-in',exact:true}).click();await customer.waitForLoadState('domcontentloaded')}
   await customer.goto(h.origin+'/portal');await customerShot('07-customer-signin')
   await customerLogin(payer.email);assert.ok((await customer.locator('main').innerText()).includes(invoice.number));assert.ok((await customer.locator('main').innerText()).includes('Staff-recorded tender'));await customerShot('08-payer-billing-statement')
+  const remaining=await h.command('payment.record',{invoiceId:invoice.id,version:invoice.version,amountCents:invoice.totals.totalCents-100,method:'cash',reference:'synthetic-mallet-140',evidence:'Remaining original cash tender'})
+  const credit=await issueCredit(h,creditInput(invoice,remaining,'synthetic-mallet-141',invoice.lines[0],1));let refund=(await h.state()).records.refund.find(r=>r.creditNoteId===credit.id)
+  await customer.reload();assert.ok((await customer.locator('main').innerText()).includes(credit.number));assert.ok((await customer.locator('main').innerText()).includes('unsubmitted'));await customerShot('12-payer-pending-refund')
+  for(const [n,status]of ['failed','disputed','refunded'].entries()){
+   refund=await h.command('refund.record',{refundId:refund.id,version:refund.version,status,reference:'synthetic-mallet-'+(142+n),evidence:'Owner recorded cash outcome '+status,confirm:'record-refund'})
+   await customer.reload();assert.ok((await customer.locator('main').innerText()).includes(status));assert.ok((await customer.locator('main').innerText()).includes('Owner recorded; not verified by Mallet'));await customerShot('13-payer-refund-'+status)
+  }
+  const held=await issueCredit(h,creditInput(invoice,null,'synthetic-mallet-145',invoice.lines[0],1));await customer.reload();assert.ok((await customer.locator('main').innerText()).includes(held.number));assert.ok((await customer.locator('main').innerText()).includes('Customer account credit'));await customerShot('14-payer-account-credit')
   await customer.getByRole('button',{name:'Sign out',exact:true}).click();await customer.waitForLoadState('domcontentloaded');await customer.goto(h.origin+'/portal/billing');assert.ok((await customer.locator('main').innerText()).includes('Billing unavailable'));await customerShot('08a-signed-out-denied')
   await customerLogin(payer.email)
   let editedPayer=await h.command('contact.save',{...payer,contactId:payer.id,version:payer.version,email:'changed-payer@example.test'})

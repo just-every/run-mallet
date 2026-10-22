@@ -1,3 +1,5 @@
+import {internalRefundCommands} from './credits'
+import {refundDoor} from './refund-door'
 import {intakeFormResponse,createIntakeFormLink} from './intake-form-door'
 import {internalIntakeFormCommands} from './intake-forms'
 import {intakeTemplatesPage,intakeTemplateInput,signedIntakeReceipt} from './ui/intake-forms'
@@ -98,7 +100,7 @@ function visible(s:State,actor:Actor):State {
  if(!human(actor)){s={...s,records:Object.fromEntries(Object.entries(s.records).filter(([k])=>!['contact','customerAccount','customerMerge','customerBilling'].includes(k)))};s={...s,records:{...s.records,event:rows(s,'event').filter(x=>!x.kind.startsWith('contact.')&&!x.kind.startsWith('customer.')),invoice:rows(s,'invoice').map(i=>{const {billing,...rest}=i;return rest})}}}
  if(!human(actor)){const records=Object.fromEntries(Object.entries(s.records).filter(([k])=>!k.startsWith('stock')&&!k.startsWith('purchase')));s={...s,records:{...records,event:(records.event??[]).filter(x=>!x.kind.startsWith('stock.')&&!x.kind.startsWith('purchase.'))}}}
  if(!human(actor))s={...s,records:{...s.records,event:rows(s,'event').filter(e=>!e.kind.startsWith('routing.'))}}
- if(actor.role!=='owner'){const {payRate:_rates,...records}=s.records;s={...s,records}}
+ if(actor.role!=='owner'){const {payRate:_rates,creditNote:_credits,refund:_refunds,...records}=s.records;s={...s,records:{...records,event:rows(s,'event').filter(x=>!x.kind.startsWith('credit.')&&!x.kind.startsWith('refund.'))}}}
  // Diagnostic notes and customer links are native staff evidence; agents never receive them.
  if(actor.role==='agent'){const {diagnosis:_d,diagnosisLink:_l,diagnosisLinkView:_v,approvalLink:_a,approvalChase:_c,chaseOptOut:_o,chaseTask:_t,...records}=s.records;s={...s,records:{...records,event:rows(s,'event').filter(x=>!x.kind.startsWith('diagnosis'))}}}
  if(actor.role==='agent'){const {routingPolicy:_routingPolicy,routingCase:_routingCase,routingBlocker:_routingBlocker,specialPart:_parts,specialPartNotice:_notices,sublet:_sublets,...records}=s.records;return withoutInspections({...s,records:{...records,event:(records.event??[]).filter(x=>!x.kind.startsWith('sublet.')),invoice:(records.invoice??[]).map(withoutSubletCosts)}})}
@@ -190,8 +192,9 @@ export async function malletResponse(request:Request,original:Bindings,execution
    const data=path==='/app/actions'?formInput(await nativeForm(request)):await body(request),command=String(data.command),input=data.input??data
    submitted={command,input}
    let result:any
-   if(internalIntakeFormCommands.includes(command)||command==='payment.verified'||command==='routing.sweep'||internalPromiseCommands.includes(command)||internalApprovalCommands.includes(command)||internalChaseCommands.includes(command))throw new HttpError(404,'unknown_command')
+   if(internalRefundCommands.includes(command)||internalIntakeFormCommands.includes(command)||command==='payment.verified'||command==='routing.sweep'||internalPromiseCommands.includes(command)||internalApprovalCommands.includes(command)||internalChaseCommands.includes(command))throw new HttpError(404,'unknown_command')
    if(command==='intakeForm.create')result=await createIntakeFormLink(env,actor,auth.authority,input)
+   else if(command==='refund.submit'||command==='refund.reconcile')result=await refundDoor(env,actor,auth.authority,command,input)
    else if(command==='payment.verifyStripe')result=await verifyStripePayment(env,actor,auth.authority,input)
    else if(command==='flow.collect'){const checked=await collectionInput(env,actor,input,auth.authority);result=await execute(env.DB,actor as any,command,checked.input,checked.authority);await env.DB.prepare('DELETE FROM mallet_intake_secrets WHERE job_id=?').bind(input.jobId).run()}
    else if(['intake.secretStore','intake.secretReveal','intake.secretEnd'].includes(command))result=await intakeSecret(env,actor,auth.authority,command,input)
