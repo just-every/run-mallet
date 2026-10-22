@@ -8,7 +8,7 @@
   ],
   "triggers": {
     "crons": [
-      "*/15 * * * *"
+      "* * * * *"
     ]
   },
   "d1_databases": [

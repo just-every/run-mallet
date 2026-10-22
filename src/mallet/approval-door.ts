@@ -1,3 +1,4 @@
+import {runReminderJobs} from './jobs/reminders'
 import {runtimeBindings,type Bindings} from '../auth.server'
 import {operatorMail} from '../mail.server.mjs'
 import {digest,HttpError,type Actor,type Authority} from './auth'
@@ -23,23 +24,8 @@ export async function sendApprovalLink(env:any,actor:Actor,authority:Authority,i
  const recorded=await execute(env.DB,actor as any,'approvalLink.delivery',{linkId:link.id,version:link.version,status:outcome.status,provider:outcome.provider,providerMessageId:outcome.providerMessageId},authority)
  return {...recorded,url}
 }
-const SCHEDULER={id:'mallet-scheduler',name:'Scheduled reminders',role:'system'} as any
-/** EST-006 cron: claim due steps in one write, then make one provider call per claim and record its answer as given. */
-export async function runApprovalChase(original:Bindings,at:number) {
- const env:any=runtimeBindings(original),now=new Date(at).toISOString(),mail=operatorMail(env)
- const claims=await execute(env.DB,SCHEDULER,'approvalChase.sweep',{},undefined,now)
- for(const claim of claims) {
-  let outcome:any={status:'unavailable',provider:'none',providerMessageId:null}
-  if(mail) {
-   const token=newToken(),url=`${env.AUTH_ORIGIN}/approve/${token}`,job=rows(await load(env.DB),'job').find(j=>j.id===claim.jobId)
-   await env.DB.prepare('INSERT INTO mallet_approval_reminder_tokens(token_hash,link_id,created_at) VALUES(?,?,?)').bind(await digest(token),claim.linkId,now).run()
-   try{outcome=await mail.send({deliveryId:`${claim.chaseId}:${claim.step}`,from:env.MAIL_FROM,to:[claim.to],subject:`Reminder: your repair estimate is waiting: ${job?.title??'repair'}`,text:`Your repair shop is still waiting for your decision on this estimate.\n\n${url}\n\nThis link expires ${claim.expiresAt} (UTC). ${STOP_NOTE}`,html:`<p>Your repair shop is still waiting for your decision on this estimate.</p><p><a href="${url}">Review the estimate</a></p><p>This link expires ${claim.expiresAt} (UTC). ${STOP_NOTE}</p>`,headers:{}})}
-   catch{outcome={status:'uncertain',provider:String(env.MAIL_PROVIDER??'mail'),providerMessageId:null}}
-  }
-  await execute(env.DB,SCHEDULER,'approvalChase.outcome',{chaseId:claim.chaseId,step:claim.step,status:outcome.status,provider:outcome.provider,providerMessageId:outcome.providerMessageId},undefined,now)
- }
- return claims.length
-}
+/** Durable intents, bounded leases and outcome recovery are owned by OPS-002. */
+export const runApprovalChase=runReminderJobs
 const stopped=()=>page('Reminders stopped','<section class="card"><p>Your repair shop will not send you automatic estimate reminders. You can still use any open approval link, and the shop may still contact you about your repair.</p></section>',undefined,200,{heading:false})
 const unavailable=(status=404)=>page('Link not available','<section class="card"><p>This approval link is not available. Ask your repair shop for a new link.</p></section>',undefined,status,{heading:false})
 // same-origin: the token never leaves in a Referer, while the form's own POST still carries its Origin.

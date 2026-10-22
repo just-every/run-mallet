@@ -361,3 +361,17 @@ test('GOV-005: sealed provider secrets rotate and revoke behind a fresh proof, w
  test('GOV-006: explicit holds, customer erasure, import custody and manual retention survive fresh-owner recovery without resurrecting media',async()=>{const {retentionJourney}=await import('./support/retention-journey.mjs');await run(retentionJourney)})
 
 test('GOV-006: owner reviews financial and media holds, erases eligible photos and releases a hold for manual retention at 1440/390',async()=>{const {retentionBrowser}=await import('./retention-browser.mjs');await retentionBrowser()})
+
+test('OPS-002: durable reminder jobs survive restart, preserve one provider handoff and expose owner recovery',async()=>{const {jobsJourney}=await import('./support/jobs-journey.mjs');await jobsJourney()})
+
+test('OPS-002: account search is paged, indexed, exact across aliases and Unicode, and survives restore',async()=>{const {searchJourney}=await import('./support/search-journey.mjs');await searchJourney()})
+test('OPS-002: approved provider GET jobs survive restart, require explicit replay and deduplicate payment evidence',async()=>{const {providerJobsJourney}=await import('./support/provider-jobs-journey.mjs');await providerJobsJourney()})
+
+test('OPS-002: core RO reads keep lines, inspections and decisions with current crew authority and exact recovery',async()=>{const {repairReadJourney}=await import('./support/repair-read-journey.mjs');await repairReadJourney()})
+test('OPS-002: native capacity import verifies record and media graphs before publishing',async()=>{const {capacityImportJourney}=await import('./support/capacity-import-journey.mjs');await capacityImportJourney()})
+
+test('OPS-002: owner queues, inspects and recovers background jobs through native forms at 1440/390',async()=>{const {jobsBrowser}=await import('./jobs-browser.mjs');await jobsBrowser()})
+
+test('OPS-002: staff search phone and plate and page native account results at 1440/390',async()=>{const {searchBrowser}=await import('./search-browser.mjs');await searchBrowser()})
+
+test('OPS-002: native peer boards update stages and priority while preserving drafts and focus at 1440/390',async()=>{const {boardLiveJourney}=await import('./support/board-live-journey.mjs');await boardLiveJourney()})

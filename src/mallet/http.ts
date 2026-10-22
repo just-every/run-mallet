@@ -1,3 +1,7 @@
+import {timedMalletResponse} from './request-timing'
+import {loadRepairState} from './read-model/repair'
+import {searchAccounts} from './read-model/search'
+import {jobsResponse} from './jobs/door'
 import {retentionCommand,retentionCommands} from './retention'
 import {retentionPage} from './ui/retention'
 import {calendarAuthority} from './calendar-door'
@@ -181,6 +185,9 @@ function formInput(data:FormData) {
  return promiseFormInput(data,diagnosisFormInput(data,timeFormInput(data,pricingOverrideInput(data,pricingFormInput(data,inspectionFormInput(data,qualityFormInput(data,input)))))))
 }
 export async function malletResponse(request:Request,original:Bindings,execution:Pick<ExecutionContext,'waitUntil'>):Promise<Response|null> {
+ return timedMalletResponse(request,()=>workshopResponse(request,original,execution))
+}
+async function workshopResponse(request:Request,original:Bindings,execution:Pick<ExecutionContext,'waitUntil'>):Promise<Response|null> {
  const url=new URL(request.url),path=url.pathname
  const deliveryEvent=await inspectionReportEventResponse(request,original);if(deliveryEvent)return deliveryEvent
  const customerDoor=await guardLinks(request,original,async()=>{
@@ -191,6 +198,7 @@ export async function malletResponse(request:Request,original:Bindings,execution
   const customer=await customerLinkResponse(request,original);if(customer)return customer
   return approvalResponse(request,original)
  });if(customerDoor)return customerDoor
+ const jobs=await jobsResponse(request,original);if(jobs)return jobs
  const security=await securityResponse(request,original);if(security)return security
  const connectors=await connectorsResponse(request,original);if(connectors)return connectors
  if(path!=='/restore' && path!=='/app' && !path.startsWith('/app/') && !path.startsWith('/api/mallet/') && !path.startsWith('/api/portability/'))return null
@@ -198,6 +206,10 @@ export async function malletResponse(request:Request,original:Bindings,execution
  let actor:Actor|undefined,submitted:any
  try {
   const auth=await identity(request,env);actor=auth.actor;originGuard(request,env,auth.bearer)
+  if(path==='/api/mallet/board-revision'&&request.method==='GET'){if(actor.role==='agent')throw new HttpError(403,'staff_required');const row=await env.DB.prepare(`SELECT version FROM mallet_meta WHERE id=1 AND (${auth.authority.sql})`).bind(...auth.authority.params).first();if(!row)throw new HttpError(403,'staff_required');return json(row)}
+  const coreRepair=path.match(/^\/api\/mallet\/repairs\/([^/]+)$/)
+  if(coreRepair&&['GET','HEAD'].includes(request.method))return json({actor,...visible(await loadRepairState(env.DB,actor,auth.authority,coreRepair[1]),actor)})
+  if(path==='/api/mallet/accounts'&&['GET','HEAD'].includes(request.method))return json(await searchAccounts(env.DB,actor,auth.authority,url.searchParams.get('q')??'',url.searchParams.get('cursor')??undefined))
   if(path.startsWith('/api/mallet/media/'))return await mediaResponse(request,env,actor,auth.authority)
   if(!['GET','POST','PUT','HEAD'].includes(request.method))throw new HttpError(405,'method_not_allowed')
   if(path.startsWith('/api/portability/')) {
@@ -329,7 +341,7 @@ export async function malletResponse(request:Request,original:Bindings,execution
   const historyMatch=path.match(/^\/api\/mallet\/assets\/([^/]+)\/history.csv$/)
   if(historyMatch)return csv(assetHistoryCsv(state,historyMatch[1]),'mallet-service-history')
   const counts:Counts={board:waiting(state).total,jobs:rows(state,'job').filter(j=>repair(state,j).column!=='closed').length},frame=(section:Section,more={})=>({section,counts,...more})
-  if(path==='/app'){const board=shopBoard(state,actor,(await operators(env.DB)).names,url.searchParams.get('ro'),boardFilter(url.searchParams));return page('Shop Board',taxNotice(state,actor)+board.body,actor,200,frame('board',{subtitle:board.subtitle,aside:board.aside,refresh:60}))}
+  if(path==='/app'){const board=shopBoard(state,actor,(await operators(env.DB)).names,url.searchParams.get('ro'),boardFilter(url.searchParams));return page('Shop Board',taxNotice(state,actor)+board.body.replace('id="board"',`id="board" data-board-version="${state.version}"`),actor,200,frame('board',{subtitle:board.subtitle,aside:board.aside,liveBoard:true}))}
   if(path==='/api/mallet/reports/turnaround') {
    if(actor.role==='agent')throw new HttpError(403,'staff_required')
    const format=reportFormat(url.searchParams),now=new Date().toISOString()
@@ -342,7 +354,7 @@ export async function malletResponse(request:Request,original:Bindings,execution
    if(path.startsWith('/api/'))return reportFormat(url.searchParams)==='csv'?csv(technicianCsv(report),`mallet-technicians-${report.period.from}-${report.period.to}`):json(report)
    return page('Technician efficiency',technicianReportPage(report,actor,(await operators(env.DB)).names),actor,200,frame('jobs',{subtitle:'Sold versus actual hours, productivity and attendance, recomputed from clock events.'}))
   }
-  if(path==='/app/accounts'||path==='/api/mallet/accounts'||/^\/api\/mallet\/accounts\/[^/]+\/billing$/.test(path)){if(!human(actor))throw new HttpError(403,'manager_required');const q=url.searchParams.get('q')??'';if(path==='/api/mallet/accounts')return json(customerSearch(state,q));if(path.endsWith('/billing')){const id=path.split('/')[4],account=rows(state,'customerAccount').find(a=>a.id===id&&!a.mergedInto);if(!account)throw new HttpError(404,'not_found');const ids=new Set([id,...rows(state,'customerAccount').filter(a=>a.mergedInto===id).map(a=>a.id)]);return json(rows(state,'invoice').filter(i=>ids.has(i.billing?.accountId)))}return page('Customer accounts',accountsPage(state,q),actor,200,frame('customers'))}
+  if(path==='/app/accounts'||path==='/api/mallet/accounts'||/^\/api\/mallet\/accounts\/[^/]+\/billing$/.test(path)){if(!human(actor))throw new HttpError(403,'manager_required');const q=url.searchParams.get('q')??'';if(path.endsWith('/billing')){const id=path.split('/')[4],account=rows(state,'customerAccount').find(a=>a.id===id&&!a.mergedInto);if(!account)throw new HttpError(404,'not_found');const ids=new Set([id,...rows(state,'customerAccount').filter(a=>a.mergedInto===id).map(a=>a.id)]);return json(rows(state,'invoice').filter(i=>ids.has(i.billing?.accountId)))}return page('Customer accounts',accountsPage(state,q,await searchAccounts(env.DB,actor,auth.authority,q,url.searchParams.get('cursor')??undefined)),actor,200,frame('customers'))}
   if(['/app/purchasing','/api/mallet/purchasing'].includes(path)){if(!human(actor))throw new HttpError(403,'manager_required');return path.startsWith('/api/')?json(rows(state,'purchaseOrder').map(po=>({...po,...purchaseStatus(state,po)}))):page('Purchase orders',purchasingPage(state),actor,200,frame('inventory'))}
   if(['/app/inventory/trace','/api/mallet/trace'].includes(path)){if(!human(actor))throw new HttpError(403,'manager_required');const q=url.searchParams.get('q')??'';return path.startsWith('/api/')?json(traceReport(state,q)):page('Parts catalog & traceability',tracePage(state,q),actor,200,frame('inventory'))}
   if(['/app/inventory','/app/inventory/count','/api/mallet/inventory'].includes(path)){if(!human(actor))throw new HttpError(403,'manager_required');if(path.startsWith('/api/'))return json(stockReport(state));return page(path.endsWith('/count')?'Blind stock count':'Stock & receiving',path.endsWith('/count')?countPage():inventoryPage(state),actor,200,frame('inventory'))}

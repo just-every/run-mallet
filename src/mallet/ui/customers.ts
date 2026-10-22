@@ -1,11 +1,11 @@
 import {fail} from '../model'
 import {e,field,area,select,form,box,rows,when} from './common'
 import {customerSearch} from '../customers'
-export function accountsPage(state:any,q:string){
+export function accountsPage(state:any,q:string,result?:{accounts:any[];nextCursor:string|null;total:number}){
  const contacts=rows(state,'contact'),choices:[string,string][]=contacts.map(c=>[c.id,c.name]),optional:[string,string][]=[['','No assigned contact'],...choices]
  const roles=(account:any={})=>select('Payer','payerId',choices,account.payerId)+select('Billing contact','billingContactId',choices,account.billingContactId)+select('Default driver','driverId',optional,account.driverId??'')+select('Authorizer','authorizerId',optional,account.authorizerId??'')
  const fields=(account:any={})=>field('Account name','name','text',account.name??'','required')+select('Account kind','kind',[['household','Household'],['fleet','Fleet'],['business','Business'],['person','Person']],account.kind??'household')+'<fieldset><legend>Contacts</legend>'+contacts.map(c=>`<label><input type="checkbox" name="contactIds" value="${e(c.id)}"${account.contactIds?.includes(c.id)?' checked':''}>${e(c.name)}</label>`).join('')+'</fieldset>'+roles(account)+select('Declared tax status','taxStatus',[['unknown','Unknown'],['standard','Standard'],['declared-exempt','Declared exempt (certificate not verified)']],account.taxStatus??'unknown')+area('Account notes','notes',account.notes??'')
- const list=customerSearch(state,q).map(a=>{
+ const list=(result?.accounts??customerSearch(state,q)).map(a=>{
   const vehicles=rows(state,'asset').filter(v=>v.customerAccountId===a.id),contact=(id:string)=>contacts.find(c=>c.id===id)?.name??'Unassigned'
   let body=`<p>${e(a.kind)} · ${e(a.taxStatus)}<br>Payer: ${e(contact(a.payerId))} · Billing contact: ${e(contact(a.billingContactId))}<br>Default driver: ${e(contact(a.driverId))} · Authorizer: ${e(contact(a.authorizerId))}</p><p>${e(a.notes)}</p>`
   body+='<ul>'+a.contactIds.map((id:string)=>{const c=contacts.find(c=>c.id===id);return `<li>${e(c?.name)} · ${e(c?.phone)} · ${e(c?.email)} · Communication: ${e(c?.communication)}</li>`}).join('')+'</ul>'
@@ -22,7 +22,8 @@ export function accountsPage(state:any,q:string){
  const contactForms=box('Contacts',form('contact.save',contactFields(),'Create contact')+contacts.map(c=>`<details><summary>${e(c.name)}</summary>${form('contact.save',contactFields(c),'Save contact',{contactId:c.id,version:c.version})}</details>`).join(''))
  const accountChoices:[string,string][]=rows(state,'customerAccount').filter(a=>!a.mergedInto).map(a=>[a.id+'@'+a.version,a.name])
  const merge=accountChoices.length>1?box('Merge a duplicate',`<p>The source is retained as an alias with both snapshots and explicit consent evidence. The surviving account’s role choices remain; existing repairs and invoices keep their original snapshots.</p>`+form('customer.mergePreview',select('Source duplicate','sourceRef',accountChoices)+select('Surviving account','targetRef',accountChoices)+area('Merge reason','reason','','required')+area('Identity-match evidence','identityEvidence','','required')+area('Explicit merge consent evidence','consentEvidence','','required'),'Preview merge')):''
- return '<p><a href="/app/customers">Vehicle register</a></p><p>Owner and admin operators manage accounts. Preferences and declared tax status do not send messages or verify exemptions. Customers sign in at /portal; only the current payer may view account billing.</p><form method="get"><label>Search accounts by name, phone or plate<input name="q" value="'+e(q)+'" maxlength="200"></label><button>Search accounts</button></form><div class="grid wide-left"><div class="col">'+list+'</div><div class="col">'+create+contactForms+merge+'</div></div>'
+ const pagination=result?'<p>'+e(result.total)+' matching accounts · showing '+e(result.accounts.length)+'</p>'+(result.nextCursor?'<p><a href="/app/accounts?'+e(new URLSearchParams({q,cursor:result.nextCursor}).toString())+'">Next accounts</a></p>':''):''
+ return pagination+'<p><a href="/app/customers">Vehicle register</a></p><p>Owner and admin operators manage accounts. Preferences and declared tax status do not send messages or verify exemptions. Customers sign in at /portal; only the current payer may view account billing.</p><form method="get"><label>Search accounts by name, phone or plate<input name="q" value="'+e(q)+'" maxlength="200"></label><button>Search accounts</button></form><div class="grid wide-left"><div class="col">'+list+'</div><div class="col">'+create+contactForms+merge+'</div></div>'
 }
 export function customerFormInput(data:FormData,input:any){
  if(input.command==='customer.save')input.contactIds=data.getAll('contactIds')
