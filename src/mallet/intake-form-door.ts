@@ -1,4 +1,3 @@
-import {e} from './ui/common'
 import {runtimeBindings,type Bindings} from '../auth.server'
 import {operatorMail} from '../mail.server.mjs'
 import {digest,type Actor,type Authority} from './auth'
@@ -6,6 +5,7 @@ import {execute,fail,load,MalletError,rows} from './model'
 import {assertion} from './media/storage'
 import {customerIntakePage} from './ui/intake-forms'
 import {page} from './ui/shell'
+import {signedIntakeDocument,signedIntakeMail} from './intake-form-copy'
 const privateResponse=(response:Response)=>{response.headers.set('cache-control','no-store');response.headers.set('referrer-policy','same-origin');response.headers.set('x-robots-tag','noindex, nofollow');return response}
 const unavailable=async(status=404)=>privateResponse(await page('Intake link unavailable','<section class="card"><p>This private intake link is unavailable. Ask your shop for a new link or paper form.</p></section>',undefined,status,{heading:false}))
 export async function createIntakeFormLink(env:Bindings,actor:Actor,authority:Authority,input:any){
@@ -28,18 +28,20 @@ export async function intakeFormResponse(request:Request,original:Bindings):Prom
  if(!doc||doc.revoked||doc.expiresAt<=new Date().toISOString())return unavailable()
  const actor={id:'intake-form:'+doc.id,name:'Customer intake link',role:'customer'} as any,authority={sql:"EXISTS(SELECT 1 FROM mallet_intake_form_links l JOIN mallet_records r ON r.kind='intakeForm' AND r.id=l.form_id WHERE l.form_id=? AND l.token_hash=? AND json_extract(r.value,'$.revoked') IS NULL AND json_extract(r.value,'$.expiresAt')>?)",params:[doc.id,hash,new Date().toISOString()]}
  if(request.method!=='POST'){
-  if(url.searchParams.get('download')==='1'&&doc.receipt)return privateResponse(new Response(JSON.stringify(doc.receipt,null,2),{headers:{'content-type':'application/json','content-disposition':'attachment; filename="signed-intake.json"'}}))
-  return privateResponse(await page(doc.receipt?'Signed intake copy':'Complete your intake',customerIntakePage(doc,url.pathname)))
+  const opened=doc.receipt&&request.method==='GET'?await execute(env.DB,actor,'intakeForm.copyAccess',{formId:doc.id},authority):doc
+  if(url.searchParams.get('download')==='json'&&doc.receipt)return privateResponse(new Response(JSON.stringify(doc.receipt,null,2),{headers:{'content-type':'application/json','content-disposition':'attachment; filename="signed-intake.json"'}}))
+  if(url.searchParams.get('download')==='1'&&doc.receipt)return privateResponse(new Response(signedIntakeDocument(doc.receipt),{headers:{'content-type':'text/html; charset=utf-8','content-disposition':'attachment; filename="signed-intake.html"'}}))
+  return privateResponse(await page(doc.receipt?'Signed intake copy':'Complete your intake',customerIntakePage(opened,url.pathname)))
  }
  if(request.headers.get('origin')!==env.AUTH_ORIGIN||request.headers.get('sec-fetch-site')==='cross-site')return unavailable(403)
  try{
-  const form=await formBody(request),saved=await execute(env.DB,actor,'intakeForm.customerSave',{formId:doc.id,version:Number(form.get('version')),answers:Object.fromEntries(['symptom',...doc.template.fields.map((f:any)=>f.key)].map(key=>[key,form.get(key)??''])),typedName:form.get('typedName')??'',consent:form.get('consent')==='yes',sign:form.get('action')==='sign'},authority)
+  const form=await formBody(request),saved=await execute(env.DB,actor,'intakeForm.customerSave',{formId:doc.id,version:Number(form.get('version')),answers:Object.fromEntries(['symptom',...doc.template.fields.map((f:any)=>f.key)].map(key=>[key,form.get(key)??''])),acknowledgments:Object.fromEntries((doc.template.acknowledgments??[]).map((a:any)=>[a.key,form.get('acknowledgment:'+a.key)==='yes'])),typedName:form.get('typedName')??'',consent:form.get('consent')==='yes',sign:form.get('action')==='sign'},authority)
   let result=saved
   if(saved.status==='signed'){
    const claim=await execute(env.DB,actor,'intakeForm.copyClaim',{formId:doc.id},authority)
    if(claim){
     let outcome:any={status:'unavailable',provider:'none'};const mail=operatorMail(env)
-    if(mail&&env.MAIL_FROM)try{outcome=await mail.send({deliveryId:'intake-copy:'+doc.id,from:env.MAIL_FROM,to:[doc.to],subject:'Your signed shop intake copy',text:'Your exact signed intake copy is included below as readable JSON. A paper copy is available from the shop.\n\n'+JSON.stringify(saved.receipt,null,2),html:'<p>Your exact signed intake copy follows. Ask the shop for a paper copy.</p><pre>'+e(JSON.stringify(saved.receipt,null,2))+'</pre>',headers:{}})}catch{outcome={status:'uncertain',provider:String(env.MAIL_PROVIDER??'mail')}}
+    if(mail&&env.MAIL_FROM)try{outcome=await mail.send({deliveryId:'intake-copy:'+doc.id,from:env.MAIL_FROM,to:[doc.to],subject:'Your signed shop intake copy',...signedIntakeMail(saved.receipt),headers:{}})}catch{outcome={status:'uncertain',provider:String(env.MAIL_PROVIDER??'mail')}}
     result=await execute(env.DB,actor,'intakeForm.copyOutcome',{formId:doc.id,status:outcome.status,provider:outcome.provider??String(env.MAIL_PROVIDER??'mail')},authority)
    }
   }
