@@ -41,7 +41,7 @@ parts and enter through the normal import door. Checksums remain mandatory.
 Private staged validation checks record/reference graphs, financial source
 snapshots, exact search projections, media metadata/chunks/digests and job
 recovery authority before publication. Memory is bounded, but native finalization
-still processes all parts in a single invocation. Legacy schema bridging also
+still processes all parts in a single invocation. Base also checks erasure sidecars in OFFSET pages before the product validation hook. A register-only local run at `e60a1b3ecff7614cc36ae135bcd064fbf248fea3` staged all 5,143 authenticated parts but did not finish finalization within its 15-minute bound; it produced no search timing samples. Released rer 0.2.79 still offers no bounded finalization/validation cursor or Worker-safe scratch migration replay, so a pin-only update does not close this dependency. Legacy schema bridging also
 requires migration replay in the HTTP portability adapter; the current adapter
 rejects an older schema before the product hook is reached.
 
