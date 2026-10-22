@@ -41,7 +41,7 @@ export async function bookingResponse(request:Request,original:Bindings):Promise
    const data=Object.fromEntries(new URLSearchParams(raw)),action=data.action
    if(!manage){
     if(action!=='hold')return view('<p>Unknown action.</p>',400)
-    const guard=await staffGuard(env,data.serviceId,data.slotId),secret=token(),saved=await execute(env.DB,actor,'booking.hold',{...data,consent:data.consent==='yes'},guard)
+    const guard=await staffGuard(env,data.serviceId,data.slotId),secret=token(),saved=await execute(env.DB,actor,'booking.hold',{...data,consent:data.consent==='yes',sourceHash:await digest(env.AUTH_ORIGIN+'|'+(request.headers.get('cf-connecting-ip')??'unknown'))},guard)
     await env.DB.prepare('INSERT INTO mallet_booking_tokens(appointment_id,token_hash) VALUES(?,?)').bind(saved.id,await digest(secret)).run()
     return new Response(null,{status:303,headers:{location:'/book/'+secret,'cache-control':'no-store','referrer-policy':'no-referrer'}})
    }

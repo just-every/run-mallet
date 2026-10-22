@@ -319,7 +319,7 @@ test('PAY-005: full original cash, check and other manual refunds preserve issue
 
 test('PAY-005: payer refund and credit statements at 1440/390',async()=>{const {refundsBrowser}=await import('./customers-browser.mjs');await refundsBrowser()})
 
-const {onlineBookingJourney,bookingAvailabilityJourney}=await import('./support/booking-journey.mjs')
+const {onlineBookingJourney,bookingAvailabilityJourney,bookingAbuseJourney}=await import('./support/booking-journey.mjs')
 const {bookingsBrowser}=await import('./bookings-browser.mjs')
 test('BOOK-001: customer appointments contend, confirm, reschedule, cancel and recover with fresh authority',()=>run(onlineBookingJourney))
 test('BOOK-001: opening windows, skills, duration, lead time and expiring tentative capacity',()=>run(bookingAvailabilityJourney))
@@ -331,3 +331,5 @@ const {inspectionReportBrowser}=await import('./inspection-report-browser.mjs')
 test('DVI-003: advisor review, email, mobile video and proposed repair at 1440 and 390',inspectionReportBrowser)
 test('BOOK-001: failed or uncertain confirmation mail preserves the appointment without an automatic resend',async()=>{const {bookingFailureJourney}=await import('./support/booking-journey.mjs');await bookingFailureJourney()})
 test('DVI-003: rejected or uncertain report mail retains one honest attempt without an automatic resend',async()=>{const {inspectionReportFailureJourney}=await import('./support/inspection-report-journey.mjs');await inspectionReportFailureJourney()})
+
+test('BOOK-001: anonymous tentative holds are bounded per source and normalized email',()=>run(bookingAbuseJourney))

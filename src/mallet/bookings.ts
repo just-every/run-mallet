@@ -39,10 +39,13 @@ export const bookings:Handler=(c,command,p)=>{
   event(c,command,null,row.id,{version:row.version});return row
  }
  if(command==='booking.hold'){
+  const email=text(p.email,'confirmation email',254).toLowerCase();if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))fail('INPUT','Provide a valid confirmation email.',null,400)
+  const sourceHash=text(p.sourceHash,'booking source',64),held=rows(c.s,'appointment').filter(a=>a.status==='held'&&a.expiresAt>c.now)
+  if(held.some(a=>a.email.toLowerCase()===email))fail('BOOKING_EMAIL_LIMIT','This email already has a tentative appointment. Confirm or cancel it, or wait for its hold to expire.',null,429)
+  if(held.filter(a=>a.sourceHash===sourceHash).length>=3)fail('BOOKING_SOURCE_LIMIT','Too many tentative appointments from this connection. Confirm or cancel an existing hold, or wait for it to expire.',null,429)
   const service=find(c.s,'bookingService',p.serviceId),plan=available(c.s,service,p,c.now)
-  const email=text(p.email,'confirmation email',254);if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))fail('INPUT','Provide a valid confirmation email.',null,400)
   if(p.consent!==true)fail('BOOKING_CONSENT','Explicitly request this appointment and its confirmation email.',null,422)
-  const row=put(c.s,'appointment',{...plan,serviceId:service.id,serviceVersion:service.version,service:{name:service.name,location:service.location,timeZone:service.timeZone,skill:service.skill,durationMinutes:service.durationMinutes},name:text(p.name,'your name'),email,status:'held',expiresAt:new Date(Date.parse(c.now)+service.holdSeconds*1000).toISOString(),createdAt:c.now,consent:{text:'I request this appointment and its confirmation email. This does not authorize repair work or payment.',at:c.now},history:[],delivery:null})
+  const row=put(c.s,'appointment',{...plan,serviceId:service.id,serviceVersion:service.version,service:{name:service.name,location:service.location,timeZone:service.timeZone,skill:service.skill,durationMinutes:service.durationMinutes},name:text(p.name,'your name'),email,sourceHash,status:'held',expiresAt:new Date(Date.parse(c.now)+service.holdSeconds*1000).toISOString(),createdAt:c.now,consent:{text:'I request this appointment and its confirmation email. This does not authorize repair work or payment.',at:c.now},history:[],delivery:null})
   event(c,command,null,row.id,{status:'held',expiresAt:row.expiresAt});return row
  }
  const row=find(c.s,'appointment',p.appointmentId);expectVersion(row,p.version)

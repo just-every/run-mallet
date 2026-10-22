@@ -6,7 +6,7 @@ export async function bookingService(h,overrides={}){
  const startAt=new Date(Date.now()+86400000).toISOString().slice(0,10)+'T09:00:00.000Z',endAt=startAt.replace('09:','12:')
  return h.command('booking.publish',{name:'synthetic-mallet-1 inspection',location:'synthetic-mallet-2 workshop',skill:'inspection',durationMinutes:60,leadMinutes:60,holdSeconds:600,active:true,windows:[{startAt,endAt,bayId:'synthetic-mallet-3',technicianId:(await h.state()).actor.id,skills:['inspection']}],...overrides})
 }
-export async function bookingPost(h,path,fields){return h.mf.dispatchFetch(h.origin+path,{method:'POST',redirect:'manual',headers:{origin:h.origin,'content-type':'application/x-www-form-urlencoded'},body:new URLSearchParams(fields)})}
+export async function bookingPost(h,path,fields,headers={}){return h.mf.dispatchFetch(h.origin+path,{method:'POST',redirect:'manual',headers:{origin:h.origin,'content-type':'application/x-www-form-urlencoded',...headers},body:new URLSearchParams(fields)})}
 export const slotId=(service,slot)=>createHash('sha256').update(JSON.stringify([service.id,service.version,slot.startAt,slot.bayId,slot.technicianId])).digest('hex')
 export const holdFields=service=>({action:'hold',serviceId:service.id,...service.windows[0],slotId:slotId(service,service.windows[0]),name:'synthetic-mallet-4',email:'synthetic-mallet-4@example.test',consent:'yes'})
 export async function onlineBookingJourney(h){
@@ -32,6 +32,10 @@ export async function onlineBookingJourney(h){
  appointment=(await h.state()).records.appointment[0];assert.equal(appointment.startAt,next);assert.equal(appointment.history.length,2)
  assert.equal((await bookingPost(h,path,{action:'cancel',version:appointment.version})).status,200)
  const available=await bookingPost(h,'/book',{...input,startAt:next,slotId:slotId(service,{...input,startAt:next})});assert.equal(available.status,303,'Cancellation frees capacity')
+ const other=(await h.state()).records.appointment.find(a=>a.id!==appointment.id),privatePage=await h.request(path+'?appointmentId='+other.id,{as:''}),privateText=await privatePage.text()
+ assert.ok(privateText.includes(appointment.id));assert.ok(!privateText.includes(other.id));assert.ok(!privateText.includes(asset.identifier));assert.ok(!privateText.includes(asset.customerEmail))
+ assert.equal((await bookingPost(h,path,{action:'confirm',version:other.version,appointmentId:other.id})).status,409,'A management link cannot select another appointment')
+ assert.equal((await h.state()).records.appointment.find(a=>a.id===other.id).status,'held');assert.equal((await h.request('/api/mallet/state',{as:''})).status,401)
  const state=await h.state();assert.equal(state.records.job?.length??0,before.records.job?.length??0);assert.equal(state.records.estimate?.length??0,before.records.estimate?.length??0);assert.equal(state.records.approval?.length??0,before.records.approval?.length??0)
  const backup=await archive(h),fresh=await installation({bindings:{OWNER_EMAIL:'synthetic-mallet-10@example.test'}})
  try{await restore(fresh,backup);const restored=await fresh.state();assert.deepEqual(restored.records.appointment,state.records.appointment);assert.deepEqual(restored.records.bookingService,state.records.bookingService);assert.equal((await fresh.mf.dispatchFetch(fresh.origin+path)).status,404);assert.ok(backup[0].excludedTables.includes('mallet_booking_tokens'));assert.ok(!JSON.stringify(backup).includes(path.slice(6)))}finally{await fresh.close()}
@@ -63,4 +67,21 @@ export async function bookingFailureJourney(){
    assert.equal((await bookingPost(h,path,{action:'confirm',version:1})).status,409);assert.equal(calls,before+1,'No automatic or replayed send after a mail failure')
   }
  }finally{await h.close()}
+}
+
+export async function bookingAbuseJourney(h){
+ await shopSetup(h);const service=await bookingService(h,{windows:[{startAt:new Date(Date.now()+86400000).toISOString().slice(0,10)+'T09:00:00.000Z',endAt:new Date(Date.now()+86400000).toISOString().slice(0,10)+'T17:00:00.000Z',bayId:'synthetic-mallet-3',technicianId:(await h.state()).actor.id,skills:['inspection']}]}),input=holdFields(service)
+ const fields=(hour,email)=>({...input,email,slotId:slotId(service,{...input,startAt:input.startAt.replace('09:',String(hour).padStart(2,'0')+':')})})
+ const source={'cf-connecting-ip':'192.0.2.1'},another={'cf-connecting-ip':'192.0.2.2'}
+ const held=await bookingPost(h,'/book',fields(9,'synthetic-mallet-20@example.test'),source);assert.equal(held.status,303)
+ const emailRefusal=await bookingPost(h,'/book',fields(10,'SYNTHETIC-MALLET-20@EXAMPLE.TEST'),another);assert.equal(emailRefusal.status,429);assert.match(await emailRefusal.text(),/email already has a tentative appointment/)
+ for(const hour of [10,11])assert.equal((await bookingPost(h,'/book',fields(hour,`synthetic-mallet-${hour}@example.test`),source)).status,303)
+ const sourceRefusal=await bookingPost(h,'/book',{...fields(12,'synthetic-mallet-21@example.test'),sourceHash:'synthetic-mallet-22'},source);assert.equal(sourceRefusal.status,429);assert.match(await sourceRefusal.text(),/Too many tentative appointments from this connection/)
+ assert.equal((await h.state()).records.appointment.length,3,'Refused holds do not consume capacity')
+ assert.equal((await bookingPost(h,'/book',fields(12,'synthetic-mallet-21@example.test'),another)).status,303,'Other sources and emails retain capacity')
+ const first=(await h.state()).records.appointment.find(a=>a.email==='synthetic-mallet-20@example.test');assert.equal((await bookingPost(h,held.headers.get('location'),{action:'cancel',version:first.version})).status,200)
+ assert.equal((await bookingPost(h,'/book',fields(9,'synthetic-mallet-20@example.test'),source)).status,303,'Cancellation releases both source and email limits')
+ const third={'cf-connecting-ip':'192.0.2.3'},races=await Promise.all([bookingPost(h,'/book',fields(13,'synthetic-mallet-23@example.test'),third),bookingPost(h,'/book',fields(14,'synthetic-mallet-23@example.test'),third)])
+ assert.equal(races.filter(r=>r.status===303).length,1,'Concurrent same-email holds share the transaction fence')
+ assert.equal((await h.state()).records.appointment.filter(a=>a.email==='synthetic-mallet-23@example.test').length,1)
 }
