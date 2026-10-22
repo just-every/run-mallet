@@ -64,7 +64,7 @@ export async function checkInJourney(h){
  assert.equal(row.status,'confirmed');assert.equal(row.confirmation.assetId,asset.id);assert.equal(row.confirmation.customerReceiptSha256,receipt.sha256);verifyHash(row.confirmation)
  let state=await h.state(),job=state.records.job.find(j=>j.id===row.confirmation.jobId),estimate=state.records.estimate.find(e=>e.id===row.confirmation.estimateId)
  assert.equal(state.records.job.length,1);assert.equal(state.records.estimate.length,1);assert.equal(job.assetId,asset.id)
- assert.deepEqual(estimate.revisions[0].lines,invitation.quote.lines);assert.equal(estimate.authorisation.method,'signed');assert.ok(estimate.authorisation.evidence.includes(receipt.sha256));assert.equal(estimate.authorisation.totals.totalCents,8063)
+ assert.deepEqual(estimate.revisions[0].lines,invitation.quote.lines);assert.equal(estimate.authorisation.method,'signed');assert.ok(estimate.authorisation.evidence.includes(row.id));assert.equal(estimate.authorisation.totals.totalCents,8063)
  assert.deepEqual(estimate.authorisation.lineIds,[invitation.quote.lines[0].id]);assert.ok(!JSON.stringify(estimate.revisions[0].lines).includes('brake replacement'))
  await checkInPost(h,invitation.url,fields);assert.deepEqual(await requestRow(h,row.id),row)
  await h.command('checkin.confirm',{...confirm,version:row.version},{status:409})
