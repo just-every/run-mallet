@@ -38,7 +38,7 @@ export async function inspectionReportJourney(h){
  await h.command('inspectionReport.send',{...send,consent:false},{status:422})
  await h.command('inspectionReport.send',send,{as:member.cookie,status:403});await h.command('inspectionReport.claim',send,{status:404})
  const delivery=await h.command('inspectionReport.send',send),path=new URL(delivery.url).pathname
- assert.equal(delivery.status,'accepted');assert.equal(h.messages.filter(m=>m.subject==='Your reviewed inspection report').length,1);assert.ok(h.messages.at(-1).text.includes(delivery.url))
+ assert.equal(delivery.status,'accepted');assert.equal(h.messages.filter(m=>m.subject==='Your reviewed inspection report').length,1);assert.ok(h.messages.at(-1).text.includes(delivery.url));assert.ok(h.messages.at(-1).html.includes('href="'+delivery.url+'"'),'HTML email has a usable private report link')
  await h.command('inspectionReport.send',send,{status:409});assert.equal(h.messages.filter(m=>m.subject==='Your reviewed inspection report').length,1,'One durable claim prevents a replayed outbound send')
  const before=await h.state(),response=await h.request(path,{as:''}),html=await response.text();assert.equal(response.status,200)
  for(const shown of ['Front brake pads','Urgency: red','Pad thickness: 2.5 mm',entry.explanation,'does not approve or decline'])assert.ok(html.includes(shown),'Report shows '+shown)
@@ -61,4 +61,18 @@ export async function inspectionReportJourney(h){
  const link=(await h.state()).records.diagnosisLink.find(l=>l.id===delivery.linkId);await h.command('diagnosisLink.revoke',{linkId:link.id,version:link.version})
  const revoked=await h.request(path,{as:''}),unknown=await h.request('/inspection/'+'A'.repeat(43),{as:''});assert.equal(revoked.status,404);assert.equal(await revoked.text(),await unknown.text());assert.equal((await h.request(path+'/media/'+sharedVideo.id,{as:''})).status,404)
  return ready
+}
+
+export async function inspectionReportFailureJourney(){
+ let providerStatus=422,calls=0
+ const h=await installation({outboundService:async request=>{assert.equal(new URL(request.url).hostname,'api.sendgrid.com');calls++;return new Response(null,{status:providerStatus})}})
+ try{
+  const {input}=await prepareReport(h),report=await h.command('inspectionReport.review',input);await h.configure({MAIL_PROVIDER:'sendgrid'})
+  for(const [status,expected]of [[422,'failed'],[503,'uncertain']]){
+   providerStatus=status;const before=calls,send={reportId:report.id,operationId:randomUUID(),to:'synthetic-mallet-12@example.test',consentEvidence:'Customer explicitly requested this reviewed email.',consent:true}
+   const outcome=await h.command('inspectionReport.send',send);assert.equal(outcome.status,expected);assert.equal(calls,before+1)
+   await h.command('inspectionReport.send',send,{status:409});assert.equal(calls,before+1,'A provider failure has one send attempt and no automatic replay')
+   assert.ok(!(await (await h.request('/app/jobs/'+input.jobId)).text()).includes('Handed to the mail provider; delivery not confirmed'))
+  }
+ }finally{await h.close()}
 }

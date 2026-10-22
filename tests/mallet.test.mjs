@@ -329,3 +329,5 @@ const {inspectionReportJourney}=await import('./support/inspection-report-journe
 test('DVI-003: reviewed private evidence, exact proposed lines, delivery and read-only view analytics survive recovery',()=>run(inspectionReportJourney))
 const {inspectionReportBrowser}=await import('./inspection-report-browser.mjs')
 test('DVI-003: advisor review, email, mobile video and proposed repair at 1440 and 390',inspectionReportBrowser)
+test('BOOK-001: failed or uncertain confirmation mail preserves the appointment without an automatic resend',async()=>{const {bookingFailureJourney}=await import('./support/booking-journey.mjs');await bookingFailureJourney()})
+test('DVI-003: rejected or uncertain report mail retains one honest attempt without an automatic resend',async()=>{const {inspectionReportFailureJourney}=await import('./support/inspection-report-journey.mjs');await inspectionReportFailureJourney()})

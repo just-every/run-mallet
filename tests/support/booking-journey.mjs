@@ -25,7 +25,7 @@ export async function onlineBookingJourney(h){
  await h.command('job.book',{assetId:asset.id,version:asset.version,title:'synthetic-mallet-9',...service.windows[0]},{status:409})
  const confirmation=await bookingPost(h,path,{action:'confirm',version:appointment.version});assert.equal(confirmation.status,200,await confirmation.text())
  appointment=(await h.state()).records.appointment[0];assert.equal(appointment.status,'confirmed');assert.equal(appointment.delivery.status,'accepted');assert.equal(h.messages.filter(m=>m.subject==='Your confirmed appointment').length,1)
- assert.ok(h.messages.at(-1).text.includes(path));assert.ok(h.messages.at(-1).text.includes(service.location));assert.equal((await bookingPost(h,path,{action:'confirm',version:1})).status,409)
+ assert.ok(h.messages.at(-1).text.includes(path));assert.ok(h.messages.at(-1).html.includes('href="'+h.origin+path+'"'),'HTML confirmation has a usable private management link');assert.ok(h.messages.at(-1).text.includes(service.location));assert.equal((await bookingPost(h,path,{action:'confirm',version:1})).status,409)
  const next=new Date(Date.parse(input.startAt)+3600000).toISOString()
  const moved=await bookingPost(h,path,{action:'reschedule',version:appointment.version,slotId:slotId(service,{...input,startAt:next})});assert.equal(moved.status,200,await moved.text())
  appointment=(await h.state()).records.appointment[0];assert.equal(appointment.startAt,next);assert.equal(appointment.history.length,2)
@@ -45,4 +45,20 @@ export async function bookingAvailabilityJourney(h){
  const unskilled=await bookingService(h,{name:'synthetic-mallet-11',windows:[{...service.windows[0],skills:['different']} ]});assert.equal((await bookingPost(h,'/book',holdFields(unskilled))).status,409)
  const lead=await bookingService(h,{name:'synthetic-mallet-12',leadMinutes:525600});assert.equal((await bookingPost(h,'/book',holdFields(lead))).status,409)
  const closed=await bookingService(h,{name:'synthetic-mallet-13',active:false});assert.equal((await bookingPost(h,'/book',holdFields(closed))).status,409)
+ const tech=await h.person('synthetic-mallet-14@example.test'),staffService=await bookingService(h,{windows:[{...service.windows[0],bayId:'synthetic-mallet-15',technicianId:tech.id}]});await h.api('/auth/operator/status',{operatorId:tech.id,status:'inactive'});assert.equal((await bookingPost(h,'/book',holdFields(staffService))).status,409,'Inactive staff cannot retain published customer capacity');const unavailable=await h.request('/book?serviceId='+staffService.id,{as:''});assert.ok(!(await unavailable.text()).includes('Hold this time'))
+}
+
+export async function bookingFailureJourney(){
+ let providerStatus=422,calls=0
+ const h=await installation({outboundService:async request=>{assert.equal(new URL(request.url).hostname,'api.sendgrid.com');calls++;return new Response(null,{status:providerStatus})}})
+ try{
+  await shopSetup(h);const service=await bookingService(h);await h.configure({MAIL_PROVIDER:'sendgrid'})
+  for(const [index,[status,expected]]of [[422,'failed'],[503,'uncertain']].entries()){
+   providerStatus=status;const fields=holdFields(service),startAt=new Date(Date.parse(fields.startAt)+index*3600000).toISOString(),slot=slotId(service,{...fields,startAt})
+   const held=await bookingPost(h,'/book',{...fields,slotId:slot});assert.equal(held.status,303);const path=held.headers.get('location'),before=calls
+   const response=await bookingPost(h,path,{action:'confirm',version:1});assert.equal(response.status,200);assert.match(await response.text(),/email failed or is uncertain; this appointment remains confirmed/)
+   const row=(await h.state()).records.appointment.find(a=>a.startAt===startAt);assert.equal(row.status,'confirmed');assert.equal(row.delivery.status,expected);assert.equal(calls,before+1)
+   assert.equal((await bookingPost(h,path,{action:'confirm',version:1})).status,409);assert.equal(calls,before+1,'No automatic or replayed send after a mail failure')
+  }
+ }finally{await h.close()}
 }

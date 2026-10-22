@@ -1,3 +1,4 @@
+import {shopTimeZone} from './promise-zone'
 import {createHash} from 'node:crypto'
 import {bump,event,expectVersion,fail,find,integer,put,rows,text,who,type Handler,type State} from './model'
 import {instant,conflicts} from './workshop'
@@ -33,15 +34,15 @@ export const bookings:Handler=(c,command,p)=>{
   if(!Array.isArray(p.windows)||p.windows.length<1||p.windows.length>50)fail('INPUT','Publish 1–50 dated opening windows.',null,400)
   const durationMinutes=integer(p.durationMinutes,'service duration',5,480),leadMinutes=integer(p.leadMinutes,'lead time',0,525600),holdSeconds=integer(p.holdSeconds??600,'tentative hold seconds',1,1800)
   const windows=p.windows.map((w:any)=>{const startAt=instant(w.startAt,'opening time'),endAt=instant(w.endAt,'closing time');if(endAt<=startAt||Date.parse(endAt)-Date.parse(startAt)>86400000)fail('INPUT','Opening windows last at most one day.',null,400);if(!Array.isArray(w.skills)||w.skills.length>20)fail('INPUT','Declare bay skills.',null,400);return {startAt,endAt,bayId:text(w.bayId,'bay'),technicianId:text(w.technicianId,'technician'),skills:w.skills.map((x:any)=>text(x,'skill',100))}})
-  const value={name:text(p.name,'service'),location:text(p.location,'location'),skill:text(p.skill,'required skill',100),durationMinutes,leadMinutes,holdSeconds,windows,active:p.active===true,by:who(c),at:c.now}
-  let row;if(p.serviceId){const old=find(c.s,'bookingService',p.serviceId);expectVersion(old,p.version);row=bump(c.s,'bookingService',old,{...value,history:[...(old.history??[]),structuredClone(old)]})}else row=put(c.s,'bookingService',value)
+  const value={timeZone:shopTimeZone(c.s),name:text(p.name,'service'),location:text(p.location,'location'),skill:text(p.skill,'required skill',100),durationMinutes,leadMinutes,holdSeconds,windows,active:p.active===true,by:who(c),at:c.now}
+  let row;if(p.serviceId){const old=find(c.s,'bookingService',p.serviceId);expectVersion(old,p.version);row=bump(c.s,'bookingService',old,{...value,history:[...(old.history??[]),structuredClone(Object.fromEntries(Object.entries(old).filter(([key])=>key!=='history')))]})}else row=put(c.s,'bookingService',value)
   event(c,command,null,row.id,{version:row.version});return row
  }
  if(command==='booking.hold'){
   const service=find(c.s,'bookingService',p.serviceId),plan=available(c.s,service,p,c.now)
   const email=text(p.email,'confirmation email',254);if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))fail('INPUT','Provide a valid confirmation email.',null,400)
   if(p.consent!==true)fail('BOOKING_CONSENT','Explicitly request this appointment and its confirmation email.',null,422)
-  const row=put(c.s,'appointment',{...plan,serviceId:service.id,serviceVersion:service.version,service:{name:service.name,location:service.location,skill:service.skill,durationMinutes:service.durationMinutes},name:text(p.name,'your name'),email,status:'held',expiresAt:new Date(Date.parse(c.now)+service.holdSeconds*1000).toISOString(),createdAt:c.now,consent:{text:'I request this appointment and its confirmation email. This does not authorize repair work or payment.',at:c.now},history:[],delivery:null})
+  const row=put(c.s,'appointment',{...plan,serviceId:service.id,serviceVersion:service.version,service:{name:service.name,location:service.location,timeZone:service.timeZone,skill:service.skill,durationMinutes:service.durationMinutes},name:text(p.name,'your name'),email,status:'held',expiresAt:new Date(Date.parse(c.now)+service.holdSeconds*1000).toISOString(),createdAt:c.now,consent:{text:'I request this appointment and its confirmation email. This does not authorize repair work or payment.',at:c.now},history:[],delivery:null})
   event(c,command,null,row.id,{status:'held',expiresAt:row.expiresAt});return row
  }
  const row=find(c.s,'appointment',p.appointmentId);expectVersion(row,p.version)

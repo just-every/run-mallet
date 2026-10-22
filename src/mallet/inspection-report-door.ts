@@ -33,8 +33,8 @@ export async function sendInspectionReport(env:Bindings,actor:Actor,authority:Au
  const report=rows(await load(env.DB),'inspectionReport').find(r=>r.id===claim.reportId)!
  const text=`Mallet · ${report.title}\n${report.vehicle} · ${report.repair}\nYour advisor reviewed this private inspection report.\n${link.url}\nLink expires ${link.expiresAt}. Anyone holding it can read this report and prepared evidence; keep it private. Viewing does not approve or decline work. Contact the shop with questions.`
  let outcome:any
- try{outcome=await mail.send({deliveryId:claim.id,from:String(env.MAIL_FROM??''),to:[claim.to],subject:'Your reviewed inspection report',text,html:'<p>'+e(text).replaceAll('\n','<br>')+'</p>',headers:{}})}catch{outcome={status:'uncertain',provider:'mail'}}
- const delivery=await execute(env.DB,actor as any,'inspectionReport.outcome',{deliveryId:claim.id,version:claim.version,linkId:link.id,status:outcome.status,provider:outcome.provider??'mail'},authority)
+ try{outcome=await mail.send({deliveryId:claim.id,from:String(env.MAIL_FROM??''),to:[claim.to],subject:'Your reviewed inspection report',text,html:'<p>'+e(text).replaceAll('\n','<br>')+'</p><p><a href="'+e(link.url)+'">Open your reviewed inspection report</a></p>',headers:{}})}catch{outcome={status:'uncertain',provider:'mail'}}
+ const delivery=await execute(env.DB,actor as any,'inspectionReport.outcome',{deliveryId:claim.id,version:claim.version,linkId:link.id,status:outcome.status==='rejected'?'failed':outcome.status,provider:outcome.provider??'mail'},authority)
  return {...delivery,url:link.url}
 }
 export async function reportLinkView(request:Request,env:Bindings,s:any,link:any,base:string,suffix:string):Promise<Response>{
