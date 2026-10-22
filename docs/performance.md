@@ -12,8 +12,7 @@ vehicle labels/plate/VIN, including merged aliases. Native SQL-maintained search
 documents and trigrams avoid loading repair history for the API. Opaque cursors
 bind the query and installation revision; account names sort with SQL NOCASE and IDs break ties; a changed revision refuses stale
 paging instead of skipping or repeating rows. Owner/admin authority is checked
-on every page. Native account pages have next-page links, but their editing
-selectors still load the full contact/vehicle register.
+on every page. Native account search pages use this bounded result directly, with next-page links and an explicit link to account/vehicle details. The separate management page retains complete create, contact, role, vehicle-link and merge controls; its selectors still load the full contact/vehicle register.
 
 `GET /api/mallet/repairs/:id` reads an indexed, version-fenced single-repair graph
 with authorized lines, inspections and decisions. Current crew authority applies
