@@ -48,7 +48,7 @@ run the full generator casually. No full-scale run is claimed here.
 
 Output is created exclusively with mode 0600 and never overwrites an existing
 file. Inventory planning is one bounded pass, output is a second deterministic
-pass; only a part (<=1 MiB and <=5,000 rows), one source record and the two shared
+pass; only a part (<=1 MiB and <=1,000 rows), one source record and the two shared
 media fixtures are held at a time. Counts and native schema/content/part/archive
 checksums are produced by the pinned Base portability implementation. The
 original native source identity, erasure journal and epoch are replaced with an
