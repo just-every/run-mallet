@@ -112,6 +112,8 @@ export async function portalSessionJourney(){
   await read('',403)
   const confirmed=await portalPost(h,path,{confirm:'yes'});assert.equal(confirmed.status,303,'Scanner opens leave the link usable')
   const setCookie=confirmed.headers.getSetCookie()[0];assert.match(setCookie,/HttpOnly/);assert.match(setCookie,/SameSite=Strict/);assert.match(setCookie,/Secure/);assert.match(setCookie,/Max-Age=86400/)
+  const db=await h.mf.getD1Database('DB'),serverSession=await db.prepare("SELECT created_at,expires_at FROM mallet_portal_tokens WHERE kind='session' AND contact_id=?").bind(contact.id).first()
+  assert.equal(serverSession.expires_at-serverSession.created_at,24*60*60*1000,'Server session expiry is exactly 24 hours')
   const first=setCookie.split(';')[0];assert.equal((await read(first)).account.id,account.id)
   const second=await portalSignIn(h,contact.email,account.name);assert.notEqual(first,second.cookie,'Each confirmed request starts a separate session')
   const signedOut=await portalPost(h,'/portal/signout',{}, {as:first});assert.equal(signedOut.status,303);assert.match(signedOut.headers.get('set-cookie'),/Max-Age=0/)
@@ -120,7 +122,18 @@ export async function portalSessionJourney(){
   await read(second.cookie,403)
   const third=await portalSignIn(h,updated.email,account.name);assert.equal((await read(third.cookie)).account.id,account.id)
   // Returning the old email does not revive either earlier contact-version session.
-  await h.command('contact.save',{...updated,contactId:updated.id,version:updated.version,email:contact.email})
+  const reverted=await h.command('contact.save',{...updated,contactId:updated.id,version:updated.version,email:contact.email})
   await read(first,403);await read(second.cookie,403);await read(third.cookie,403)
+  const fourth=await portalSignIn(h,reverted.email,account.name);assert.equal((await read(fourth.cookie)).account.id,account.id)
+  const replacement=await h.command('contact.save',{name:'New payer',email:'new-payer@example.test',phone:'',communication:'none',notes:''})
+  await h.command('customer.save',{...account,customerId:account.id,version:account.version,contactIds:[replacement.id],payerId:replacement.id,billingContactId:replacement.id,driverId:replacement.id})
+  await read(fourth.cookie,403)
+  assert.equal((await h.request('/portal/billing',{as:fourth.cookie})).status,403,'Removing the signed-in payer ends the browser session')
+  // Isolate membership from payer epoch and contact-version fences in persisted state.
+  // customer.save also changes the payer; retain its old role/epoch in this edge probe.
+  const row=await db.prepare("SELECT value FROM mallet_records WHERE kind='customerAccount' AND id=?").bind(account.id).first(),removed=JSON.parse(row.value)
+  removed.payerId=contact.id;removed.payerRevision=account.payerRevision
+  await db.prepare("UPDATE mallet_records SET value=? WHERE kind='customerAccount' AND id=?").bind(JSON.stringify(removed),account.id).run()
+  await read(fourth.cookie,403)
  }finally{await h.close()}
 }

@@ -3,7 +3,7 @@ export const paymentCommands=['payment.record','payment.verified'] as const
 export const publicInvoiceSnapshot=(invoice:Row)=>{const {billing,...snapshot}=invoice;return structuredClone(snapshot)}
 export const invoiceBalance=(s:State,i:Row)=>{
  const payments=rows(s,'payment').filter(p=>p.invoiceId===i.id),credits=rows(s,'creditNote').filter(n=>n.invoiceId===i.id),refunds=rows(s,'refund').filter(r=>r.invoiceId===i.id)
- const creditedCents=credits.reduce((n,r)=>n+r.totals.totalCents,0),refundedCents=refunds.filter(r=>r.status==='refunded').reduce((n,r)=>n+r.amountCents,0),accountCreditCents=credits.filter(n=>n.destination==='account-credit').reduce((n,r)=>n+r.totals.totalCents,0),paidCents=payments.reduce((n,p)=>n+p.amountCents,0)-refundedCents-accountCreditCents
+ const creditedCents=credits.reduce((n,r)=>n+r.totals.totalCents,0),refundedCents=refunds.filter(r=>(r.redirect?.status??r.status)==='refunded').reduce((n,r)=>n+r.amountCents,0),accountCreditCents=credits.filter(n=>n.destination==='account-credit'||refunds.some(r=>r.creditNoteId===n.id&&r.redirect?.destination==='account-credit')).reduce((n,r)=>n+r.totals.totalCents,0),paidCents=payments.reduce((n,p)=>n+p.amountCents,0)-refundedCents-accountCreditCents
  return {totalCents:i.totals.totalCents,creditedCents,refundedCents,adjustedTotalCents:i.totals.totalCents-creditedCents,paidCents,outstandingCents:Math.max(0,i.totals.totalCents-creditedCents-paidCents),payments}
 }
 export const payments:Handler=(c,command,p)=>{

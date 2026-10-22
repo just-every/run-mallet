@@ -39,7 +39,7 @@ export async function refundsJourney(){
   await h.command('tax.configure',{ratePercent:20,partsTaxable:true,laborTaxable:true})
   const input=creditInput(invoice,payment,'synthetic-mallet-103'),admin=await h.person('refund-admin@example.test','admin'),member=await h.person('refund-member@example.test'),agent=await h.command('agent.create',{label:'No refund authority'}),bearer={as:'',headers:{authorization:'Bearer '+agent.token}}
   const before=(await h.state()).records
-  for(const command of ['credit.preview','credit.issue','credit.apply','credit.exchange','refund.record','refund.submit','refund.reconcile'])for(const options of [{as:'',status:401},{as:admin.cookie,status:403},{as:member.cookie,status:403},{...bearer,status:403},{headers:{origin:'https://elsewhere.test'},status:403}])await h.command(command,input,options)
+  for(const command of ['credit.preview','credit.issue','credit.apply','credit.exchange','refund.record','refund.redirect','refund.submit','refund.reconcile'])for(const options of [{as:'',status:401},{as:admin.cookie,status:403},{as:member.cookie,status:403},{...bearer,status:403},{headers:{origin:'https://elsewhere.test'},status:403}])await h.command(command,input,options)
   for(const command of ['refund.claim','refund.outcome'])await h.command(command,input,{status:404})
   assert.deepEqual((await h.state()).records,before,'Unauthorized calls have no effects')
   const review=await h.command('credit.preview',input);assert.equal(review.totals.totalCents,109);assert.equal(review.totals.salesTaxCents,8)
@@ -88,13 +88,15 @@ export async function stripeRefundJourney(){
   if(url.pathname.startsWith('/v1/payment_intents/'))return Response.json({id:'synthetic-mallet-121',metadata:{mallet_invoice_id:invoice.id},status:'succeeded',currency:'usd',amount_received:541,livemode:false,latest_charge:{paid:true,captured:true,refunded:false,amount_refunded:0,currency:'usd',amount:541}})
   if(request.method==='POST'){
    postCount++;const form=new URLSearchParams(await request.text());assert.equal(form.get('payment_intent'),'synthetic-mallet-121');assert.equal(request.headers.get('idempotency-key'),'mallet-refund-'+form.get('metadata[mallet_refund_id]'))
-   const receipt={id:'synthetic-mallet-'+(122+postCount),payment_intent:form.get('payment_intent'),amount:Number(form.get('amount')),currency:'usd',status:mode==='failed'?'failed':'succeeded',metadata:{mallet_refund_id:form.get('metadata[mallet_refund_id]')}};provider.push(receipt)
+   const receipt={id:'synthetic-mallet-'+(122+postCount),payment_intent:form.get('payment_intent'),amount:Number(form.get('amount')),currency:'usd',status:mode==='uncertain'?'succeeded':mode,metadata:{mallet_refund_id:form.get('metadata[mallet_refund_id]')}};provider.push(receipt)
    return mode==='uncertain'?new Response('Unconfirmed',{status:500}):Response.json(receipt)
   }
   assert.equal(request.method,'GET');if(revoke){const fn=revoke;revoke=null;await fn()}return Response.json(url.pathname==='/v1/refunds'?{data:provider,has_more:false}:provider.find(r=>url.pathname.endsWith('/'+r.id)))
  }})
  try{
-  const {account}=await creditAccountFixture(h);({invoice}=await creditInvoice(h,account))
+  const {account,contact}=await creditAccountFixture(h),replacement=await creditInvoice(h,account,'2'),outsider=await creditAccountFixture(h,'2'),other=await creditInvoice(h,outsider.account,'3');let exported;({invoice,exported}=await creditInvoice(h,account))
+  const csv=await (await h.request('/api/mallet/exports/'+exported.id)).text()
+  const redirect=(r,reference='synthetic-mallet-170')=>({refundId:r.id,version:r.version,destination:'account-credit',accountId:account.id,reference,consentEvidence:'New customer instruction to recover failed Stripe refund as same-account credit',confirm:'redirect-refund'})
   const payment=await h.command('payment.verifyStripe',{invoiceId:invoice.id,version:invoice.version,paymentIntentId:'synthetic-mallet-121'})
   const note=await issueCredit(h,creditInput(invoice,payment,'synthetic-mallet-125'))
   let refund=(await h.state()).records.refund.find(r=>r.creditNoteId===note.id)
@@ -103,16 +105,54 @@ export async function stripeRefundJourney(){
   const race=await Promise.all([1,2].map(()=>h.request('/api/mallet/commands',{method:'POST',body:{command:'refund.submit',input:{refundId:refund.id,version:refund.version,confirm:'send-refund'}}})))
   assert.deepEqual(race.map(r=>r.status).sort(),[200,409]);refund=await race.find(r=>r.status===200).json();assert.equal(refund.status,'uncertain');assert.equal(postCount,1)
   await h.command('refund.submit',{refundId:refund.id,version:refund.version,confirm:'send-refund'},{status:409});assert.equal(postCount,1)
+  await h.command('refund.redirect',redirect(refund),{status:409})
   refund=await h.command('refund.reconcile',{refundId:refund.id,version:refund.version});assert.equal(refund.status,'refunded')
   for(let n=0;n<2;n++)assert.deepEqual(await h.command('refund.reconcile',{refundId:refund.id,version:refund.version}),refund,'Duplicate provider outcomes have no further financial effect')
   assert.equal(postCount,1)
   mode='failed';const second=await issueCredit(h,creditInput(invoice,payment,'synthetic-mallet-127',invoice.lines[0],2));let failed=(await h.state()).records.refund.find(r=>r.creditNoteId===second.id)
   failed=await h.command('refund.submit',{refundId:failed.id,version:failed.version,confirm:'send-refund'});assert.equal(failed.status,'failed');assert.equal(failed.amountCents,217)
-  const state=(await h.state()).records;assert.equal(state.refund.filter(r=>r.status==='refunded').reduce((n,r)=>n+r.amountCents,0),109);assert.deepEqual(state.invoice.find(i=>i.id===invoice.id),invoice)
+  const input=redirect(failed)
+  await h.command('refund.redirect',{...input,confirm:''},{status:409})
+  await h.command('refund.redirect',{...input,consentEvidence:''},{status:400})
+  await h.command('refund.redirect',{...input,accountId:outsider.account.id},{status:409})
+  await h.command('refund.redirect',{...input,version:failed.version-1},{status:409})
+  const redirected=await h.command('refund.redirect',input);assert.equal(redirected.status,'redirected');assert.equal(redirected.redirect.status,'available');assert.equal(redirected.amountCents,217)
+  assert.deepEqual(await h.command('refund.redirect',input),redirected,'Exact redirect replay returns saved outcome')
+  await h.command('refund.redirect',{...input,consentEvidence:'Changed instruction'},{status:409})
+  await h.command('refund.redirect',redirect(redirected,'synthetic-mallet-171'),{status:409})
+  await h.command('refund.reconcile',{refundId:redirected.id,version:redirected.version},{status:409})
+  await h.command('refund.submit',{refundId:redirected.id,version:redirected.version,confirm:'send-refund'},{status:409});assert.equal(postCount,2)
+  const allocation={creditNoteId:second.id,invoiceId:replacement.invoice.id,version:replacement.invoice.version,amountCents:217,reference:'synthetic-mallet-172',reason:'Apply redirected credit to another repair of this account',confirm:'apply-credit'}
+  await h.command('credit.apply',{...allocation,invoiceId:other.invoice.id,version:other.invoice.version},{status:409})
+  const applied=await h.command('credit.apply',allocation);assert.equal(applied.amountCents,217)
+  await h.command('credit.apply',{...allocation,reference:'synthetic-mallet-173',amountCents:1},{status:409})
+  // The remaining original line first gets a pending outcome, which cannot redirect.
+  mode='pending';const third=await issueCredit(h,creditInput(invoice,payment,'synthetic-mallet-174',invoice.lines[1]));let manual=(await h.state()).records.refund.find(r=>r.creditNoteId===third.id)
+  manual=await h.command('refund.submit',{refundId:manual.id,version:manual.version,confirm:'send-refund'});assert.equal(manual.status,'pending')
+  await h.command('refund.redirect',redirect(manual,'synthetic-mallet-175'),{status:409})
+  provider.find(r=>r.metadata.mallet_refund_id===manual.id).status='canceled'
+  manual=await h.command('refund.reconcile',{refundId:manual.id,version:manual.version});assert.equal(manual.status,'failed')
+  const manualInput={...redirect(manual,'synthetic-mallet-175'),destination:'manual-tender',method:'check'};delete manualInput.accountId
+  manual=await h.command('refund.redirect',manualInput);assert.equal(manual.redirect.status,'unsubmitted')
+  const observation={refundId:manual.id,version:manual.version,status:'refunded',reference:'synthetic-mallet-176',evidence:'Owner handed the customer a replacement check for the failed Stripe refund',confirm:'record-refund'}
+  manual=await h.command('refund.record',observation);assert.equal(manual.redirect.status,'refunded');assert.deepEqual(await h.command('refund.record',observation),manual)
+  await h.command('refund.redirect',{...manualInput,version:manual.version,reference:'synthetic-mallet-177'},{status:409})
+  await h.command('refund.record',{...observation,version:manual.version,reference:'synthetic-mallet-178'},{status:409})
+  await h.command('credit.preview',creditInput(invoice,payment,'synthetic-mallet-179'),{status:409})
+  const state=(await h.state()).records;assert.equal(state.refund.filter(r=>(r.redirect?.status??r.status)==='refunded').reduce((n,r)=>n+r.amountCents,0)+applied.amountCents,541,'Refunded plus credited equals, and cannot exceed, recorded tender')
+  assert.deepEqual(state.invoice.find(i=>i.id===invoice.id),invoice);assert.deepEqual(state.creditNote.find(n=>n.id===second.id),second,'Redirect never alters the issued credit note');assert.equal(await (await h.request('/api/mallet/exports/'+exported.id)).text(),csv)
+  const login=await portalSignIn(h,contact.email,account.name),view=await h.api('/api/mallet/portal/billing',undefined,{as:login.cookie}),bill=view.invoices.find(i=>i.id===invoice.id)
+  assert.deepEqual(bill.refunds.map(r=>[r.amountCents,r.method,r.status]).sort(),[[109,'stripe','refunded'],[215,'check','refunded'],[217,'account-credit','available']].sort())
+  assert.equal(bill.paidCents,0);assert.equal(bill.outstandingCents,0);assert.equal(bill.refundedCents,324);assert.equal(view.invoices.find(i=>i.id===replacement.invoice.id).paidCents,217)
+  for(const r of bill.refunds)assert.deepEqual(Object.keys(r).sort(),['amountCents','method','status'])
+  for(const secret of ['consentEvidence','synthetic-mallet-170','replacement check','paymentIntentId'])assert.ok(!JSON.stringify(view).includes(secret))
+  const fresh=await installation({bindings:{OWNER_EMAIL:'redirect-recovery@example.test'}})
+  try{await restore(fresh,await archive(h));const restored=(await fresh.state()).records;for(const kind of ['invoice','export','payment','creditNote','refund'])assert.deepEqual(restored[kind],state[kind]);assert.deepEqual(await fresh.command('refund.redirect',input),redirected);await fresh.command('credit.apply',{...allocation,amountCents:1,reference:'synthetic-mallet-180'},{status:409});await fresh.command('refund.redirect',redirect(redirected,'synthetic-mallet-181'),{status:409});await fresh.state({as:h.owner,status:401});assert.equal(fresh.messages.length,0)}finally{await fresh.close()}
+
   revoke=async()=>{assert.equal((await h.request('/auth/signout',{method:'POST',body:{}})).status,204)}
-  await h.command('refund.reconcile',{refundId:failed.id,version:failed.version},{status:409})
-  const db=await h.mf.getD1Database('DB'),saved=await db.prepare("SELECT value FROM mallet_records WHERE kind='refund' AND id=?").bind(failed.id).first()
-  assert.deepEqual(JSON.parse(saved.value),failed,'Revoked owner cannot persist an outcome after provider fetch')
+  await h.command('refund.reconcile',{refundId:refund.id,version:refund.version},{status:409})
+  const db=await h.mf.getD1Database('DB'),saved=await db.prepare("SELECT value FROM mallet_records WHERE kind='refund' AND id=?").bind(refund.id).first()
+  assert.deepEqual(JSON.parse(saved.value),refund,'Revoked owner cannot persist an outcome after provider fetch')
  }finally{await h.close()}
 }
 

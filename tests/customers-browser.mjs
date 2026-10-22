@@ -56,13 +56,25 @@ export async function customersBrowser(){
   await customer.reload();assert.ok((await customer.locator('main').innerText()).includes('Billing unavailable'));assert.ok(!(await customer.locator('main').innerText()).includes(invoice.number));await customerShot('09-old-payer-denied')
   await customerLogin(driver.email);assert.ok((await customer.locator('main').innerText()).includes('Billing unavailable'));await customerShot('10-driver-denied')
   await h.command('customer.save',{...changed,customerId:changed.id,version:changed.version,payerId:payer.id,billingContactId:payer.id})
-  await customerLogin(authorizer.email);assert.ok((await customer.locator('main').innerText()).includes('Billing unavailable'));await customerShot('11-authorizer-denied');await customerContext.close()
+  await customerLogin(authorizer.email);assert.ok((await customer.locator('main').innerText()).includes('Billing unavailable'));await customerShot('11-authorizer-denied')
+  const membershipPayer=await h.command('contact.save',{name:'Membership payer',email:'membership-payer@example.test',phone:'',communication:'none',notes:''})
+  fleet=(await h.state()).records.customerAccount.find(a=>a.id===fleet.id)
+  const membershipAccount=await h.command('customer.save',{...fleet,customerId:fleet.id,version:fleet.version,contactIds:[...fleet.contactIds,membershipPayer.id],payerId:membershipPayer.id,billingContactId:membershipPayer.id})
+  await customerLogin(membershipPayer.email);assert.ok((await customer.locator('main').innerText()).includes(invoice.number))
+  await h.command('customer.save',{...membershipAccount,customerId:fleet.id,version:membershipAccount.version,contactIds:fleet.contactIds,payerId:payer.id,billingContactId:payer.id})
+  await customer.reload();assert.ok((await customer.locator('main').innerText()).includes('Billing unavailable'));assert.ok(!(await customer.locator('main').innerText()).includes(invoice.number));await customerShot('11a-removed-account-member-denied');await customerContext.close()
   const records=(await h.state()).records;assert.equal(records.customerMerge.length,1);assert.equal(records.asset.filter(a=>a.customerAccountId===fleet.id).length,2);assert.equal(records.customerAccount.find(a=>a.id===fleet.id).payerId,payer.id);assert.deepEqual(errors,[])
  }finally{await browser?.close();await h.close()}
 }
 
 export async function refundsBrowser(){
- const h=await installation({entry:'tests/worker.ts',network:true,assets:true,secureNetwork:true});let browser
+ let stripeInvoice;const receipts=[]
+ const h=await installation({entry:'tests/worker.ts',network:true,assets:true,secureNetwork:true,bindings:{STRIPE_SECRET_KEY:'synthetic-mallet-190'},outboundService:async request=>{
+  const url=new URL(request.url)
+  assert.equal(url.hostname,'api.stripe.com')
+  if(url.pathname.startsWith('/v1/payment_intents/'))return Response.json({id:'synthetic-mallet-191',metadata:{mallet_invoice_id:stripeInvoice.id},status:'succeeded',currency:'usd',amount_received:541,livemode:false,latest_charge:{paid:true,captured:true,refunded:false,amount_refunded:0,currency:'usd',amount:541}})
+  assert.equal(request.method,'POST');const form=new URLSearchParams(await request.text()),receipt={id:'synthetic-mallet-'+(192+receipts.length),payment_intent:form.get('payment_intent'),amount:Number(form.get('amount')),currency:'usd',status:'failed',metadata:{mallet_refund_id:form.get('metadata[mallet_refund_id]')}};receipts.push(receipt);return Response.json(receipt)
+ }});let browser
  try{
   const {account,contact}=await creditAccountFixture(h),{invoice}=await creditInvoice(h,account),replacement=await creditInvoice(h,account,'2')
   const payment=await h.command('payment.record',{invoiceId:invoice.id,version:invoice.version,amountCents:invoice.totals.totalCents,method:'cash',reference:'synthetic-mallet-140',evidence:'Original cash tender'})
@@ -82,6 +94,20 @@ export async function refundsBrowser(){
   const held=await issueCredit(h,creditInput(invoice,null,'synthetic-mallet-145',invoice.lines[0],2));await p.reload();assert.ok((await p.locator('main').innerText()).includes(held.number));assert.ok((await p.locator('main').innerText()).includes('Customer account credit'));await shot('14-payer-account-credit')
   await h.command('credit.exchange',{creditNoteId:held.id,invoiceId:replacement.invoice.id,version:replacement.invoice.version,amountCents:held.totals.totalCents,reference:'synthetic-mallet-146',reason:'Customer selected the separately authorized replacement accessory',confirm:'apply-credit'})
   await p.reload();const text=await p.locator('main').innerText();assert.ok(text.includes('Outstanding balance $3.24'));assert.ok(text.includes('Customer credit allocation; no new cash or processor settlement.'));assert.ok(!text.includes('Customer selected the separately authorized'));await shot('15-payer-exchange-allocation')
+  ;({invoice:stripeInvoice}=await creditInvoice(h,account,'3'))
+  const stripePayment=await h.command('payment.verifyStripe',{invoiceId:stripeInvoice.id,version:stripeInvoice.version,paymentIntentId:'synthetic-mallet-191'})
+  const stripeCredit=await issueCredit(h,creditInput(stripeInvoice,stripePayment,'synthetic-mallet-194',stripeInvoice.lines[0],3));let failed=(await h.state()).records.refund.find(r=>r.creditNoteId===stripeCredit.id)
+  failed=await h.command('refund.submit',{refundId:failed.id,version:failed.version,confirm:'send-refund'})
+  await p.reload();assert.ok((await p.locator('main').innerText()).includes('stripe · failed'));await shot('16-payer-failed-stripe-refund')
+  await h.command('refund.redirect',{refundId:failed.id,version:failed.version,destination:'account-credit',accountId:account.id,reference:'synthetic-mallet-195',consentEvidence:'Private new instruction to redirect to customer credit',confirm:'redirect-refund'})
+  await h.command('credit.apply',{creditNoteId:stripeCredit.id,invoiceId:replacement.invoice.id,version:replacement.invoice.version,amountCents:326,reference:'synthetic-mallet-196',reason:'Private customer instruction for the second repair',confirm:'apply-credit'})
+  await p.reload();assert.ok((await p.locator('main').innerText()).includes('account-credit · available'));assert.ok(!(await p.locator('main').innerText()).includes('Private new instruction'));await shot('17-payer-redirected-credit-applied')
+  const manualCredit=await issueCredit(h,creditInput(stripeInvoice,stripePayment,'synthetic-mallet-197',stripeInvoice.lines[1]));let manual=(await h.state()).records.refund.find(r=>r.creditNoteId===manualCredit.id)
+  manual=await h.command('refund.submit',{refundId:manual.id,version:manual.version,confirm:'send-refund'})
+  manual=await h.command('refund.redirect',{refundId:manual.id,version:manual.version,destination:'manual-tender',method:'cash',reference:'synthetic-mallet-198',consentEvidence:'Private new customer cash instruction',confirm:'redirect-refund'})
+  await p.reload();assert.ok((await p.locator('main').innerText()).includes('cash · unsubmitted'));await shot('18-payer-redirected-manual-pending')
+  await h.command('refund.record',{refundId:manual.id,version:manual.version,status:'refunded',reference:'synthetic-mallet-199',evidence:'Private owner record of cash handed over',confirm:'record-refund'})
+  await p.reload();const recovered=await p.locator('main').innerText();assert.ok(recovered.includes('cash · refunded'));assert.ok(recovered.includes('Refunded $2.15'));assert.ok(!recovered.includes('Private'));await shot('19-payer-redirected-manual-refunded')
   assert.deepEqual(errors,[]);await context.close()
  }finally{await browser?.close();await h.close()}
 }

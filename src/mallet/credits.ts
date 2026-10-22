@@ -1,7 +1,7 @@
 import {bump,choice,event,expectVersion,fail,find,integer,put,rows,text,who,type Handler,type State,type Row} from './model'
 import {quantity,totals} from './money'
 import {invoiceBalance} from './payments'
-export const creditCommands=['credit.preview','credit.issue','credit.apply','credit.exchange','refund.record','refund.claim','refund.outcome'] as const
+export const creditCommands=['credit.preview','credit.issue','credit.apply','credit.exchange','refund.record','refund.redirect','refund.claim','refund.outcome'] as const
 export const internalRefundCommands=['refund.claim','refund.outcome']
 export function creditAccount(s:State,id:string|undefined):string|null{
  if(!id)return null
@@ -62,7 +62,8 @@ export const credits:Handler=(c,command,p)=>{
   const note=find(c.s,'creditNote',p.creditNoteId),invoice=find(c.s,'invoice',p.invoiceId);expectVersion(invoice,p.version)
   const amountCents=integer(p.amountCents,'credit allocation cents',1),reference=text(p.reference,'unique allocation reference'),reason=text(p.reason,'allocation or exchange reason',2000)
   if(p.confirm!=='apply-credit')fail('CREDIT_REVIEW','Confirm this exact credit allocation.')
-  if(note.destination!=='account-credit'||!['approved','exported'].includes(invoice.status)||creditAccount(c.s,note.accountId)!==creditAccount(c.s,invoice.billing?.accountId))fail('CREDIT_ACCOUNT','Apply issued account credit only to an approved invoice belonging to the same current account.')
+  const redirected=rows(c.s,'refund').find(r=>r.creditNoteId===note.id)?.redirect
+  if(!(note.destination==='account-credit'||redirected?.destination==='account-credit')||!['approved','exported'].includes(invoice.status)||creditAccount(c.s,note.accountId)!==creditAccount(c.s,invoice.billing?.accountId))fail('CREDIT_ACCOUNT','Apply issued account credit only to an approved invoice belonging to the same current account.')
   if(command==='credit.exchange'&&(!note.lines.some((l:any)=>l.kind==='part')||!invoice.lines.some((l:any)=>l.kind==='part')))fail('CREDIT_EXCHANGE','An accessory exchange needs a returned part and a separately authorized replacement part invoice.')
   const prior=rows(c.s,'payment').find(x=>x.reference===reference)
   if(prior){if(prior.creditNoteId===note.id&&prior.invoiceId===invoice.id&&prior.amountCents===amountCents&&prior.reason===reason&&prior.exchange===(command==='credit.exchange'))return prior;fail('CREDIT_REPLAY','This allocation reference already has different instructions.')}
@@ -72,18 +73,36 @@ export const credits:Handler=(c,command,p)=>{
   event(c,command,invoice.jobId,payment.id,{creditNoteId:note.id,amountCents});return payment
  }
  const refund=find(c.s,'refund',p.refundId)
+ if(command==='refund.redirect'){
+  const destination=choice(p.destination,['account-credit','manual-tender'],'refund redirect destination'),reference=text(p.reference,'unique refund redirect reference'),consentEvidence=text(p.consentEvidence,'new customer refund redirect instruction',2000)
+  const accountId=destination==='account-credit'?text(p.accountId,'current customer account'):null,method=destination==='manual-tender'?choice(p.method,['cash','check','other'],'manual refund tender'):'account-credit'
+  const request={destination,accountId,method,reference,consentEvidence}
+  if(p.confirm!=='redirect-refund')fail('REFUND_REVIEW','Explicitly confirm the failed refund redirect.')
+  const prior=rows(c.s,'refund').find(r=>r.redirect?.reference===reference)
+  if(prior){if(prior.id===refund.id&&JSON.stringify(prior.redirect.request)===JSON.stringify(request))return prior;fail('REFUND_REPLAY','This redirect reference already records different instructions.')}
+  expectVersion(refund,p.version)
+  if(refund.method!=='stripe'||refund.status!=='failed'||refund.redirect)fail('REFUND_STATE','Redirect only a processor-confirmed failed Stripe refund once; pending and uncertain refunds stay reserved.')
+  if(rows(c.s,'refund').some(r=>r.history.some((h:any)=>h.reference===reference)))fail('REFUND_REPLAY','This reference already records another refund outcome.')
+  const note=find(c.s,'creditNote',refund.creditNoteId),currentAccount=creditAccount(c.s,note.accountId)
+  if(destination==='account-credit'&&(!currentAccount||accountId!==currentAccount))fail('CREDIT_ACCOUNT','Redirect credit only to the invoice’s same current account.')
+  const redirect={...request,request,status:destination==='account-credit'?'available':'unsubmitted',by:who(c),at:c.now,label:'Owner-recorded failed-refund redirect; no money moved or verified by Mallet.'}
+  const next=bump(c.s,'refund',refund,{status:'redirected',redirect,history:[...refund.history,{status:'redirected',reference,by:who(c),at:c.now}]})
+  event(c,command,refund.jobId,refund.id,{destination,method,amountCents:refund.amountCents});return next
+ }
  if(command==='refund.record'){
-  if(refund.method==='stripe')fail('REFUND_PROVIDER','Stripe outcomes must come from the processor, never a staff flag.')
+  if(refund.method==='stripe'&&refund.redirect?.destination!=='manual-tender')fail('REFUND_PROVIDER','Stripe outcomes must come from the processor, never a staff flag.')
   const status=choice(p.status,['refunded','failed','disputed'],'observed manual refund outcome'),reference=text(p.reference,'unique refund observation reference'),evidence=text(p.evidence,'manual original-tender outcome evidence',2000)
   if(p.confirm!=='record-refund')fail('REFUND_REVIEW','Explicitly confirm the observed original-tender refund outcome.')
   const prior=rows(c.s,'refund').flatMap(x=>x.history.map((entry:any)=>({...entry,refundId:x.id}))).find((x:any)=>x.reference===reference)
   if(prior){if(prior.refundId===refund.id&&prior.status===status&&prior.evidence===evidence)return refund;fail('REFUND_REPLAY','This refund observation reference already has different facts.')}
   expectVersion(refund,p.version)
-  if(refund.status==='refunded')fail('REFUND_FINAL','Keep the original completed refund unchanged; never pay it twice.')
-  const outcome={status,reference,evidence,by:who(c),at:c.now,label:'Owner-recorded original-tender refund; Mallet did not move or verify money.'},next=bump(c.s,'refund',refund,{status,history:[...refund.history,outcome]})
+  if((refund.redirect?.status??refund.status)==='refunded')fail('REFUND_FINAL','Keep the original completed refund unchanged; never pay it twice.')
+  if(rows(c.s,'refund').some(r=>r.redirect?.reference===reference))fail('REFUND_REPLAY','This reference already records a redirect.')
+  const outcome={status,reference,evidence,by:who(c),at:c.now,label:'Owner-recorded manual refund; Mallet did not move or verify money.'},next=bump(c.s,'refund',refund,{...(refund.redirect?{redirect:{...refund.redirect,status}}:{status}),history:[...refund.history,outcome]})
   event(c,command,refund.jobId,refund.id,{status,amountCents:refund.amountCents});return next
  }
  expectVersion(refund,p.version)
+ if(refund.redirect)fail('REFUND_FINAL','A redirected refund cannot receive another processor outcome.')
  if(refund.method!=='stripe')fail('REFUND_PROVIDER','Only a Stripe tender can use the connected processor.')
  if(command==='refund.claim'){
   if(p.confirm!=='send-refund'||refund.status!=='unsubmitted')fail('REFUND_STATE','Confirm a new refund once; pending or uncertain submissions must be reconciled, never resent.')

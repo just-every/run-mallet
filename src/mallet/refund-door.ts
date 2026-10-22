@@ -17,6 +17,7 @@ export async function refundDoor(env:Bindings,actor:Actor,authority:Authority,co
  if(actor.role!=='owner')fail('FORBIDDEN','Only the current owner sends or reconciles refunds.',null,403)
  if(!env.STRIPE_SECRET_KEY)fail('REFUND_CONFIGURATION','Configure the shop-owned Stripe connection privately first.',null,503)
  let s=await load(env.DB),refund=find(s,'refund',p.refundId);expectVersion(refund,p.version)
+ if(refund.redirect)fail('REFUND_FINAL','A redirected refund cannot be submitted or reconciled again.')
  const payment=find(s,'payment',refund.paymentId)
  if(refund.method!=='stripe'||!payment.verified||!payment.receipt?.paymentIntentId)fail('REFUND_PROVIDER','Choose an original verified Stripe tender.')
  if(command==='refund.submit')refund=await execute(env.DB,actor,'refund.claim',p,authority)

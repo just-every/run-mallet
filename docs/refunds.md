@@ -4,7 +4,7 @@ The current owner uses the authenticated `POST /api/mallet/commands` door.
 Every request has `{ "command": "…", "input": { … } }`, the native session
 cookie and the installation's Origin. Agents, members and admins cannot approve
 these money actions. Delegated finance roles and refund step-up remain GOV-001
-and GOV-004 work. This owner-only policy is provisional pending ct approval.
+and GOV-004 work. ct approved this interim owner-only authority and consent policy on 22 October 2026.
 
 Read current invoices, payments, credit notes and refund histories from
 `GET /api/mallet/state`. Invoice numbers, original lines, approved tax snapshots
@@ -31,7 +31,8 @@ changed instructions under that reference are refused.
 Each credit is bounded by the remaining original line quantities and recorded
 uncredited tender. An original-tender refund additionally reserves only that
 payment's remaining refundable amount. Failed and uncertain refunds keep their
-reservation: neither a retry nor another credit can silently spend it.
+reservation: neither a retry nor another credit can silently spend it. A failed
+Stripe refund can move that reservation once through the explicit redirect below.
 Account credit cannot be manufactured from an unpaid invoice. Returning a
 customer-credit payment creates account credit, never a cash conversion.
 
@@ -68,6 +69,24 @@ there is no automatic resubmission or unreserve door. Resolve external provider
 exceptions with the merchant before changing the product's policy. A restored
 pending submission also needs this read-only reconciliation under fresh owner
 credentials; restoring an archive never submits a refund.
+
+## Redirect a failed Stripe refund once
+
+`refund.redirect` requires `refundId`, current `version`, a unique `reference`,
+new staff-recorded `consentEvidence`, and `confirm: "redirect-refund"`.
+Choose `destination: "account-credit"` with the invoice's same current `accountId`,
+or `destination: "manual-tender"` with `method: "cash"`, `"check"` or `"other"`.
+Only a processor-confirmed failed or canceled Stripe refund qualifies. Pending,
+uncertain, completed, manual or already redirected refunds are refused. Exact
+reference/input replay returns the saved record; changed instructions are refused.
+
+The linked outcome moves exactly the failed reservation, never creates another
+credit note or changes the invoice. Account credit becomes available on the
+original `creditNoteId` and can be applied to another RO of that same account.
+Manual tender starts unsubmitted; record its actual outcome with `refund.record`
+and new evidence/reference, as above. It never claims Mallet sent money. The
+original Stripe outcome/history remains retained; further submit/reconcile calls
+are refused. Redirects, observations and allocations survive archive/restore.
 
 ## Apply account credit or exchange an accessory
 
