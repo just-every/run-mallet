@@ -294,8 +294,8 @@ test('PART-002: scan shipment and bins, approve shortage and reconcile through n
 test('BUY-001 / OPS-001: approved spend, partial receipt, repair allocation, backorder, bill exceptions, closure and fresh recovery',async()=>{const {purchasingJourney}=await import('./support/purchasing-journey.mjs');await run(purchasingJourney)})
 test('BUY-001: two-line spend approval, partial receiving, backorder and changed bill exception through native forms at 1440/390',async()=>{const {purchasingBrowser}=await import('./purchasing-browser.mjs');await purchasingBrowser()})
 
-test('CUS-001 / OPS-001: owner-reviewed household and fleet contacts, vehicle search, driver changes, duplicate history, frozen invoices and recovery',async()=>{const {customersJourney}=await import('./support/customers-journey.mjs');await run(customersJourney)})
-test('CUS-001: owner creates household and fleet, changes driver, merges duplicate and searches through native forms at 1440/390',async()=>{const {customersBrowser}=await import('./customers-browser.mjs');await customersBrowser()})
+test('CUS-001 / OPS-001: owner/admin accounts, previewed merges, payer sessions, frozen invoices and recovery',async()=>{const {customersJourney}=await import('./support/customers-journey.mjs');await run(customersJourney)})
+test('CUS-001: admin intake, merge preview and payer-only account billing through native forms at 1440/390',async()=>{const {customersBrowser}=await import('./customers-browser.mjs');await customersBrowser()})
 
 test('PART-001 / OPS-001: declared catalog, two supplier lots, serial identity, exact installed costs, affected repairs, count reconciliation and recovery',async()=>{const {traceJourney}=await import('./support/stock-trace-journey.mjs');await run(traceJourney)})
 test('PART-001: maintain catalog, receive two lots, identify installation and find only affected vehicles at 1440/390',async()=>{const {traceBrowser}=await import('./stock-trace-browser.mjs');await traceBrowser()})

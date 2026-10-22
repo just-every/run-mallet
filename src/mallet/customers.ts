@@ -1,6 +1,7 @@
-// Owner-reviewed contacts and account aliases retain provenance; merging never rewrites a job or invoice.
+import {createHash} from 'node:crypto'
+// Owner/admin-reviewed contacts and account aliases retain provenance; merging never rewrites a job or invoice.
 import {bump,choice,event,expectVersion,fail,find,put,rows,text,who,type Context,type Handler,type State,type Row} from './model'
-export const accountCommands=['contact.save','customer.save','customer.linkAsset','customer.driver','customer.merge']
+export const accountCommands=['contact.save','customer.save','customer.linkAsset','customer.driver','customer.mergePreview','customer.merge']
 const email=(value:unknown)=>{const e=text(value,'email',254,true);if(e&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e))fail('INPUT','Provide a valid contact email.',null,400);return e}
 function active(s:State,id:unknown){const account=find(s,'customerAccount',id);if(account.mergedInto)fail('MERGED_ACCOUNT','Use the surviving account; the source remains read-only history.');return account}
 function contactIds(s:State,value:unknown){if(!Array.isArray(value)||!value.length||value.length>100)fail('INPUT','Choose 1–100 contacts.',null,400);const ids=[...new Set(value.map(v=>text(v,'contact')))];ids.forEach(id=>find(s,'contact',id));return ids}
@@ -16,10 +17,19 @@ export function customerBillingSnapshot(s:State,asset:Row){
  const account=active(s,asset.customerAccountId),contact=(id:string|null)=>id?structuredClone(find(s,'contact',id)):null
  return {accountId:account.id,kind:account.kind,name:account.name,taxStatus:account.taxStatus,payer:contact(account.payerId),billingContact:contact(account.billingContactId),driver:contact(asset.driverContactId??account.driverId),authorizer:contact(account.authorizerId),recordedAt:asset.updatedAt??asset.createdAt}
 }
+export function mergePreview(s:State,p:any){
+ const source=active(s,p.sourceId),target=active(s,p.targetId);expectVersion(source,p.sourceVersion);expectVersion(target,p.targetVersion)
+ if(source.id===target.id)fail('INPUT','Choose two distinct accounts.',null,400)
+ if(source.kind!==target.kind)fail('MERGE_CONFLICT','Different account kinds need separate identity review; no automatic merge.')
+ const survivor={...structuredClone(target),contactIds:[...new Set([...target.contactIds,...source.contactIds])]},vehicles=rows(s,'asset').filter(a=>[source.id,target.id].includes(a.customerAccountId)).map(a=>({id:a.id,version:a.version,label:a.label,identifier:a.identifier,driverContactId:a.driverContactId}))
+ const preview={source:structuredClone(source),survivor,contacts:rows(s,'contact').filter(c=>survivor.contactIds.includes(c.id)),vehicles}
+ return {...preview,previewHash:createHash('sha256').update(JSON.stringify(preview)).digest('hex')}
+}
 function audit(c:Context,command:string,account:Row,data:any){event(c,command,null,account.id,data);return account}
 export const customers:Handler=(c,command,p)=>{
  if(!accountCommands.includes(command))return
- if(c.actor.role!=='owner')fail('FORBIDDEN','The owner manages contact identities and account relationships until customer access policy is approved.',null,403)
+ if(!['owner','admin'].includes(c.actor.role))fail('FORBIDDEN','Owner and admin operators manage contacts and account relationships.',null,403)
+ if(command==='customer.mergePreview')return mergePreview(c.s,p)
  if(command==='contact.save'){
   const prior=p.contactId?find(c.s,'contact',p.contactId):null;if(prior)expectVersion(prior,p.version)
   const fields={name:text(p.name,'contact name'),email:email(p.email),phone:text(p.phone,'phone',100,true),communication:choice(p.communication,['none','email','phone'],'communication preference'),notes:text(p.notes,'contact notes',4000,true),by:who(c),at:c.now}
@@ -29,7 +39,7 @@ export const customers:Handler=(c,command,p)=>{
  if(command==='customer.save'){
   const prior=p.customerId?active(c.s,p.customerId):null;if(prior)expectVersion(prior,p.version)
   const ids=contactIds(c.s,p.contactIds),role=(key:string,required=false)=>{const id=p[key]?text(p[key],key):null;if(required&&!id)fail('INPUT','Choose a payer and billing contact.',null,400);if(id&&!ids.includes(id))fail('CONTACT_SCOPE','Each account role must be one of its contacts.');return id}
-  const fields={name:text(p.name,'account name'),kind:choice(p.kind,['person','household','business','fleet'],'account kind'),contactIds:ids,payerId:role('payerId',true),billingContactId:role('billingContactId',true),driverId:role('driverId'),authorizerId:role('authorizerId'),taxStatus:choice(p.taxStatus,['standard','declared-exempt','unknown'],'tax status'),notes:text(p.notes,'account notes',4000,true),by:who(c),at:c.now}
+  const fields={payerRevision:(prior?.payerRevision??1)+(prior&&prior.payerId!==p.payerId?1:0),name:text(p.name,'account name'),kind:choice(p.kind,['person','household','business','fleet'],'account kind'),contactIds:ids,payerId:role('payerId',true),billingContactId:role('billingContactId',true),driverId:role('driverId'),authorizerId:role('authorizerId'),taxStatus:choice(p.taxStatus,['standard','declared-exempt','unknown'],'tax status'),notes:text(p.notes,'account notes',4000,true),by:who(c),at:c.now}
   const row=prior?bump(c.s,'customerAccount',prior,{...fields,history:[...prior.history,{...structuredClone(prior),history:undefined}]}):put(c.s,'customerAccount',{...fields,history:[],mergedInto:null})
   return audit(c,command,row,{version:row.version})
  }
@@ -37,8 +47,10 @@ export const customers:Handler=(c,command,p)=>{
   const source=active(c.s,p.sourceId),target=active(c.s,p.targetId);expectVersion(source,p.sourceVersion);expectVersion(target,p.targetVersion)
   if(source.id===target.id)fail('INPUT','Choose two distinct accounts.',null,400)
   if(source.kind!==target.kind)fail('MERGE_CONFLICT','Different account kinds need separate identity review; no automatic merge.')
-  const reason=text(p.reason,'merge reason',2000),consentEvidence=text(p.consentEvidence,'explicit merge consent evidence',4000),sourceSnapshot=structuredClone(source),targetSnapshot=structuredClone(target)
-  const receipt=put(c.s,'customerMerge',{sourceId:source.id,targetId:target.id,sourceSnapshot,targetSnapshot,reason,consentEvidence,by:who(c),at:c.now})
+  const preview=mergePreview(c.s,p)
+  if(p.previewHash!==preview.previewHash)fail('MERGE_PREVIEW','Preview the exact current survivor before merging.')
+  const identityEvidence=text(p.identityEvidence,'identity-match evidence',4000),reason=text(p.reason,'merge reason',2000),consentEvidence=text(p.consentEvidence,'explicit merge consent evidence',4000),sourceSnapshot=structuredClone(source),targetSnapshot=structuredClone(target)
+  const receipt=put(c.s,'customerMerge',{sourceId:source.id,targetId:target.id,sourceSnapshot,targetSnapshot,reason,identityEvidence,consentEvidence,previewHash:preview.previewHash,by:who(c),at:c.now})
   // The survivor's role choices remain explicit. Alias contacts and vehicles move without granting a billing identity.
   bump(c.s,'customerAccount',target,{contactIds:[...new Set([...target.contactIds,...source.contactIds])],history:[...target.history,{...targetSnapshot,history:undefined}],mergeReceipts:[...(target.mergeReceipts??[]),receipt.id]})
   const saved=bump(c.s,'customerAccount',source,{mergedInto:target.id,mergeReceiptId:receipt.id})

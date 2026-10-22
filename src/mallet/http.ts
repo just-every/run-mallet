@@ -10,6 +10,8 @@ import {tracePage,traceFormInput} from './ui/stock-trace'
 import {traceReport} from './stock-trace'
 import {accountsPage,customerFormInput} from './ui/customers'
 import {customerSearch} from './customers'
+import {mergePreviewPage} from './ui/customers'
+import {portalResponse} from './portal-door'
 import {purchasingPage,purchasingFormInput} from './ui/purchasing'
 import {purchaseStatus} from './purchasing'
 import {inventoryPage,countPage,inventoryFormInput} from './ui/inventory'
@@ -93,7 +95,7 @@ function visible(s:State,actor:Actor):State {
  if(!human(actor))s={...s,records:Object.fromEntries(Object.entries(s.records).map(([k,v])=>[k,(k.startsWith('intake')||['warranty','warrantyTerms','payment','handover','returnDelegate','returnOverride'].includes(k))?[]:k==='event'?v.filter(x=>!x.kind.startsWith('intake.')&&!x.kind.startsWith('warranty.')&&!x.kind.startsWith('payment.')&&!x.kind.startsWith('return.')):v]))}
  s=scopedCollaboration(scopedPromises(s,actor),actor)
  s=scopedTime(s,actor)
- if(actor.role!=='owner'){s={...s,records:Object.fromEntries(Object.entries(s.records).filter(([k])=>!['contact','customerAccount','customerMerge','customerBilling'].includes(k)))};s={...s,records:{...s.records,event:rows(s,'event').filter(x=>!x.kind.startsWith('contact.')&&!x.kind.startsWith('customer.')),invoice:rows(s,'invoice').map(i=>{const {billing,...rest}=i;return rest})}}}
+ if(!human(actor)){s={...s,records:Object.fromEntries(Object.entries(s.records).filter(([k])=>!['contact','customerAccount','customerMerge','customerBilling'].includes(k)))};s={...s,records:{...s.records,event:rows(s,'event').filter(x=>!x.kind.startsWith('contact.')&&!x.kind.startsWith('customer.')),invoice:rows(s,'invoice').map(i=>{const {billing,...rest}=i;return rest})}}}
  if(!human(actor)){const records=Object.fromEntries(Object.entries(s.records).filter(([k])=>!k.startsWith('stock')&&!k.startsWith('purchase')));s={...s,records:{...records,event:(records.event??[]).filter(x=>!x.kind.startsWith('stock.')&&!x.kind.startsWith('purchase.'))}}}
  if(!human(actor))s={...s,records:{...s.records,event:rows(s,'event').filter(e=>!e.kind.startsWith('routing.'))}}
  if(actor.role!=='owner'){const {payRate:_rates,...records}=s.records;s={...s,records}}
@@ -148,6 +150,7 @@ function formInput(data:FormData) {
 }
 export async function malletResponse(request:Request,original:Bindings):Promise<Response|null> {
  const url=new URL(request.url),path=url.pathname
+ const portal=await portalResponse(request,original);if(portal)return portal
  const intakeForm=await intakeFormResponse(request,original);if(intakeForm)return intakeForm
  const customer=await customerLinkResponse(request,original);if(customer)return customer
  const decision=await approvalResponse(request,original);if(decision)return decision
@@ -211,7 +214,8 @@ export async function malletResponse(request:Request,original:Bindings):Promise<
    }
    else if(command==='inspection.record'&&actor.role!=='agent'){const checked=await inspectionRecordInput(env.DB,actor,auth.authority,input);result=await execute(env.DB,actor as any,command,checked.input,checked.authority)}
    else result=await execute(env.DB,actor as any,command,input,auth.authority)
-   if(isApi){if(actor.role!=='owner'&&result&&typeof result==='object'&&'billing' in result){const {billing,...rest}=result;result=rest}return json(actor.role==='agent'?withoutSubletCosts(withoutInspectionSource(result)):result)}
+   if(isApi){if(!human(actor)&&result&&typeof result==='object'&&'billing' in result){const {billing,...rest}=result;result=rest}return json(actor.role==='agent'?withoutSubletCosts(withoutInspectionSource(result)):result)}
+   if(command==='customer.mergePreview')return page('Review duplicate merge',mergePreviewPage(result,input),actor,200,{section:'customers'})
    if(command==='intakeForm.create')return page('Customer intake link',`<section class="card"><p>Share this private seven-day link directly with this customer. Mallet has not sent it. Anyone holding it can use it; it will not be shown again.</p><a href="${e(result.url)}">Open customer intake form</a><pre>${e(result.url)}</pre><a href="/app/jobs/${e(input.jobId)}/intake">Return to custody</a></section>`,actor,200,{section:'jobs'})
    if(command==='intakeForm.publish')return redirect('/app/intake-templates')
    if(command==='intakeForm.revoke')return redirect(`/app/jobs/${e(input.jobId)}/intake`)
@@ -274,7 +278,7 @@ export async function malletResponse(request:Request,original:Bindings):Promise<
    if(path.startsWith('/api/'))return reportFormat(url.searchParams)==='csv'?csv(technicianCsv(report),`mallet-technicians-${report.period.from}-${report.period.to}`):json(report)
    return page('Technician efficiency',technicianReportPage(report,actor,(await operators(env.DB)).names),actor,200,frame('jobs',{subtitle:'Sold versus actual hours, productivity and attendance, recomputed from clock events.'}))
   }
-  if(path==='/app/accounts'||path==='/api/mallet/accounts'||/^\/api\/mallet\/accounts\/[^/]+\/billing$/.test(path)){if(actor.role!=='owner')throw new HttpError(403,'owner_required');const q=url.searchParams.get('q')??'';if(path==='/api/mallet/accounts')return json(customerSearch(state,q));if(path.endsWith('/billing')){const id=path.split('/')[4],account=rows(state,'customerAccount').find(a=>a.id===id&&!a.mergedInto);if(!account)throw new HttpError(404,'not_found');const ids=new Set([id,...rows(state,'customerAccount').filter(a=>a.mergedInto===id).map(a=>a.id)]);return json(rows(state,'invoice').filter(i=>ids.has(i.billing?.accountId)))}return page('Customer accounts',accountsPage(state,q),actor,200,frame('customers'))}
+  if(path==='/app/accounts'||path==='/api/mallet/accounts'||/^\/api\/mallet\/accounts\/[^/]+\/billing$/.test(path)){if(!human(actor))throw new HttpError(403,'manager_required');const q=url.searchParams.get('q')??'';if(path==='/api/mallet/accounts')return json(customerSearch(state,q));if(path.endsWith('/billing')){const id=path.split('/')[4],account=rows(state,'customerAccount').find(a=>a.id===id&&!a.mergedInto);if(!account)throw new HttpError(404,'not_found');const ids=new Set([id,...rows(state,'customerAccount').filter(a=>a.mergedInto===id).map(a=>a.id)]);return json(rows(state,'invoice').filter(i=>ids.has(i.billing?.accountId)))}return page('Customer accounts',accountsPage(state,q),actor,200,frame('customers'))}
   if(['/app/purchasing','/api/mallet/purchasing'].includes(path)){if(!human(actor))throw new HttpError(403,'manager_required');return path.startsWith('/api/')?json(rows(state,'purchaseOrder').map(po=>({...po,...purchaseStatus(state,po)}))):page('Purchase orders',purchasingPage(state),actor,200,frame('inventory'))}
   if(['/app/inventory/trace','/api/mallet/trace'].includes(path)){if(!human(actor))throw new HttpError(403,'manager_required');const q=url.searchParams.get('q')??'';return path.startsWith('/api/')?json(traceReport(state,q)):page('Parts catalog & traceability',tracePage(state,q),actor,200,frame('inventory'))}
   if(['/app/inventory','/app/inventory/count','/api/mallet/inventory'].includes(path)){if(!human(actor))throw new HttpError(403,'manager_required');if(path.startsWith('/api/'))return json(stockReport(state));return page(path.endsWith('/count')?'Blind stock count':'Stock & receiving',path.endsWith('/count')?countPage():inventoryPage(state),actor,200,frame('inventory'))}
