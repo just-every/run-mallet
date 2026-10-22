@@ -42,7 +42,8 @@ export const diagnostics:Handler=(c,command,p)=>{
  }
  if(command==='diagnosisLink.create') {
   const job=find(c.s,'job',p.jobId),days=integer(p.days??LINK_DAYS.default,'link lifetime in days',LINK_DAYS.min,LINK_DAYS.max)
-  const row=put(c.s,'diagnosisLink',{jobId:job.id,createdBy:who(c),createdAt:c.now,expiresAt:new Date(Date.parse(c.now)+days*86_400_000).toISOString(),revokedAt:null,revokedBy:null,sentByMallet:false});event(c,command,job.id,row.id,{expiresAt:row.expiresAt});return row
+  if(p.reportId){const report=find(c.s,'inspectionReport',p.reportId);if(report.jobId!==job.id)fail('REPORT_SCOPE','This report belongs to another repair.',null,400)}
+  const row=put(c.s,'diagnosisLink',{jobId:job.id,...(p.reportId?{reportId:p.reportId}:{}),createdBy:who(c),createdAt:c.now,expiresAt:new Date(Date.parse(c.now)+days*86_400_000).toISOString(),revokedAt:null,revokedBy:null,sentByMallet:false});event(c,command,job.id,row.id,{expiresAt:row.expiresAt});return row
  }
  const link=find(c.s,'diagnosisLink',p.linkId);expectVersion(link,p.version)
  if(link.revokedAt)fail('LINK_STATE','This link is already revoked.')

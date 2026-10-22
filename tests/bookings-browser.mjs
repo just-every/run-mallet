@@ -1,3 +1,5 @@
+import {createServer} from 'node:http'
+import {once} from 'node:events'
 import assert from 'node:assert/strict'
 import {mkdir} from 'node:fs/promises'
 import {join} from 'node:path'
@@ -15,6 +17,8 @@ export async function bookingsBrowser(){
   const fields={name:'Brake inspection',location:'Main workshop',skill:'brakes',skills:'brakes, inspection',bayId:'Bay 1',startAt:new Date(Date.now()+86400000).toISOString().slice(0,10)+'T09:00:00Z',endAt:new Date(Date.now()+86400000).toISOString().slice(0,10)+'T12:00:00Z',durationMinutes:'60',leadMinutes:'60'}
   for(const [name,value]of Object.entries(fields))await p.locator(`[name="${name}"]`).fill(value)
   await shot(p,'booking-01-publish');await p.getByRole('button',{name:'Publish service'}).click();await p.waitForLoadState('domcontentloaded');await shot(p,'booking-02-staff-appointments')
+  const embedServer=createServer((req,res)=>{res.writeHead(200,{'content-type':'text/html'});res.end('<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1"><iframe title="Shop booking" style="width:100%;height:900px;box-sizing:border-box" src="'+h.origin+'/book"></iframe>')});embedServer.listen(0,'127.0.0.1');await once(embedServer,'listening')
+  try{const embedded=await customer.newPage();await embedded.goto('http://127.0.0.1:'+embedServer.address().port);await embedded.frameLocator('iframe').getByRole('heading',{name:'Choose a service'}).waitFor();await shot(embedded,'booking-02b-embedded-form');await embedded.close()}finally{await new Promise(resolve=>embedServer.close(resolve))}
   await c.goto(h.origin+'/book');await c.setViewportSize({width:390,height:1000});await shot(c,'booking-03-customer-times')
   const first=c.locator('form:has(input[value="hold"])').first();await first.getByLabel('Your name').fill('Dana Brooks');await first.getByLabel('Confirmation email',{exact:true}).fill('dana@example.test');await first.getByRole('checkbox').check();await first.getByRole('button',{name:'Hold this time'}).click();await c.waitForLoadState('domcontentloaded');await shot(c,'booking-04-tentative')
   assert.match(await c.locator('main').innerText(),/held/);await c.getByRole('button',{name:'Confirm appointment',exact:true}).click();await c.waitForLoadState('domcontentloaded');await shot(c,'booking-05-confirmed');assert.match(await c.locator('main').innerText(),/confirmed/)

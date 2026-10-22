@@ -49,6 +49,9 @@ function byteRange(header: string | null, size: number): { start: number; end: n
 async function content(request: Request, env: Bindings, actor: Actor, authority: Authority, id: string): Promise<Response> {
  const { scope, row } = await uploadScope(env.DB, actor, authority, id)
  if (!row.complete) fail('MEDIA_INCOMPLETE', 'This media has not finished uploading.')
+ return streamMedia(request,row,(first,last)=>chunkPage(env.DB,scope,id,first,last))
+}
+export async function streamMedia(request:Request,row:import('./types').UploadRow,readPage:(first:number,last:number)=>Promise<ChunkRow[]>):Promise<Response>{
  const range = byteRange(request.headers.get('range'), row.size)
  if (!range) return new Response(null, { status: 416, headers: { ...privateHeaders, 'content-range': `bytes */${row.size}`, 'accept-ranges': 'bytes' } })
  const fallback = row.filename.replace(/[^a-zA-Z0-9._ -]/g, '_').replace(/"/g, '_') || 'inspection-media'
@@ -62,7 +65,7 @@ async function content(request: Request, env: Bindings, actor: Actor, authority:
    try {
     if (cancelled) return
     if (ordinal > last) { controller.close(); return }
-    if (!page.length) page = await chunkPage(env.DB, scope, id, ordinal, Math.min(last, ordinal + 11))
+    if (!page.length) page = await readPage(ordinal, Math.min(last, ordinal + 11))
     if (cancelled) return
     const chunk = page.shift()
     if (!chunk || chunk.ordinal !== ordinal) fail('MEDIA_STORAGE', 'The stored media is incomplete.', null, 500)

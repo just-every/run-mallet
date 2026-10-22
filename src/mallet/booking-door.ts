@@ -1,3 +1,4 @@
+import {e} from './ui/common'
 import {runtimeBindings,type Bindings} from '../auth.server'
 import {digest} from './auth'
 import {execute,load,MalletError,rows} from './model'
@@ -37,7 +38,7 @@ export async function bookingResponse(request:Request,original:Bindings):Promise
    row=await execute(env.DB,actor,'booking.'+action,{...data,appointmentId:row.id,version:Number(data.version)},authority)
    if(action!=='cancel'){
     const mail=operatorMail(env);let outcome:any={status:'failed',provider:'mail'}
-    try{if(mail){const text=`Your appointment is confirmed.\n${row.service.name}\n${row.service.location}\n${row.startAt} – ${row.endAt}\nReference: ${row.id}\nManage or cancel: ${env.AUTH_ORIGIN+url.pathname}\nNo repair work or payment is authorized.`;outcome=await mail.send({deliveryId:row.delivery.id,from:String(env.MAIL_FROM??''),to:[row.email],subject:'Your confirmed appointment',text,html:'<p>Your appointment is confirmed. Keep your private confirmation email to manage it.</p>',headers:{}})}}catch{outcome={status:'uncertain',provider:'mail'}}
+    try{if(mail){const text=`Your appointment is confirmed.\n${row.service.name}\n${row.service.location}\n${row.startAt} – ${row.endAt}\nReference: ${row.id}\nManage or cancel: ${env.AUTH_ORIGIN+url.pathname}\nNo repair work or payment is authorized.`;outcome=await mail.send({deliveryId:row.delivery.id,from:String(env.MAIL_FROM??''),to:[row.email],subject:'Your confirmed appointment',text,html:'<p>'+e(text).replaceAll('\n','<br>')+'</p>',headers:{}})}}catch{outcome={status:'uncertain',provider:'mail'}}
     row=await execute(env.DB,actor,'booking.outcome',{appointmentId:row.id,version:row.version,deliveryId:row.delivery.id,status:outcome.status,provider:outcome.provider??'mail'},authority)
    }
   }

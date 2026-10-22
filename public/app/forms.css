@@ -96,3 +96,5 @@
  .tech{white-space:normal}
  .scroll tr{padding:12px 0;grid-template-columns:minmax(0,.8fr) minmax(0,1fr) minmax(0,1.3fr)}
 }
+
+.inspection-report-media{display:block;max-width:100%;height:auto}

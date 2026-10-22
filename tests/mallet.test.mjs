@@ -324,3 +324,8 @@ const {bookingsBrowser}=await import('./bookings-browser.mjs')
 test('BOOK-001: customer appointments contend, confirm, reschedule, cancel and recover with fresh authority',()=>run(onlineBookingJourney))
 test('BOOK-001: opening windows, skills, duration, lead time and expiring tentative capacity',()=>run(bookingAvailabilityJourney))
 test('BOOK-001: native publication and customer phone booking at 1440 and 390',bookingsBrowser)
+
+const {inspectionReportJourney}=await import('./support/inspection-report-journey.mjs')
+test('DVI-003: reviewed private evidence, exact proposed lines, delivery and read-only view analytics survive recovery',()=>run(inspectionReportJourney))
+const {inspectionReportBrowser}=await import('./inspection-report-browser.mjs')
+test('DVI-003: advisor review, email, mobile video and proposed repair at 1440 and 390',inspectionReportBrowser)
