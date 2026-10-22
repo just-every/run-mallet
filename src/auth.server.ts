@@ -44,6 +44,7 @@ export interface Bindings {
  SETUP_TOKEN?: string
  MAIL_PROVIDER?: 'development' | 'resend' | 'sendgrid' | 'cloudflare'
  MAIL_FROM?: string
+ MAIL_EVENT_KEY?: string
  MAIL_API_KEY?: string
  MAIL_ACCOUNT_ID?: string
 }

@@ -330,6 +330,6 @@ test('DVI-003: reviewed private evidence, exact proposed lines, delivery and rea
 const {inspectionReportBrowser}=await import('./inspection-report-browser.mjs')
 test('DVI-003: advisor review, email, mobile video and proposed repair at 1440 and 390',inspectionReportBrowser)
 test('BOOK-001: failed or uncertain confirmation mail preserves the appointment without an automatic resend',async()=>{const {bookingFailureJourney}=await import('./support/booking-journey.mjs');await bookingFailureJourney()})
-test('DVI-003: rejected or uncertain report mail retains one honest attempt without an automatic resend',async()=>{const {inspectionReportFailureJourney}=await import('./support/inspection-report-journey.mjs');await inspectionReportFailureJourney()})
+test('DVI-003: rejected or uncertain report mail retains one honest attempt without an automatic resend',async()=>{const {inspectionReportFailureJourney}=await import('./support/inspection-report-journey.mjs');await inspectionReportFailureJourney();const {inspectionReportDevelopmentJourney}=await import('./support/inspection-report-journey.mjs');await inspectionReportDevelopmentJourney()})
 
 test('BOOK-001: anonymous tentative holds are bounded per source and normalized email',()=>run(bookingAbuseJourney))

@@ -33,7 +33,7 @@ export const inspectionReports:Handler=(c,command,p)=>{
  }
  const row=find(c.s,'inspectionReportDelivery',p.deliveryId);expectVersion(row,p.version)
  if(row.status!=='unconfirmed')fail('REPORT_DELIVERY','This outcome was already recorded.')
- if(!['accepted','development','failed','uncertain'].includes(p.status))fail('INPUT','Unknown mail outcome.',null,400)
- const next=bump(c.s,'inspectionReportDelivery',row,{status:p.status,provider:text(p.provider,'provider',100),linkId:text(p.linkId,'inspection link'),at:c.now})
+ if(!['accepted','development','failed','uncertain','rate_limited'].includes(p.status))fail('INPUT','Unknown mail outcome.',null,400)
+ const next=bump(c.s,'inspectionReportDelivery',row,{status:p.status,provider:text(p.provider,'provider',100),providerMessageId:p.providerMessageId?text(p.providerMessageId,'provider message id',1024):null,linkId:text(p.linkId,'inspection link'),at:c.now})
  event(c,command,row.jobId,row.id,{status:next.status});return next
 }

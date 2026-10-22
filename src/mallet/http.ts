@@ -1,3 +1,4 @@
+import {inspectionReportEventResponse} from './inspection-report-events'
 import {inspectionReportInput,sendInspectionReport} from './inspection-report-door'
 import {internalReportCommands} from './inspection-reports'
 import {reportFormInput} from './ui/inspection-reports'
@@ -164,6 +165,7 @@ function formInput(data:FormData) {
 }
 export async function malletResponse(request:Request,original:Bindings,execution:Pick<ExecutionContext,'waitUntil'>):Promise<Response|null> {
  const url=new URL(request.url),path=url.pathname
+ const deliveryEvent=await inspectionReportEventResponse(request,original);if(deliveryEvent)return deliveryEvent
  const booking=await bookingResponse(request,original);if(booking)return booking
  const checkIn=await checkInResponse(request,original);if(checkIn)return checkIn
  const portal=await portalResponse(request,original,execution);if(portal)return portal
