@@ -14,11 +14,10 @@ export async function boardLiveJourney(){
  try{
   await shopSetup(h)
   const advisor=await h.person('synthetic-mallet-201@example.test','admin'),evidence=[],timings=[],errors=[]
-  // An ordinary active board, with several cards hidden behind each stage's
-  // native five-card limit. The selected repair remains visible as it moves.
-  for(let i=0;i<12;i++){
+  const prepareInitial=async(start=0,end=12)=>{for(let i=start;i<end;i++){
    const asset=await h.command('asset.create',{customerName:['Dana Brooks','Harbor Plumbing','Lee Chen','Rivera Fleet'][i%4],customerEmail:'synthetic-mallet-'+(210+i)+'@example.test',label:['2019 Honda CR-V','2021 Ford Transit','2020 Toyota Corolla'][i%3],identifier:'synthetic-mallet-'+(230+i)})
    const hour=String(8+i).padStart(2,'0');await booking(h,{asset,bayId:'Bay '+(i%3+1),startAt:`2026-11-01T${hour}:00:00Z`,endAt:`2026-11-01T${hour}:45:00Z`})
+  }
   }
   browser=await chromium.launch({headless:true,args:['--use-mock-keychain','--password-store=basic']})
   const ownerContext=await browser.newContext({ignoreHTTPSErrors:true,viewport:{width:1440,height:1000},timezoneId:'America/New_York'}),peerContext=await browser.newContext({ignoreHTTPSErrors:true,viewport:{width:1440,height:1000}})
@@ -26,6 +25,11 @@ export async function boardLiveJourney(){
   await signIn(ownerContext,h.owner);await signIn(peerContext,advisor.cookie)
   const owner=await ownerContext.newPage(),peer=await peerContext.newPage()
   for(const p of [owner,peer]){p.on('pageerror',error=>errors.push(error.message));p.on('response',response=>{const path=new URL(response.url()).pathname;if(['/app','/api/mallet/board-revision'].includes(path)){const timing=response.headers()['server-timing'];if(timing)timings.push({path,status:response.status(),serverTiming:timing})}})}
+  await owner.goto(h.origin+'/app');assert.equal(await owner.locator('.empty-board').count(),1)
+  const initialDocument=await owner.evaluateHandle(()=>document)
+  await prepareInitial(0,1);const firstCommit=performance.now();await owner.locator('#board .ro').first().waitFor({timeout:1900});assert.ok(performance.now()-firstCommit<2000)
+  assert.ok(await owner.evaluate(previous=>document===previous,initialDocument),'An empty board receives its first repair without reloading')
+  await initialDocument.dispose();await prepareInitial(1,12)
   const directory=process.env.MALLET_OPS_PROOF_DIR??'.cache/ops-board-live';await mkdir(directory,{recursive:true})
   const stage=async(id,wanted,committedAt)=>{
    await owner.waitForFunction(({id,wanted})=>[...document.querySelectorAll('#board .ro')].some(a=>a.getAttribute('href')?.includes('ro='+id)&&a.dataset.stage===wanted),{id,wanted},{timeout:1900})
@@ -76,12 +80,12 @@ export async function boardLiveJourney(){
    await preserved()
    assert.ok(await owner.evaluate(handle=>window.pageIdentity===handle,pageIdentity),'Live changes retain the same document')
    assert.ok(await owner.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'The existing board fits '+width)
-   await owner.screenshot({path:join(directory,'board-peer-stage-'+width+'.png'),fullPage:true})
-   if(width===1440){
-    await ownerContext.setOffline(true);await owner.locator('[data-board-live-status]').waitFor({state:'visible',timeout:6000});await preserved();await owner.screenshot({path:join(directory,'board-updates-offline-'+width+'.png'),fullPage:true})
+   await owner.screenshot({path:join(directory,'board-peer-stage-'+width+'.png'),fullPage:true});await owner.screenshot({path:join(directory,'board-peer-viewport-'+width+'.png')})
+   {
+    await ownerContext.setOffline(true);await owner.locator('[data-board-live-status]').waitFor({state:'visible',timeout:6000});await preserved();await owner.screenshot({path:join(directory,'board-updates-offline-'+width+'.png')})
     await ownerContext.setOffline(false);await owner.locator('[data-board-live-status]').waitFor({state:'detached',timeout:6000});await preserved()
    }
-   await pageIdentity.dispose()
+   await owner.locator('#board .stage-work').screenshot({path:join(directory,'board-peer-work-'+width+'.png')});await pageIdentity.dispose()
   }
   assert.deepEqual(errors,[],'No browser script errors')
   await writeFile(join(directory,'board-live-timing.json'),JSON.stringify({dataset:{initialOpenRepairs:12,peerRepairs:2},peerVisibility:evidence,serverTiming:timings},null,2)+'\n')

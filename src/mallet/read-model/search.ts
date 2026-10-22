@@ -43,18 +43,18 @@ const eligible=`(p.has_cursor=0 OR ${name} COLLATE NOCASE>p.cursor_name COLLATE 
 const after=`(${name} COLLATE NOCASE>? OR (${name} COLLATE NOCASE=? AND a.source_id>?))`
 
 /** Matching owners remain inside SQL; only Unicode text requiring JavaScript casefolding crosses into the Worker. */
-function matchingSql(empty:boolean){
+function matchingSql(empty:boolean,hasGrams:boolean,unicodeOnly:boolean){
  const params='WITH params AS (SELECT ? AS q,? AS digits,? AS grams,? AS cursor_name,? AS cursor_id,? AS has_cursor)'
  if(empty)return params+",ascii_owners AS (SELECT source_id AS id FROM mallet_search_documents WHERE kind='customerAccount' AND merged_into IS NULL) "
  return params+`,candidate_documents AS (
-  SELECT d.doc_id FROM mallet_search_documents d CROSS JOIN params p WHERE json_array_length(p.grams)=0 OR d.has_unicode=1
-  OR d.doc_id IN (SELECT g.doc_id FROM mallet_search_grams g WHERE g.gram IN (SELECT value FROM json_each(p.grams)))
+  ${hasGrams?`SELECT g.doc_id FROM params p CROSS JOIN mallet_search_grams g WHERE g.gram IN (SELECT value FROM json_each(p.grams))
+  UNION SELECT doc_id FROM mallet_search_documents WHERE has_unicode=1`:'SELECT doc_id FROM mallet_search_documents'+(unicodeOnly?' WHERE has_unicode=1':'')}
  ),document_owners AS (
-  SELECT d.doc_id,d.account_id AS id FROM mallet_search_documents d WHERE d.kind='customerAccount'
-  UNION ALL SELECT d.doc_id,m.account_id FROM mallet_search_documents d JOIN mallet_search_members m ON m.contact_id=d.source_id WHERE d.kind='contact'
-  UNION ALL SELECT d.doc_id,a.account_id FROM mallet_search_documents d JOIN mallet_search_documents a ON a.kind='customerAccount' AND a.source_id=d.account_id WHERE d.kind='asset'
+  SELECT d.doc_id,d.account_id AS id FROM candidate_documents c JOIN mallet_search_documents d ON d.doc_id=c.doc_id WHERE d.kind='customerAccount'
+  UNION ALL SELECT d.doc_id,m.account_id FROM candidate_documents c JOIN mallet_search_documents d ON d.doc_id=c.doc_id JOIN mallet_search_members m ON m.contact_id=d.source_id WHERE d.kind='contact'
+  UNION ALL SELECT d.doc_id,a.account_id FROM candidate_documents c JOIN mallet_search_documents d ON d.doc_id=c.doc_id JOIN mallet_search_documents a ON a.kind='customerAccount' AND a.source_id=d.account_id WHERE d.kind='asset'
  ),ascii_owners AS (
-  SELECT DISTINCT o.id FROM candidate_documents c JOIN mallet_search_documents d ON d.doc_id=c.doc_id JOIN document_owners o ON o.doc_id=d.doc_id CROSS JOIN params p
+  SELECT DISTINCT o.id FROM document_owners o JOIN mallet_search_documents d ON d.doc_id=o.doc_id CROSS JOIN params p
   WHERE (d.has_unicode=0 AND EXISTS(SELECT 1 FROM json_each(d.terms) t WHERE instr(lower(COALESCE(CAST(t.value AS TEXT),'null')),p.q)>0))
   OR (length(p.digits)>=3 AND d.kind='contact' AND instr(d.phone_digits,p.digits)>0)
  ),unicode_owners AS (
@@ -67,7 +67,7 @@ async function unicodeMatches(read:<T>(sql:string,params?:unknown[])=>Promise<T[
  let total=0,last:Match|null=null
  const page:Match[]=[]
  for(;;){
-  const batch=await read<Match&{eligible:number}>(base+`SELECT a.source_id AS id,${name} AS name,CASE WHEN ${eligible} THEN 1 ELSE 0 END AS eligible FROM mallet_search_documents a CROSS JOIN params p
+  const batch:(Match&{eligible:number})[]=await read<Match&{eligible:number}>(base+`SELECT a.source_id AS id,${name} AS name,CASE WHEN ${eligible} THEN 1 ELSE 0 END AS eligible FROM mallet_search_documents a CROSS JOIN params p
    WHERE ${active} AND a.source_id IN (SELECT id FROM unicode_owners) AND a.source_id NOT IN (SELECT id FROM ascii_owners)
    ${last?'AND '+after:''} ORDER BY ${ordered} LIMIT ?`,[...bindings,...(last?[last.name,last.name,last.id]:[]),SCAN_SIZE])
   if(!batch.length)break
@@ -97,7 +97,7 @@ export async function searchAccounts(db:D1Database,actor:Actor,authority:Authori
  const grams:string[]=[]
  if(/^[\x00-\x7f]+$/.test(q)&&q.length>=3)grams.push(q.slice(0,3))
  if(digits.length>=3)grams.push(digits.slice(0,3))
- const base=matchingSql(!q),bindings:unknown[]=[q,digits,JSON.stringify(grams),previous?.name??'',previous?.id??'',previous?1:0]
+ const base=matchingSql(!q,grams.length>0,!/^[\x00-\x7f]*$/.test(q)&&digits.length<3),bindings:unknown[]=[q,digits,JSON.stringify(grams),previous?.name??'',previous?.id??'',previous?1:0]
  const read=<T>(sql:string,params:unknown[]=[])=>checked<T>(db,actor,authority,sql,params,state.version)
  const [count]=await read<{count:number}>(base+`SELECT COUNT(*) AS count FROM mallet_search_documents a WHERE ${active} AND a.source_id IN (SELECT id FROM ascii_owners)`,bindings)
  const ascii=await read<Match>(base+`SELECT a.source_id AS id,${name} AS name FROM mallet_search_documents a CROSS JOIN params p WHERE ${active} AND a.source_id IN (SELECT id FROM ascii_owners) AND ${eligible} ORDER BY ${ordered} LIMIT ?`,[...bindings,PAGE_SIZE+1])

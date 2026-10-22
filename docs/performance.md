@@ -10,7 +10,7 @@ those capacity or p95 requirements.
 50 matching accounts. Search covers names, contact email/phone digits and linked
 vehicle labels/plate/VIN, including merged aliases. Native SQL-maintained search
 documents and trigrams avoid loading repair history for the API. Opaque cursors
-bind the query and installation revision; a changed revision refuses stale
+bind the query and installation revision; account names sort with SQL NOCASE and IDs break ties; a changed revision refuses stale
 paging instead of skipping or repeating rows. Owner/admin authority is checked
 on every page. Native account pages have next-page links, but their editing
 selectors still load the full contact/vehicle register.

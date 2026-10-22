@@ -29,5 +29,12 @@ export async function searchJourney(){
   assert.ok(h.logs.some(s=>s.includes('mallet_request')&&s.includes('account-search')),'Worker request logs include a canonical route and server duration')
   const target=await installation()
   try{await restore(target,await archive(h));assert.equal((await target.api('/api/mallet/accounts?q=202555')).total,50);assert.equal((await target.api('/api/mallet/accounts?q=VIN-987654')).accounts[0].id,accounts[1].id)}finally{await target.close()}
+  const mixed=[]
+  for(let i=0;i<60;i++)mixed.push(await h.command('customer.save',{name:(i%2?'Keyset':'Keyset')+' counter '+String(i).padStart(3,'0'),kind:'person',contactIds:[contact.id],payerId:contact.id,billingContactId:contact.id,taxStatus:'unknown',notes:''}))
+  const mixedFirst=await search('keyset'),mixedLast=await search('keyset',{cursor:mixedFirst.nextCursor})
+  assert.equal(mixedFirst.total,60);assert.equal(mixedFirst.accounts.length,50);assert.equal(mixedLast.accounts.length,10);assert.equal(mixedLast.nextCursor,null);assert.deepEqual(new Set([...mixedFirst.accounts,...mixedLast.accounts].map(a=>a.id)),new Set(mixed.map(a=>a.id)))
+  const sigma=await h.command('customer.save',{name:'ΟΣ',kind:'person',contactIds:[contact.id],payerId:contact.id,billingContactId:contact.id,taxStatus:'unknown',notes:''})
+  await h.command('customer.save',{name:'ΟΣΑ',kind:'person',contactIds:[contact.id],payerId:contact.id,billingContactId:contact.id,taxStatus:'unknown',notes:''})
+  assert.deepEqual((await search('ος')).accounts.map(a=>a.id),[sigma.id]);assert.equal((await search('%_')).total,0)
  }finally{await h.close()}
 }

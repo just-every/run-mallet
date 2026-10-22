@@ -341,7 +341,7 @@ async function workshopResponse(request:Request,original:Bindings,execution:Pick
   const historyMatch=path.match(/^\/api\/mallet\/assets\/([^/]+)\/history.csv$/)
   if(historyMatch)return csv(assetHistoryCsv(state,historyMatch[1]),'mallet-service-history')
   const counts:Counts={board:waiting(state).total,jobs:rows(state,'job').filter(j=>repair(state,j).column!=='closed').length},frame=(section:Section,more={})=>({section,counts,...more})
-  if(path==='/app'){const board=shopBoard(state,actor,(await operators(env.DB)).names,url.searchParams.get('ro'),boardFilter(url.searchParams));return page('Shop Board',taxNotice(state,actor)+board.body.replace('id="board"',`id="board" data-board-version="${state.version}"`),actor,200,frame('board',{subtitle:board.subtitle,aside:board.aside,liveBoard:true}))}
+  if(path==='/app'){const board=shopBoard(state,actor,(await operators(env.DB)).names,url.searchParams.get('ro'),boardFilter(url.searchParams));return page('Shop Board',taxNotice(state,actor)+board.body.replace('id="board"',`id="board" data-board-version="${state.version}"`).replace('class="empty-board"',`class="empty-board" data-board-version="${state.version}"`),actor,200,frame('board',{subtitle:board.subtitle,aside:board.aside,liveBoard:true}))}
   if(path==='/api/mallet/reports/turnaround') {
    if(actor.role==='agent')throw new HttpError(403,'staff_required')
    const format=reportFormat(url.searchParams),now=new Date().toISOString()
