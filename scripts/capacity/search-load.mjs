@@ -120,4 +120,4 @@ async function main(){
  if(options.output)await writeFile(options.output,serialized,{flag:'wx',mode:0o600})
  process.stdout.write(serialized);if(!result.completed||!result.cleanupCompleted)process.exitCode=1
 }
-main().catch(error=>{process.stderr.write(JSON.stringify({incomplete:true,completed:false,error:error.publicCode??'workload_configuration_failed'})+'\n');process.exitCode=1})
+main().catch(error=>{process.stderr.write(JSON.stringify({incomplete:true,completed:false,error:error.publicCode??error.code??error.name??'workload_configuration_failed'})+'\n');process.exitCode=1})
