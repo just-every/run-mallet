@@ -5,7 +5,10 @@ export async function importCapacity(lines,request,{laterJournal,onProgress=()=>
  async function json(path,method,body){
   const response=await request(path,{method,body})
   const value=await response.json()
-  if(!response.ok)throw new Error(`Native import refused (${response.status}): ${value.error??'operation_failed'}`)
+  if(!response.ok){
+   const code=typeof value.error==='string'&&/^[a-z][a-z0-9_:.-]{0,100}$/.test(value.error)?value.error:'operation_failed'
+   const error=new Error(`Native import refused (${response.status}): ${code}`);error.publicCode=`native_import_${response.status}_${code}`;throw error
+  }
   return value
  }
  for await(const line of lines){

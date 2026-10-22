@@ -25,7 +25,8 @@ export async function readEmptyTemplate(source){
  return {manifest,retained}
 }
 
-const PART_BYTES=1024*1024,PART_ROWS=5000
+// Native portability permits at most 1,000 row items per authenticated part.
+const PART_BYTES=1024*1024,PART_ROWS=1000
 async function* parts(items,{hashed=true}={}){
  let batch=[],bytes=100,index=0
  for(const item of items()){
