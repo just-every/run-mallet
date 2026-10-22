@@ -47,7 +47,9 @@ export async function bookingResponse(request:Request,original:Bindings):Promise
    }
    if(!['confirm','cancel','reschedule'].includes(action))return view('<p>Unknown action.</p>',400)
    if(action!=='cancel'){const service=rows(await load(env.DB),'bookingService').find(x=>x.id===row.serviceId)!;authority=await staffGuard(env,service.id,action==='confirm'?bookingSlotId(service,row):data.slotId,row.id,authority)}
-   row=await execute(env.DB,actor,'booking.'+action,{...data,appointmentId:row.id,version:Number(data.version)},authority)
+   const active=action==='cancel'?(await env.DB.prepare("SELECT id FROM oa_operators WHERE status='active'").all<{id:string}>()).results.map(x=>x.id):[]
+   if(action==='cancel'&&active.includes(row.technicianId))authority={sql:'('+authority.sql+") AND EXISTS(SELECT 1 FROM oa_operators WHERE id=? AND status='active')",params:[...authority.params,row.technicianId]}
+   row=await execute(env.DB,actor,'booking.'+action,{...data,appointmentId:row.id,version:Number(data.version),verifiedActiveTechnicianIds:active},authority)
    if(action!=='cancel'){
     const mail=operatorMail(env);let outcome:any={status:'failed',provider:'mail'}
     try{if(mail){const text=`Your appointment is confirmed.\n${row.service.name}\n${row.service.location}\n${shopTime(row.startAt,row.service.timeZone??'America/New_York')} – ${shopTime(row.endAt,row.service.timeZone??'America/New_York')}\nReference: ${row.id}\nManage or cancel: ${env.AUTH_ORIGIN+url.pathname}\nNo repair work or payment is authorized.`;outcome=await mail.send({deliveryId:row.delivery.id,from:String(env.MAIL_FROM??''),to:[row.email],subject:'Your confirmed appointment',text,html:'<p>'+e(text).replaceAll('\n','<br>')+'</p><p><a href="'+e(env.AUTH_ORIGIN+url.pathname)+'">Manage or cancel your appointment</a></p>',headers:{}})}}catch{outcome={status:'uncertain',provider:'mail'}}

@@ -333,3 +333,16 @@ test('BOOK-001: failed or uncertain confirmation mail preserves the appointment 
 test('DVI-003: rejected or uncertain report mail retains one honest attempt without an automatic resend',async()=>{const {inspectionReportFailureJourney}=await import('./support/inspection-report-journey.mjs');await inspectionReportFailureJourney();const {inspectionReportDevelopmentJourney}=await import('./support/inspection-report-journey.mjs');await inspectionReportDevelopmentJourney()})
 
 test('BOOK-001: anonymous tentative holds are bounded per source and normalized email',()=>run(bookingAbuseJourney))
+
+const {calendarJourney}=await import('./support/calendar-journey.mjs')
+test('BOOK-002: qualified resources, absences, recurring DST reservations and dispatch contention recover',()=>run(calendarJourney))
+
+const {waitlistCancellationJourney,waitlistExpiryJourney,waitlistLimitsJourney,waitlistSourceLimitJourney,waitlistMailFailureJourney}=await import('./support/waitlist-journey.mjs')
+test('BOOK-002: cancellation offers FIFO eligible customers one private bounded reservation',()=>run(waitlistCancellationJourney))
+test('BOOK-002: waitlist offer expiry requires explicit staff advancement',()=>run(waitlistExpiryJourney))
+test('BOOK-002: existing tentative email holds preserve waitlist eligibility',()=>run(waitlistLimitsJourney))
+test('BOOK-002: waitlist offers share the tentative source capacity bound',()=>run(waitlistSourceLimitJourney))
+test('BOOK-002: failed or uncertain waitlist mail never automatically retries',waitlistMailFailureJourney)
+
+const {calendarBrowser}=await import('./calendar-browser.mjs')
+test('BOOK-002: native day week resources and cancellation offers at 1440 and 390',calendarBrowser)

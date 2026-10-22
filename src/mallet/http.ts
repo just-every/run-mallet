@@ -1,3 +1,9 @@
+import {calendarAuthority} from './calendar-door'
+import {calendarPage} from './ui/calendar'
+import {calendarFormInput} from './ui/calendar-forms'
+import {waitlistCommand} from './waitlist-door'
+import {internalWaitlistCommands} from './booking-waitlist'
+import {waitlistFormInput} from './ui/waitlist'
 import {inspectionReportEventResponse} from './inspection-report-events'
 import {inspectionReportInput,sendInspectionReport} from './inspection-report-door'
 import {internalReportCommands} from './inspection-reports'
@@ -104,7 +110,7 @@ async function nativeForm(request:Request) {
 }
 const withoutSubletCosts=(value:any)=>{if(!value||!('sublets' in value))return value;const {sublets,...rest}=value;return rest}
 function visible(s:State,actor:Actor):State {
- if(!human(actor))s={...s,records:Object.fromEntries(Object.entries(s.records).map(([k,v])=>[k,(k==='appointment'||k==='bookingService'||k==='counterIntake'||k.startsWith('intake')||['warranty','warrantyTerms','payment','handover','returnDelegate','returnOverride'].includes(k))?[]:k==='event'?v.filter(x=>!x.kind.startsWith('booking.')&&!x.kind.startsWith('checkin.')&&!x.kind.startsWith('intake.')&&!x.kind.startsWith('warranty.')&&!x.kind.startsWith('payment.')&&!x.kind.startsWith('return.')):v]))}
+ if(!human(actor))s={...s,records:Object.fromEntries(Object.entries(s.records).map(([k,v])=>[k,(k.startsWith('calendar')||k==='bookingWaitlist'||k==='waitlistOffer'||k==='appointment'||k==='bookingService'||k==='counterIntake'||k.startsWith('intake')||['warranty','warrantyTerms','payment','handover','returnDelegate','returnOverride'].includes(k))?[]:k==='event'?v.filter(x=>!x.kind.startsWith('calendar.')&&!x.kind.startsWith('waitlist.')&&!x.kind.startsWith('booking.')&&!x.kind.startsWith('checkin.')&&!x.kind.startsWith('intake.')&&!x.kind.startsWith('warranty.')&&!x.kind.startsWith('payment.')&&!x.kind.startsWith('return.')):v]))}
  s=scopedCollaboration(scopedPromises(s,actor),actor)
  s=scopedTime(s,actor)
  if(!human(actor)){s={...s,records:Object.fromEntries(Object.entries(s.records).filter(([k])=>!['contact','customerAccount','customerMerge','customerBilling'].includes(k)))};s={...s,records:{...s.records,event:rows(s,'event').filter(x=>!x.kind.startsWith('contact.')&&!x.kind.startsWith('customer.')),invoice:rows(s,'invoice').map(i=>{const {billing,...rest}=i;return rest})}}}
@@ -149,6 +155,7 @@ function formInput(data:FormData) {
  if(input.command.startsWith('specialPart.')){if(input.partVersion!==undefined)input.partVersion=Number(input.partVersion);if(input.source){let source:any;try{source=JSON.parse(input.source)}catch{throw new HttpError(400,'invalid_source')};input.estimateId=source.estimateId;input.revision=source.revision;input.lineId=source.lineId}}
  if(input.command==='payRate.set'){input.centsPerHour=Math.round(Number(input.rate)*100);delete input.rate}
  reportFormInput(data,input)
+ calendarFormInput(data,input);waitlistFormInput(data,input)
  bookingFormInput(data,input)
  checkInFormInput(data,input)
  intakeTemplateInput(data,input)
@@ -208,10 +215,12 @@ export async function malletResponse(request:Request,original:Bindings,execution
    const data=path==='/app/actions'?formInput(await nativeForm(request)):await body(request),command=String(data.command),input=data.input??data
    submitted={command,input}
    let result:any
-   if(internalReportCommands.includes(command)||internalBookingCommands.includes(command)||internalCheckInCommands.includes(command)||internalRefundCommands.includes(command)||internalIntakeFormCommands.includes(command)||command==='payment.verified'||command==='routing.sweep'||internalPromiseCommands.includes(command)||internalApprovalCommands.includes(command)||internalChaseCommands.includes(command))throw new HttpError(404,'unknown_command')
-   if(command==='inspectionReport.review'){const checked=await inspectionReportInput(env.DB,actor,auth.authority,input);result=await execute(env.DB,actor as any,command,checked.input,checked.authority)}
+   if(internalWaitlistCommands.includes(command)||internalReportCommands.includes(command)||internalBookingCommands.includes(command)||internalCheckInCommands.includes(command)||internalRefundCommands.includes(command)||internalIntakeFormCommands.includes(command)||command==='payment.verified'||command==='routing.sweep'||internalPromiseCommands.includes(command)||internalApprovalCommands.includes(command)||internalChaseCommands.includes(command))throw new HttpError(404,'unknown_command')
+   if(command.startsWith('waitlist.'))result=await waitlistCommand(env,request,actor,auth.authority,command,input)
+   else if(command.startsWith('calendar.')||['job.book','dispatch.approve'].includes(command))result=await execute(env.DB,actor as any,command,input,await calendarAuthority(env,command,input,auth.authority))
+   else if(command==='inspectionReport.review'){const checked=await inspectionReportInput(env.DB,actor,auth.authority,input);result=await execute(env.DB,actor as any,command,checked.input,checked.authority)}
    else if(command==='inspectionReport.send')result=await sendInspectionReport(env,actor,auth.authority,input)
-   else if(command==='booking.publish'){if(!human(actor))throw new HttpError(403,'manager_required');const active=(await operators(env.DB)).list.filter(x=>x.status==='active');if(!Array.isArray(input.windows)||input.windows.some((w:any)=>!active.some(x=>x.id===w.technicianId)))throw new HttpError(400,'active_staff_required');result=await execute(env.DB,actor as any,command,input,auth.authority)}
+   else if(command==='booking.publish'){if(!human(actor))throw new HttpError(403,'manager_required');const active=(await operators(env.DB)).list.filter(x=>x.status==='active');if(!Array.isArray(input.windows)||input.windows.some((w:any)=>!active.some(x=>x.id===w.technicianId)))throw new HttpError(400,'active_staff_required');const technicians=[...new Set(input.windows.map((w:any)=>String(w.technicianId)))];const guard={sql:'('+auth.authority.sql+') AND '+technicians.map(()=>"EXISTS(SELECT 1 FROM oa_operators WHERE id=? AND status='active')").join(' AND '),params:[...auth.authority.params,...technicians]};result=await execute(env.DB,actor as any,command,input,guard)}
    else if(command==='checkin.issue')result=await createCheckInLink(env,actor,auth.authority,input)
    else if(command==='intakeForm.create')result=await createIntakeFormLink(env,actor,auth.authority,input)
    else if(command==='refund.submit'||command==='refund.reconcile')result=await refundDoor(env,actor,auth.authority,command,input)
@@ -240,6 +249,8 @@ export async function malletResponse(request:Request,original:Bindings,execution
    if(isApi){if(!human(actor)&&result&&typeof result==='object'&&'billing' in result){const {billing,...rest}=result;result=rest}return json(actor.role==='agent'?withoutSubletCosts(withoutInspectionSource(result)):result)}
    if(command==='customer.mergePreview')return page('Review duplicate merge',mergePreviewPage(result,input),actor,200,{section:'customers'})
    if(command==='inspectionReport.send')return page('Inspection report email',`<section class="card"><p>${e(result.status==='accepted'?'Handed to the mail provider; delivery is not confirmed.':result.status==='development'?'Saved to the development outbox; not sent.':'Send failed or is uncertain. Contact the customer; no automatic retry will occur.')}</p><a href="${e(result.url)}">Open reviewed customer report</a><p><a href="/app/jobs/${e(result.jobId)}#inspection-reports">Return to repair</a></p></section>`,actor,200,{section:'jobs'})
+   if(command.startsWith('calendar.')||command.startsWith('waitlist.'))return redirect('/app/calendar')
+   if(command==='promise.timeZone'&&input.calendarReturn)return redirect('/app/calendar')
    if(command==='booking.publish')return redirect('/app/bookings')
    if(command==='checkin.issue')return page('Customer check-in link',`<section class="card"><p>Share this private seven-day, one-request link directly with the customer. No message, booking or payment has been sent. Anyone holding the link can use it.</p><a href="${e(result.url)}">Open customer check-in</a><pre>${e(result.url)}</pre><p><a href="/app/check-ins">Return to check-in queue</a></p></section>`,actor,200,{section:'jobs'})
    if(command==='checkin.confirm'||command==='checkin.revoke')return redirect('/app/check-ins')
@@ -284,6 +295,7 @@ export async function malletResponse(request:Request,original:Bindings,execution
   if(request.method!=='GET' && request.method!=='HEAD')throw new HttpError(405,'method_not_allowed')
   const state=visible(await load(env.DB),actor)
   if(path==='/api/mallet/catalogue'){if(actor.role==='member')throw new HttpError(403,'manager_required');return json(await catalogue(env))}
+  if(path==='/app/calendar'){if(!human(actor))throw new HttpError(403,'manager_required');return page('Resource calendar',calendarPage(state,(await operators(env.DB)).names,url.searchParams),actor,200,{section:'jobs'})}
   if(path==='/app/bookings'){if(!human(actor))throw new HttpError(403,'manager_required');return page('Online appointments',bookingStaff(state,(await operators(env.DB)).names),actor,200,{section:'jobs'})}
   if(path==='/api/mallet/state')return json({actor,...state})
   if(path==='/api/mallet/board')return json(repairBoard(state,new Date().toISOString(),boardFilter(url.searchParams)))
