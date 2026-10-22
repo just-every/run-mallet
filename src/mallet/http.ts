@@ -40,6 +40,7 @@ import {intakeSecret,expireIntakeSecrets,purgeIntakeSecrets} from './intake-secr
 import {tracePage,traceFormInput} from './ui/stock-trace'
 import {traceReport} from './stock-trace'
 import {accountsPage,customerFormInput} from './ui/customers'
+import {accountResultsPage} from './ui/account-results'
 import {customerSearch} from './customers'
 import {mergePreviewPage} from './ui/customers'
 import {portalResponse} from './portal-door'
@@ -211,6 +212,7 @@ async function workshopResponse(request:Request,original:Bindings,execution:Pick
   const coreRepair=path.match(/^\/api\/mallet\/repairs\/([^/]+)$/)
   if(coreRepair&&['GET','HEAD'].includes(request.method))return json({actor,...visible(await loadRepairState(env.DB,actor,auth.authority,coreRepair[1]),actor)})
   if(path==='/api/mallet/accounts'&&['GET','HEAD'].includes(request.method))return json(await searchAccounts(env.DB,actor,auth.authority,url.searchParams.get('q')??'',url.searchParams.get('cursor')??undefined))
+  if(path==='/app/accounts'&&['GET','HEAD'].includes(request.method)&&!url.searchParams.has('manage')){const q=url.searchParams.get('q')??'';return page('Customer accounts',accountResultsPage(q,await searchAccounts(env.DB,actor,auth.authority,q,url.searchParams.get('cursor')??undefined)),actor,200,{section:'customers'})}
   if(path.startsWith('/api/mallet/media/'))return await mediaResponse(request,env,actor,auth.authority)
   if(!['GET','POST','PUT','HEAD'].includes(request.method))throw new HttpError(405,'method_not_allowed')
   if(path.startsWith('/api/portability/')) {
@@ -311,7 +313,7 @@ async function workshopResponse(request:Request,original:Bindings,execution:Pick
    // The saved rate is shown in the period the owner was reviewing, not silently today's.
    if(command==='payRate.set')return redirect('/app/reports/technicians?'+new URLSearchParams({from:String(input.from??''),to:String(input.to??'')})+'#tech-'+encodeURIComponent(input.technicianId))
    if(command==='rateProfile.save')return redirect('/app/jobs#rate-profiles')
-   if(command.startsWith('customer.')||command.startsWith('contact.'))return redirect('/app/accounts')
+   if(command.startsWith('customer.')||command.startsWith('contact.'))return redirect('/app/accounts?manage=all')
    if(command.startsWith('purchase.'))return redirect('/app/purchasing')
    if(['stock.catalog','stock.lot','stock.useLot'].includes(command))return redirect('/app/inventory/trace')
    if(command.startsWith('stock.'))return redirect('/app/inventory')
@@ -354,7 +356,21 @@ async function workshopResponse(request:Request,original:Bindings,execution:Pick
    if(path.startsWith('/api/'))return reportFormat(url.searchParams)==='csv'?csv(technicianCsv(report),`mallet-technicians-${report.period.from}-${report.period.to}`):json(report)
    return page('Technician efficiency',technicianReportPage(report,actor,(await operators(env.DB)).names),actor,200,frame('jobs',{subtitle:'Sold versus actual hours, productivity and attendance, recomputed from clock events.'}))
   }
-  if(path==='/app/accounts'||path==='/api/mallet/accounts'||/^\/api\/mallet\/accounts\/[^/]+\/billing$/.test(path)){if(!human(actor))throw new HttpError(403,'manager_required');const q=url.searchParams.get('q')??'';if(path.endsWith('/billing')){const id=path.split('/')[4],account=rows(state,'customerAccount').find(a=>a.id===id&&!a.mergedInto);if(!account)throw new HttpError(404,'not_found');const ids=new Set([id,...rows(state,'customerAccount').filter(a=>a.mergedInto===id).map(a=>a.id)]);return json(rows(state,'invoice').filter(i=>ids.has(i.billing?.accountId)))}return page('Customer accounts',accountsPage(state,q,await searchAccounts(env.DB,actor,auth.authority,q,url.searchParams.get('cursor')??undefined)),actor,200,frame('customers'))}
+  if(/^\/api\/mallet\/accounts\/[^/]+\/billing$/.test(path)){
+   if(!human(actor))throw new HttpError(403,'manager_required')
+   const id=path.split('/')[4],account=rows(state,'customerAccount').find(a=>a.id===id&&!a.mergedInto)
+   if(!account)throw new HttpError(404,'not_found')
+   const ids=new Set([id,...rows(state,'customerAccount').filter(a=>a.mergedInto===id).map(a=>a.id)])
+   return json(rows(state,'invoice').filter(i=>ids.has(i.billing?.accountId)))
+  }
+  if(path==='/app/accounts'){
+   if(!human(actor))throw new HttpError(403,'manager_required')
+   const manage=url.searchParams.get('manage'),q=url.searchParams.get('q')??''
+   const account=manage&&manage!=='all'?rows(state,'customerAccount').find(a=>a.id===manage&&!a.mergedInto):null
+   if(manage!=='all'&&!account)throw new HttpError(404,'not_found')
+   const result=account?{accounts:[account],nextCursor:null,total:1}:await searchAccounts(env.DB,actor,auth.authority,q,url.searchParams.get('cursor')??undefined)
+   return page('Customer accounts',accountsPage(state,q,result),actor,200,frame('customers'))
+  }
   if(['/app/purchasing','/api/mallet/purchasing'].includes(path)){if(!human(actor))throw new HttpError(403,'manager_required');return path.startsWith('/api/')?json(rows(state,'purchaseOrder').map(po=>({...po,...purchaseStatus(state,po)}))):page('Purchase orders',purchasingPage(state),actor,200,frame('inventory'))}
   if(['/app/inventory/trace','/api/mallet/trace'].includes(path)){if(!human(actor))throw new HttpError(403,'manager_required');const q=url.searchParams.get('q')??'';return path.startsWith('/api/')?json(traceReport(state,q)):page('Parts catalog & traceability',tracePage(state,q),actor,200,frame('inventory'))}
   if(['/app/inventory','/app/inventory/count','/api/mallet/inventory'].includes(path)){if(!human(actor))throw new HttpError(403,'manager_required');if(path.startsWith('/api/'))return json(stockReport(state));return page(path.endsWith('/count')?'Blind stock count':'Stock & receiving',path.endsWith('/count')?countPage():inventoryPage(state),actor,200,frame('inventory'))}
