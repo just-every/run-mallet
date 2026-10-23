@@ -42,7 +42,7 @@ export async function validateRecords({ table, rejectIf, index }) {
  await reference('customerAccount', 'mergedInto', 'customerAccount', false, `AND target.id<>r.id AND ${j('mergedInto','target')} IS NULL`)
  const jobKinds = 'approvalChase approvalLink chaseTask customerBilling declinedWork diagnosis diagnosisLink estimate flow handoff handover inspection inspectionReport inspectionReportDelivery intake intakeComparison intakeForm invoice jobNote payment promise promiseNotice promisePlan promiseRevision proposal quality reading returnDelegate returnOverride routingBlocker routingCase serviceInterval specialPart specialPartNotice stageEvent stockReservation stockUse sublet subtask warranty warrantyTerms'
  for (const kind of jobKinds.split(' ')) await reference(kind, 'jobId', 'job', true)
- for (const kind of ['event','counterIntake','retentionHold','timeEntry','timeCorrection']) await reference(kind,'jobId','job')
+ for (const kind of ['purchaseComparison','purchaseSubmission','stockRma','event','counterIntake','retentionHold','timeEntry','timeCorrection']) await reference(kind,'jobId','job')
  for (const [kind, field, target] of [
   ['estimate','supplementOf','estimate'], ['invoice','exportId','export'], ['export','invoiceId','invoice'],
   ['payment creditNote refund returnOverride handover','invoiceId','invoice'], ['refund','paymentId','payment'],
@@ -53,7 +53,7 @@ export async function validateRecords({ table, rejectIf, index }) {
   ['purchaseComparison','itemId','stockItem'], ['purchaseSubmission','purchaseId','purchaseOrder'],
   ['stockTransfer','sourceBinId','stockBin'], ['stockTransfer','destinationBinId','stockBin'], ['stockTransferException','transferId','stockTransfer'], ['stockTransferException','lotId','stockLot'],
   ['stockRma','lotId','stockLot'], ['stockRma','purchaseId','purchaseOrder'], ['stockRma','purchaseReceiptId','purchaseReceipt'], ['stockRma','stockUseId','stockUse'], ['stockRma','warrantyId','warranty'],
-  ['stockCore','invoiceId','invoice'], ['stockCore','stockUseId','stockUse'], ['stockCore','creditNoteId','creditNote'],
+  ['stockCore','jobId','job'], ['stockCore','invoiceId','invoice'], ['stockCore','stockUseId','stockUse'], ['stockCore','creditNoteId','creditNote'],
   ['stockReplenishment','itemId','stockItem'], ['stockReplenishment','binId','stockBin'],
   ['stockUse stockLotAdjustment','lotId','stockLot'], ['purchaseReceipt purchaseBill','purchaseId','purchaseOrder'],
   ['bookingWaitlist appointment','serviceId','bookingService'], ['waitlistOffer','entryId','bookingWaitlist'],
