@@ -73,5 +73,5 @@ export const transfers:Handler=(c,command,p)=>{
   moveStock(c,line.itemId,transfer.sourceBinId,exception.quantityMilli,{kind:'transferReturn',id:exception.id,lotId:line.lotId},reason)
  }
  const correction={outcome,quantityMilli:exception.quantityMilli,reason,evidence,approvedBy:who(c),at:c.now};bump(c.s,'stockTransferException',exception,{correction})
- return save({status:rows(c.s,'stockTransferException').some(e=>e.transferId===transfer.id&&!e.correction)?'exception':'received',corrections:[...(transfer.corrections??[]),{exceptionId:exception.id,...correction}]})
+ return save({status:rows(c.s,'stockTransferException').some(e=>e.transferId===transfer.id&&!e.correction)?'exception':'resolved',corrections:[...(transfer.corrections??[]),{exceptionId:exception.id,...correction}]})
 }

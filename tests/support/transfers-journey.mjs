@@ -26,7 +26,7 @@ export async function transfersJourney(h){
  const ex=report.exceptions[0],correction={...refs(),exceptionId:ex.id,outcome:'received',reason:'Carrier found the original missing serial',evidence:'Destination scanned the missing original serial'}
  await h.command('stock.transferCorrect',{...correction,version:1},{status:409})
  transfer=await h.command('stock.transferCorrect',correction,{as:admin.cookie});await h.command('stock.transferCorrect',{...correction,version:transfer.version},{status:409})
- report=(await h.api('/api/mallet/transfers'))[0];assert.equal(report.status,'received');assert.equal(report.exceptions[0].correction.approvedBy.id,admin.id);assert.deepEqual(report.lines.map(l=>l.inTransitMilli),[0,0]);assert.equal((await balance()).find(b=>b.binId===f.destination.id).onHandMilli,2000)
+ report=(await h.api('/api/mallet/transfers'))[0];assert.equal(report.status,'resolved');assert.equal(report.exceptions[0].correction.approvedBy.id,admin.id);assert.deepEqual(report.lines.map(l=>l.inTransitMilli),[0,0]);assert.equal((await balance()).find(b=>b.binId===f.destination.id).onHandMilli,2000)
  let trace=await h.api('/api/mallet/trace?q=synthetic-mallet-123');for(const original of f.lots){assert.equal(trace.lots.filter(l=>l.serial===original.serial).reduce((n,l)=>n+l.remainingMilli,0),1000);const child=trace.lots.find(l=>l.parentLotId===original.id);assert.equal(child.binId,f.destination.id);assert.equal(child.unitCostCents,original.unitCostCents);assert.deepEqual(child.catalog,original.catalog)}
  // A damaged physical receipt stays out of availability until an explicit inspected correction.
  const children=trace.lots.filter(l=>l.transferId===transfer.id)

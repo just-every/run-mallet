@@ -24,7 +24,7 @@ export const cores:Handler=(c,command,p)=>{
  }
  if(['stock.coreCorrect','stock.coreRefund'].includes(command)&&c.actor.role!=='owner')fail('FORBIDDEN','Only the owner approves core credit notes and refund outcomes.',null,403)
  const core=find(c.s,'stockCore',p.coreId)
- if(command==='stock.coreRefund'){const refund=rows(c.s,'refund').find(r=>r.creditNoteId===core.creditNoteId);if(!refund)fail('CORE_STATE','Issue the core credit note first.');return credits(c,'refund.record',{...p,refundId:refund.id,version:p.refundVersion,confirm:'record-refund'})}
+ if(command==='stock.coreRefund'){if(p.confirm!=='record-refund')fail('CORE_REVIEW','Explicitly confirm the observed original-tender refund outcome.');const refund=rows(c.s,'refund').find(r=>r.creditNoteId===core.creditNoteId);if(!refund)fail('CORE_STATE','Issue the core credit note first.');return credits(c,'refund.record',{...p,refundId:refund.id,version:p.refundVersion,confirm:'record-refund'})}
  if(command==='stock.coreCredit'){
   if(!core.shipment)fail('CORE_STATE','Retain the core shipment before supplier credit reconciliation.')
   return recordSupplierCredit(c,'stockCore',core,p)

@@ -28,12 +28,13 @@ export async function coresJourney(h){
  const credit={...refs(),reference:'synthetic-mallet-96',amountCents:3500,reason:'Supplier deducted $5 for cracked tab',evidence:'Supplier adjusted credit document'}
  const reconciled=await h.command('stock.coreCredit',credit);assert.deepEqual(await h.command('stock.coreCredit',credit),reconciled);await h.command('stock.coreCredit',{...credit,amountCents:4000},{status:409})
  await h.command('stock.coreCorrect',{...refs(),paymentId:f.payment.id,reason:'Returned old core',consentEvidence:'Customer instructed original cash refund',confirm:'correct-core'},{as:admin.cookie,status:403})
+ await h.command('stock.coreCorrect',{...refs(),paymentId:f.payment.id,reason:'Returned old core',consentEvidence:'Customer instruction',confirm:'correct-core'},{status:403,refuseStepUp:true})
  const note=await h.command('stock.coreCorrect',{...refs(),paymentId:f.payment.id,reason:'Returned old core',consentEvidence:'Customer instructed original cash refund',confirm:'correct-core'});await refresh()
  assert.equal(note.totals.totalCents,5500);assert.equal(note.lines[0].salesTaxCents,500);assert.equal(note.lines[0].lineId,f.input.lineId);assert.deepEqual((await h.state()).records.invoice[0],f.invoice)
  assert.equal((await h.command('stock.coreCorrect',refs())).id,note.id)
  let refund=(await h.state()).records.refund[0]
- await h.command('stock.coreRefund',{...refs(),refundVersion:refund.version,status:'refunded',reference:'synthetic-mallet-97',evidence:'Owner recorded cash returned after signed receipt'},{as:admin.cookie,status:403})
- refund=await h.command('stock.coreRefund',{...refs(),refundVersion:refund.version,status:'refunded',reference:'synthetic-mallet-97',evidence:'Owner recorded cash returned after signed receipt'})
+ await h.command('stock.coreRefund',{...refs(),refundVersion:refund.version,confirm:'record-refund',status:'refunded',reference:'synthetic-mallet-97',evidence:'Owner recorded cash returned after signed receipt'},{as:admin.cookie,status:403})
+ refund=await h.command('stock.coreRefund',{...refs(),refundVersion:refund.version,confirm:'record-refund',status:'refunded',reference:'synthetic-mallet-97',evidence:'Owner recorded cash returned after signed receipt'})
  assert.equal(refund.amountCents,5500);report=(await h.api('/api/mallet/cores'))[0];assert.equal(report.customerCreditCents,5500);assert.equal(report.customerRefundCents,5500);assert.equal(report.supplierCreditCents,3500);assert.equal(report.supplierExposureCents,500);assert.equal(report.customerDue,false);assert.equal(report.creditExpiryAlert,true)
  await h.api('/api/mallet/cores',undefined,{as:member.cookie,status:403});assert.equal((await h.state({as:member.cookie})).records.stockCore,undefined)
  const final=(await h.state()).records,fresh=await installation({bindings:{OWNER_EMAIL:'core-recovery@example.test'}})
