@@ -1,0 +1,11 @@
+# Issued invoice copies and tax custody
+
+The owner opens an approved repair invoice with **Issue, print and email invoice copies**. Review the recorded USD amounts, readings, tender allocations and warranty wording, then issue a permanent numbered copy. Download the same PDF or text later, or print the HTML copy. A corrected copy requires the latest copy and a reason; the earlier copy remains readable. These corrections do not alter financial amounts. Use the existing reviewed credit-note workflow for financial reversals.
+
+Email is an explicit owner action to the invoice customer or the current recorded payer. Record the customer’s email request and confirm the exact recipient and copy. One copy gets one attempt. Provider acceptance means handed to the provider, not confirmed customer delivery. An uncertain or interrupted attempt stays unconfirmed and never retries automatically. A restored copy cannot reuse its former owner’s sending authority; the new owner must issue a reviewed corrected copy and obtain fresh email consent. Text delivery is not implemented.
+
+The PDF uses a standard Latin font. Characters outside ASCII have substitute visible glyphs, while PDF ActualText, HTML and text copies retain the exact Unicode content. Use HTML or text when visible non-ASCII names are required. Issued copies and delivery outcomes travel in the owner archive, without sessions or credentials.
+
+On **Shop tax**, the owner can open certificate custody and the invoice tax report. Record the exact supplied certificate text, account, declared scope, jurisdiction, start date, inclusive expiry date and review evidence. Dates are UTC calendar dates; expired and future certificates are labelled. This custody does not verify eligibility or apply an exemption. Certificates remain private owner records, with no automatic deletion or outbound action.
+
+The owner may assign one explicit jurisdiction declaration to an approved invoice. The report groups original invoice tax less separately issued credit-note tax reversals, linking each total to its repair. Missing declarations remain visibly unassigned. This is invoice-basis accounting, not cash-collected filing totals or legal advice. Certificate application, capped supplies fees and legally permitted surcharge rules remain unfinished.

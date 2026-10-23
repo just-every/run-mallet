@@ -65,3 +65,9 @@ test('pre-US records migrate without changing amounts and request unknown shop r
  assert.equal(invoice.lines[0].taxRatePercent,10);assert.equal(invoice.lines[0].kind,'labor')
  assert.equal(state.records.taxSettings[0].ratePercent,null)
 }))
+
+import {taxCustodyJourney} from './support/tax-custody-journey.mjs'
+test('TAX-002: private certificate dates and declared jurisdiction tax reverse exact issued credits without repricing',taxCustodyJourney)
+
+import {taxCustodyBrowser} from './invoice-documents-browser.mjs'
+test('TAX-002: owner retains an expired certificate and declares invoice jurisdiction through native forms at 1440 and 390',taxCustodyBrowser)
