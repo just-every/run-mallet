@@ -1,0 +1,22 @@
+import {area,box,e,field,form,money,rows,select,when} from './common'
+import {rmaReport} from '../supplier-returns'
+const note=()=>area('Evidence','evidence','','required')
+export function rmasPage(s:any){
+ let body='<p><a href="/app/inventory">Stock & receiving</a> · <a href="/app/inventory/trace">Lot and repair trace</a></p><p>Physical returns stay in separate quarantine custody, unavailable for sale. Supplier authorization, label, shipment and credits require external evidence; Mallet sends nothing automatically. Repair warranty costs and supplier credits remain separate from customer charges and accounting posting.</p>'
+ for(const r of rmaReport(s)){
+ const refs={rmaId:r.id,version:r.version}
+ let content=`<p>${e(r.kind)} · ${e(r.reason)} · ${e(r.supplier)}<br>Lot ${e(r.supplierLot)} · Serial ${e(r.serial||'None')} · Quantity ${r.quantityMilli/1000} · Quarantined ${r.quarantinedMilli/1000}<br>Original cost ${money(r.originalCostCents)} · Expected credit ${money(r.expectedCreditCents)} · Reconciled credit ${money(r.creditCents)} · Exposure ${money(r.creditExposureCents)}</p><p>${e(r.removalEvidence)} · ${when(r.at)}<br>Original PO <a href="/app/purchasing#po-${e(r.purchaseId)}">Open purchase</a>${r.jobId?` · <a href="/app/jobs/${e(r.jobId)}">Original repair</a>`:''}${r.warrantyId?` · Rework cost ${money(r.reworkCostCents)} · Net warranty cost after these credits ${money(r.netWarrantyCostCents)}`:''}</p>`
+ if(!r.authorization&&!r.disposition)content+=form('stock.rmaAuthorize',field('Supplier RMA number','number','text','','required')+field('Return label reference','label','text','','required')+note(),'Record supplier authorization',refs)
+ if(r.authorization)content+=`<p>Authorized RMA ${e(r.authorization.number)} · Label ${e(r.authorization.label)} · ${e(r.authorization.evidence)}</p>`
+ if(r.authorization&&!r.shipment&&!r.disposition)content+=form('stock.rmaShip',field('Carrier','carrier','text','','required')+field('Tracking reference','tracking','text','','required')+note(),'Record RMA shipment',refs)
+ if(!r.shipment&&!r.disposition)content+=`<details><summary>Dispose of quarantine</summary>${form('stock.rmaDispose',select('Disposition','outcome',r.stockUseId?[['destroyed','Destroyed']]:[['destroyed','Destroyed'],['restocked','Inspected and returned to original stock']])+area('Disposition reason','reason','','required')+note(),'Approve quarantine disposition',refs)}</details>`
+ if(r.disposition)content+=`<p>Disposition ${e(r.disposition.outcome)} · ${e(r.disposition.reason)} · ${e(r.disposition.evidence)}</p>`
+ if(r.shipment)content+=`<p>Shipped ${e(r.shipment.carrier)} · ${e(r.shipment.tracking)} · ${e(r.shipment.evidence)}</p>`+form('stock.rmaCredit',field('Supplier credit reference','reference','text','','required')+field('Supplier credit (USD cents)','amountCents','number',0,'required min="0" step="1"')+area('Credit reconciliation reason','reason','','required')+note(),'Reconcile RMA supplier credit',refs)
+ content+='<ul>'+r.credits.map((x:any)=>`<li>${e(x.reference)} · ${money(x.amountCents)} · ${e(x.reason)} · ${e(x.evidence)}</li>`).join('')+'</ul>'
+ body+=box(r.reference,content)
+ }
+ const lots=rows(s,'stockLot').filter(l=>l.purchaseId)
+ if(lots.length)body+=box('Quarantine a supplier part',form('stock.rmaOpen',field('Unique return reference','reference','text','','required')+select('Original PO lot','lotId',lots.map(l=>[l.id,l.supplier+' · '+l.supplierLot+' · '+(l.serial||'Lot')]))+select('Installed part removal (leave blank for unused stock)','stockUseId',[['','Unused stock'],...rows(s,'stockUse').filter(u=>lots.some(l=>l.id===u.lotId)).map(u=>[u.id,u.reference] as [string,string])])+select('Approved warranty case (optional)','warrantyId',[['','No warranty cost case'],...rows(s,'warranty').filter(w=>w.decision?.outcome==='covered').map(w=>[w.id,w.failure] as [string,string])])+select('Return category','kind',[['faulty','Faulty'],['unused','Unused'],['warranty','Warranty']])+field('Physical return quantity','quantity','number',1,'required min="0.001" step="0.001"')+field('Expected credit (USD cents)','expectedCreditCents','number',0,'required min="0" step="1"')+area('Return reason','reason','','required')+note(),'Quarantine supplier return'))
+ return '<div class="narrow">'+body+'</div>'
+}
+export function rmaFormInput(p:any){if(String(p.command).startsWith('stock.rma'))for(const key of ['version','quantity','expectedCreditCents','amountCents'])if(key in p)p[key]=Number(p[key])}

@@ -50,6 +50,7 @@ export const purchasing:Handler=(c,command,p)=>{
   const line=status.lines.find((l:any)=>l.id===p.lineId)
   if(!line)fail('INPUT','Choose a line on this purchase order.',null,400)
   const item=scan(c.s,'stockItem',p.itemBarcode),bin=scan(c.s,'stockBin',p.binBarcode),quantityMilli=amount(p.quantity),reference=text(p.reference,'goods receipt reference',200)
+  if(po.binId&&bin.id!==po.binId)fail('WRONG_BIN','Receive this location-specific PO only in its approved destination bin.')
   if(item.id!==line.itemId)fail('WRONG_PART','The scanned part does not match this PO line.')
   if(quantityMilli>line.backorderMilli)fail('OVER_RECEIPT','Receive only the outstanding quantity; surplus needs a separately approved PO.')
   if(receiptExists(c.s,reference))fail('DUPLICATE','That goods receipt is already retained.')
