@@ -36,6 +36,7 @@ export async function transfersJourney(h){
  back=await h.command('stock.transferReceive',{transferId:back.id,version:back.version,lines:back.lines.map((l,n)=>({lineId:l.id,received:0,damaged:n?0:1})),evidence:'First damaged, second missing'})
  const exceptions=(await h.api('/api/mallet/transfers')).find(t=>t.id===back.id).exceptions
  assert.equal((await balance()).reduce((n,b)=>n+b.availableMilli,0),0)
+ const damaged=exceptions.find(e=>e.kind==='damaged');await h.command('stock.transferCorrect',{transferId:back.id,version:back.version,exceptionId:damaged.id,outcome:'returned',reason:'Cannot make a damaged unit saleable by returning it',evidence:'Still damaged'},{status:409})
  for(const exception of exceptions){back=await h.command('stock.transferCorrect',{transferId:back.id,version:back.version,exceptionId:exception.id,outcome:exception.kind==='damaged'?'destroyed':'returned',reason:'Approved documented '+exception.kind+' custody',evidence:'Witnessed disposition and original serial'})}
  assert.equal((await balance()).reduce((n,b)=>n+b.onHandMilli,0),1000)
  const final=(await h.state()).records,fresh=await installation({bindings:{OWNER_EMAIL:'transfer-recovery@example.test'}})

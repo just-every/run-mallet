@@ -66,7 +66,7 @@ export const transfers:Handler=(c,command,p)=>{
  const exception=find(c.s,'stockTransferException',p.exceptionId)
  if(exception.transferId!==transfer.id||exception.correction)fail('TRANSFER_STATE','Correct one unresolved exception belonging to this transfer once.')
  const outcome=choice(p.outcome,['received','returned','lost','destroyed'],'approved correction'),reason=text(p.reason,'correction approval reason',2000),evidence=text(p.evidence,'correction custody evidence',4000),line=transfer.lines.find((l:any)=>l.id===exception.lineId)
- if(exception.kind==='damaged'&&outcome==='lost'||exception.kind==='shortage'&&outcome==='destroyed')fail('TRANSFER_STATE','Use lost for missing stock or destroyed for physically held damaged stock.')
+ if(exception.kind==='damaged'&&['lost','returned'].includes(outcome)||exception.kind==='shortage'&&outcome==='destroyed')fail('TRANSFER_STATE','Missing stock may be returned or written off; damaged stock must be inspected at destination or destroyed, never returned to saleable stock by a flag.')
  if(outcome==='received')receiveLot(c,transfer,line,exception.quantityMilli,exception.id,transfer.destinationBinId)
  if(outcome==='returned'){
   put(c.s,'stockLotAdjustment',{lotId:line.lotId,transferId:transfer.id,deltaMilli:exception.quantityMilli,reason,by:who(c),at:c.now})

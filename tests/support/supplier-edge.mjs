@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 export function supplierEdge(){
- const calls=[],orders=new Map(),actions=new Set();let mode='timeout',quoteMode='normal'
+ const calls=[],orders=new Map(),actions=new Set();let mode='timeout',quoteMode='normal',held=null
  const origin='https://supplier.example.test',key='synthetic-mallet-200'
  const offers=quantityMilli=>['Cedar Parts','Maple Parts'].map((supplierName,n)=>({quoteId:'synthetic-mallet-'+(201+n),supplierId:'synthetic-mallet-'+(203+n),supplierName,grade:n?'Remanufactured':'OE-equivalent',compatible:quoteMode!=='incompatible',availableMilli:quoteMode==='short'?0:10000,quantityMilli,unitCents:n?900:1000,freightCents:n?500:200,taxCents:n?90:100,currency:'USD',observedAt:new Date().toISOString(),cutoffAt:new Date(Date.now()+(quoteMode==='expired'?-3600000:3600000)).toISOString(),etaAt:new Date(Date.now()+3*3600000).toISOString(),expiresAt:new Date(Date.now()+3600000).toISOString()}))
  const fetch=async request=>{
@@ -10,6 +10,7 @@ export function supplierEdge(){
  if(url.pathname==='/v1/orders'&&request.method==='POST'){
   assert.equal(request.headers.get('idempotency-key'),'mallet-supplier-order-'+body.clientReference)
   if(!orders.has(body.clientReference))orders.set(body.clientReference,{...body,orderId:'synthetic-mallet-'+(210+orders.size),status:mode==='reject'?'rejected':'acknowledged'})
+  if(held){const gate=held;held=null;const snapshot=structuredClone(orders.get(body.clientReference));gate.enter();await gate.wait;return Response.json(snapshot)}
   if(mode==='timeout')return new Response(null,{status:504})
   return Response.json(orders.get(body.clientReference))
  }
@@ -23,5 +24,5 @@ export function supplierEdge(){
  if(mode==='secret-echo')return Response.json({...order,ignored:key})
  return Response.json(order)
  }
- return {origin,key,fetch,calls,orders,actions,set mode(v){mode=v},set quoteMode(v){quoteMode=v},substitute(reference){const order=orders.get(reference);order.status='substitution';order.proposal={id:'synthetic-mallet-220',sku:'synthetic-mallet-221',grade:'Different grade',unitCents:5000}}}
+ return {holdNextOrder(){let enter,release;const entered=new Promise(resolve=>enter=resolve),wait=new Promise(resolve=>release=resolve);held={enter,wait};return {entered,release}},origin,key,fetch,calls,orders,actions,set mode(v){mode=v},set quoteMode(v){quoteMode=v},substitute(reference){const order=orders.get(reference);order.status='substitution';order.proposal={id:'synthetic-mallet-220',sku:'synthetic-mallet-221',grade:'Different grade',unitCents:5000}}}
 }

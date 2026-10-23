@@ -20,8 +20,9 @@ async function edge(origin:string,key:string,path:string,init:RequestInit={}){
   try{for(;;){const {value,done}=await reader.read();if(done)break;size+=value.length;if(size>131072)throw Error('unconfirmed');parts.push(value)}}finally{await reader.cancel();reader.releaseLock()}
   const bytes=new Uint8Array(size);let offset=0;for(const part of parts){bytes.set(part,offset);offset+=part.length}
   const raw=new TextDecoder('utf-8',{fatal:true}).decode(bytes)
-  if(raw.includes(key))throw Error('unconfirmed')
-  return JSON.parse(raw)
+  const value=JSON.parse(raw)
+  if(raw.includes(key)||JSON.stringify(value).includes(JSON.stringify(key).slice(1,-1)))throw Error('unconfirmed')
+  return value
  }finally{clearTimeout(timer)}
 }
 function offers(value:any,quantityMilli:number){

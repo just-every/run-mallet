@@ -39,6 +39,21 @@ export async function supplierJourney(){
  let rejected=await h.command('purchase.cart',{comparisonId:secondComparison.id,quoteId:secondComparison.offers[1].quoteId,reference:'synthetic-mallet-232',shipTo:'Receiving bench'});rejected=await h.command('purchase.approve',{purchaseId:rejected.id,version:rejected.version,reason:'Explicit second reviewed supplier cart after first cancellation'})
  const rejection=await h.command('purchase.submit',{purchaseId:rejected.id,version:rejected.version,confirm:'submit-exact-cart'});assert.equal(rejection.status,'rejected');await h.command('purchase.submit',{purchaseId:rejected.id,version:rejected.version,confirm:'submit-exact-cart'});assert.equal(posts().length,2,'Rejected orders are not resubmitted')
  for(const mode of ['expired','incompatible','short']){edge.quoteMode=mode;const compare=await h.command('purchase.compare',f.compare);await h.command('purchase.cart',{comparisonId:compare.id,quoteId:compare.offers[0].quoteId,reference:'synthetic-mallet-'+({expired:233,incompatible:234,short:235}[mode]),shipTo:'Receiving bench'},{status:409})}
+ edge.mode='normal';edge.quoteMode='normal';await h.stepUp()
+ const concurrentComparison=await h.command('purchase.compare',f.compare)
+ let concurrent=await h.command('purchase.cart',{comparisonId:concurrentComparison.id,quoteId:concurrentComparison.offers[0].quoteId,reference:'synthetic-mallet-236',shipTo:'Receiving bench'})
+ concurrent=await h.command('purchase.approve',{purchaseId:concurrent.id,version:concurrent.version,reason:'Approve one exact concurrent-submission cart'})
+ const gate=edge.holdNextOrder(),late=h.request('/api/mallet/commands',{method:'POST',body:{command:'purchase.submit',input:{purchaseId:concurrent.id,version:concurrent.version,confirm:'submit-exact-cart'}}})
+ let finalSubmission
+ try{
+  await gate.entered
+  finalSubmission=await h.command('purchase.submit',{purchaseId:concurrent.id,version:concurrent.version,confirm:'submit-exact-cart'})
+  assert.equal(finalSubmission.status,'acknowledged');assert.equal(posts().length,3,'A concurrent submission of a claimed cart performs GET only')
+  finalSubmission=await h.command('purchase.cancel',{purchaseId:concurrent.id,version:concurrent.version,submissionVersion:finalSubmission.version,confirm:'cancel',reason:'Cancel while an older supplier response is still in flight'})
+  assert.equal(finalSubmission.status,'cancelled')
+ }finally{gate.release()}
+ const lateResponse=await late;assert.equal(lateResponse.status,409,'A late acknowledgment cannot overwrite newer cancellation evidence')
+ assert.equal((await h.api('/api/mallet/supplier-orders')).orders.find(po=>po.id===concurrent.id).submission.status,'cancelled');assert.equal(posts().length,3)
  await h.command('connector.revoke',{connector:'supplier-gateway',name:'MALLET_SUPPLIER_KEY'});const before=edge.calls.length
  await h.command('purchase.compare',f.compare,{status:503});assert.equal(edge.calls.length,before,'Revoked keys prevent new network requests')
  await h.api('/api/mallet/supplier-orders',undefined,{as:member.cookie,status:403});assert.equal((await h.state({as:member.cookie})).records.purchaseSubmission,undefined)

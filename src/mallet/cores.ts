@@ -3,11 +3,12 @@ import {instant} from './workshop'
 import {credits} from './credits'
 import {supplierCredits,recordSupplierCredit} from './supplier-credits'
 export const coreCommands=['stock.coreOpen','stock.coreReturn','stock.coreShip','stock.coreCredit','stock.coreCorrect','stock.coreRefund']
-export function coreReport(s:State,now=new Date().toISOString()):Row[]{
+export function coreReport(s:State,now=new Date().toISOString(),financial=true):Row[]{
  return rows(s,'stockCore').map(core=>{
-  const invoice=find(s,'invoice',core.invoiceId),line=invoice.lines.find((l:any)=>l.id===core.lineId),payments=rows(s,'payment').filter(r=>r.invoiceId===invoice.id),paidCents=payments.reduce((n,r)=>n+r.amountCents,0),credits=supplierCredits(s,'stockCore',core.id),supplierCreditCents=credits.reduce((n,r)=>n+r.amountCents,0),note=core.creditNoteId?find(s,'creditNote',core.creditNoteId):null
-  const refunds=note?rows(s,'refund').filter(r=>r.creditNoteId===note.id):[]
-  return {...core,invoiceNumber:invoice.number,depositSubtotalCents:line.subtotalCents,depositTaxCents:line.salesTaxCents,depositTotalCents:line.totalCents,depositRecorded:paidCents>=invoice.totals.totalCents,credits,supplierCreditCents,supplierExposureCents:core.expectedCreditCents-supplierCreditCents,customerCreditCents:note?.totals.totalCents??0,customerRefundCents:refunds.filter(r=>(r.redirect?.status??r.status)==='refunded').reduce((n,r)=>n+r.amountCents,0),customerDue:!core.returned&&core.customerDueAt<=new Date(Date.parse(now)+core.alertDays*864e5).toISOString(),creditExpiryAlert:supplierCreditCents<core.expectedCreditCents&&core.supplierDueAt<=new Date(Date.parse(now)+core.alertDays*864e5).toISOString()}
+  const invoice=find(s,'invoice',core.invoiceId),line=invoice.lines.find((l:any)=>l.id===core.lineId),payments=rows(s,'payment').filter(r=>r.invoiceId===invoice.id),paidCents=payments.reduce((n,r)=>n+r.amountCents,0),credits=supplierCredits(s,'stockCore',core.id),supplierCreditCents=credits.reduce((n,r)=>n+r.amountCents,0)
+  const notes=rows(s,'creditNote').filter(n=>n.invoiceId===core.invoiceId&&n.lines.some((l:any)=>l.lineId===core.lineId)),coreCredit=(note:Row)=>note.lines.filter((l:any)=>l.lineId===core.lineId).reduce((n:number,l:any)=>n+l.totalCents,0)
+  const customerCreditCents=notes.reduce((n,note)=>n+coreCredit(note),0),customerRefundCents=notes.filter(note=>rows(s,'refund').some(r=>r.creditNoteId===note.id&&(r.redirect?.status??r.status)==='refunded')).reduce((n,note)=>n+coreCredit(note),0)
+  return {...core,invoiceNumber:invoice.number,depositSubtotalCents:line.subtotalCents,depositTaxCents:line.salesTaxCents,depositTotalCents:line.totalCents,depositRecorded:paidCents>=invoice.totals.totalCents,credits,supplierCreditCents,supplierExposureCents:core.expectedCreditCents-supplierCreditCents,customerCreditCents:financial?customerCreditCents:null,customerRefundCents:financial?customerRefundCents:null,customerDue:!core.returned&&core.customerDueAt<=new Date(Date.parse(now)+core.alertDays*864e5).toISOString(),creditExpiryAlert:supplierCreditCents<core.expectedCreditCents&&core.supplierDueAt<=new Date(Date.parse(now)+core.alertDays*864e5).toISOString()}
  })
 }
 export const cores:Handler=(c,command,p)=>{
