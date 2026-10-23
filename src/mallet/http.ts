@@ -324,6 +324,7 @@ async function workshopResponse(request:Request,original:Bindings,execution:Pick
    if(command==='rateProfile.save')return redirect('/app/jobs#rate-profiles')
    if(command.startsWith('customer.')||command.startsWith('contact.'))return redirect('/app/accounts?manage=all')
    if(command.startsWith('purchase.'))return redirect('/app/purchasing')
+   if(command==='stock.lot'&&input.returnTo==='supplier-returns')return redirect('/app/inventory/returns')
    if(['stock.catalog','stock.lot','stock.useLot'].includes(command))return redirect('/app/inventory/trace')
    if(command.startsWith('stock.rma'))return redirect('/app/inventory/returns')
    if(command.startsWith('stock.core'))return redirect('/app/inventory/cores')
