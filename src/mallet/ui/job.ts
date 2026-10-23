@@ -37,6 +37,7 @@ export function jobPage(state:any,id:string,actor:Actor,names:Names,photos:any[]
  if(manager && invoice?.status==='draft') bill+=form('invoice.approve','<p>Approve the exact invoice prepared from recorded, authorized work.</p>','Approve invoice',{invoiceId:invoice.id,version:invoice.version,revision:ir?.n??1})
  if(manager && invoice?.status==='approved') bill+=form('invoice.export','<p>Export once for your accounting software. Subsequent downloads use the saved file.</p>','Export invoice once',{invoiceId:invoice.id,version:invoice.version})
  if(manager&&invoice){const balance=invoiceBalance(state,invoice);bill+=`<p data-invoice-balance>Credits ${money(balance.creditedCents)} · Recorded tender net of refunds and account credit ${money(balance.paidCents)} · <strong>Balance due ${money(balance.outstandingCents)}</strong></p><p class="muted">Recorded tender is an allocation, not proof of cleared funds. The original invoice subtotal and tax stay unchanged.</p>`}
+ if(actor.role==='owner'&&invoice&&invoice.status!=='draft')bill+=`<p><a href="/app/invoices/${e(invoice.id)}">Issue, print and email invoice copies</a></p>`
  const exp=rows(state,'export').find(x=>x.invoiceId===invoice?.id)
  if(manager && exp) bill+=`<p><a href="/api/mallet/exports/${e(exp.id)}">Download saved invoice CSV</a></p>`
  const events=rows(state,'event').filter(v=>v.jobId===id).sort((a,b)=>a.at.localeCompare(b.at))

@@ -98,3 +98,6 @@
 }
 
 .inspection-report-media{display:block;max-width:100%;height:auto}
+
+.invoice-copy{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;min-width:0}
+.invoice-hash{overflow-wrap:anywhere}

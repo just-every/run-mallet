@@ -106,4 +106,19 @@ export async function validateFinance({db,table}){
  }
  await validateTender(context)
  return true
+ for await(const doc of each('invoiceDocument')){
+  const invoice=await get('invoice',doc.invoiceId)
+  insist(doc.snapshot?.jobId===invoice.jobId&&doc.jobId===invoice.jobId&&doc.invoiceRevision===invoice.revision,'invoice_document_reference')
+  insist(same(doc.snapshot.totals,invoice.totals),'invoice_document_totals')
+  insist(createHash('sha256').update(doc.content).digest('hex')===doc.contentHash,'invoice_document_content')
+  const pdf=Buffer.from(doc.pdfBase64,'base64')
+  insist(pdf.toString('base64')===doc.pdfBase64&&pdf.subarray(0,8).toString()==='%PDF-1.4'&&createHash('sha256').update(pdf).digest('hex')===doc.pdfHash,'invoice_document_pdf')
+  insist(whole(doc.sequence,1),'invoice_document_sequence')
+  if(doc.corrects){const original=await get('invoiceDocument',doc.corrects);insist(original.invoiceId===invoice.id&&original.number===doc.correctsNumber&&original.sequence===doc.sequence-1,'invoice_document_correction')}else insist(doc.sequence===1,'invoice_document_original')
+ }
+ for await(const delivery of each('invoiceDelivery')){
+  const doc=await get('invoiceDocument',delivery.documentId)
+  insist(delivery.invoiceId===doc.invoiceId&&delivery.jobId===doc.jobId&&delivery.contentHash===doc.contentHash&&['unconfirmed','uncertain','failed','accepted','development'].includes(delivery.status),'invoice_delivery_document')
+ }
+
 }

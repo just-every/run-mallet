@@ -390,3 +390,9 @@ test('ASSET-001 / OPS-001: typed bicycle, device, equipment and auto repairs ret
 test('ASSET-001: typed intake, bench booking and paid return through native forms at 1440/390',async()=>{const {assetBrowser}=await import('./asset-browser.mjs');await assetBrowser()})
 test('DIAG-002 / OPS-001: private Phonecheck result imports retain raw tests, quarantine serial mismatches and recover without shared authority',()=>run(async h=>{const {diagnosticResultsJourney}=await import('./support/diagnostic-results-journey.mjs');await diagnosticResultsJourney(h)}))
 test('DIAG-002: native private result import, mismatch and raw evidence at 1440/390',async()=>{const {diagnosticResultsBrowser}=await import('./diagnostic-results-browser.mjs');await diagnosticResultsBrowser()})
+
+import {invoiceDocumentsJourney} from './support/invoice-documents-journey.mjs'
+test('INV-001: exact mixed USD copies, linked corrections, single Base mail handoff and private archive recovery',invoiceDocumentsJourney)
+
+import {invoiceDocumentsBrowser} from './invoice-documents-browser.mjs'
+test('INV-001: owner issues, prints, emails and corrects invoice copies through native forms at 1440 and 390',invoiceDocumentsBrowser)
