@@ -23,7 +23,7 @@ export async function assetBrowser(){
   for(const [index,f]of assetFixtures.entries()){
    if(f.assetType!=='vehicle'){
     await p.goto(h.origin+'/app/tax');const detail=p.locator('details').filter({has:form('tax.configure').filter({has:p.locator(`input[name="assetType"][value="${f.assetType}"]`)})})
-    await detail.locator('summary').click();const tax=detail.locator('form');await tax.locator('[name="ratePercent"]').fill(String(f.tax.ratePercent));await tax.locator('[name="partsTaxable"]').setChecked(f.tax.partsTaxable);await tax.locator('[name="laborTaxable"]').setChecked(f.tax.laborTaxable);await tax.getByRole('button',{name:'Save '+f.assetType+' tax rule'}).click();await p.waitForLoadState('domcontentloaded');await shot(f.assetType+'-00-tax-rule')
+    await detail.locator('summary').click();const tax=detail.locator('form');await tax.locator('[name="ratePercent"]').fill(String(f.tax.ratePercent));await tax.locator('[name="partsTaxable"]').setChecked(f.tax.partsTaxable);await tax.locator('[name="laborTaxable"]').setChecked(f.tax.laborTaxable);await shot(f.assetType+'-00-tax-form');await tax.getByRole('button',{name:'Save '+f.assetType+' tax rule'}).click();await p.waitForLoadState('domcontentloaded');await shot(f.assetType+'-00-tax-rule')
    }
    await p.goto(h.origin+'/app/customers?type='+f.assetType+'#add');await shot(f.assetType+'-01-register')
    const input=assetInput(f);await fill(form('asset.create'),{customerName:input.customerName,customerEmail:input.customerEmail,label:input.label,identifier:input.identifier,...Object.fromEntries(Object.entries(input.specifications).map(([key,value])=>['spec:'+key,value]))},f.assetType==='vehicle'?'Add vehicle':'Add asset')

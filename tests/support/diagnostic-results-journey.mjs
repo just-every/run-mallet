@@ -19,8 +19,8 @@ export async function diagnosticResultsJourney(h){
  await h.command('diagnosis.record',{jobId:job.id,version:job.version,complaint:'Repair review',customerExplanation:'Prepared explanation does not change measured results',dtcs:[],measurements:[]})
  assert.deepEqual((await h.state()).records.diagnosticResult.find(r=>r.id===source.id),source,'Independent explanations never rewrite the imported test results')
  for(const options of [{as:admin.cookie},{as:member.cookie},agent]){
-  assert.ok(!JSON.stringify(await h.state(options)).includes('source content ran'))
-  const graph=await h.api('/api/mallet/repairs/'+job.id,undefined,{...options,...(options.as===member.cookie?{status:404}:{})});assert.ok(!JSON.stringify(graph).includes('source content ran'))
+  const privateState=JSON.stringify(await h.state(options));assert.ok(!privateState.includes('source content ran'));assert.ok(!privateState.includes(source.sha256),'Private import metadata stays owner-only')
+  const graph=await h.api('/api/mallet/repairs/'+job.id,undefined,{...options,...(options.as===member.cookie?{status:404}:{})});assert.ok(!JSON.stringify(graph).includes('source content ran'));assert.ok(!JSON.stringify(graph).includes(source.sha256))
  }
  const link=await h.command('diagnosisLink.create',{jobId:job.id,days:1});const publicReport=await h.request(new URL(link.url).pathname,{as:''});assert.equal(publicReport.status,200);assert.ok(!(await publicReport.text()).includes('source content ran'))
  const backup=await archive(h),fresh=await installation({bindings:{OWNER_EMAIL:'diagnostic-recovery@example.test'}})
