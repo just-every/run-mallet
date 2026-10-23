@@ -1,3 +1,5 @@
+import {transfersPage,transferFormInput} from './ui/stock-transfers'
+import {transferReport} from './stock-transfers'
 import {rmasPage,rmaFormInput} from './ui/supplier-returns'
 import {rmaReport} from './supplier-returns'
 import {coresPage,coresFormInput} from './ui/cores'
@@ -188,6 +190,7 @@ function formInput(data:FormData) {
  customerFormInput(data,input)
  purchasingFormInput(input)
  traceFormInput(input)
+ transferFormInput(input)
  rmaFormInput(input)
  coresFormInput(input)
  replenishmentFormInput(input)
@@ -326,6 +329,7 @@ async function workshopResponse(request:Request,original:Bindings,execution:Pick
    if(command.startsWith('purchase.'))return redirect('/app/purchasing')
    if(command==='stock.lot'&&input.returnTo==='supplier-returns')return redirect('/app/inventory/returns')
    if(['stock.catalog','stock.lot','stock.useLot'].includes(command))return redirect('/app/inventory/trace')
+   if(command==='stock.location'||command.startsWith('stock.transfer'))return redirect('/app/inventory/transfers')
    if(command.startsWith('stock.rma'))return redirect('/app/inventory/returns')
    if(command.startsWith('stock.core'))return redirect('/app/inventory/cores')
    if(['stock.replenishment','stock.replenish'].includes(command))return redirect('/app/inventory/replenishment')
@@ -385,6 +389,7 @@ async function workshopResponse(request:Request,original:Bindings,execution:Pick
    return page('Customer accounts',accountsPage(state,q,result),actor,200,frame('customers'))
   }
   if(['/app/purchasing','/api/mallet/purchasing'].includes(path)){if(!human(actor))throw new HttpError(403,'manager_required');return path.startsWith('/api/')?json(rows(state,'purchaseOrder').map(po=>({...po,...purchaseStatus(state,po)}))):page('Purchase orders',purchasingPage(state),actor,200,frame('inventory'))}
+  if(['/app/inventory/transfers','/api/mallet/transfers'].includes(path)){if(!human(actor))throw new HttpError(403,'manager_required');return path.startsWith('/api/')?json(transferReport(state)):page('Inter-store stock transfers',transfersPage(state),actor,200,frame('inventory'))}
   if(['/app/inventory/returns','/api/mallet/supplier-returns'].includes(path)){if(!human(actor))throw new HttpError(403,'manager_required');return path.startsWith('/api/')?json(rmaReport(state)):page('Supplier returns & quarantine',rmasPage(state),actor,200,frame('inventory'))}
   if(['/app/inventory/cores','/api/mallet/cores'].includes(path)){if(!human(actor))throw new HttpError(403,'manager_required');return path.startsWith('/api/')?json(coreReport(state)):page('Core deposits & returns',coresPage(state,actor.role==='owner'),actor,200,frame('inventory'))}
   if(['/app/inventory/replenishment','/api/mallet/replenishment'].includes(path)){if(!human(actor))throw new HttpError(403,'manager_required');return path.startsWith('/api/')?json(replenishmentReport(state)):page('Replenishment',replenishmentPage(state),actor,200,frame('inventory'))}
