@@ -1,3 +1,5 @@
+import {coresPage,coresFormInput} from './ui/cores'
+import {coreReport} from './cores'
 import {replenishmentPage,replenishmentFormInput} from './ui/replenishment'
 import {replenishmentReport} from './stock-replenishment'
 import {workshopPortabilityResponse} from './portability-door'
@@ -184,6 +186,7 @@ function formInput(data:FormData) {
  customerFormInput(data,input)
  purchasingFormInput(input)
  traceFormInput(input)
+ coresFormInput(input)
  replenishmentFormInput(input)
  inventoryFormInput(input)
  subletFormInput(data,input)
@@ -319,6 +322,7 @@ async function workshopResponse(request:Request,original:Bindings,execution:Pick
    if(command.startsWith('customer.')||command.startsWith('contact.'))return redirect('/app/accounts?manage=all')
    if(command.startsWith('purchase.'))return redirect('/app/purchasing')
    if(['stock.catalog','stock.lot','stock.useLot'].includes(command))return redirect('/app/inventory/trace')
+   if(command.startsWith('stock.core'))return redirect('/app/inventory/cores')
    if(['stock.replenishment','stock.replenish'].includes(command))return redirect('/app/inventory/replenishment')
    if(command.startsWith('stock.'))return redirect('/app/inventory')
    if(command==='asset.create')return redirect(`/app/assets/${result.id}`)
@@ -376,6 +380,7 @@ async function workshopResponse(request:Request,original:Bindings,execution:Pick
    return page('Customer accounts',accountsPage(state,q,result),actor,200,frame('customers'))
   }
   if(['/app/purchasing','/api/mallet/purchasing'].includes(path)){if(!human(actor))throw new HttpError(403,'manager_required');return path.startsWith('/api/')?json(rows(state,'purchaseOrder').map(po=>({...po,...purchaseStatus(state,po)}))):page('Purchase orders',purchasingPage(state),actor,200,frame('inventory'))}
+  if(['/app/inventory/cores','/api/mallet/cores'].includes(path)){if(!human(actor))throw new HttpError(403,'manager_required');return path.startsWith('/api/')?json(coreReport(state)):page('Core deposits & returns',coresPage(state,actor.role==='owner'),actor,200,frame('inventory'))}
   if(['/app/inventory/replenishment','/api/mallet/replenishment'].includes(path)){if(!human(actor))throw new HttpError(403,'manager_required');return path.startsWith('/api/')?json(replenishmentReport(state)):page('Replenishment',replenishmentPage(state),actor,200,frame('inventory'))}
   if(['/app/inventory/trace','/api/mallet/trace'].includes(path)){if(!human(actor))throw new HttpError(403,'manager_required');const q=url.searchParams.get('q')??'';return path.startsWith('/api/')?json(traceReport(state,q)):page('Parts catalog & traceability',tracePage(state,q),actor,200,frame('inventory'))}
   if(['/app/inventory','/app/inventory/count','/api/mallet/inventory'].includes(path)){if(!human(actor))throw new HttpError(403,'manager_required');if(path.startsWith('/api/'))return json(stockReport(state));return page(path.endsWith('/count')?'Blind stock count':'Stock & receiving',path.endsWith('/count')?countPage():inventoryPage(state),actor,200,frame('inventory'))}
