@@ -3,7 +3,7 @@ import {randomBytes} from 'node:crypto'
 import {mkdir} from 'node:fs/promises'
 import {join} from 'node:path'
 import {chromium} from '@playwright/test'
-import {installation} from './harness.mjs'
+import {installation,snapshots} from './harness.mjs'
 import {publicDoor} from './support/portable-repair.mjs'
 import {assetFixtures,assetInput,repairToInvoice,currentJob} from './support/asset-journey.mjs'
 export async function assetBrowser(){
@@ -21,6 +21,10 @@ export async function assetBrowser(){
    for(const el of await p.locator('a,button').all())if(await el.isVisible())assert.ok((await el.innerText()).trim(),name+' control has visible words or needs a tooltip')
    await p.screenshot({path:join(dir,name+'-'+width+'.png'),fullPage:true})}}
   for(const [index,f]of assetFixtures.entries()){
+   if(f.assetType!=='vehicle'){
+    await p.goto(h.origin+'/app/tax');const detail=p.locator('details').filter({has:form('tax.configure').filter({has:p.locator(`input[name="assetType"][value="${f.assetType}"]`)})})
+    await detail.locator('summary').click();const tax=detail.locator('form');await tax.locator('[name="ratePercent"]').fill(String(f.tax.ratePercent));await tax.locator('[name="partsTaxable"]').setChecked(f.tax.partsTaxable);await tax.locator('[name="laborTaxable"]').setChecked(f.tax.laborTaxable);await tax.getByRole('button',{name:'Save '+f.assetType+' tax rule'}).click();await p.waitForLoadState('domcontentloaded');await shot(f.assetType+'-00-tax-rule')
+   }
    await p.goto(h.origin+'/app/customers?type='+f.assetType+'#add');await shot(f.assetType+'-01-register')
    const input=assetInput(f);await fill(form('asset.create'),{customerName:input.customerName,customerEmail:input.customerEmail,label:input.label,identifier:input.identifier,...Object.fromEntries(Object.entries(input.specifications).map(([key,value])=>['spec:'+key,value]))},f.assetType==='vehicle'?'Add vehicle':'Add asset')
    const assetId=p.url().split('/').at(-1);assert.ok((await p.locator('main').innerText()).includes(f.identifier));await shot(f.assetType+'-02-asset')
@@ -31,7 +35,7 @@ export async function assetBrowser(){
    }
    await p.goto(h.origin+'/app/jobs/'+jobId+'/intake')
    await fill(form('intake.record'),{damage:'Observed scratches before '+f.assetType+' work',itemLines:f.items.map(i=>i.kind+' | '+i.label+' | '+i.quantity).join('\n'),lockHandling:'Customer keeps all credentials; no unlock secret collected',signedBy:input.customerName,consent:true},'Sign custody receipt');await shot(f.assetType+'-05-intake')
-   let job=await currentJob(h,jobId);const {invoice}=await repairToInvoice(h,job,f,{reviewer});job=await currentJob(h,jobId)
+   let job=await currentJob(h,jobId);const {invoice}=await repairToInvoice(h,job,f,{reviewer,configure:false});job=await currentJob(h,jobId)
    await p.goto(h.origin+'/app/jobs/'+jobId);await shot(f.assetType+'-06-invoice')
    if(['vehicle','equipment'].includes(f.assetType)){
     await p.getByText('Record mileage or hours',{exact:true}).click();assert.equal(await form('reading.record').locator('[name="unit"]').inputValue(),f.assetType==='equipment'?'hours':'miles')
@@ -45,6 +49,10 @@ export async function assetBrowser(){
    await fill(form('flow.collect'),{collectorName:input.customerName,comparisonId:comparison.id,...(reading?{readingId:reading.id}:{}),identityEvidence:'Staff checked collector in person',warrantyAdvice:'Warranty explained; ask the shop for a paper receipt.'},'Record documented handover');assert.ok((await p.locator('main').innerText()).includes('Tender recorded by staff; Mallet did not verify funds'));await shot(f.assetType+'-10-handover')
    await p.getByRole('link',{name:'Print or save handover receipt'}).click();const copy=await p.locator('main').innerText();assert.ok(copy.includes(f.identifier));for(const item of f.items)assert.ok(copy.includes(item.label+': '+item.quantity+' of '+item.quantity+' returned'));assert.equal(copy.includes('Mileage-out:'),f.assetType==='vehicle');assert.equal(copy.includes('Hours-out:'),f.assetType==='equipment');await shot(f.assetType+'-11-print')
   }
+  const legacyInput=await snapshots(),preview=await h.api('/api/mallet/imports/preview',legacyInput)
+  await h.api('/api/mallet/imports/apply',{...legacyInput,fingerprint:preview.fingerprint});const legacy=(await h.state()).records.asset.find(a=>!a.assetType)
+  await p.goto(h.origin+'/app/assets/'+legacy.id);await shot('legacy-12-unclassified')
+  await fill(form('asset.update'),{assetType:'equipment'},'Save asset details');await fill(form('asset.update'),{'spec:model':'Declared compressor model'},'Save asset details');assert.ok((await p.locator('main').innerText()).includes('Declared compressor model'));await shot('legacy-13-classified')
   assert.deepEqual(errors,[])
  }finally{await browser?.close();await h.close()}
 }

@@ -9,7 +9,7 @@ export const current = (estimate: Row) => estimate.revisions[estimate.revisions.
 function revision(c: Context, p: any, n: number, job: Row) {
   const rateProfile = resolveRateProfile(c, p)
   const raw = rateProfile && Array.isArray(p.lines) ? p.lines.map((line:any)=>line.kind==='labor'||line.kind==='labour'?{...line,unitCents:rateProfile.snapshot.laborRateCents}:line) : p.lines
-  const priced = normalizeReplacements(c, job, raw, lines(raw, configuredTax(c.s)))
+  const priced = normalizeReplacements(c, job, raw, lines(raw, configuredTax(c.s,job.asset.assetType)))
   validateReplacements(c, job, priced, p.estimateId)
   return { n, ...(rateProfile?{rateProfile}:{}), lines: priced, totals: totals(priced), notes: text(p.notes, 'notes', 4000, true), preparedBy: who(c), preparedAt: c.now, approval: null }
 }
