@@ -277,6 +277,20 @@ test('FLOW-002: revised pickup promise and customer notice through native forms 
 
 test('FLOW-004: helper crew, dependent subtasks, mentioned advisor with media, acknowledged handoff, per-person time and recovery',()=>run(collaborationJourney))
 test('FLOW-004: native helper, dependent subtasks, mention and acknowledged handoff at 1440/390',collaborationBrowser)
+test('a technician taken off a repair’s crew can no longer complete its subtasks or mark its mentions seen',()=>run(async h=>{
+ const lead=await h.person('lee-crew@example.test'),helper=await h.person('kai-crew@example.test'),L={as:lead.cookie},K={as:helper.cookie}
+ const {job}=await booking(h,{technicianId:lead.id}),current=async()=>(await h.state()).records.job.find(j=>j.id===job.id)
+ await h.command('crew.add',{jobId:job.id,version:(await current()).version,technicianId:helper.id})
+ const first=await h.command('subtask.create',{jobId:job.id,title:'Torque wheel nuts',assigneeId:helper.id},L),second=await h.command('subtask.create',{jobId:job.id,title:'Check tyre pressures',assigneeId:helper.id},L)
+ const note=await h.command('note.add',{jobId:job.id,body:'Studs checked on the left side',mentionIds:[helper.id]},L)
+ assert.ok((await h.command('subtask.complete',{subtaskId:first.id,version:first.version},K)).completedAt,'a helper on the crew completes their own subtask')
+ await h.command('crew.remove',{jobId:job.id,version:(await current()).version,technicianId:helper.id})
+ await h.command('subtask.complete',{subtaskId:second.id,version:second.version},{...K,status:403})
+ await h.command('mention.acknowledge',{noteId:note.id,version:note.version},{...K,status:403})
+ const records=(await h.state()).records
+ assert.equal(records.subtask.find(t=>t.id===second.id).completedAt,null);assert.equal(records.jobNote.find(n=>n.id===note.id).mentions[0].acknowledgedAt,null)
+ assert.ok((await h.command('subtask.complete',{subtaskId:second.id,version:second.version})).completedAt,'the owner still completes it')
+}))
 test('FLOW-001 / REPORT-004 / REPORT-006: nine-stage board, measured delays, promises, gated moves, technician/overdue/priority/search filters, canceled and lost retention, recorded collection and recovery',()=>run(flowJourney))
 test('FLOW-001: native board filters, priority, cancel and recorded collection at 1440/390',flowBrowser)
 

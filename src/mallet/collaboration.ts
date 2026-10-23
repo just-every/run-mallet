@@ -38,7 +38,7 @@ export const collaboration:Handler=(c,command,p)=>{
   event(c,command,job.id,row.id,{title:row.title,assigneeId,dependsOn});return row
  }
  if(command==='subtask.complete') {
-  const task=find(c.s,'subtask',p.subtaskId);expectVersion(task,p.version);open(c,task.jobId)
+  const task=find(c.s,'subtask',p.subtaskId);expectVersion(task,p.version);member(c,open(c,task.jobId))
   if(!manager(c)&&c.actor.id!==task.assigneeId)fail('FORBIDDEN','Only the assignee, the owner or a service advisor completes this subtask.',null,403)
   if(task.completedAt)fail('SUBTASK_STATE','This subtask is already complete.')
   const waiting=task.dependsOn.map((d:string)=>find(c.s,'subtask',d)).filter((d:Row)=>!d.completedAt)
@@ -54,7 +54,7 @@ export const collaboration:Handler=(c,command,p)=>{
   event(c,command,job.id,row.id,{mentions:row.mentions.map((m:any)=>m.id),attachments:row.attachments.length});return row
  }
  if(command==='mention.acknowledge') {
-  const note=find(c.s,'jobNote',p.noteId);expectVersion(note,p.version)
+  const note=find(c.s,'jobNote',p.noteId);expectVersion(note,p.version);member(c,find(c.s,'job',note.jobId))
   const mine=note.mentions.find((m:any)=>m.id===c.actor.id)
   if(!mine)fail('FORBIDDEN','Only the mentioned person acknowledges a mention.',null,403)
   if(mine.acknowledgedAt)return note
