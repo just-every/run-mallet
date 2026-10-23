@@ -125,7 +125,7 @@ async function nativeForm(request:Request) {
 }
 const withoutSubletCosts=(value:any)=>{if(!value||!('sublets' in value))return value;const {sublets,...rest}=value;return rest}
 function visible(s:State,actor:Actor):State {
- if(actor.role!=='owner')s={...s,records:Object.fromEntries(Object.entries(s.records).filter(([kind])=>!['retentionPolicy','retentionHold','retentionReceipt'].includes(kind)))}
+ if(actor.role!=='owner')s={...s,records:Object.fromEntries(Object.entries(s.records).filter(([kind])=>!['retentionPolicy','retentionHold','retentionReceipt','diagnosticResult'].includes(kind)))}
  if(!human(actor))s={...s,records:Object.fromEntries(Object.entries(s.records).map(([k,v])=>[k,(k.startsWith('calendar')||k==='bookingWaitlist'||k==='waitlistOffer'||k==='appointment'||k==='bookingService'||k==='counterIntake'||k.startsWith('intake')||['warranty','warrantyTerms','payment','handover','returnDelegate','returnOverride'].includes(k))?[]:k==='event'?v.filter(x=>!x.kind.startsWith('calendar.')&&!x.kind.startsWith('waitlist.')&&!x.kind.startsWith('booking.')&&!x.kind.startsWith('checkin.')&&!x.kind.startsWith('intake.')&&!x.kind.startsWith('warranty.')&&!x.kind.startsWith('payment.')&&!x.kind.startsWith('return.')):v]))}
  s=scopedCollaboration(scopedPromises(s,actor),actor)
  s=scopedTime(s,actor)
