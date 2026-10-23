@@ -14,6 +14,6 @@ export function inventoryPage(state:any){
  +box('Register a part',form('stock.item',field('SKU','sku','text','','required')+field('Part name','name','text','','required')+field('Part barcode','barcode','text','','required')+field('Unit','unit','text','each','required'),'Register part'))
  +box('Register a bin',form('stock.bin',field('Bin code','code','text','','required')+field('Bin barcode','barcode','text','','required'),'Register bin'))
  +box('Reserve for a repair',form('stock.reserve',scanFields()+select('Repair order','jobId',rows(state,'job').filter(j=>['booked','working'].includes(j.status)).map(j=>[j.id,j.title]))+qty('Reserve quantity')+field('Reservation reference','reference','text','','required'),'Reserve stock'))
- return '<p><a href="/app/purchasing">Purchase orders</a> · <a href="/app/inventory/trace">Parts catalog & traceability</a></p><div class="grid wide-left"><div class="col">'+left+'</div><div class="col">'+right+'</div></div>'
+ return '<p><a href="/app/inventory/replenishment">Low-stock replenishment</a> · <a href="/app/purchasing">Purchase orders</a> · <a href="/app/inventory/trace">Parts catalog & traceability</a></p><div class="grid wide-left"><div class="col">'+left+'</div><div class="col">'+right+'</div></div>'
 }
 export function inventoryFormInput(input:any){if(String(input.command).startsWith('stock.'))for(const k of ['quantity','expectedQuantity','version'])if(k in input)input[k]=Number(input[k]);return input}

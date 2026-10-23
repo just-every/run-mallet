@@ -1,3 +1,4 @@
+import {assertReplenishment} from './stock-replenishment'
 import {bump,event,expectVersion,fail,find,integer,object,put,rows,text,who,type Handler,type Row,type State} from './model'
 import {amount,moveStock,receiptExists,reserveStock,scan} from './inventory'
 import {instant} from './workshop'
@@ -25,13 +26,15 @@ export const purchasing:Handler=(c,command,p)=>{
   const reference=text(p.reference,'PO reference',200)
   if(rows(c.s,'purchaseOrder').some(r=>r.reference.toLowerCase()===reference.toLowerCase()))fail('DUPLICATE','That PO reference already exists.')
   const taxCents=cents(p.taxCents,'supplier tax'),freightCents=cents(p.freightCents,'freight'),subtotalCents=lines.reduce((n:number,l:any)=>n+lineCost(l),0),totalCents=integer(subtotalCents+taxCents+freightCents,'total spend',0,1_000_000_000)
-  const po=put(c.s,'purchaseOrder',{reference,supplier:text(p.supplier,'supplier'),shipTo:text(p.shipTo,'ship-to address',2000),expectedAt:instant(p.expectedAt,'expected date'),lines,subtotalCents,taxCents,freightCents,totalCents,status:'draft',approval:null,closed:null,by:who(c),at:c.now})
+  const binId=p.binId?find(c.s,'stockBin',p.binId).id:null
+  const po=put(c.s,'purchaseOrder',{reference,binId,supplier:text(p.supplier,'supplier'),shipTo:text(p.shipTo,'ship-to address',2000),expectedAt:instant(p.expectedAt,'expected date'),lines,subtotalCents,taxCents,freightCents,totalCents,status:'draft',approval:null,closed:null,by:who(c),at:c.now})
   event(c,command,null,po.id,{totalCents});return po
  }
  const po=find(c.s,'purchaseOrder',p.purchaseId);expectVersion(po,p.version)
  if(po.closed)fail('PO_CLOSED','This purchase order is closed; its evidence is immutable.')
  if(command==='purchase.approve'){
   if(po.status!=='draft')fail('ALREADY_APPROVED','This spend is already approved.')
+  assertReplenishment(c.s,po)
   const reason=text(p.reason,'spend approval reason',2000),saved=bump(c.s,'purchaseOrder',po,{status:'approved',approval:{by:who(c),at:c.now,totalCents:po.totalCents,lines:structuredClone(po.lines),taxCents:po.taxCents,freightCents:po.freightCents,shipTo:po.shipTo,expectedAt:po.expectedAt,reason}})
   event(c,command,null,po.id,{totalCents:po.totalCents,reason});return saved
  }

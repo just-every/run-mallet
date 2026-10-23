@@ -1,3 +1,5 @@
+import {replenishmentPage,replenishmentFormInput} from './ui/replenishment'
+import {replenishmentReport} from './stock-replenishment'
 import {workshopPortabilityResponse} from './portability-door'
 import {timedMalletResponse} from './request-timing'
 import {loadRepairState} from './read-model/repair'
@@ -182,6 +184,7 @@ function formInput(data:FormData) {
  customerFormInput(data,input)
  purchasingFormInput(input)
  traceFormInput(input)
+ replenishmentFormInput(input)
  inventoryFormInput(input)
  subletFormInput(data,input)
  return promiseFormInput(data,diagnosisFormInput(data,timeFormInput(data,pricingOverrideInput(data,pricingFormInput(data,inspectionFormInput(data,qualityFormInput(data,input)))))))
@@ -316,6 +319,7 @@ async function workshopResponse(request:Request,original:Bindings,execution:Pick
    if(command.startsWith('customer.')||command.startsWith('contact.'))return redirect('/app/accounts?manage=all')
    if(command.startsWith('purchase.'))return redirect('/app/purchasing')
    if(['stock.catalog','stock.lot','stock.useLot'].includes(command))return redirect('/app/inventory/trace')
+   if(['stock.replenishment','stock.replenish'].includes(command))return redirect('/app/inventory/replenishment')
    if(command.startsWith('stock.'))return redirect('/app/inventory')
    if(command==='asset.create')return redirect(`/app/assets/${result.id}`)
    const jobId=command==='job.book'?result.id:input.jobId??result.jobId??(command==='invoice.export'?rows(await load(env.DB),'invoice').find(i=>i.id===input.invoiceId)?.jobId:undefined)
@@ -372,6 +376,7 @@ async function workshopResponse(request:Request,original:Bindings,execution:Pick
    return page('Customer accounts',accountsPage(state,q,result),actor,200,frame('customers'))
   }
   if(['/app/purchasing','/api/mallet/purchasing'].includes(path)){if(!human(actor))throw new HttpError(403,'manager_required');return path.startsWith('/api/')?json(rows(state,'purchaseOrder').map(po=>({...po,...purchaseStatus(state,po)}))):page('Purchase orders',purchasingPage(state),actor,200,frame('inventory'))}
+  if(['/app/inventory/replenishment','/api/mallet/replenishment'].includes(path)){if(!human(actor))throw new HttpError(403,'manager_required');return path.startsWith('/api/')?json(replenishmentReport(state)):page('Replenishment',replenishmentPage(state),actor,200,frame('inventory'))}
   if(['/app/inventory/trace','/api/mallet/trace'].includes(path)){if(!human(actor))throw new HttpError(403,'manager_required');const q=url.searchParams.get('q')??'';return path.startsWith('/api/')?json(traceReport(state,q)):page('Parts catalog & traceability',tracePage(state,q),actor,200,frame('inventory'))}
   if(['/app/inventory','/app/inventory/count','/api/mallet/inventory'].includes(path)){if(!human(actor))throw new HttpError(403,'manager_required');if(path.startsWith('/api/'))return json(stockReport(state));return page(path.endsWith('/count')?'Blind stock count':'Stock & receiving',path.endsWith('/count')?countPage():inventoryPage(state),actor,200,frame('inventory'))}
   if(path==='/app/time'){if(actor.role==='agent')throw new HttpError(403,'staff_required');return page('Time & attendance',`<div class="narrow">${timePanel(state,actor,(await operators(env.DB)).names)}</div>`,actor,200,frame('jobs'))}
