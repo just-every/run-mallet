@@ -10,6 +10,11 @@ import {coresPage,coresFormInput} from './ui/cores'
 import {coreReport} from './cores'
 import {replenishmentPage,replenishmentFormInput} from './ui/replenishment'
 import {replenishmentReport} from './stock-replenishment'
+import {taxCustodyPage} from './ui/tax-custody'
+import {jurisdictionReport} from './tax'
+import {invoiceDocumentsPage} from './ui/invoice-documents'
+import {documentHtml,internalDocumentCommands} from './invoice-documents'
+import {sendInvoice} from './invoice-document-door'
 import {assetNativeInput} from './ui/asset-types'
 import {workshopPortabilityResponse} from './portability-door'
 import {timedMalletResponse} from './request-timing'
@@ -142,6 +147,7 @@ function visible(s:State,actor:Actor):State {
  if(!human(actor))s={...s,records:Object.fromEntries(Object.entries(s.records).map(([k,v])=>[k,(k.startsWith('calendar')||k==='bookingWaitlist'||k==='waitlistOffer'||k==='appointment'||k==='bookingService'||k==='counterIntake'||k.startsWith('intake')||['warranty','warrantyTerms','payment','handover','returnDelegate','returnOverride'].includes(k))?[]:k==='event'?v.filter(x=>!x.kind.startsWith('calendar.')&&!x.kind.startsWith('waitlist.')&&!x.kind.startsWith('booking.')&&!x.kind.startsWith('checkin.')&&!x.kind.startsWith('intake.')&&!x.kind.startsWith('warranty.')&&!x.kind.startsWith('payment.')&&!x.kind.startsWith('return.')):v]))}
  s=scopedCollaboration(scopedPromises(s,actor),actor)
  s=scopedTime(s,actor)
+ if(actor.role!=='owner'){const {taxCertificate:_certificates,taxJurisdiction:_jurisdiction,invoiceDocument:_docs,invoiceDelivery:_delivery,...records}=s.records;s={...s,records:{...records,event:rows(s,'event').filter(x=>!x.kind.startsWith('invoice.delivery')&&x.kind!=='invoice.issue'&&!x.kind.startsWith('tax.certificate')&&!x.kind.startsWith('tax.assignJurisdiction'))}}}
  if(!human(actor)){s={...s,records:Object.fromEntries(Object.entries(s.records).filter(([k])=>!['contact','customerAccount','customerMerge','customerBilling'].includes(k)))};s={...s,records:{...s.records,event:rows(s,'event').filter(x=>!x.kind.startsWith('contact.')&&!x.kind.startsWith('customer.')),invoice:rows(s,'invoice').map(i=>{const {billing,...rest}=i;return rest})}}}
  if(!human(actor)){const records=Object.fromEntries(Object.entries(s.records).filter(([k])=>!k.startsWith('stock')&&!k.startsWith('purchase')));s={...s,records:{...records,event:(records.event??[]).filter(x=>!x.kind.startsWith('stock.')&&!x.kind.startsWith('purchase.'))}}}
  if(!human(actor))s={...s,records:{...s.records,event:rows(s,'event').filter(e=>!e.kind.startsWith('routing.'))}}
@@ -175,6 +181,7 @@ function formInput(data:FormData) {
   let source:any;try{source=JSON.parse(input.replacementSource)}catch{throw new HttpError(400,'invalid_replacement')}
   input.lines=[{kind:source.kind,description:source.description,quantity:Number(input.replacementQuantity),unitCents:Math.round(Number(input.replacementPrice)*100),...(source.kind==='fee'?{feeTaxable:source.feeTaxable}:{}),replaces:{estimateId:source.estimateId,revision:source.revision,lineId:source.lineId}}]
  }
+ if(input.command==='invoice.send')input.consent=data.has('consent')
  if(input.command==='tax.configure'){input.ratePercent=input.ratePercent===''?null:Number(input.ratePercent);input.partsTaxable=data.has('partsTaxable');input.laborTaxable=data.has('laborTaxable')}
  if(input.command==='decline.reprice')input.unitCents=Math.round(Number(input.unitCents)*100)
  if(input.channel)input.method=input.channel
@@ -265,8 +272,9 @@ async function workshopResponse(request:Request,original:Bindings,execution:Pick
    let result:any
    if(['connector.save','connector.revoke'].includes(command)&&actor.role==='owner'&&!auth.gate?.enrolled)throw new HttpError(403,'step_up_required','Enrol your own second factor before opening the credential door.')
    if(needsStepUp(command,actor.role))auth.authority=requireStepUp(auth)
-   if(internalSupplierCommands.includes(command)||internalWaitlistCommands.includes(command)||internalReportCommands.includes(command)||internalBookingCommands.includes(command)||internalCheckInCommands.includes(command)||internalRefundCommands.includes(command)||internalIntakeFormCommands.includes(command)||command==='payment.verified'||command==='routing.sweep'||internalPromiseCommands.includes(command)||internalApprovalCommands.includes(command)||internalChaseCommands.includes(command))throw new HttpError(404,'unknown_command')
-   if(retentionCommands.includes(command))result=await retentionCommand(env,actor,auth.authority,command,input)
+   if(internalSupplierCommands.includes(command)||internalDocumentCommands.includes(command)||internalWaitlistCommands.includes(command)||internalReportCommands.includes(command)||internalBookingCommands.includes(command)||internalCheckInCommands.includes(command)||internalRefundCommands.includes(command)||internalIntakeFormCommands.includes(command)||command==='payment.verified'||command==='routing.sweep'||internalPromiseCommands.includes(command)||internalApprovalCommands.includes(command)||internalChaseCommands.includes(command))throw new HttpError(404,'unknown_command')
+   if(command==='invoice.send')result=await sendInvoice(env,actor,auth.authority,input)
+   else if(retentionCommands.includes(command))result=await retentionCommand(env,actor,auth.authority,command,input)
    else if(command.startsWith('waitlist.'))result=await waitlistCommand(env,request,actor,auth.authority,command,input)
    else if(command.startsWith('calendar.')||['job.book','dispatch.approve'].includes(command))result=await execute(env.DB,actor as any,command,input,await calendarAuthority(env,command,input,auth.authority))
    else if(command==='inspectionReport.review'){const checked=await inspectionReportInput(env.DB,actor,auth.authority,input);result=await execute(env.DB,actor as any,command,checked.input,checked.authority)}
@@ -303,6 +311,7 @@ async function workshopResponse(request:Request,original:Bindings,execution:Pick
    else result=await execute(env.DB,actor as any,command,input,auth.authority)
    if(isApi){if(!human(actor)&&result&&typeof result==='object'&&'billing' in result){const {billing,...rest}=result;result=rest}return json(actor.role==='agent'?withoutSubletCosts(withoutInspectionSource(result)):result)}
    if(retentionCommands.includes(command)){if(command==='customer.export')return new Response(JSON.stringify(result,null,2),{headers:{...headers,'content-type':'application/json','content-disposition':'attachment; filename="customer-data.json"'}});return page('Retention & erasure',retentionPage(await load(env.DB),input.customerId??'',command==='retention.preview'?result:undefined,input,['customer.erase','retention.run'].includes(command)?result:undefined),actor,200,{section:'data'})}
+   if(['invoice.issue','invoice.send'].includes(command)){const invoiceId=command==='invoice.issue'?input.invoiceId:result.invoiceId;return redirect('/app/invoices/'+encodeURIComponent(invoiceId))}
    if(command==='customer.mergePreview')return page('Review duplicate merge',mergePreviewPage(result,input),actor,200,{section:'customers'})
    if(command==='inspectionReport.send')return page('Inspection report email',`<section class="card"><p>${e(result.status==='accepted'?'Handed to the mail provider; delivery is not confirmed.':result.status==='development'?'Saved to the development outbox; not sent.':'Send failed or is uncertain. Contact the customer; no automatic retry will occur.')}</p><a href="${e(result.url)}">Open reviewed customer report</a><p><a href="/app/jobs/${e(result.jobId)}#inspection-reports">Return to repair</a></p></section>`,actor,200,{section:'jobs'})
    if(command.startsWith('calendar.')||command.startsWith('waitlist.'))return redirect('/app/calendar')
@@ -324,6 +333,7 @@ async function workshopResponse(request:Request,original:Bindings,execution:Pick
    if(command==='approvalLink.create')return page('Approval link sent',`<section class="card"><p>${e(result.delivery?.status==='accepted'?'Handed to the mail provider for '+result.to+'; delivery is not confirmed.':result.delivery?.status==='development'?'Written to the development mail outbox for '+result.to+'; not sent.':'The mail provider did not accept the message for '+result.to+'.')}</p><p>If the customer cannot find the email, share this link yourself. It will not be shown again.</p><pre>${e(result.url)}</pre><p class="card-foot"><a href="/app/jobs/${e(result.jobId)}#approval-links">Return to the repair</a></p></section>`,actor,200,{section:'jobs'})
    if(command==='diagnosisLink.create')return page('Customer inspection link',`<section class="card"><p>Copy this read-only link to the customer yourself. Mallet has not sent it, and it will not be shown again.</p><pre>${e(result.url)}</pre><p>Expires ${when(result.expiresAt)}</p><p class="card-foot"><a href="/app/jobs/${e(result.jobId)}#diagnosis">Return to the repair</a></p></section>`,actor,200,{section:'jobs'})
    if(command==='agent.revoke')return redirect('/app/data')
+   if(['tax.certificate','tax.assignJurisdiction'].includes(command))return redirect('/app/tax/custody')
    if(command==='tax.configure')return redirect('/app/tax?saved=1')
    if(command==='handoff.decline')return redirect('/app/jobs')
    if(['chasePolicy.save','chaseOptOut.record','chaseOptOut.lift'].includes(command)||command==='chaseTask.resolve'&&!input.jobId)return redirect('/app/approvals#'+(command==='chasePolicy.save'?'chase-policy':command==='chaseTask.resolve'?'chase-tasks':'chase-opt-outs'))
@@ -363,6 +373,10 @@ async function workshopResponse(request:Request,original:Bindings,execution:Pick
   if(path==='/app/bookings'){if(!human(actor))throw new HttpError(403,'manager_required');return page('Online appointments',bookingStaff(state,(await operators(env.DB)).names),actor,200,{section:'jobs'})}
   if(path==='/api/mallet/state')return json({actor,...state})
   if(path==='/api/mallet/board')return json(repairBoard(state,new Date().toISOString(),boardFilter(url.searchParams)))
+  const invoicePage=path.match(/^\/app\/invoices\/([^/]+)$/)
+  if(invoicePage){if(actor.role!=='owner')throw new HttpError(403,'owner_required');const invoice=rows(state,'invoice').find(i=>i.id===invoicePage[1]);if(!invoice||invoice.status==='draft')throw new HttpError(404,'not_found');return page('Issued invoices',invoiceDocumentsPage(state,invoice),actor,200,{section:'jobs'})}
+  const documentPath=path.match(/^\/(app|api\/mallet)\/invoice-documents\/([^/.]+)(\.pdf|\.txt|\/print)$/)
+  if(documentPath){if(actor.role!=='owner')throw new HttpError(403,'owner_required');const d=rows(state,'invoiceDocument').find(d=>d.id===documentPath[2]);if(!d)throw new HttpError(404,'not_found');if(documentPath[3]==='/print')return page('Issued invoice',documentHtml(d),actor,200,{section:'jobs'});const pdf=documentPath[3]==='.pdf';return new Response(pdf?Uint8Array.from(atob(d.pdfBase64),c=>c.charCodeAt(0)):d.content,{headers:{...headers,'content-type':pdf?'application/pdf':'text/plain; charset=utf-8','content-disposition':'attachment; filename="'+d.number+(pdf?'.pdf':'.txt')+'"'}})}
   const receiptMatch=path.match(/^\/api\/mallet\/approval-receipts\/([^/]+)$/)
   if(receiptMatch)return json(approvalReceipt(state,actor,receiptMatch[1]))
   const exportMatch=path.match(/^\/api\/mallet\/exports\/([^/]+)$/)
@@ -411,6 +425,7 @@ async function workshopResponse(request:Request,original:Bindings,execution:Pick
   if(path==='/app/jobs'){const names=(await operators(env.DB)).names;return page('Repair orders',(actor.role!=='agent'?waitingForMe(state,actor)+(human(actor)?'<p><a href="/app/bookings">Online appointments</a> · <a href="/app/check-ins">Counter & after-hours check-in queue</a></p>':'')+'<p><a href="/app/time">My time & attendance</a> · <a href="/app/reports/technicians">Technician efficiency</a></p>':'')+(human(actor)?rateProfilePanel(state,''):'')+specialPartNotices(state,actor)+promisePlan(state,actor,names)+repairOrders(state,names),actor,200,frame('jobs',{subtitle:'Open repair orders by start time, then invoiced visits.'}))}
   if(path==='/app/customers')return page('Customers',customers(state,actor,url.searchParams.get('type')??'vehicle'),actor,200,frame('customers',{subtitle:'Every customer’s asset and its visits.'}))
   if(path==='/app/approvals')return page('Approvals',(human(actor)?chasePage(state):'')+approvals(state),actor,200,frame('approvals',{subtitle:'Every price, dispatch plan and invoice a person approved, at its exact revision.'}))
+  if(path==='/app/tax/custody'||path==='/api/mallet/tax/report'){if(actor.role!=='owner')throw new HttpError(403,'owner_required');return path.startsWith('/api/')?json(jurisdictionReport(state)):page('Tax certificates & invoice report',taxCustodyPage(state),actor,200,frame('tax'))}
   if(path==='/app/tax'){if(!human(actor))throw new HttpError(403,'manager_required');return page('Shop sales tax',`<div class="narrow">${taxPage(state,url.searchParams.has('saved'))}</div>`,actor,200,frame('tax',{subtitle:'The sales tax rate Mallet applies to new estimates, in USD.'}))}
   if(path==='/app/move-in')return page('Move into Mallet',moveIn(actor),actor,200,frame('move-in'))
   if(path==='/app/data'){if(!human(actor))throw new HttpError(403,'manager_required');const keys=await env.DB.prepare('SELECT id,label,expires_at,revoked_at FROM mallet_agent_keys ORDER BY created_at DESC').all();return page('Data & access',dataPage(actor,keys.results),actor,200,frame('data'))}

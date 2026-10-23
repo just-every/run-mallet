@@ -1,4 +1,4 @@
-import { bump, choice, fail, rows, type Handler, type Row, type State } from './model'
+import { bump, choice, event, expectVersion, fail, find, put, text, who, rows, type Handler, type Row, type State } from './model'
 
 export type TaxSettings = { currency: 'USD'; ratePercent: number; rateMillionths: number; partsTaxable: boolean; laborTaxable: boolean }
 const settingsId = 'shop-tax'
@@ -13,8 +13,40 @@ export function configuredTax(s: State, assetType?: string): TaxSettings {
   if (!settings || settings.ratePercent === null || settings.ratePercent === undefined) fail('TAX_NOT_CONFIGURED', 'Set the shop sales tax rate before preparing an estimate. Enter 0 if no sales tax applies.')
   return settings as Row & TaxSettings
 }
+export const taxCommands=['tax.certificate','tax.assignJurisdiction']
+export function certificateState(row:Row,now:string){return now.slice(0,10)<row.validFrom?'not yet effective':now.slice(0,10)>row.expiresOn?'expired':'within recorded dates'}
+const date=(value:unknown,label:string)=>{const v=text(value,label,10);if(!/^\d{4}-\d{2}-\d{2}$/.test(v)||!Number.isFinite(Date.parse(v))||new Date(v).toISOString().slice(0,10)!==v)fail('INPUT','Use a valid UTC calendar date.',null,400);return v}
+export function jurisdictionReport(s:State){
+ const groups=new Map<string,any>()
+ for(const invoice of rows(s,'invoice').filter(i=>['approved','exported'].includes(i.status))){
+  const assignment=rows(s,'taxJurisdiction').find(r=>r.invoiceId===invoice.id),jurisdiction=assignment?.jurisdiction??'Unassigned - not filing ready'
+  const credits=rows(s,'creditNote').filter(n=>n.invoiceId===invoice.id),reversedCents=credits.reduce((n,r)=>n+r.totals.salesTaxCents,0)
+  const group=groups.get(jurisdiction)??{jurisdiction,invoicedTaxCents:0,reversedTaxCents:0,netTaxCents:0,invoices:[]}
+  group.invoicedTaxCents+=invoice.totals.salesTaxCents;group.reversedTaxCents+=reversedCents;group.netTaxCents+=invoice.totals.salesTaxCents-reversedCents
+  group.invoices.push({invoiceId:invoice.id,number:invoice.number,jobId:invoice.jobId,taxCents:invoice.totals.salesTaxCents,reversedCents,assignmentId:assignment?.id??null,creditNoteIds:credits.map(n=>n.id)})
+  groups.set(jurisdiction,group)
+ }
+ return {currency:'USD',basis:'Invoice tax less issued credit-note reversals; this is not a cash-collected tax return or legal filing advice.',groups:[...groups.values()].sort((a,b)=>a.jurisdiction.localeCompare(b.jurisdiction))}
+}
 export const tax: Handler = (c, command, p) => {
-  if (command !== 'tax.configure') return
+ if(taxCommands.includes(command)){
+  if(c.actor.role!=='owner')fail('FORBIDDEN','Only the owner retains tax certificates and assigns filing jurisdictions.',null,403)
+  if(command==='tax.certificate'){
+   const account=find(c.s,'customerAccount',p.accountId);expectVersion(account,p.version)
+   if(account.mergedInto)fail('TAX_ACCOUNT','Use the current customer account.')
+   const validFrom=date(p.validFrom,'valid from'),expiresOn=date(p.expiresOn,'expires on')
+   if(expiresOn<validFrom)fail('INPUT','Certificate expiry must not precede its start.',null,400)
+   const scope=choice(p.scope,['parts','labor','fees','all'],'declared certificate scope')
+   const row=put(c.s,'taxCertificate',{accountId:account.id,accountName:account.name,reference:text(p.reference,'certificate reference'),jurisdiction:text(p.jurisdiction,'certificate jurisdiction'),scope,validFrom,expiresOn,certificate:text(p.certificate,'exact certificate text',20000),evidence:text(p.evidence,'owner review evidence',2000),by:who(c),at:c.now})
+   event(c,command,null,row.id,{accountId:account.id,scope,validFrom,expiresOn});return row
+  }
+  const invoice=find(c.s,'invoice',p.invoiceId);expectVersion(invoice,p.version)
+  if(!['approved','exported'].includes(invoice.status))fail('TAX_INVOICE','Approve the exact invoice before assigning its tax jurisdiction.')
+  if(rows(c.s,'taxJurisdiction').some(r=>r.invoiceId===invoice.id))fail('TAX_JURISDICTION','This invoice already retains its immutable jurisdiction declaration.')
+  const row=put(c.s,'taxJurisdiction',{invoiceId:invoice.id,jobId:invoice.jobId,invoiceRevision:invoice.revision,jurisdiction:text(p.jurisdiction,'owner-declared jurisdiction'),evidence:text(p.evidence,'jurisdiction review evidence',2000),by:who(c),at:c.now})
+  event(c,command,invoice.jobId,row.id,{jurisdiction:row.jurisdiction});return row
+ }
+ if (command !== 'tax.configure') return
   const assetType = p.assetType === undefined || p.assetType === '' ? '' : choice(p.assetType,['vehicle','bicycle','equipment','device'],'asset tax type'), id = assetType ? settingsId+':'+assetType : settingsId
   const rate = taxRate(p.ratePercent)
   for (const key of ['partsTaxable', 'laborTaxable']) if (p[key] !== undefined && typeof p[key] !== 'boolean') fail('INPUT', `${key} must be true or false.`, null, 400)
