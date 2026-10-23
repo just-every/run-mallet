@@ -11,6 +11,15 @@ export function stockBalance(s:State,itemId:string,binId:string){
  const reservedMilli=rows(s,'stockReservation').filter(x=>x.itemId===itemId&&x.binId===binId&&!x.release).reduce((n,x)=>n+x.quantityMilli,0)
  return {itemId,binId,onHandMilli,reservedMilli,availableMilli:onHandMilli-reservedMilli}
 }
+// A count cannot recreate a serial held at another location or in non-saleable custody.
+function serialInCustody(s:State,serial:string){
+ const key=serial.toLowerCase(),lots=rows(s,'stockLot').filter(l=>String(l.serial??'').toLowerCase()===key),ids=new Set(lots.map(l=>l.id))
+ const available=lots.reduce((n,l)=>n+lotRemaining(s,l),0)
+ const inTransit=rows(s,'stockTransfer').filter(t=>t.status==='in-transit').flatMap(t=>t.lines).filter(l=>ids.has(l.lotId)).reduce((n,l)=>n+l.quantityMilli,0)
+ const transferExceptions=rows(s,'stockTransferException').filter(e=>!e.correction&&ids.has(e.lotId)).reduce((n,e)=>n+e.quantityMilli,0)
+ const quarantined=rows(s,'stockRma').filter(r=>String(r.serial??'').toLowerCase()===key).reduce((n,r)=>n+Math.max(0,r.quantityMilli-(r.shipment?.quantityMilli??0)-(r.disposition?.quantityMilli??0)),0)
+ return available+inTransit+transferExceptions+quarantined
+}
 export const receiptExists=(s:State,reference:string)=>['stockReceipt','purchaseReceipt'].some(kind=>rows(s,kind).some(r=>r.reference===reference))
 export function stockReport(s:State){return {balances:[...rows(s,'stockItem')].sort((a,b)=>a.sku.localeCompare(b.sku)).flatMap(item=>[...rows(s,'stockBin')].sort((a,b)=>a.code.localeCompare(b.code)).map(bin=>({...stockBalance(s,item.id,bin.id),sku:item.sku,item:item.name,bin:bin.code}))),receipts:[...rows(s,'stockReceipt'),...rows(s,'purchaseReceipt').map((r):Row=>({...r,expectedMilli:r.quantityMilli,shortageMilli:0,reason:'PO goods receipt '+r.reference}))],counts:rows(s,'stockCount'),movements:rows(s,'stockMovement'),reservations:rows(s,'stockReservation')}}
 export function scan(s:State,kind:'stockItem'|'stockBin',barcode:unknown){const code=text(barcode,'scanned barcode',100),row=rows(s,kind).find(x=>x.barcode.toLowerCase()===code.toLowerCase());if(!row)fail('NOT_FOUND',`Unknown ${kind==='stockItem'?'part':'bin'} barcode.`,null,404);return row}
@@ -47,7 +56,8 @@ export const inventory:Handler=(c,command,p)=>{
   const lots=rows(c.s,'stockLot').filter(l=>l.itemId===count.itemId&&l.binId===count.binId),lot=p.lotId?lots.find(l=>l.id===p.lotId):null
   if(p.lotId&&!lot)fail('LOT_SCOPE','Choose a lot in this part and bin.')
   if(lot){const remaining=lotRemaining(c.s,lot)+deltaMilli;if(remaining<0||lot.serial&&![0,1000].includes(remaining))fail('LOT_SHORTAGE','The count variance is not valid for that lot or serial.')}
-  else if(balance.onHandMilli-lots.reduce((n,l)=>n+lotRemaining(c.s,l),0)+deltaMilli<0)fail('LOT_REQUIRED','Choose the affected lot before approving this stock variance.')
+  if(lot?.serial&&serialInCustody(c.s,lot.serial)+deltaMilli>1000)fail('SERIAL_CONFLICT','This serial is already available, in transit or quarantined. Resolve its existing custody instead of counting it twice.')
+  else if(!lot&&balance.onHandMilli-lots.reduce((n,l)=>n+lotRemaining(c.s,l),0)+deltaMilli<0)fail('LOT_REQUIRED','Choose the affected lot before approving this stock variance.')
   if(lot)put(c.s,'stockLotAdjustment',{lotId:lot.id,countId:count.id,deltaMilli,by:who(c),at:c.now,reason})
   const movement=moveStock(c,count.itemId,count.binId,deltaMilli,{kind:'count',id:count.id},reason)
   const saved=bump(c.s,'stockCount',count,{approval:{by:who(c),at:c.now,reason,movementId:movement.id},varianceMilli:deltaMilli})

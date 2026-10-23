@@ -17,6 +17,8 @@ export async function transfersJourney(h){
  await h.command('stock.transferDispatch',{...refs(),evidence:'Not approved'},{status:409})
  transfer=await h.command('stock.transferApprove',{...refs(),reason:'Approve exact serial, source, destination and cost custody'},{as:admin.cookie});assert.equal(transfer.approval.lines[0].unitCostCents,1001)
  transfer=await h.command('stock.transferDispatch',{...refs(),evidence:'Driver signed for two sealed serialized units'})
+ const duplicateCount=await h.command('stock.count',{...f.scans,mode:'cycle',quantity:1,reason:'Try to count a dispatched serial back into sending stock'})
+ assert.equal((await h.command('stock.approveCount',{countId:duplicateCount.id,version:duplicateCount.version,lotId:f.lots[0].id,reason:'This serial is still in transit and cannot be counted twice'},{status:409})).error,'SERIAL_CONFLICT')
  assert.deepEqual((await balance()).map(b=>b.onHandMilli),[0,0]);let report=(await h.api('/api/mallet/transfers'))[0];assert.deepEqual(report.lines.map(l=>l.inTransitMilli),[1000,1000])
  await h.command('stock.transferDispatch',{...refs(),evidence:'Cannot dispatch twice'},{status:409})
  await h.command('stock.transferReceive',{...refs(),lines:transfer.lines.map(l=>({lineId:l.id,received:2,damaged:0})),evidence:'Over receipt'},{status:409})
@@ -26,6 +28,7 @@ export async function transfersJourney(h){
  const ex=report.exceptions[0],correction={...refs(),exceptionId:ex.id,outcome:'received',reason:'Carrier found the original missing serial',evidence:'Destination scanned the missing original serial'}
  await h.command('stock.transferCorrect',{...correction,version:1},{status:409})
  transfer=await h.command('stock.transferCorrect',correction,{as:admin.cookie});await h.command('stock.transferCorrect',{...correction,version:transfer.version},{status:409})
+ assert.equal((await h.command('stock.approveCount',{countId:duplicateCount.id,version:duplicateCount.version,lotId:f.lots[0].id,reason:'This serial has arrived at the other shop and cannot be counted here'},{status:409})).error,'SERIAL_CONFLICT')
  report=(await h.api('/api/mallet/transfers'))[0];assert.equal(report.status,'resolved');assert.equal(report.exceptions[0].correction.approvedBy.id,admin.id);assert.deepEqual(report.lines.map(l=>l.inTransitMilli),[0,0]);assert.equal((await balance()).find(b=>b.binId===f.destination.id).onHandMilli,2000)
  let trace=await h.api('/api/mallet/trace?q=synthetic-mallet-123');for(const original of f.lots){assert.equal(trace.lots.filter(l=>l.serial===original.serial).reduce((n,l)=>n+l.remainingMilli,0),1000);const child=trace.lots.find(l=>l.parentLotId===original.id);assert.equal(child.binId,f.destination.id);assert.equal(child.unitCostCents,original.unitCostCents);assert.deepEqual(child.catalog,original.catalog)}
  // A damaged physical receipt stays out of availability until an explicit inspected correction.
