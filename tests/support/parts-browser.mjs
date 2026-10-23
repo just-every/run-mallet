@@ -5,10 +5,10 @@ import {join} from 'node:path'
 import {chromium} from '@playwright/test'
 import {installation} from '../harness.mjs'
 import {publicDoor} from './portable-repair.mjs'
-export async function partsBrowser(name,fixture,journey){
- const h=await installation({entry:'tests/dev-worker.ts',network:true,assets:true,bindings:{AUTH_LOCAL:'true',RER_DEV_KEY:randomBytes(32).toString('base64url')}});let browser
+export async function partsBrowser(name,fixture,journey,options={}){
+ const h=await installation({...options,entry:'tests/dev-worker.ts',network:true,assets:true,bindings:{...options.bindings,AUTH_LOCAL:'true',RER_DEV_KEY:randomBytes(32).toString('base64url')}});let browser
  try{
- const f=await fixture({...h,person:publicDoor(h.origin,h.owner).person});browser=await chromium.launch({headless:true,args:['--use-mock-keychain','--password-store=basic']});const context=await browser.newContext()
+ const f=await fixture({...h,person:publicDoor(h.origin,h.owner).person});await h.stepUp();browser=await chromium.launch({headless:true,args:['--use-mock-keychain','--password-store=basic']});const context=await browser.newContext()
  await context.addCookies(h.owner.split('; ').map(pair=>({name:pair.slice(0,pair.indexOf('=')),value:pair.slice(pair.indexOf('=')+1),url:h.origin})))
  const p=await context.newPage(),errors=[];p.on('pageerror',e=>errors.push(e.message));const directory=process.env.MALLET_PARTS_PROOF_DIR?join(process.env.MALLET_PARTS_PROOF_DIR,name):'.cache/'+name+'-browser';await mkdir(directory,{recursive:true})
  const go=async path=>{await p.goto(h.origin+path);if(new URL(p.url()).pathname==='/setup'){await p.getByLabel('Sales tax rate (%)',{exact:true}).fill('0');await p.getByLabel('I confirm this owner account is ready to use.').check();await p.getByRole('button',{name:'Finish setup',exact:true}).click();await p.goto(h.origin+path)}}

@@ -1,6 +1,7 @@
 import {bump,event,expectVersion,fail,find,integer,put,rows,text,who,type Handler,type State,type Row} from './model'
 import {amount,stockBalance} from './inventory'
 import {purchaseStatus,purchasing} from './purchasing'
+import {supplierSubmission} from './supplier-orders'
 import {instant} from './workshop'
 export const replenishmentCommands=['stock.replenishment','stock.replenish']
 // Unlocated legacy orders are allocated once, in stable bin order. Repair POs are
@@ -9,7 +10,7 @@ export function replenishmentReport(s:State,excludePurchaseId?:string):Row[]{
  const policies=[...rows(s,'stockReplenishment')].sort((a,b)=>a.binId.localeCompare(b.binId)||a.id.localeCompare(b.id)),unlocated=new Map<string,number>()
  const incoming=new Map<string,number>()
  for(const po of rows(s,'purchaseOrder')){
-  if(po.id===excludePurchaseId||po.closed||po.status==='superseded'||!po.approval&&!po.replenishmentId)continue
+  if(po.id===excludePurchaseId||po.closed||po.status==='superseded'||['cancelled','rejected'].includes(supplierSubmission(s,po.id)?.status??'')||!po.approval&&!po.replenishmentId)continue
   for(const line of purchaseStatus(s,po).lines){if(line.jobId)continue;const key=po.binId?line.itemId+'\0'+po.binId:line.itemId,map=po.binId?incoming:unlocated;map.set(key,(map.get(key)??0)+line.backorderMilli)}
  }
  return policies.map(policy=>{

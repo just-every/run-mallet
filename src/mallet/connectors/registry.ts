@@ -21,5 +21,11 @@ export const CONNECTORS:Declaration[]=[
   sends:['Recipient address, subject and the message you reviewed; never payment or card details'],receives:['An accepted, rejected or rate-limited answer and a provider message identifier'],
   retention:'Mallet keeps the delivery outcome, never an automatic retry. The provider keeps message logs under its own policy.',
   licensing:'Your Resend, SendGrid or Cloudflare email account and its terms.',access:'Sent only on a person’s request, or by the shop’s published reminder policy.',secrets:[{name:'MAIL_API_KEY',label:'Sending key (set in your Cloudflare account)',rotatable:false}]},
+ {id:'supplier-gateway',name:'Supplier ordering gateway',version:1,purpose:'Compare quotes and explicitly submit, reconcile, cancel or reject substitutions through your authorized supplier-order.v1 gateway.',
+  sends:['For comparison: catalog SKU, unit and requested quantity only','After exact cart approval: supplier/quote identifiers, SKU, grade, quantity, unit price, total USD cents, ship-to address and opaque Mallet purchase reference','Only on explicit request: cancellation or substitution rejection and its opaque identifiers'],
+  receives:['Supplier availability, compatibility/grade, price, cutoff, freight/tax and ETA with observation/expiry times','Exact acknowledged, rejected, cancelled or proposed-substitution order evidence'],
+  retention:'Mallet retains bounded quote, approval, custody and order outcome history with the purchase. The gateway retains its own records under your agreement. Credentials are excluded from product records and archives.',
+  licensing:'Your authorized supplier gateway implementing docs/supplier-ordering.md; direct PartsTech, Nexpart and Worldpac licensing remains BUY-003/004/005.',
+  access:'Owner enables/rotates/revokes the private key after reading this declaration. Owner/admin operators explicitly approve exact spend and each outbound action. A claimed POST is never automatically repeated; uncertain outcomes use GET reconciliation only.',secrets:[{name:'MALLET_SUPPLIER_KEY',label:'Supplier gateway API key',rotatable:true}]},
 ]
 export const connector=(id:string)=>CONNECTORS.find(c=>c.id===id)

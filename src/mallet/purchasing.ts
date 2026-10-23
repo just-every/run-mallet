@@ -1,3 +1,4 @@
+import {assertSupplierCart,supplierSubmission} from './supplier-orders'
 import {assertReplenishment} from './stock-replenishment'
 import {bump,event,expectVersion,fail,find,integer,object,put,rows,text,who,type Handler,type Row,type State} from './model'
 import {amount,moveStock,receiptExists,reserveStock,scan} from './inventory'
@@ -34,8 +35,9 @@ export const purchasing:Handler=(c,command,p)=>{
  if(po.closed)fail('PO_CLOSED','This purchase order is closed; its evidence is immutable.')
  if(command==='purchase.approve'){
   if(po.status!=='draft')fail('ALREADY_APPROVED','This spend is already approved.')
+  assertSupplierCart(c.s,po,c.now)
   assertReplenishment(c.s,po)
-  const reason=text(p.reason,'spend approval reason',2000),saved=bump(c.s,'purchaseOrder',po,{status:'approved',approval:{by:who(c),at:c.now,totalCents:po.totalCents,lines:structuredClone(po.lines),taxCents:po.taxCents,freightCents:po.freightCents,shipTo:po.shipTo,expectedAt:po.expectedAt,reason}})
+  const reason=text(p.reason,'spend approval reason',2000),saved=bump(c.s,'purchaseOrder',po,{status:'approved',approval:{supplier:po.supplier,...(po.supplierQuote?{supplierQuote:structuredClone(po.supplierQuote)}:{}),by:who(c),at:c.now,totalCents:po.totalCents,lines:structuredClone(po.lines),taxCents:po.taxCents,freightCents:po.freightCents,shipTo:po.shipTo,expectedAt:po.expectedAt,reason}})
   event(c,command,null,po.id,{totalCents:po.totalCents,reason});return saved
  }
  if(!po.approval)fail('NOT_APPROVED','Approve the exact PO spend before receiving or matching bills.')
@@ -47,6 +49,7 @@ export const purchasing:Handler=(c,command,p)=>{
   const saved=bump(c.s,'purchaseOrder',po,{status:'short-closed',shortClose});event(c,command,null,po.id,shortClose);return saved
  }
  if(command==='purchase.receive'){
+  if(po.supplierQuote&&supplierSubmission(c.s,po.id)?.status!=='acknowledged')fail('SUPPLIER_ACKNOWLEDGMENT','Reconcile an exact supplier acknowledgment before receiving this submitted cart.')
   const line=status.lines.find((l:any)=>l.id===p.lineId)
   if(!line)fail('INPUT','Choose a line on this purchase order.',null,400)
   const item=scan(c.s,'stockItem',p.itemBarcode),bin=scan(c.s,'stockBin',p.binBarcode),quantityMilli=amount(p.quantity),reference=text(p.reference,'goods receipt reference',200)

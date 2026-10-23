@@ -1,3 +1,7 @@
+import {supplierOrdersPage,supplierOrdersFormInput} from './ui/supplier-orders'
+import {supplierOrderReport} from './supplier-orders'
+import {supplierDoor} from './supplier-door'
+import {internalSupplierCommands} from './supplier-orders'
 import {transfersPage,transferFormInput} from './ui/stock-transfers'
 import {transferReport} from './stock-transfers'
 import {rmasPage,rmaFormInput} from './ui/supplier-returns'
@@ -188,6 +192,7 @@ function formInput(data:FormData) {
  warrantyFormInput(input)
  intakeFormInput(data,input)
  customerFormInput(data,input)
+ supplierOrdersFormInput(input)
  purchasingFormInput(input)
  traceFormInput(input)
  transferFormInput(input)
@@ -257,7 +262,7 @@ async function workshopResponse(request:Request,original:Bindings,execution:Pick
    let result:any
    if(['connector.save','connector.revoke'].includes(command)&&actor.role==='owner'&&!auth.gate?.enrolled)throw new HttpError(403,'step_up_required','Enrol your own second factor before opening the credential door.')
    if(needsStepUp(command,actor.role))auth.authority=requireStepUp(auth)
-   if(internalWaitlistCommands.includes(command)||internalReportCommands.includes(command)||internalBookingCommands.includes(command)||internalCheckInCommands.includes(command)||internalRefundCommands.includes(command)||internalIntakeFormCommands.includes(command)||command==='payment.verified'||command==='routing.sweep'||internalPromiseCommands.includes(command)||internalApprovalCommands.includes(command)||internalChaseCommands.includes(command))throw new HttpError(404,'unknown_command')
+   if(internalSupplierCommands.includes(command)||internalWaitlistCommands.includes(command)||internalReportCommands.includes(command)||internalBookingCommands.includes(command)||internalCheckInCommands.includes(command)||internalRefundCommands.includes(command)||internalIntakeFormCommands.includes(command)||command==='payment.verified'||command==='routing.sweep'||internalPromiseCommands.includes(command)||internalApprovalCommands.includes(command)||internalChaseCommands.includes(command))throw new HttpError(404,'unknown_command')
    if(retentionCommands.includes(command))result=await retentionCommand(env,actor,auth.authority,command,input)
    else if(command.startsWith('waitlist.'))result=await waitlistCommand(env,request,actor,auth.authority,command,input)
    else if(command.startsWith('calendar.')||['job.book','dispatch.approve'].includes(command))result=await execute(env.DB,actor as any,command,input,await calendarAuthority(env,command,input,auth.authority))
@@ -269,6 +274,7 @@ async function workshopResponse(request:Request,original:Bindings,execution:Pick
    else if(command==='booking.revokeLink')result=await revokeBookingLink(env,actor,auth.authority,input)
    else if(command==='checkin.issue')result=await createCheckInLink(env,actor,auth.authority,input)
    else if(command==='intakeForm.create')result=await createIntakeFormLink(env,actor,auth.authority,input)
+   else if(['purchase.compare','purchase.submit','purchase.reconcile','purchase.cancel','purchase.rejectSubstitution'].includes(command))result=await supplierDoor(env,actor,auth.authority,command,input)
    else if(command==='refund.submit'||command==='refund.reconcile')result=await refundDoor(env,actor,auth.authority,command,input)
    else if(command==='payment.verifyStripe')result=await verifyStripePayment(env,actor,auth.authority,input)
    else if(command==='flow.collect'){const checked=await collectionInput(env,actor,input,auth.authority);result=await execute(env.DB,actor as any,command,checked.input,checked.authority);await purgeIntakeSecrets(env,'job_id=?',[input.jobId])}
@@ -326,6 +332,7 @@ async function workshopResponse(request:Request,original:Bindings,execution:Pick
    if(command==='payRate.set')return redirect('/app/reports/technicians?'+new URLSearchParams({from:String(input.from??''),to:String(input.to??'')})+'#tech-'+encodeURIComponent(input.technicianId))
    if(command==='rateProfile.save')return redirect('/app/jobs#rate-profiles')
    if(command.startsWith('customer.')||command.startsWith('contact.'))return redirect('/app/accounts?manage=all')
+   if(command.startsWith('purchase.')&&(input.returnTo==='suppliers'||['purchase.compare','purchase.cart','purchase.submit','purchase.reconcile','purchase.rejectSubstitution','purchase.cancel'].includes(command)))return redirect('/app/purchasing/suppliers')
    if(command.startsWith('purchase.'))return redirect('/app/purchasing')
    if(command==='stock.lot'&&input.returnTo==='supplier-returns')return redirect('/app/inventory/returns')
    if(['stock.catalog','stock.lot','stock.useLot'].includes(command))return redirect('/app/inventory/trace')
@@ -388,6 +395,7 @@ async function workshopResponse(request:Request,original:Bindings,execution:Pick
    const result=account?{accounts:[account],nextCursor:null,total:1}:await searchAccounts(env.DB,actor,auth.authority,q,url.searchParams.get('cursor')??undefined)
    return page('Customer accounts',accountsPage(state,q,result),actor,200,frame('customers'))
   }
+  if(['/app/purchasing/suppliers','/api/mallet/supplier-orders'].includes(path)){if(!human(actor))throw new HttpError(403,'manager_required');return path.startsWith('/api/')?json(supplierOrderReport(state)):page('Supplier stock & ordering',supplierOrdersPage(state),actor,200,frame('inventory'))}
   if(['/app/purchasing','/api/mallet/purchasing'].includes(path)){if(!human(actor))throw new HttpError(403,'manager_required');return path.startsWith('/api/')?json(rows(state,'purchaseOrder').map(po=>({...po,...purchaseStatus(state,po)}))):page('Purchase orders',purchasingPage(state),actor,200,frame('inventory'))}
   if(['/app/inventory/transfers','/api/mallet/transfers'].includes(path)){if(!human(actor))throw new HttpError(403,'manager_required');return path.startsWith('/api/')?json(transferReport(state)):page('Inter-store stock transfers',transfersPage(state),actor,200,frame('inventory'))}
   if(['/app/inventory/returns','/api/mallet/supplier-returns'].includes(path)){if(!human(actor))throw new HttpError(403,'manager_required');return path.startsWith('/api/')?json(rmaReport(state)):page('Supplier returns & quarantine',rmasPage(state),actor,200,frame('inventory'))}

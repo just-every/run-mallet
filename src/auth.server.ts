@@ -14,6 +14,8 @@ const theme = { href: '/rer-theme.css', productName: branding.name, accentColor:
 
 export interface Bindings {
  /** Optional shop-owned Stripe credential, configured privately; never part of product archives. */
+ MALLET_SUPPLIER_ORIGIN?: string
+ MALLET_SUPPLIER_KEY?: string
  STRIPE_SECRET_KEY?: string
  PIER_ORIGIN?: string
  PIER_SESSION?: string
