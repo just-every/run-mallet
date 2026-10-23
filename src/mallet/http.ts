@@ -1,3 +1,4 @@
+import {assetNativeInput} from './ui/asset-types'
 import {workshopPortabilityResponse} from './portability-door'
 import {timedMalletResponse} from './request-timing'
 import {loadRepairState} from './read-model/repair'
@@ -146,6 +147,7 @@ async function operators(db:D1Database) {
 const bookingFields=['title','bayId','technicianId','startAt','endAt']
 function formInput(data:FormData) {
  const input:any=Object.fromEntries(data)
+ assetNativeInput(input)
  if(retentionCommands.includes(input.command)){input.consent=input.consent==='yes';if(['retention.preview','customer.erase','retention.run'].includes(input.command))input.categories=data.getAll('categories');for(const key of ['mediaDays','personalDays'])if(key in input)input[key]=input[key]===''?null:Number(input[key])}
  for(const name of ['flowVersion','version','itemVersion','revision','quantity','value','dueValue'])if(input[name]!==undefined&&input[name]!=='')input[name]=Number(input[name])
  if(data.has('lineIds') || input.command==='estimate.authorise')input.lineIds=data.getAll('lineIds')
@@ -317,7 +319,7 @@ async function workshopResponse(request:Request,original:Bindings,execution:Pick
    if(command.startsWith('purchase.'))return redirect('/app/purchasing')
    if(['stock.catalog','stock.lot','stock.useLot'].includes(command))return redirect('/app/inventory/trace')
    if(command.startsWith('stock.'))return redirect('/app/inventory')
-   if(command==='asset.create')return redirect(`/app/assets/${result.id}`)
+   if(command==='asset.create'||command==='asset.update')return redirect(`/app/assets/${result.id}`)
    const jobId=command==='job.book'?result.id:input.jobId??result.jobId??(command==='invoice.export'?rows(await load(env.DB),'invoice').find(i=>i.id===input.invoiceId)?.jobId:undefined)
    return redirect(jobId?`/app/jobs/${jobId}`:'/app')
   }
@@ -377,7 +379,7 @@ async function workshopResponse(request:Request,original:Bindings,execution:Pick
   if(path==='/app/time'){if(actor.role==='agent')throw new HttpError(403,'staff_required');return page('Time & attendance',`<div class="narrow">${timePanel(state,actor,(await operators(env.DB)).names)}</div>`,actor,200,frame('jobs'))}
   if(path==='/app/check-ins'){if(!human(actor))throw new HttpError(403,'manager_required');return page('Counter & after-hours check-ins',checkInQueuePage(state,(await operators(env.DB)).list,actor),actor,200,frame('jobs'))}
   if(path==='/app/jobs'){const names=(await operators(env.DB)).names;return page('Repair orders',(actor.role!=='agent'?waitingForMe(state,actor)+(human(actor)?'<p><a href="/app/bookings">Online appointments</a> · <a href="/app/check-ins">Counter & after-hours check-in queue</a></p>':'')+'<p><a href="/app/time">My time & attendance</a> · <a href="/app/reports/technicians">Technician efficiency</a></p>':'')+(human(actor)?rateProfilePanel(state,''):'')+specialPartNotices(state,actor)+promisePlan(state,actor,names)+repairOrders(state,names),actor,200,frame('jobs',{subtitle:'Open repair orders by start time, then invoiced visits.'}))}
-  if(path==='/app/customers')return page('Customers',customers(state,actor),actor,200,frame('customers',{subtitle:'Every customer’s vehicle and its visits.'}))
+  if(path==='/app/customers')return page('Customers',customers(state,actor,url.searchParams.get('type')??'vehicle'),actor,200,frame('customers',{subtitle:'Every customer’s asset and its visits.'}))
   if(path==='/app/approvals')return page('Approvals',(human(actor)?chasePage(state):'')+approvals(state),actor,200,frame('approvals',{subtitle:'Every price, dispatch plan and invoice a person approved, at its exact revision.'}))
   if(path==='/app/tax'){if(!human(actor))throw new HttpError(403,'manager_required');return page('Shop sales tax',`<div class="narrow">${taxPage(state,url.searchParams.has('saved'))}</div>`,actor,200,frame('tax',{subtitle:'The sales tax rate Mallet applies to new estimates, in USD.'}))}
   if(path==='/app/move-in')return page('Move into Mallet',moveIn(actor),actor,200,frame('move-in'))

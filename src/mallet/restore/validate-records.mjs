@@ -20,6 +20,7 @@ export async function validateRecords({ table, rejectIf, index }) {
   await check(kind, field + '_reference', `(${required ? '1' : `${value} IS NOT NULL`}) AND (${type(field)} IS NOT 'text' OR NOT ${exists(target, value, extra)})`)
  }
  await check('asset', 'asset_shape', requiredText(['customerName', 'label', 'identifier']) + ` OR ${type('visits')} IS NOT 'array'`)
+ await check('asset', 'asset_type', `${j('assetType')} IS NOT NULL AND (${type('assetType')} IS NOT 'text' OR ${j('assetType')} NOT IN ('vehicle','bicycle','equipment','device') OR ${type('specifications')} IS NOT 'object')`)
  await rejectIf('asset_identifier', `SELECT 1 FROM ${records} WHERE kind='asset' GROUP BY lower(json_extract(value,'$.identifier')) HAVING count(*)>1`)
  await check('asset', 'asset_visits', `EXISTS(SELECT 1 FROM json_each(r.value,'$.visits') visit WHERE visit.type<>'text' OR NOT ${exists('job', 'visit.value', `AND ${j('assetId','target')}=r.id`)}) OR EXISTS(SELECT 1 FROM json_each(r.value,'$.visits') GROUP BY value HAVING count(*)>1)`)
  await reference('asset', 'customerAccountId', 'customerAccount')

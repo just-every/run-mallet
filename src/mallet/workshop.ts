@@ -1,3 +1,4 @@
+import {typedAssetFields,assetSnapshot} from './asset-types'
 import {capacityConflicts,resourceFields} from './calendar-capacity'
 import {appointmentConflicts} from './bookings'
 import {customerBillingSnapshot} from './customers'
@@ -35,16 +36,16 @@ export function openJob(c: Context, p: any) {
   if (job.status !== 'booked' && job.status !== 'working') fail('JOB_STATE', job.closure ? `This repair was ${job.status}; book a new visit instead.` : 'This job is already completed.')
   return job
 }
-function assetFields(p: any) {
+function assetFields(p: any, previous?: Row) {
   const customerEmail = text(p.customerEmail, 'customerEmail', 254, true)
   if (customerEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(customerEmail)) fail('INPUT', 'Provide a valid customer email.', null, 400)
-  return { customerName: text(p.customerName, 'customerName'), customerEmail, label: text(p.label, 'label'), identifier: text(p.identifier, 'identifier', 100) }
+  return { customerName: text(p.customerName, 'customerName'), customerEmail, label: text(p.label, 'label'), identifier: text(p.identifier, 'identifier', 100), ...typedAssetFields(p,previous) }
 }
 export const workshop: Handler = (c, command, p) => {
   switch (command) {
     case 'asset.create': {
       const fields = assetFields(p)
-      if (rows(c.s, 'asset').some(a => a.identifier.toLowerCase() === fields.identifier.toLowerCase())) fail('DUPLICATE', 'A vehicle with that plate or VIN is already on file.')
+      if (rows(c.s, 'asset').some(a => a.identifier.toLowerCase() === fields.identifier.toLowerCase())) fail('DUPLICATE', 'An asset with that identifier is already on file.')
       const row = put(c.s, 'asset', { ...fields, visits: [], createdAt: c.now })
       event(c, command, null, row.id, fields)
       return row
@@ -52,8 +53,8 @@ export const workshop: Handler = (c, command, p) => {
     case 'asset.update': {
       const asset = find(c.s, 'asset', p.assetId)
       expectVersion(asset, p.version)
-      const fields = assetFields(p)
-      if (rows(c.s, 'asset').some(a => a.id !== asset.id && a.identifier.toLowerCase() === fields.identifier.toLowerCase())) fail('DUPLICATE', 'A vehicle with that plate or VIN is already on file.')
+      const fields = assetFields(p,asset)
+      if (rows(c.s, 'asset').some(a => a.id !== asset.id && a.identifier.toLowerCase() === fields.identifier.toLowerCase())) fail('DUPLICATE', 'An asset with that identifier is already on file.')
       const row = bump(c.s, 'asset', asset, fields)
       event(c, command, null, row.id, { before: assetFields(asset), after: fields })
       return row
@@ -63,7 +64,7 @@ export const workshop: Handler = (c, command, p) => {
       expectVersion(asset, p.version)
       const plan = slot(p)
       requireFree(c, plan)
-      const row = put(c.s, 'job', { assetId: asset.id, asset: { customerName: asset.customerName, customerEmail: asset.customerEmail, label: asset.label, identifier: asset.identifier }, title: text(p.title, 'title'), notes: text(p.notes, 'notes', 4000, true), ...plan, status: 'booked', estimateId: null, invoiceId: null, actuals: [], createdAt: c.now, bookedBy: who(c) })
+      const row = put(c.s, 'job', { assetId: asset.id, asset: assetSnapshot(asset), title: text(p.title, 'title'), notes: text(p.notes, 'notes', 4000, true), ...plan, status: 'booked', estimateId: null, invoiceId: null, actuals: [], createdAt: c.now, bookedBy: who(c) })
       if(asset.customerAccountId)put(c.s,'customerBilling',{jobId:row.id,snapshot:customerBillingSnapshot(c.s,asset),by:who(c),at:c.now})
       bump(c.s, 'asset', asset, { visits: [...asset.visits, row.id] })
       event(c, command, row.id, row.id, plan)
@@ -129,5 +130,5 @@ export function assetHistory(s: State, assetId: string) {
 const csvCell = (value: unknown) => { const raw = String(value ?? ''), safe = /^[=+\-@\t\r]/.test(raw) ? `'${raw}` : raw; return `"${safe.replace(/"/g, '""')}"` }
 export function assetHistoryCsv(s: State, assetId: string) {
   const history = assetHistory(s, assetId)
-  return [['When', 'Vehicle', 'Identifier', 'Job', 'Event', 'Actor', 'Details'], ...history.events.map(e => [e.at, history.asset.label, history.asset.identifier, e.jobId ?? '', e.kind, e.actor.name, JSON.stringify(e.data)])].map(row => row.map(csvCell).join(',')).join('\r\n') + '\r\n'
+  return [['When', 'Asset', 'Identifier', 'Job', 'Event', 'Actor', 'Details'], ...history.events.map(e => [e.at, history.asset.label, history.asset.identifier, e.jobId ?? '', e.kind, e.actor.name, JSON.stringify(e.data)])].map(row => row.map(csvCell).join(',')).join('\r\n') + '\r\n'
 }

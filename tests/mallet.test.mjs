@@ -375,3 +375,6 @@ test('OPS-002: owner queues, inspects and recovers background jobs through nativ
 test('OPS-002: staff search phone and plate and page native account results at 1440/390',async()=>{const {searchBrowser}=await import('./search-browser.mjs');await searchBrowser()})
 
 test('OPS-002: native peer boards update stages and priority while preserving drafts and focus at 1440/390',async()=>{const {boardLiveJourney}=await import('./support/board-live-journey.mjs');await boardLiveJourney()})
+
+test('ASSET-001 / OPS-001: typed bicycle, device, equipment and auto repairs retain custody, parts, tax, paid returns and recovery',()=>run(async h=>{const {assetJourney}=await import('./support/asset-journey.mjs');await assetJourney(h)}))
+test('ASSET-001: typed intake, bench booking and paid return through native forms at 1440/390',async()=>{const {assetBrowser}=await import('./asset-browser.mjs');await assetBrowser()})
