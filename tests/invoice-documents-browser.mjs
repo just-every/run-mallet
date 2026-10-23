@@ -24,7 +24,7 @@ export async function invoiceDocumentsBrowser(){
   const downloadPromise=p.waitForEvent('download');await p.getByRole('link',{name:'Download exact PDF'}).click();const download=await downloadPromise;assert.equal(download.suggestedFilename(),original.number+'.pdf');await download.saveAs(join(dir,'issued-copy.pdf'))
   await form('invoice.send').locator('[name="consentEvidence"]').fill('Customer explicitly requested this invoice email at the counter');await form('invoice.send').locator('[name="consent"]').check();await form('invoice.send').getByRole('button',{name:'Email exact invoice copy'}).click();await p.waitForLoadState('domcontentloaded');assert.match(await p.locator('main').innerText(),/Handed to the mail provider; delivery is not confirmed/);await shot('invoice-04-provider-outcome');assert.equal(await form('invoice.send').count(),0)
   await form('invoice.issue').locator('[name="reference"]').fill('synthetic-mallet-311');await form('invoice.issue').locator('[name="reason"]').fill('Clarify the warranty copy at customer request');await form('invoice.issue').locator('[name="warrantyTerms"]').fill('12 months on supplied parts; customer must contact the shop for inspection.');await form('invoice.issue').getByRole('button',{name:'Issue exact invoice copy'}).click();await p.waitForLoadState('domcontentloaded');assert.match(await p.locator('main').innerText(),/Corrects M-000001-D001/);await shot('invoice-05-linked-correction')
-  assert.deepEqual((await h.state()).records.invoiceDocument[0],original);assert.deepEqual(errors,[])
+  assert.deepEqual((await h.state()).records.invoiceDocument.find(d=>d.id===original.id),original);assert.deepEqual(errors,[])
  }finally{await browser?.close();await h.close()}
 }
 
