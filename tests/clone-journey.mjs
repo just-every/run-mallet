@@ -5,7 +5,9 @@ import {tmpdir} from 'node:os'
 import {join} from 'node:path'
 import {browserJourney} from './browser-journey.mjs'
 import {portableRepair,publicDoor} from './support/portable-repair.mjs'
-import {openSourceInstallation} from './open-source-journey.mjs'
+import {openSourceInstallation,publishedStartSite} from './open-source-journey.mjs'
+
+await publishedStartSite(process.cwd())
 
 const directory=await mkdtemp(join(tmpdir(),'mallet-published-')),scratchHome=join(directory,'home')
 await mkdir(scratchHome,{mode:0o700})

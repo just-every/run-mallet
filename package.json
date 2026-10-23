@@ -27,8 +27,7 @@
     "check": "rer check",
     "deps": "rer install",
     "rer": "rer",
-    "test:mallet": "node --test --test-concurrency=1 tests/mallet.test.mjs tests/demo.test.mjs tests/sales-tax.test.mjs",
-    "test:site": "node --test tests/site/site.test.mjs"
+    "test:mallet": "node --test --test-concurrency=1 tests/mallet.test.mjs tests/demo.test.mjs tests/sales-tax.test.mjs"
   },
   "dependencies": {
     "@tanstack/react-router": "1.170.41",
