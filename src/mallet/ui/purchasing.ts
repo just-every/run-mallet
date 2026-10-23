@@ -25,7 +25,7 @@ export function purchasingPage(state:any){
   body+=box('Bill matching history',status.bills.map(b=>`<article><h3>${e(b.invoiceNumber)} · ${b.matched?'Matched':'Exception'}</h3><p>${money(b.totalCents)} · ${e(b.evidence)} · ${e(b.by.name)} · ${when(b.at)}</p><ul>${b.exceptions.map((v:string)=>`<li>${e(v)}</li>`).join('')}</ul></article>`).join('')||'<p>No supplier bill recorded.</p>')
   return box(po.reference,body,{id:'po-'+po.id})
  }).join('')
- return '<p><a href="/app/inventory">Stock & receiving</a> · <a href="/api/mallet/purchasing">Purchase order and matching report (JSON)</a></p><p>Owner and admin operators retain approved spend, physical receipt and supplier evidence. Order submission and accounting posting remain separate steps.</p><div class="grid wide-left"><div class="col">'+(orders||box('Purchase orders','<p>No purchase orders yet.</p>'))+'</div><div class="col">'+create+'</div></div>'
+ return '<p><a href="/app/purchasing/suppliers">Compare supplier stock & order</a> · <a href="/app/inventory">Stock & receiving</a> · <a href="/api/mallet/purchasing">Purchase order and matching report (JSON)</a></p><p>Owner and admin operators retain approved spend, physical receipt and supplier evidence. Order submission and accounting posting remain separate steps.</p><div class="grid wide-left"><div class="col">'+(orders||box('Purchase orders','<p>No purchase orders yet.</p>'))+'</div><div class="col">'+create+'</div></div>'
 }
 export function purchasingFormInput(input:any){
  if(!String(input.command).startsWith('purchase.'))return

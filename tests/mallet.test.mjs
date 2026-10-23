@@ -390,6 +390,16 @@ test('OPS-002: staff search phone and plate and page native account results at 1
 
 test('OPS-002: native peer boards update stages and priority while preserving drafts and focus at 1440/390',async()=>{const {boardLiveJourney}=await import('./support/board-live-journey.mjs');await boardLiveJourney()})
 
+test('PART-007 / OPS-001: consumed stock, location demand, open-order deduction, replay-safe drafts, stale approval and recovery',async()=>{const {replenishmentJourney}=await import('./support/replenishment-journey.mjs');await run(replenishmentJourney)})
+test('PART-007: low stock, repeated preparation and exact cart approval at 1440/390',async()=>{const {replenishmentBrowser}=await import('./replenishment-browser.mjs');await replenishmentBrowser()})
+test('PART-004 / OPS-001: separate taxed core deposit, tender, due alerts, returned condition, shipment, adjusted supplier credit and immutable invoice correction',async()=>{const {coresJourney}=await import('./support/cores-journey.mjs');await run(coresJourney)})
+test('PART-004: core deposit, expiry alert, shipment and adjusted credit correction at 1440/390',async()=>{const {coresBrowser}=await import('./cores-browser.mjs');await coresBrowser()})
+test('PART-005 / OPS-001: installed and unused supplier returns, PO provenance, quarantine, authorization, shipment, partial credit and warranty costs survive recovery',async()=>{const {rmaJourney}=await import('./support/supplier-returns-journey.mjs');await run(rmaJourney)})
+test('PART-005: remove failed part, authorize RMA, ship and reconcile partial credit at 1440/390',async()=>{const {rmaBrowser}=await import('./supplier-returns-browser.mjs');await rmaBrowser()})
+test('PART-008 / OPS-001: serialized inter-store request, approval, dispatch, shortage/damage custody, exact corrections and recovery',async()=>{const {transfersJourney}=await import('./support/transfers-journey.mjs');await run(transfersJourney)})
+test('PART-008: serialized inter-store transfer received short and approved correction at 1440/390',async()=>{const {transfersBrowser}=await import('./transfers-browser.mjs');await transfersBrowser()})
+test('BUY-002 / OPS-001: supplier comparison, exact cart approval, timed-out submit replay, rejected substitution, cancellation, rejected orders and recovery',async()=>{const {supplierJourney}=await import('./support/supplier-orders-journey.mjs');await supplierJourney()})
+test('BUY-002: compare suppliers, approve cart, reconcile timeout, reject substitution and inspect cancellation/rejection at 1440/390',async()=>{const {supplierBrowser}=await import('./supplier-orders-browser.mjs');await supplierBrowser()})
 test('ASSET-001 / OPS-001: typed bicycle, device, equipment and auto repairs retain custody, parts, tax, paid returns and recovery',()=>run(async h=>{const {assetJourney}=await import('./support/asset-journey.mjs');await assetJourney(h)}))
 test('ASSET-001: typed intake, bench booking and paid return through native forms at 1440/390',async()=>{const {assetBrowser}=await import('./asset-browser.mjs');await assetBrowser()})
 test('DIAG-002 / OPS-001: private Phonecheck result imports retain raw tests, quarantine serial mismatches and recover without shared authority',()=>run(async h=>{const {diagnosticResultsJourney}=await import('./support/diagnostic-results-journey.mjs');await diagnosticResultsJourney(h)}))
