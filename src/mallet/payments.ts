@@ -1,4 +1,5 @@
 import {event,expectVersion,fail,find,integer,put,rows,text,who,choice,type Handler,type State,type Row} from './model'
+export const depositReferenceUsed=(s:State,reference:string)=>rows(s,'deposit').some(d=>d.reference===reference||(d.refunds??[]).some((r:any)=>r.reference===reference))
 export const paymentCommands=['payment.record','payment.verified'] as const
 export const publicInvoiceSnapshot=(invoice:Row)=>{const {billing,...snapshot}=invoice;return structuredClone(snapshot)}
 export const invoiceBalance=(s:State,i:Row)=>{
@@ -21,12 +22,14 @@ export const payments:Handler=(c,command,p)=>{
  if(command==='payment.verified'){
   const receipt=p.receipt,reference='stripe:'+text(receipt.paymentIntentId,'processor payment id',200),amountCents=integer(receipt.amountCents,'captured amount',1),prior=rows(c.s,'payment').find(x=>x.reference===reference)
   if(prior){if(prior.invoiceId===invoice.id&&prior.invoiceRevision===invoice.revision&&prior.invoiceTotalCents===invoice.totals.totalCents&&prior.amountCents===amountCents)return prior;fail('PAYMENT_REPLAY','This processor receipt already belongs to a different payment allocation.')}
+  if(depositReferenceUsed(c.s,reference))fail('PAYMENT_REPLAY','This reference already records a deposit operation.')
   if(amountCents>invoiceBalance(c.s,invoice).outstandingCents)fail('PAYMENT_AMOUNT','Do not apply a processor receipt beyond the invoice balance.')
   const row=put(c.s,'payment',{jobId:invoice.jobId,invoiceId:invoice.id,invoiceNumber:invoice.number,invoiceRevision:invoice.revision,invoiceTotalCents:invoice.totals.totalCents,amountCents,method:'stripe',reference,verified:true,receipt,by:who(c),at:c.now});event(c,command,invoice.jobId,row.id,{amountCents,method:'stripe'});return row
  }
  const amountCents=integer(p.amountCents,'tender amount in USD cents',1),method=choice(p.method,['cash','check','other'],'manual tender'),reference=text(p.reference,'unique tender reference',200),evidence=text(p.evidence,'staff tender evidence',2000)
  const prior=rows(c.s,'payment').find(x=>x.reference===reference)
  if(prior){if(prior.invoiceId===invoice.id&&prior.invoiceRevision===invoice.revision&&prior.invoiceTotalCents===invoice.totals.totalCents&&prior.amountCents===amountCents&&prior.method===method&&prior.evidence===evidence)return prior;fail('PAYMENT_REPLAY','This tender reference already has different allocation or evidence.')}
+ if(depositReferenceUsed(c.s,reference))fail('PAYMENT_REPLAY','This reference already records a deposit operation.')
  if(amountCents>invoiceBalance(c.s,invoice).outstandingCents)fail('PAYMENT_AMOUNT','Do not allocate more than this invoice’s outstanding balance.')
  const row=put(c.s,'payment',{jobId:invoice.jobId,invoiceId:invoice.id,invoiceNumber:invoice.number,invoiceRevision:invoice.revision,invoiceTotalCents:invoice.totals.totalCents,amountCents,method,reference,evidence,verified:false,label:'Tender recorded by staff; Mallet did not verify funds'+(method==='check'?'; check not cleared':''),by:who(c),at:c.now});event(c,command,invoice.jobId,row.id,{amountCents,method});return row
 }

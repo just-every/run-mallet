@@ -1,6 +1,6 @@
 import {bump,choice,event,expectVersion,fail,find,integer,put,rows,text,who,type Handler,type State,type Row} from './model'
 import {quantity,totals} from './money'
-import {invoiceBalance} from './payments'
+import {invoiceBalance,depositReferenceUsed} from './payments'
 export const creditCommands=['credit.preview','credit.issue','credit.apply','credit.exchange','refund.record','refund.redirect','refund.claim','refund.outcome'] as const
 export const internalRefundCommands=['refund.claim','refund.outcome']
 export function creditAccount(s:State,id:string|undefined):string|null{
@@ -67,6 +67,7 @@ export const credits:Handler=(c,command,p)=>{
   if(command==='credit.exchange'&&(!note.lines.some((l:any)=>l.kind==='part')||!invoice.lines.some((l:any)=>l.kind==='part')))fail('CREDIT_EXCHANGE','An accessory exchange needs a returned part and a separately authorized replacement part invoice.')
   const prior=rows(c.s,'payment').find(x=>x.reference===reference)
   if(prior){if(prior.creditNoteId===note.id&&prior.invoiceId===invoice.id&&prior.amountCents===amountCents&&prior.reason===reason&&prior.exchange===(command==='credit.exchange'))return prior;fail('CREDIT_REPLAY','This allocation reference already has different instructions.')}
+  if(depositReferenceUsed(c.s,reference))fail('CREDIT_REPLAY','This reference already records a deposit operation.')
   const used=rows(c.s,'payment').filter(x=>x.creditNoteId===note.id).reduce((n,x)=>n+x.amountCents,0)
   if(amountCents>note.totals.totalCents-used||amountCents>invoiceBalance(c.s,invoice).outstandingCents)fail('CREDIT_AMOUNT','The allocation exceeds the unspent credit or destination invoice balance.')
   const payment=put(c.s,'payment',{jobId:invoice.jobId,invoiceId:invoice.id,invoiceNumber:invoice.number,creditNoteId:note.id,amountCents,reference,reason,exchange:command==='credit.exchange',method:'customer-credit',verified:false,label:'Customer credit allocation; no new cash or processor settlement.',by:who(c),at:c.now})

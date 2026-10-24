@@ -16,6 +16,7 @@ export async function depositsJourney(h,{edge}={}){
  await h.command('deposit.record',{...input,amountCents:15001},{status:409})
  assert.equal((await h.state()).records.invoice?.length??0,0,'Deposit exists before any invoice or parts order')
  const i1=await invoice(job),i2=await invoice(second)
+ await h.command('payment.record',{invoiceId:i1.id,version:i1.version,method:'cash',amountCents:1,reference:input.reference,evidence:'Duplicate reference through another tender door'},{status:409})
  const allocation=(i,ref,amountCents=5000)=>({depositId:deposit.id,invoiceId:i.id,version:i.version,amountCents,reference:ref,evidence:'Customer approved this exact deposit allocation',confirm:'allocate-deposit'})
  const a=await h.command('deposit.allocate',allocation(i1,'synthetic-mallet-deposit-2'))
  assert.equal((await h.command('deposit.allocate',allocation(i1,'synthetic-mallet-deposit-2'))).id,a.id)
@@ -39,6 +40,7 @@ export async function depositsJourney(h,{edge}={}){
  const returned=await h.command('deposit.refund',refund);assert.equal(returned.balance.unallocatedCents,0);assert.equal(returned.balance.refundedCents,3000)
  await h.command('deposit.refund',refund)
  await h.command('deposit.refund',{...refund,version:returned.version,reference:'synthetic-mallet-deposit-9'},{status:409})
+ await h.command('deposit.record',{...input,reference:refund.reference},{status:409})
  assert.equal((await h.state({as:admin.cookie})).records.deposit,undefined,'No new finance data is exposed to delegated staff')
  const backup=await archive(h),fresh=await installation()
  try{await restore(fresh,backup);const after=await fresh.state();assert.deepEqual(after.records.deposit,(await h.state()).records.deposit);assert.equal(after.records.payment.filter(p=>p.depositId===deposit.id).length,2);await fresh.command('deposit.allocate',allocation(i2,'synthetic-mallet-deposit-10',5001),{status:409})}finally{await fresh.close()}

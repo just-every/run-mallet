@@ -1564,7 +1564,7 @@
       "executable": false
     },
     "src/mallet/credits.ts": {
-      "sha256": "2fc9707d8a1685a95d9a449cf2a3b8e301ebd22788a686865b56f7b0ba95d824",
+      "sha256": "787b5fdaab8a66526e31538d34b3dd05f2ea031c7298e01efd22f38385abe051",
       "executable": false
     },
     "src/mallet/customers.ts": {
@@ -1596,7 +1596,7 @@
       "executable": false
     },
     "src/mallet/deposits.ts": {
-      "sha256": "667ecf336de15fbb00f0103f4fd758d0c77d9c9b05dd3a9d460d05e45f7760b2",
+      "sha256": "f08d2425f52b8d5674ad7d3b863441ecac94c22e61dd496aa6ca2cb7b4ff7491",
       "executable": false
     },
     "src/mallet/diagnosis-links.ts": {
@@ -1828,7 +1828,7 @@
       "executable": false
     },
     "src/mallet/payments.ts": {
-      "sha256": "6821670510144d7e02272c23fb36cb53617b2bfbc70055f9d38397b015d7c90d",
+      "sha256": "c3b8a589c78e938199ca80d2dc194f16a45d91a2c2db74eee255cc24269d85ed",
       "executable": false
     },
     "src/mallet/pier.ts": {
@@ -4488,7 +4488,7 @@
       "executable": false
     },
     "tests/support/deposits-journey.mjs": {
-      "sha256": "74fa4077c7a7705d4acbe8957e96508a03ebc038fcd2b76ac62aa884dc92dccf",
+      "sha256": "2f4bd743996f3edd7edd1aea6508dfc3307131ef778ad8e579dfa12c3e244b37",
       "executable": false
     },
     "tests/support/diagnosis-journey.mjs": {

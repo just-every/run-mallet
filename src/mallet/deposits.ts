@@ -1,5 +1,5 @@
 import {creditAccount} from './credits'
-import {invoiceBalance} from './payments'
+import {invoiceBalance,depositReferenceUsed} from './payments'
 import {bump,choice,event,expectVersion,fail,find,integer,put,rows,text,who,type Handler,type Row,type State} from './model'
 export const depositCommands=['deposit.record','deposit.allocate','deposit.refund']
 export function depositBalance(s:State,d:Row){
@@ -16,7 +16,7 @@ export const deposits:Handler=(c,command,p)=>{
   if(jobId){const job=find(c.s,'job',jobId),billing=rows(c.s,'customerBilling').find(b=>b.jobId===job.id);if(!['booked','working'].includes(job.status)||creditAccount(c.s,billing?.snapshot.accountId)!==accountId)fail('DEPOSIT_ACCOUNT','A pre-order deposit requires an open repair with the same explicitly recorded payer account.')}
   const request={accountId,jobId,amountCents,method,reference,evidence},prior=rows(c.s,'deposit').find(d=>d.reference===reference)
   if(prior){if(JSON.stringify(prior.request)===JSON.stringify(request))return {...prior,balance:depositBalance(c.s,prior)};fail('DEPOSIT_REPLAY','This reference already has different deposit facts.')}
-  if(rows(c.s,'payment').some(r=>r.reference===reference))fail('DEPOSIT_REPLAY','This reference already records invoice tender.')
+  if(depositReferenceUsed(c.s,reference)||rows(c.s,'payment').some(r=>r.reference===reference))fail('DEPOSIT_REPLAY','This reference already records invoice tender.')
   const saved=put(c.s,'deposit',{...request,request,refunds:[],by:who(c),at:c.now,label:'Tender recorded by staff; Mallet did not verify funds'+(method==='check'?'; check not cleared':'')});event(c,command,jobId,saved.id,{amountCents});return {...saved,balance:depositBalance(c.s,saved)}
  }
  const deposit=find(c.s,'deposit',p.depositId),amountCents=integer(p.amountCents,'USD cents',1)
