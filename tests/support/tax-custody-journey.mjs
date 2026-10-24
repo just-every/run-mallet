@@ -64,7 +64,7 @@ export async function taxDraftFixture(h,account,suffix='1'){
  return {job,q}
 }
 async function taxAdjustmentJourney(h,account,expired,admin){
- const originalMessages=h.messages.length
+ const adjust=async(input,options={})=>{const messages=h.messages.length,result=await h.command('tax.adjustEstimate',input,options);assert.equal(h.messages.length,messages,'A tax adjustment creates no outbound action');return result}
  await h.command('tax.configure',{ratePercent:7.5,partsTaxable:true,laborTaxable:true})
  const {job,q}=await taxDraftFixture(h,account),original=structuredClone(q.revisions[0])
  const ruleInput={name:'Capped supplies',basis:'parts and labor',rateBps:1000,capCents:2500,taxable:true,legalBasis:'Owner reviewed the applicable shop supplies rule; customer explicitly requested this quote'}
@@ -77,8 +77,8 @@ async function taxAdjustmentJourney(h,account,expired,admin){
  const rule=await h.command('tax.suppliesRule',ruleInput)
  const active=await h.command('tax.certificate',{accountId:account.id,version:account.version,reference:'synthetic-mallet-341',jurisdiction:'Declared fleet district',scope:'parts',validFrom:'2000-01-01',expiresOn:'2099-12-31',certificate:'Private synthetic certificate original',evidence:'Owner reviewed the supplied certificate'})
  const input={estimateId:q.id,version:q.version,certificateId:active.id,feeRuleId:rule.id,feeVersion:rule.version,consent:true,evidence:'Customer explicitly consented to the exact capped fee and owner-applied certificate basis'}
- for(const options of [{as:admin.cookie,status:403},{as:'',status:401},{headers:{origin:'https://other.example.test'},status:403}])await h.command('tax.adjustEstimate',input,options)
- const refuse=async(change,error,status=409)=>{const before=await h.state(),messages=h.messages.length;const result=await h.command('tax.adjustEstimate',{...input,...change},{status});assert.equal(result.error,error);assert.deepEqual((await h.state()).records,before.records,'Rejected tax review leaves every product record and audit event unchanged');assert.equal(h.messages.length,messages,'Rejected tax review creates no mail')}
+ for(const options of [{as:admin.cookie,status:403},{as:'',status:401},{headers:{origin:'https://other.example.test'},status:403}])await adjust(input,options)
+ const refuse=async(change,error,status=409)=>{const before=await h.state(),messages=h.messages.length;const result=await adjust({...input,...change},{status});assert.equal(result.error,error);assert.deepEqual((await h.state()).records,before.records,'Rejected tax review leaves every product record and audit event unchanged');assert.equal(h.messages.length,messages,'Rejected tax review creates no mail')}
  for(const consent of [false,undefined,'true'])await refuse({consent},'TAX_CONSENT')
  await refuse({evidence:''},'INPUT',400)
  await refuse({certificateId:expired.id},'TAX_EXPIRED')
@@ -90,7 +90,7 @@ async function taxAdjustmentJourney(h,account,expired,admin){
  const feesOnly=await h.command('tax.certificate',{accountId:account.id,version:account.version,reference:'synthetic-mallet-344',jurisdiction:'Declared fleet district',scope:'fees',validFrom:'2000-01-01',expiresOn:'2099-12-31',certificate:'Fee-only synthetic certificate',evidence:'Owner recorded the exact limited scope'})
  await refuse({certificateId:feesOnly.id,feeRuleId:''},'TAX_SCOPE')
  const other=await creditAccountFixture(h,'tax-other'),mismatch=await taxDraftFixture(h,other.account,'2')
- await h.command('tax.adjustEstimate',{...input,estimateId:mismatch.q.id,version:mismatch.q.version},{status:409})
+ await adjust({...input,estimateId:mismatch.q.id,version:mismatch.q.version},{status:409})
  const future=await h.command('tax.certificate',{accountId:account.id,version:account.version,reference:'synthetic-mallet-343',jurisdiction:'Declared fleet district',scope:'parts',validFrom:'2098-01-01',expiresOn:'2099-12-31',certificate:'Future synthetic certificate',evidence:'Future-dated certificate is custody only'})
  await refuse({certificateId:future.id},'TAX_EXPIRED')
  let changed=(await h.state()).records.asset.find(a=>a.id===job.assetId)
@@ -100,7 +100,7 @@ async function taxAdjustmentJourney(h,account,expired,admin){
  for(const [index,category]of ['disposal','environmental','surcharge'].entries()){
   const feeRule=await h.command('tax.suppliesRule',{...ruleInput,name:category+' fee',category,basis:'parts',rateBps:500,capCents:700,...(category==='environmental'?{mode:'fixed',fixedCents:700}:{})})
   const draft=await taxDraftFixture(h,account,'category-'+index)
-  const reviewed=await h.command('tax.adjustEstimate',{estimateId:draft.q.id,version:draft.q.version,feeRuleId:feeRule.id,feeVersion:feeRule.version,consent:true,evidence:'Customer accepted the disclosed '+category+' fee, percentage basis and cap'})
+  const reviewed=await adjust({estimateId:draft.q.id,version:draft.q.version,feeRuleId:feeRule.id,feeVersion:feeRule.version,consent:true,evidence:'Customer accepted the disclosed '+category+' fee, percentage basis and cap'})
   const revision=reviewed.revisions.at(-1);assert.equal(revision.taxAdjustment.fee.category,category);assert.equal(revision.taxAdjustment.fee.amountCents,700);assert.equal(revision.lines.at(-1).salesTaxCents,53);assert.deepEqual(reviewed.revisions[0],draft.q.revisions[0])
   const billed=await finishTaxInvoice(h,reviewed),issued=await h.command('invoice.issue',{invoiceId:billed.id,version:billed.version,reference:'synthetic-mallet-category-'+index,warrantyTerms:'Reviewed warranty terms',confirm:'issue-invoice'})
   assert.ok(issued.content.includes(category+' fee basis parts $180.00; '+(category==='environmental'?'fixed $7.00':'5%')+'; cap $7.00; fee $7.00'))
@@ -112,33 +112,33 @@ async function taxAdjustmentJourney(h,account,expired,admin){
  const percentFee=await h.command('tax.suppliesRule',{...ruleInput,capCents:10000})
  const discountReview={...input,estimateId:discountDraft.q.id,version:discountDraft.q.version,discountRuleId:discount.id,discountVersion:discount.version,feeRuleId:percentFee.id,feeVersion:percentFee.version}
  await refuse({...discountReview,discountVersion:discount.version+1},'VERSION')
- const discounted=await h.command('tax.adjustEstimate',discountReview),d=discounted.revisions.at(-1)
+ const discounted=await adjust(discountReview),d=discounted.revisions.at(-1)
  assert.equal(d.taxAdjustment.discount.amountCents,1800);assert.equal(d.lines[0].unitDiscountCents,1900);assert.equal(d.taxAdjustment.fee.baseCents,26200);assert.equal(d.taxAdjustment.fee.amountCents,2620);assert.equal(d.totals.totalCents,29767);assert.deepEqual(discounted.revisions[0],discountDraft.q.revisions[0])
  const discountInvoice=await finishTaxInvoice(h,discounted),discountDocument=await h.command('invoice.issue',{invoiceId:discountInvoice.id,version:discountInvoice.version,reference:'synthetic-mallet-discount',warrantyTerms:'Reviewed warranty terms',confirm:'issue-invoice'})
  assert.ok(discountDocument.content.includes('Discount rule Fleet parts discount; parts; 10% of remaining unit $90.00; added unit discount $9.00'));assert.ok(discountDocument.content.includes('Supplies basis parts and labor $262.00; 10%; cap $100.00; fee $26.20'))
  const tinyDraft=await taxDraftFixture(h,account,'discount-rounding'),tiny=await h.command('estimate.revise',{estimateId:tinyDraft.q.id,version:tinyDraft.q.version,revision:1,lines:[{kind:'part',description:'Fractional discount per unit',quantity:3,unitCents:15}]})
- const rounded=await h.command('tax.adjustEstimate',{estimateId:tiny.id,version:tiny.version,discountRuleId:discount.id,discountVersion:discount.version,consent:true,evidence:'Customer accepted half-up per-unit discount and exact quantity extension'})
+ const rounded=await adjust({estimateId:tiny.id,version:tiny.version,discountRuleId:discount.id,discountVersion:discount.version,consent:true,evidence:'Customer accepted half-up per-unit discount and exact quantity extension'})
  assert.equal(rounded.revisions.at(-1).lines[0].unitDiscountCents,1);assert.equal(rounded.revisions.at(-1).totals.subtotalCents,42,'Remaining 13.5 cents rounds up to 14 cents before quantity three')
  const halfDraft=await taxDraftFixture(h,account,'half-cent'),half=await h.command('estimate.revise',{estimateId:halfDraft.q.id,version:halfDraft.q.version,revision:1,lines:[{kind:'part',description:'Half-cent remaining unit',quantity:1001,unitCents:1}]})
  const halfRule=await h.command('tax.discountRule',{...discountInput,rateBps:5000})
- const halfReview=await h.command('tax.adjustEstimate',{estimateId:half.id,version:half.version,discountRuleId:halfRule.id,discountVersion:halfRule.version,feeRuleId:percentFee.id,feeVersion:percentFee.version,consent:true,evidence:'Customer accepted the disclosed half-cent unit rounding and percentage fee'})
+ const halfReview=await adjust({estimateId:half.id,version:half.version,discountRuleId:halfRule.id,discountVersion:halfRule.version,feeRuleId:percentFee.id,feeVersion:percentFee.version,consent:true,evidence:'Customer accepted the disclosed half-cent unit rounding and percentage fee'})
  assert.equal(halfReview.revisions.at(-1).lines[0].unitDiscountCents,0);assert.equal(halfReview.revisions.at(-1).lines[0].subtotalCents,1001,'USD 0.005 remaining rounds up to USD 0.01 before quantity extension');assert.equal(halfReview.revisions.at(-1).taxAdjustment.fee.baseCents,1001);assert.equal(halfReview.revisions.at(-1).taxAdjustment.fee.amountCents,100);assert.deepEqual(halfReview.revisions.at(-1).lines.map(l=>l.salesTaxCents),[75,8]);assert.equal(halfReview.revisions.at(-1).totals.totalCents,1184)
  const uncapped=await h.command('tax.suppliesRule',{...ruleInput,basis:'parts',rateBps:1,capCents:100000})
  const rounding=await h.command('estimate.revise',{estimateId:mismatch.q.id,version:mismatch.q.version,revision:1,lines:[{kind:'part',description:'Half-cent fee basis',quantity:1,unitCents:15000}]})
- const small=await h.command('tax.adjustEstimate',{...input,estimateId:mismatch.q.id,version:rounding.version,certificateId:'',feeRuleId:uncapped.id,feeVersion:uncapped.version})
+ const small=await adjust({...input,estimateId:mismatch.q.id,version:rounding.version,certificateId:'',feeRuleId:uncapped.id,feeVersion:uncapped.version})
  assert.equal(small.revisions.at(-1).lines.at(-1).unitCents,2,'An uncapped 1.5 cent fee rounds half up to two cents')
- const adjusted=await h.command('tax.adjustEstimate',input),rev=adjusted.revisions.at(-1)
+ const adjusted=await adjust(input),rev=adjusted.revisions.at(-1)
  assert.deepEqual(adjusted.revisions[0],original);assert.equal(rev.n,2)
  assert.deepEqual(rev.lines.map(l=>l.salesTaxCents),[0,750,188]);assert.equal(rev.lines[2].unitCents,2500);assert.equal(rev.taxAdjustment.fee.baseCents,28000)
  assert.equal(rev.totals.totalCents,31438);assert.ok(!JSON.stringify(rev).includes(active.certificate))
- await h.command('tax.adjustEstimate',{...input,version:adjusted.version},{status:409})
+ await adjust({...input,version:adjusted.version},{status:409})
  const invoice=await finishTaxInvoice(h,adjusted)
- await h.command('tax.adjustEstimate',{...input,version:(await h.state()).records.estimate.find(q=>q.id===adjusted.id).version},{status:409})
+ await adjust({...input,version:(await h.state()).records.estimate.find(q=>q.id===adjusted.id).version},{status:409})
  assert.deepEqual(invoice.totals,rev.totals)
  const doc=await h.command('invoice.issue',{invoiceId:invoice.id,version:invoice.version,reference:'synthetic-mallet-342',warrantyTerms:'Shop reviewed warranty terms',confirm:'issue-invoice'})
  assert.match(doc.content,/Owner-applied certificate synthetic-mallet-341/);assert.match(doc.content,/Supplies basis parts and labor \$280.00; 10%; cap \$25.00; fee \$25.00/)
  assert.ok(!doc.content.includes(active.certificate));assert.equal((await h.state({as:admin.cookie})).records.taxFeeRule,undefined)
- await h.command('tax.configure',{ratePercent:20});assert.equal((await h.state()).records.invoice.find(i=>i.id===invoice.id).totals.totalCents,31438);assert.equal(h.messages.length,originalMessages,'Successful tax adjustments create no outbound action')
+ await h.command('tax.configure',{ratePercent:20});assert.equal((await h.state()).records.invoice.find(i=>i.id===invoice.id).totals.totalCents,31438)
 }
 
 export async function finishTaxInvoice(h,adjusted){
