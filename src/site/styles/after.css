@@ -55,7 +55,7 @@
 .terminal-dots i{width:13px;height:13px;border-radius:50%;background:#ff5f57}
 .terminal-dots i:nth-child(2){background:#febc2e}.terminal-dots i:nth-child(3){background:#28c840}
 .terminal pre{margin:0;overflow-x:auto;color:#f6eef5;font:500 clamp(13.5px,1.15vw,17px)/1.75 var(--font-mono);white-space:pre-wrap}
-.terminal .repo{white-space:nowrap}
+.terminal .nw{white-space:nowrap}
 .terminal .prompt{color:#c9a6c4}
 .terminal .comment{color:#9fd8b3}
 .import{overflow:hidden}
