@@ -50,7 +50,7 @@ export async function taxCustodyBrowser(){
   await p.reload()
   const adjustment=form('tax.adjustEstimate').filter({has:p.locator('input[name="estimateId"][value="'+q.id+'"]')})
   await adjustment.locator('[name="certificateId"]').selectOption(active.id)
-  await adjustment.locator('[name="feeSource"]').selectOption({label:'Capped browser supplies · parts and labor · 10% · cap $25.00 · fee $25.00 · not taxable'})
+  await adjustment.locator('[name="feeSource"]').selectOption({label:'Capped browser supplies · parts and labor · 10% · cap $25.00 · not taxable'})
   await adjustment.locator('[name="evidence"]').fill('Customer explicitly accepted the disclosed capped supplies fee')
   await adjustment.locator('[name="consent"]').check()
   const rejected=async(name,message,prepare=async()=>{})=>{
@@ -75,7 +75,7 @@ export async function taxCustodyBrowser(){
   await h.command('customer.linkAsset',{assetId:changedAsset.id,version:changedAsset.version,customerId:account.id,customerVersion:account.version,reason:'Owner restored the original account before fresh review'})
   await p.goto(h.origin+'/app/tax/custody')
   await adjustment.locator('[name="certificateId"]').selectOption(active.id)
-  await adjustment.locator('[name="feeSource"]').selectOption({label:'Capped browser supplies · parts and labor · 10% · cap $25.00 · fee $25.00 · not taxable'})
+  await adjustment.locator('[name="feeSource"]').selectOption({label:'Capped browser supplies · parts and labor · 10% · cap $25.00 · not taxable'})
   await adjustment.locator('[name="evidence"]').fill('Customer explicitly accepted the disclosed capped supplies fee')
   await adjustment.locator('[name="consent"]').check();await shot('tax-05-reviewed-adjustment')
   await adjustment.getByRole('button',{name:'Apply reviewed draft adjustment'}).click();await p.waitForLoadState('domcontentloaded')
@@ -87,7 +87,7 @@ export async function taxCustodyBrowser(){
   await form('invoice.issue').locator('[name="reference"]').fill('synthetic-mallet-352');await form('invoice.issue').locator('[name="warrantyTerms"]').fill('Shop-reviewed warranty terms');await form('invoice.issue').getByRole('button',{name:'Issue exact invoice copy'}).click();await p.waitForLoadState('domcontentloaded')
   assert.match(await p.locator('main').innerText(),/Owner-applied certificate synthetic-mallet-351/);assert.match(await p.locator('main').innerText(),/Supplies basis parts and labor/);await shot('tax-09-invoice-disclosures')
   await p.getByRole('link',{name:'Print issued copy'}).click();await p.waitForLoadState('domcontentloaded');await shot('tax-10-print-disclosures')
-  for(const category of ['disposal','environmental']){
+  for(const category of ['disposal','environmental','surcharge']){
    await p.goto(h.origin+'/app/tax/custody')
    await form('tax.suppliesRule').locator('[name="category"]').selectOption(category)
    if(category==='environmental'){await form('tax.suppliesRule').locator('[name="mode"]').selectOption('fixed');await form('tax.suppliesRule').locator('[name="fixedUsd"]').fill('9')}
@@ -97,7 +97,7 @@ export async function taxCustodyBrowser(){
    const draft=await taxDraftFixture(h,account,'browser-'+category)
    await p.reload()
    const feeForm=form('tax.adjustEstimate').filter({has:p.locator('input[name="estimateId"][value="'+draft.q.id+'"]')})
-   await feeForm.locator('[name="feeSource"]').selectOption({label:category+' browser fee · parts · '+(category==='environmental'?'fixed $9.00':'5%')+' · cap $7.00 · fee $7.00 · not taxable'})
+   await feeForm.locator('[name="feeSource"]').selectOption({label:category+' browser fee · parts · '+(category==='environmental'?'fixed $9.00':'5%')+' · cap $7.00 · not taxable'})
    await feeForm.locator('[name="evidence"]').fill('Customer explicitly accepted the '+category+' fee and cap')
    await feeForm.locator('[name="consent"]').check();await shot('tax-'+category+'-review')
    await feeForm.getByRole('button',{name:'Apply reviewed draft adjustment'}).click();await p.waitForLoadState('domcontentloaded')
@@ -111,6 +111,22 @@ export async function taxCustodyBrowser(){
    assert.match(await p.locator('main').innerText(),new RegExp(category+' fee basis'));await shot('tax-'+category+'-issued')
    await p.getByRole('link',{name:'Print issued copy'}).click();await p.waitForLoadState('domcontentloaded');await shot('tax-'+category+'-print')
   }
+  await p.goto(h.origin+'/app/tax/custody')
+  for(const [name,value]of Object.entries({name:'Reviewed fleet discount',rateBps:'1000',legalBasis:'Owner retained the agreed fleet parts discount'}))await form('tax.discountRule').locator('[name="'+name+'"]').fill(value)
+  await form('tax.discountRule').getByRole('button',{name:'Save discount rule'}).click();await p.waitForLoadState('domcontentloaded');await shot('tax-discount-rule')
+  const discountDraft=await taxDraftFixture(h,account,'browser-discount');await p.reload()
+  const discountForm=form('tax.adjustEstimate').filter({has:p.locator('input[name="estimateId"][value="'+discountDraft.q.id+'"]')})
+  await discountForm.locator('[name="discountSource"]').selectOption({label:'Reviewed fleet discount · parts · 10%'})
+  await discountForm.locator('[name="feeSource"]').selectOption({label:'disposal browser fee · parts · 5% · cap $7.00 · not taxable'})
+  await discountForm.locator('[name="evidence"]').fill('Customer accepted the exact parts discount and capped disposal fee')
+  await discountForm.locator('[name="consent"]').check();assert.match(await discountForm.innerText(),/With Reviewed fleet discount: disposal browser fee/);await shot('tax-discount-review')
+  await discountForm.getByRole('button',{name:'Apply reviewed draft adjustment'}).click();await p.waitForLoadState('domcontentloaded')
+  const discountEstimate=(await h.state()).records.estimate.find(x=>x.id===discountDraft.q.id);assert.equal(discountEstimate.revisions.at(-1).taxAdjustment.discount.amountCents,1800)
+  const discountInvoice=await finishTaxInvoice(h,discountEstimate)
+  await p.goto(h.origin+'/app/invoices/'+discountInvoice.id)
+  await form('invoice.issue').locator('[name="reference"]').fill('synthetic-mallet-browser-discount');await form('invoice.issue').locator('[name="warrantyTerms"]').fill('Reviewed warranty terms')
+  await form('invoice.issue').getByRole('button',{name:'Issue exact invoice copy'}).click();await p.waitForLoadState('domcontentloaded');assert.match(await p.locator('main').innerText(),/Discount rule Reviewed fleet discount/);await shot('tax-discount-issued')
+  await p.getByRole('link',{name:'Print issued copy'}).click();await p.waitForLoadState('domcontentloaded');await shot('tax-discount-print')
   await p.goto(h.origin+'/app/tax/custody')
   await p.getByRole('link',{name:invoice.number,exact:true}).click();assert.match(p.url(),new RegExp('/app/jobs/'+invoice.jobId));assert.deepEqual(errors,[])
  }finally{await browser?.close();await h.close()}

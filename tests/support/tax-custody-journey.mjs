@@ -26,7 +26,7 @@ export async function taxCustodyJourney(){
   await taxAdjustmentJourney(h,account,certificate,admin)
   report=await h.api('/api/mallet/tax/report')
   const records=(await h.state()).records,fresh=await installation({bindings:{OWNER_EMAIL:'tax-custody-recovery@example.test'}})
-  try{await restore(fresh,await archive(h));for(const kind of ['taxCertificate','taxFeeRule','taxJurisdiction','estimate','invoice','invoiceDocument','creditNote'])assert.deepEqual((await fresh.state()).records[kind],records[kind]);assert.deepEqual(await fresh.api('/api/mallet/tax/report'),report);assert.equal(fresh.messages.length,0)}finally{await fresh.close()}
+  try{await restore(fresh,await archive(h));for(const kind of ['taxCertificate','taxDiscountRule','taxFeeRule','taxJurisdiction','estimate','invoice','invoiceDocument','creditNote'])assert.deepEqual((await fresh.state()).records[kind],records[kind]);assert.deepEqual(await fresh.api('/api/mallet/tax/report'),report);assert.equal(fresh.messages.length,0)}finally{await fresh.close()}
  }finally{await h.close()}
 }
 
@@ -63,7 +63,7 @@ async function taxAdjustmentJourney(h,account,expired,admin){
  changed=await h.command('customer.linkAsset',{assetId:changed.id,version:changed.version,customerId:other.account.id,customerVersion:other.account.version,reason:'Owner recorded a different current billing relationship'})
  await refuse({},'TAX_ACCOUNT')
  await h.command('customer.linkAsset',{assetId:changed.id,version:changed.version,customerId:account.id,customerVersion:account.version,reason:'Owner restored the original billing relationship for a fresh review'})
- for(const [index,category]of ['disposal','environmental'].entries()){
+ for(const [index,category]of ['disposal','environmental','surcharge'].entries()){
   const feeRule=await h.command('tax.suppliesRule',{...ruleInput,name:category+' fee',category,basis:'parts',rateBps:500,capCents:700,...(category==='environmental'?{mode:'fixed',fixedCents:900}:{})})
   const draft=await taxDraftFixture(h,account,'category-'+index)
   const reviewed=await h.command('tax.adjustEstimate',{estimateId:draft.q.id,version:draft.q.version,feeRuleId:feeRule.id,feeVersion:feeRule.version,consent:true,evidence:'Customer accepted the disclosed '+category+' fee, percentage basis and cap'})
@@ -71,6 +71,20 @@ async function taxAdjustmentJourney(h,account,expired,admin){
   const billed=await finishTaxInvoice(h,reviewed),issued=await h.command('invoice.issue',{invoiceId:billed.id,version:billed.version,reference:'synthetic-mallet-category-'+index,warrantyTerms:'Reviewed warranty terms',confirm:'issue-invoice'})
   assert.ok(issued.content.includes(category+' fee basis parts $180.00; '+(category==='environmental'?'fixed $9.00':'5%')+'; cap $7.00; fee $7.00'))
  }
+ const discountInput={name:'Fleet parts discount',basis:'parts',rateBps:1000,legalBasis:'Owner reviewed the explicit customer discount agreement'}
+ await h.command('tax.discountRule',discountInput,{as:admin.cookie,status:403})
+ for(const change of [{rateBps:10001},{rateBps:-1},{basis:'inferred'}])await h.command('tax.discountRule',{...discountInput,...change},{status:400})
+ const discount=await h.command('tax.discountRule',discountInput),discountDraft=await taxDraftFixture(h,account,'discount')
+ const percentFee=await h.command('tax.suppliesRule',{...ruleInput,capCents:10000})
+ const discountReview={...input,estimateId:discountDraft.q.id,version:discountDraft.q.version,discountRuleId:discount.id,discountVersion:discount.version,feeRuleId:percentFee.id,feeVersion:percentFee.version}
+ await refuse({...discountReview,discountVersion:discount.version+1},'VERSION')
+ const discounted=await h.command('tax.adjustEstimate',discountReview),d=discounted.revisions.at(-1)
+ assert.equal(d.taxAdjustment.discount.amountCents,1800);assert.equal(d.lines[0].unitDiscountCents,1900);assert.equal(d.taxAdjustment.fee.baseCents,26200);assert.equal(d.taxAdjustment.fee.amountCents,2620);assert.equal(d.totals.totalCents,29767);assert.deepEqual(discounted.revisions[0],discountDraft.q.revisions[0])
+ const discountInvoice=await finishTaxInvoice(h,discounted),discountDocument=await h.command('invoice.issue',{invoiceId:discountInvoice.id,version:discountInvoice.version,reference:'synthetic-mallet-discount',warrantyTerms:'Reviewed warranty terms',confirm:'issue-invoice'})
+ assert.ok(discountDocument.content.includes('Discount rule Fleet parts discount; parts; 10% of remaining unit $90.00; added unit discount $9.00'));assert.ok(discountDocument.content.includes('Supplies basis parts and labor $262.00; 10%; cap $100.00; fee $26.20'))
+ const tinyDraft=await taxDraftFixture(h,account,'discount-rounding'),tiny=await h.command('estimate.revise',{estimateId:tinyDraft.q.id,version:tinyDraft.q.version,revision:1,lines:[{kind:'part',description:'Fractional discount per unit',quantity:3,unitCents:15}]})
+ const rounded=await h.command('tax.adjustEstimate',{estimateId:tiny.id,version:tiny.version,discountRuleId:discount.id,discountVersion:discount.version,consent:true,evidence:'Customer accepted half-up per-unit discount and exact quantity extension'})
+ assert.equal(rounded.revisions.at(-1).lines[0].unitDiscountCents,2);assert.equal(rounded.revisions.at(-1).totals.subtotalCents,39)
  const uncapped=await h.command('tax.suppliesRule',{...ruleInput,basis:'parts',rateBps:1,capCents:100000})
  const rounding=await h.command('estimate.revise',{estimateId:mismatch.q.id,version:mismatch.q.version,revision:1,lines:[{kind:'part',description:'Half-cent fee basis',quantity:1,unitCents:15000}]})
  const small=await h.command('tax.adjustEstimate',{...input,estimateId:mismatch.q.id,version:rounding.version,certificateId:'',feeRuleId:uncapped.id,feeVersion:uncapped.version})

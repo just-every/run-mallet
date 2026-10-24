@@ -20,7 +20,16 @@ export function suppliesCalculation(rule:Row,priced:any[]){
  const amountCents=Math.min(rule.capCents,rule.mode==='fixed'?rule.fixedCents:Number((BigInt(baseCents)*BigInt(rule.rateBps)+5000n)/10000n))
  return {baseCents,amountCents}
 }
-export const taxCommands=['tax.certificate','tax.assignJurisdiction','tax.suppliesRule','tax.adjustEstimate']
+/** Discounts round each remaining unit price half up before quantity extension. */
+export function discountCalculation(rule:Row,priced:any[]){
+ return priced.map(l=>{
+  if(!(rule.basis==='parts and labor'?['part','labor'].includes(l.kind):l.kind===(rule.basis==='parts'?'part':'labor')))return l
+  const remaining=l.unitCents-(l.unitDiscountCents??0),addedUnitDiscountCents=Number((BigInt(remaining)*BigInt(rule.rateBps)+5000n)/10000n)
+  const next={...l,unitDiscountCents:(l.unitDiscountCents??0)+addedUnitDiscountCents,discountRule:{id:rule.id,name:rule.name,basis:rule.basis,rateBps:rule.rateBps,unitBeforeDiscountCents:remaining,addedUnitDiscountCents,legalBasis:rule.legalBasis}}
+  return {...next,...price(next)}
+ })
+}
+export const taxCommands=['tax.certificate','tax.assignJurisdiction','tax.suppliesRule','tax.discountRule','tax.adjustEstimate']
 export function certificateState(row:Row,now:string){return now.slice(0,10)<row.validFrom?'not yet effective':now.slice(0,10)>row.expiresOn?'expired':'within recorded dates'}
 const date=(value:unknown,label:string)=>{const v=text(value,label,10);if(!/^\d{4}-\d{2}-\d{2}$/.test(v)||!Number.isFinite(Date.parse(v))||new Date(v).toISOString().slice(0,10)!==v)fail('INPUT','Use a valid UTC calendar date.',null,400);return v}
 export function jurisdictionReport(s:State){
@@ -38,8 +47,12 @@ export function jurisdictionReport(s:State){
 export const tax: Handler = (c, command, p) => {
  if(taxCommands.includes(command)){
   if(c.actor.role!=='owner')fail('FORBIDDEN','Only the owner retains tax certificates and assigns filing jurisdictions.',null,403)
+  if(command==='tax.discountRule'){
+   const row=put(c.s,'taxDiscountRule',{name:text(p.name,'discount name'),basis:choice(p.basis,['parts','labor','parts and labor'],'discount basis'),rateBps:integer(p.rateBps,'discount basis points',0,10000),legalBasis:text(p.legalBasis,'owner-reviewed discount basis',2000),by:who(c),at:c.now})
+   event(c,command,null,row.id,{name:row.name});return row
+  }
   if(command==='tax.suppliesRule'){
-   const category=choice(p.category??'supplies',['supplies','disposal','environmental'],'fee category'),mode=choice(p.mode??'percentage',['percentage','fixed'],'fee calculation'),fixedCents=mode==='fixed'?integer(p.fixedCents,'fixed fee in USD cents'):0
+   const category=choice(p.category??'supplies',['supplies','disposal','environmental','surcharge'],'fee category'),mode=choice(p.mode??'percentage',['percentage','fixed'],'fee calculation'),fixedCents=mode==='fixed'?integer(p.fixedCents,'fixed fee in USD cents'):0
    const row=put(c.s,'taxFeeRule',{category,mode,fixedCents,name:text(p.name,'supplies fee name'),basis:choice(p.basis,['parts','labor','parts and labor'],'supplies basis'),rateBps:integer(p.rateBps,'fee basis points',0,10000),capCents:integer(p.capCents,'fee cap in USD cents',0),taxable:p.taxable===true,legalBasis:text(p.legalBasis,'owner-reviewed legal basis',2000),by:who(c),at:c.now})
    if(typeof p.taxable!=='boolean')fail('INPUT','Declare supplies fee tax treatment.',null,400)
    event(c,command,null,row.id,{name:row.name});return row
@@ -51,8 +64,13 @@ export const tax: Handler = (c, command, p) => {
    if(!['booked','working'].includes(job.status)||old.taxAdjustment)fail('TAX_FROZEN','Use a fresh draft revision for a new tax review.')
    if(p.consent!==true)fail('TAX_CONSENT','Record explicit customer consent to the disclosed fee and exemption basis.')
    const evidence=text(p.evidence,'review and customer consent evidence',2000)
-   if(!p.certificateId&&!p.feeRuleId)fail('INPUT','Choose a certificate or supplies fee rule.',null,400)
-   let priced=structuredClone(old.lines),certificate:any=null,fee:any=null
+   if(!p.certificateId&&!p.feeRuleId&&!p.discountRuleId)fail('INPUT','Choose a certificate, shop fee or discount rule.',null,400)
+   let priced=structuredClone(old.lines),certificate:any=null,fee:any=null,discount:any=null
+   if(p.discountRuleId){
+    const rule=find(c.s,'taxDiscountRule',p.discountRuleId);expectVersion(rule,p.discountVersion)
+    const before=totals(priced);priced=discountCalculation(rule,priced)
+    discount={ruleId:rule.id,name:rule.name,basis:rule.basis,rateBps:rule.rateBps,amountCents:before.subtotalCents-totals(priced).subtotalCents,legalBasis:rule.legalBasis}
+   }
    if(p.feeRuleId){
     const rule=find(c.s,'taxFeeRule',p.feeRuleId);expectVersion(rule,p.feeVersion)
     if(priced.length>=100)fail('INPUT','The supplies fee would exceed 100 estimate lines.',null,400)
@@ -69,9 +87,9 @@ export const tax: Handler = (c, command, p) => {
     certificate={id:cert.id,reference:cert.reference,jurisdiction:cert.jurisdiction,scope:cert.scope,validFrom:cert.validFrom,expiresOn:cert.expiresOn}
     priced=priced.map((l:any)=>cert.scope==='all'||l.kind===(cert.scope==='parts'?'part':cert.scope==='fees'?'fee':'labor')?{...l,taxable:false,exemption:certificate,...price({...l,taxable:false})}:l)
    }
-   const next={...old,n:old.n+1,lines:priced,totals:totals(priced),approval:null,preparedBy:who(c),preparedAt:c.now,taxAdjustment:{certificate,fee,evidence,by:who(c),at:c.now}}
+   const next={...old,n:old.n+1,lines:priced,totals:totals(priced),approval:null,preparedBy:who(c),preparedAt:c.now,taxAdjustment:{certificate,fee,discount,evidence,by:who(c),at:c.now}}
    const saved=bump(c.s,'estimate',estimate,{revisions:[...estimate.revisions,next]})
-   event(c,command,job.id,saved.id,{revision:next.n,certificateId:certificate?.id??null,feeRuleId:fee?.ruleId??null});return saved
+   event(c,command,job.id,saved.id,{revision:next.n,certificateId:certificate?.id??null,feeRuleId:fee?.ruleId??null,discountRuleId:discount?.ruleId??null});return saved
   }
   if(command==='tax.certificate'){
    const account=find(c.s,'customerAccount',p.accountId);expectVersion(account,p.version)
