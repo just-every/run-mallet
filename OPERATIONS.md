@@ -62,3 +62,28 @@ instructions under `node_modules/@runeditrun/rer/modules/deploy-kit`; account sc
 resource ownership, migrations, receipt and health checks are defined there.
 Local validation does not prove hosted acceptance, provider delivery or remote
 health.
+
+## Hosted installation package
+
+`packaging.json` declares Mallet's Worker, database, private intake object storage,
+minute schedule, setup fields and recovery policy. Build with `pnpm run build`,
+then run `pnpm delivery:spec` when that policy or a migration changes. Commit the
+resulting deployment specification; `pnpm check:deployment-spec` checks it against
+the real build. `node scripts/delivery/base/cli.mjs package --config packaging.json`
+emits a fresh package. The artifact command in the project descriptor emits the
+Worker payloads without deploying them.
+
+Hosted email requires a verified sender and private provider configuration.
+Managed hosting supplies the RER provider, sender, relay URL and private mail key.
+Assisted hosting can use Resend, SendGrid or Cloudflare Email Sending, with the
+account and sender requirements of that provider. Local development suppresses
+email. The RER relay refuses attachments and unsupported message features;
+attachment-bearing workflows need a direct provider that supports them. A failed
+or uncertain send retains its existing recorded outcome and is never silently
+resent. Delivery-event verification remains a separate provider configuration.
+
+Use the existing recovery procedure in `docs/operations.md` and this document.
+Keep a complete backup and exact source before updates, preserve applied SQL
+bytes, restore into empty resources, establish fresh native owner authority and
+reconcile the restored records before routing traffic. Generated packages and
+local runtime state are disposable and are excluded from source control.

@@ -36,6 +36,15 @@
     {
       "binding": "INTAKE_VAULT_KEY",
       "environment": "INTAKE_VAULT_KEY"
+    },
+    {
+      "binding": "INSTALLATION_KEY",
+      "environment": "INSTALLATION_KEY"
+    },
+    {
+      "binding": "INSTALLATION_KEY_PREVIOUS",
+      "environment": "INSTALLATION_KEY_PREVIOUS",
+      "optional": true
     }
   ],
   "r2": [

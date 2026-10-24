@@ -1,0 +1,20 @@
+{
+  "key": "3e99be5d0ff02bddb7ef0353529ba13bc80b0eff04a9de437be729b564364b21",
+  "origin": {
+    "repository": "https://github.com/runeditrun/base",
+    "revision": "4280971d7c0295b8a88c3e1179048efcbbe14f30",
+    "path": ".",
+    "paths": [
+      "modules/import-kit/src/d1/reversal-journal.ts"
+    ],
+    "excludeSnapshots": false
+  },
+  "digest": "c0f1379d91a4dc860be3dd0be0c19ad64f5b5388b1a077f5aa8b396c47034a45",
+  "files": {
+    "modules/import-kit/src/d1/reversal-journal.ts": {
+      "data": "aW1wb3J0IHR5cGUgeyBJbXBvcnRKb2IgfSBmcm9tICcuLi90eXBlcy50cyc7CmltcG9ydCB0eXBlIHsgRDFSZXZlcnNhbFBvbGljeUNvbnZlcnNpb24gfSBmcm9tICcuL3VuZG8tdHlwZXMudHMnOwoKLyoqIENvbnZlcnNpb24gaXMgaXRzIG93biBkdXJhYmxlIGZlbmNlIGluY3JlbWVudCwgbmV2ZXIgYW4gZWRpdCB0byBhbiBlYXJsaWVyCiAqIGFwcGx5L3JldmVyc2FsIGJhdGNoLiBBY2NvdW50IGZvciB0aGF0IG9uZSBnYXAgYXQgaXRzIHJlY29yZGVkIHBvc2l0aW9uLiAqLwpleHBvcnQgZnVuY3Rpb24gdmFsaWRhdGVSZXZlcnNhbEpvdXJuYWwoam9iOiBJbXBvcnRKb2IsIGJhdGNoZXM6IGFueVtdLCBhcHBseUZlbmNlOiBudW1iZXIsIGNvbnZlcnNpb24/OiBEMVJldmVyc2FsUG9saWN5Q29udmVyc2lvbik6IHZvaWQgewogIGNvbnN0IGFjdGlvbiA9IFsndW5kb2luZycsJ3VuZG9uZSddLmluY2x1ZGVzKGpvYi5zdGF0ZSkgPyAndW5kbycgOiAncm9sbGJhY2snOwogIGxldCBleHBlY3RlZEZlbmNlID0gYXBwbHlGZW5jZSArIDE7CiAgaWYgKGNvbnZlcnNpb24/LnN0YXRlID09PSAnY29tcGxldGVkJykgewogICAgaWYgKGNvbnZlcnNpb24uZmVuY2UgIT09IGFwcGx5RmVuY2UpIHRocm93IG5ldyBFcnJvcignSU1QT1JUX0pPVVJOQUxfTUlTTUFUQ0gnKTsKICAgIGV4cGVjdGVkRmVuY2UrKzsKICB9CiAgbGV0IGNyb3NzZWQgPSBjb252ZXJzaW9uPy5zdGF0ZSAhPT0gJ3VuZG9pbmcnOwogIGNvbnN0IGNyb3NzQ29udmVyc2lvbiA9ICgpID0+IHsKICAgIGlmICghY3Jvc3NlZCAmJiBjb252ZXJzaW9uIS5mZW5jZSA9PT0gZXhwZWN0ZWRGZW5jZSkgeyBleHBlY3RlZEZlbmNlKys7IGNyb3NzZWQgPSB0cnVlOyB9CiAgfTsKICBmb3IgKGNvbnN0IGJhdGNoIG9mIGJhdGNoZXMpIHsKICAgIGNyb3NzQ29udmVyc2lvbigpOwogICAgaWYgKGJhdGNoLmFjdGlvbiAhPT0gYWN0aW9uIHx8IGJhdGNoLnBvc2l0aW9uICE9PSBleHBlY3RlZEZlbmNlIHx8IGJhdGNoLmVuZF9wb3NpdGlvbiAhPT0gZXhwZWN0ZWRGZW5jZSArIDEgfHwgYmF0Y2guZmVuY2UgIT09IGV4cGVjdGVkRmVuY2UgKyAxKSB0aHJvdyBuZXcgRXJyb3IoJ0lNUE9SVF9KT1VSTkFMX01JU01BVENIJyk7CiAgICBleHBlY3RlZEZlbmNlKys7CiAgfQogIGNyb3NzQ29udmVyc2lvbigpOwogIGlmICghY3Jvc3NlZCB8fCBqb2IuZmVuY2UgIT09IGV4cGVjdGVkRmVuY2UpIHRocm93IG5ldyBFcnJvcignSU1QT1JUX0pPVVJOQUxfTUlTTUFUQ0gnKTsKfQo=",
+      "executable": false
+    }
+  },
+  "dependencies": []
+}

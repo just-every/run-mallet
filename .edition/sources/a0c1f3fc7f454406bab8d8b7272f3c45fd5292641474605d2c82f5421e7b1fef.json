@@ -1,0 +1,20 @@
+{
+  "key": "a0c1f3fc7f454406bab8d8b7272f3c45fd5292641474605d2c82f5421e7b1fef",
+  "origin": {
+    "repository": "https://github.com/runeditrun/base",
+    "revision": "b70dbba0f53353eb6f3cdd2713f3cca0712b341b",
+    "path": ".",
+    "paths": [
+      "foundation/template/src/mail.server.d.mts"
+    ],
+    "excludeSnapshots": false
+  },
+  "digest": "99300f52ad9f676408cb83012e29c490eed727c22e4d10952a06f9145657b861",
+  "files": {
+    "foundation/template/src/mail.server.d.mts": {
+      "data": "aW1wb3J0IHR5cGUgeyBNYWlsU2VuZGVyIH0gZnJvbSAnLi9tb2R1bGVzL29wZXJhdG9yLWF1dGgvaW5kZXgubWpzJwppbXBvcnQgdHlwZSB7IEJpbmRpbmdzIH0gZnJvbSAnLi9hdXRoLnNlcnZlcicKZXhwb3J0IGZ1bmN0aW9uIG9wZXJhdG9yTWFpbChlbnY6IEJpbmRpbmdzKTogTWFpbFNlbmRlciB8IHVuZGVmaW5lZAo=",
+      "executable": false
+    }
+  },
+  "dependencies": []
+}
