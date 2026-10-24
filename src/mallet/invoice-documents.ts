@@ -44,7 +44,7 @@ function issuedContent(d:any):string {
   'Mileage and readings: '+(x.readings.map((r:any)=>r.stage+' '+r.value+' '+r.unit+' observed '+r.observedAt).join('; ')||'Not recorded'),'',
   ...x.lines.flatMap((l:any)=>[l.description+' ['+l.kind+']',l.quantity+' x '+money(l.unitCents)+' USD; unit discount '+money(l.unitDiscountCents??0)+'; subtotal '+money(l.subtotalCents),
    ...(l.exemption?['Owner-applied certificate '+l.exemption.reference+'; '+l.exemption.jurisdiction+'; scope '+l.exemption.scope+'; dates '+l.exemption.validFrom+' through '+l.exemption.expiresOn]:[]),
-   ...(l.suppliesFee?['Supplies basis '+l.suppliesFee.basis+' '+money(l.suppliesFee.baseCents)+'; '+(l.suppliesFee.rateBps/100)+'%; cap '+money(l.suppliesFee.capCents)+'; fee '+money(l.suppliesFee.amountCents)]:[]),
+   ...(l.suppliesFee?[(l.suppliesFee.category&&l.suppliesFee.category!=='supplies'?l.suppliesFee.category+' fee basis ':'Supplies basis ')+l.suppliesFee.basis+' '+money(l.suppliesFee.baseCents)+'; '+(l.suppliesFee.mode==='fixed'?'fixed '+money(l.suppliesFee.fixedCents):(l.suppliesFee.rateBps/100)+'%')+'; cap '+money(l.suppliesFee.capCents)+'; fee '+money(l.suppliesFee.amountCents)]:[]),
    'Sales tax '+money(l.salesTaxCents)+' ('+(l.taxable?String(l.taxRatePercent)+'%':'exempt')+'); line total '+money(l.totalCents)+' USD']),
   '', 'Subtotal '+money(x.totals.subtotalCents)+' USD','Sales tax '+money(x.totals.salesTaxCents)+' USD','Total '+money(x.totals.totalCents)+' USD',
   'Credits '+money(b.creditedCents)+'; tender net of refunds and account credit '+money(b.paidCents)+'; balance '+money(b.outstandingCents)+' USD',

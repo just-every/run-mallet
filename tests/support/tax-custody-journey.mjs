@@ -33,7 +33,8 @@ export async function taxCustodyJourney(){
 export async function taxDraftFixture(h,account,suffix='1'){
  let asset=await h.command('asset.create',{...assetInput('tax-adjust-'+suffix),customerName:account.name})
  asset=await h.command('customer.linkAsset',{assetId:asset.id,version:asset.version,customerId:account.id,customerVersion:account.version,reason:'Customer explicitly linked this fleet repair'})
- const {job}=await booking(h,{asset,bayId:'Tax review bay '+suffix,startAt:new Date(Date.now()+(suffix==='2'?2:1)*86400000).toISOString(),endAt:new Date(Date.now()+(suffix==='2'?2:1)*86400000+3600000).toISOString()})
+ const start=Date.now()+((await h.state()).records.job.length+1)*86400000
+ const {job}=await booking(h,{asset,bayId:'Tax review bay '+suffix,startAt:new Date(start).toISOString(),endAt:new Date(start+3600000).toISOString()})
  const q=await h.command('estimate.prepare',{jobId:job.id,version:job.version,lines:[{kind:'part',description:'Fleet replacement part',quantity:2,unitCents:10000,unitDiscountCents:1000},{kind:'labor',description:'Fleet service',quantity:1,unitCents:10000}]})
  return {job,q}
 }
@@ -42,16 +43,34 @@ async function taxAdjustmentJourney(h,account,expired,admin){
  const {job,q}=await taxDraftFixture(h,account),original=structuredClone(q.revisions[0])
  const ruleInput={name:'Capped supplies',basis:'parts and labor',rateBps:1000,capCents:2500,taxable:true,legalBasis:'Owner reviewed the applicable shop supplies rule; customer explicitly requested this quote'}
  await h.command('tax.suppliesRule',ruleInput,{as:admin.cookie,status:403})
- for(const change of [{rateBps:10001},{capCents:-1},{taxable:'yes'}])await h.command('tax.suppliesRule',{...ruleInput,...change},{status:400})
+ for(const change of [{rateBps:10001},{capCents:-1},{taxable:'yes'},{category:'inferred'},{mode:'fixed',fixedCents:-1}])await h.command('tax.suppliesRule',{...ruleInput,...change},{status:400})
  const rule=await h.command('tax.suppliesRule',ruleInput)
  const active=await h.command('tax.certificate',{accountId:account.id,version:account.version,reference:'synthetic-mallet-341',jurisdiction:'Declared fleet district',scope:'parts',validFrom:'2000-01-01',expiresOn:'2099-12-31',certificate:'Private synthetic certificate original',evidence:'Owner reviewed the supplied certificate'})
  const input={estimateId:q.id,version:q.version,certificateId:active.id,feeRuleId:rule.id,feeVersion:rule.version,consent:true,evidence:'Customer explicitly consented to the exact capped fee and owner-applied certificate basis'}
  for(const options of [{as:admin.cookie,status:403},{as:'',status:401},{headers:{origin:'https://other.example.test'},status:403}])await h.command('tax.adjustEstimate',input,options)
- for(const change of [{consent:false},{certificateId:expired.id},{feeVersion:2}])await h.command('tax.adjustEstimate',{...input,...change},{status:409})
+ const refuse=async(change,error,status=409)=>{const before=await h.state(),messages=h.messages.length;const result=await h.command('tax.adjustEstimate',{...input,...change},{status});assert.equal(result.error,error);assert.deepEqual((await h.state()).records,before.records,'Rejected tax review leaves every product record and audit event unchanged');assert.equal(h.messages.length,messages,'Rejected tax review creates no mail')}
+ for(const consent of [false,undefined,'true'])await refuse({consent},'TAX_CONSENT')
+ await refuse({evidence:''},'INPUT',400)
+ await refuse({certificateId:expired.id},'TAX_EXPIRED')
+ await refuse({feeVersion:2},'VERSION')
+ const feesOnly=await h.command('tax.certificate',{accountId:account.id,version:account.version,reference:'synthetic-mallet-344',jurisdiction:'Declared fleet district',scope:'fees',validFrom:'2000-01-01',expiresOn:'2099-12-31',certificate:'Fee-only synthetic certificate',evidence:'Owner recorded the exact limited scope'})
+ await refuse({certificateId:feesOnly.id,feeRuleId:''},'TAX_SCOPE')
  const other=await creditAccountFixture(h,'tax-other'),mismatch=await taxDraftFixture(h,other.account,'2')
  await h.command('tax.adjustEstimate',{...input,estimateId:mismatch.q.id,version:mismatch.q.version},{status:409})
  const future=await h.command('tax.certificate',{accountId:account.id,version:account.version,reference:'synthetic-mallet-343',jurisdiction:'Declared fleet district',scope:'parts',validFrom:'2098-01-01',expiresOn:'2099-12-31',certificate:'Future synthetic certificate',evidence:'Future-dated certificate is custody only'})
- await h.command('tax.adjustEstimate',{...input,certificateId:future.id},{status:409})
+ await refuse({certificateId:future.id},'TAX_EXPIRED')
+ let changed=(await h.state()).records.asset.find(a=>a.id===job.assetId)
+ changed=await h.command('customer.linkAsset',{assetId:changed.id,version:changed.version,customerId:other.account.id,customerVersion:other.account.version,reason:'Owner recorded a different current billing relationship'})
+ await refuse({},'TAX_ACCOUNT')
+ await h.command('customer.linkAsset',{assetId:changed.id,version:changed.version,customerId:account.id,customerVersion:account.version,reason:'Owner restored the original billing relationship for a fresh review'})
+ for(const [index,category]of ['disposal','environmental'].entries()){
+  const feeRule=await h.command('tax.suppliesRule',{...ruleInput,name:category+' fee',category,basis:'parts',rateBps:500,capCents:700,...(category==='environmental'?{mode:'fixed',fixedCents:900}:{})})
+  const draft=await taxDraftFixture(h,account,'category-'+index)
+  const reviewed=await h.command('tax.adjustEstimate',{estimateId:draft.q.id,version:draft.q.version,feeRuleId:feeRule.id,feeVersion:feeRule.version,consent:true,evidence:'Customer accepted the disclosed '+category+' fee, percentage basis and cap'})
+  const revision=reviewed.revisions.at(-1);assert.equal(revision.taxAdjustment.fee.category,category);assert.equal(revision.taxAdjustment.fee.amountCents,700);assert.equal(revision.lines.at(-1).salesTaxCents,53);assert.deepEqual(reviewed.revisions[0],draft.q.revisions[0])
+  const billed=await finishTaxInvoice(h,reviewed),issued=await h.command('invoice.issue',{invoiceId:billed.id,version:billed.version,reference:'synthetic-mallet-category-'+index,warrantyTerms:'Reviewed warranty terms',confirm:'issue-invoice'})
+  assert.ok(issued.content.includes(category+' fee basis parts $180.00; '+(category==='environmental'?'fixed $9.00':'5%')+'; cap $7.00; fee $7.00'))
+ }
  const uncapped=await h.command('tax.suppliesRule',{...ruleInput,basis:'parts',rateBps:1,capCents:100000})
  const rounding=await h.command('estimate.revise',{estimateId:mismatch.q.id,version:mismatch.q.version,revision:1,lines:[{kind:'part',description:'Half-cent fee basis',quantity:1,unitCents:15000}]})
  const small=await h.command('tax.adjustEstimate',{...input,estimateId:mismatch.q.id,version:rounding.version,certificateId:'',feeRuleId:uncapped.id,feeVersion:uncapped.version})
@@ -72,6 +91,11 @@ async function taxAdjustmentJourney(h,account,expired,admin){
 
 export async function finishTaxInvoice(h,adjusted){
  const rev=adjusted.revisions.at(-1)
+ const job=(await h.state()).records.job.find(j=>j.id===adjusted.jobId)
+ const before=(await h.state()).records
+ await h.command('work.record',{jobId:job.id,version:job.version,lineId:rev.lines[0].id,quantity:1},{status:409})
+ assert.deepEqual((await h.state()).records,before)
+ await h.command('estimate.authorise',{estimateId:adjusted.id,version:adjusted.version,revision:rev.n,lineIds:rev.lines.map(l=>l.id),customerName:'Fleet authorizer',method:'signed',evidence:'Cannot skip renewed approval'},{status:409})
  let next=await h.command('estimate.approve',{estimateId:adjusted.id,version:adjusted.version,revision:rev.n})
  next=await h.command('estimate.markSent',{estimateId:adjusted.id,version:next.version,revision:rev.n,method:'printed'})
  next=await h.command('estimate.authorise',{estimateId:adjusted.id,version:next.version,revision:rev.n,lineIds:rev.lines.map(l=>l.id),customerName:'Recorded fleet authorizer',method:'signed',evidence:'Signed authorization to exact disclosed fee and exemption basis'})

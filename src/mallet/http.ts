@@ -181,7 +181,7 @@ function formInput(data:FormData) {
   let source:any;try{source=JSON.parse(input.replacementSource)}catch{throw new HttpError(400,'invalid_replacement')}
   input.lines=[{kind:source.kind,description:source.description,quantity:Number(input.replacementQuantity),unitCents:Math.round(Number(input.replacementPrice)*100),...(source.kind==='fee'?{feeTaxable:source.feeTaxable}:{}),replaces:{estimateId:source.estimateId,revision:source.revision,lineId:source.lineId}}]
  }
- if(input.command==='tax.suppliesRule'){input.rateBps=Number(input.rateBps);input.capCents=Math.round(Number(input.capUsd)*100);input.taxable=data.has('taxable')}
+ if(input.command==='tax.suppliesRule'){input.fixedCents=Math.round(Number(input.fixedUsd)*100);input.rateBps=Number(input.rateBps);input.capCents=Math.round(Number(input.capUsd)*100);input.taxable=data.has('taxable')}
  if(input.command==='tax.adjustEstimate'){input.consent=data.has('consent');if(input.feeSource){const source=JSON.parse(input.feeSource);input.feeRuleId=source.id;input.feeVersion=source.version}}
  if(input.command==='invoice.send')input.consent=data.has('consent')
  if(input.command==='tax.configure'){input.ratePercent=input.ratePercent===''?null:Number(input.ratePercent);input.partsTaxable=data.has('partsTaxable');input.laborTaxable=data.has('laborTaxable')}

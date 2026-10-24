@@ -19,7 +19,7 @@ export async function validateRecords({ table, rejectIf, index }) {
   const value = j(field)
   await check(kind, field + '_reference', `(${required ? '1' : `${value} IS NOT NULL`}) AND (${type(field)} IS NOT 'text' OR NOT ${exists(target, value, extra)})`)
  }
- await check('taxFeeRule','supplies_fee_shape',requiredText(['name','basis'])+` OR ${j('basis')} NOT IN ('parts','labor','parts and labor') OR ${type('rateBps')} IS NOT 'integer' OR ${j('rateBps')}<0 OR ${j('rateBps')}>10000 OR ${type('capCents')} IS NOT 'integer' OR ${j('capCents')}<0 OR ${j('capCents')}>1000000000 OR ${type('taxable')} NOT IN ('true','false')`)
+ await check('taxFeeRule','supplies_fee_shape',requiredText(['name','basis'])+` OR (${j('category')} IS NOT NULL AND ${j('category')} NOT IN ('supplies','disposal','environmental')) OR (${j('mode')} IS NOT NULL AND ${j('mode')} NOT IN ('percentage','fixed')) OR (${j('mode')}='fixed' AND (${type('fixedCents')} IS NOT 'integer' OR ${j('fixedCents')}<0 OR ${j('fixedCents')}>1000000000)) OR ${j('basis')} NOT IN ('parts','labor','parts and labor') OR ${type('rateBps')} IS NOT 'integer' OR ${j('rateBps')}<0 OR ${j('rateBps')}>10000 OR ${type('capCents')} IS NOT 'integer' OR ${j('capCents')}<0 OR ${j('capCents')}>1000000000 OR ${type('taxable')} NOT IN ('true','false')`)
  await reference('taxCertificate','accountId','customerAccount',true)
  await reference('taxJurisdiction','invoiceId','invoice',true)
  await check('taxCertificate','certificate_shape',requiredText(['reference','jurisdiction','scope','validFrom','expiresOn'])+` OR ${type('certificate')} IS NOT 'text' OR ${j('scope')} NOT IN ('parts','labor','fees','all') OR julianday(${j('validFrom')}) IS NULL OR julianday(${j('expiresOn')})<julianday(${j('validFrom')})`)

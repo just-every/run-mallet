@@ -17,7 +17,7 @@ export function configuredTax(s: State, assetType?: string): TaxSettings {
 /** Supplies use discounted pre-tax extension, half-up cents, then the saved cap. */
 export function suppliesCalculation(rule:Row,priced:any[]){
  const baseCents=priced.filter(l=>rule.basis==='parts and labor'?['part','labor'].includes(l.kind):l.kind===(rule.basis==='parts'?'part':'labor')).reduce((n,l)=>n+l.subtotalCents,0)
- const amountCents=Math.min(rule.capCents,Number((BigInt(baseCents)*BigInt(rule.rateBps)+5000n)/10000n))
+ const amountCents=Math.min(rule.capCents,rule.mode==='fixed'?rule.fixedCents:Number((BigInt(baseCents)*BigInt(rule.rateBps)+5000n)/10000n))
  return {baseCents,amountCents}
 }
 export const taxCommands=['tax.certificate','tax.assignJurisdiction','tax.suppliesRule','tax.adjustEstimate']
@@ -39,7 +39,8 @@ export const tax: Handler = (c, command, p) => {
  if(taxCommands.includes(command)){
   if(c.actor.role!=='owner')fail('FORBIDDEN','Only the owner retains tax certificates and assigns filing jurisdictions.',null,403)
   if(command==='tax.suppliesRule'){
-   const row=put(c.s,'taxFeeRule',{name:text(p.name,'supplies fee name'),basis:choice(p.basis,['parts','labor','parts and labor'],'supplies basis'),rateBps:integer(p.rateBps,'fee basis points',0,10000),capCents:integer(p.capCents,'fee cap in USD cents',0),taxable:p.taxable===true,legalBasis:text(p.legalBasis,'owner-reviewed legal basis',2000),by:who(c),at:c.now})
+   const category=choice(p.category??'supplies',['supplies','disposal','environmental'],'fee category'),mode=choice(p.mode??'percentage',['percentage','fixed'],'fee calculation'),fixedCents=mode==='fixed'?integer(p.fixedCents,'fixed fee in USD cents'):0
+   const row=put(c.s,'taxFeeRule',{category,mode,fixedCents,name:text(p.name,'supplies fee name'),basis:choice(p.basis,['parts','labor','parts and labor'],'supplies basis'),rateBps:integer(p.rateBps,'fee basis points',0,10000),capCents:integer(p.capCents,'fee cap in USD cents',0),taxable:p.taxable===true,legalBasis:text(p.legalBasis,'owner-reviewed legal basis',2000),by:who(c),at:c.now})
    if(typeof p.taxable!=='boolean')fail('INPUT','Declare supplies fee tax treatment.',null,400)
    event(c,command,null,row.id,{name:row.name});return row
   }
@@ -56,7 +57,7 @@ export const tax: Handler = (c, command, p) => {
     const rule=find(c.s,'taxFeeRule',p.feeRuleId);expectVersion(rule,p.feeVersion)
     if(priced.length>=100)fail('INPUT','The supplies fee would exceed 100 estimate lines.',null,400)
     const {baseCents,amountCents}=suppliesCalculation(rule,priced),settings=configuredTax(c.s,job.asset.assetType)
-    fee={ruleId:rule.id,name:rule.name,basis:rule.basis,baseCents,rateBps:rule.rateBps,capCents:rule.capCents,amountCents,legalBasis:rule.legalBasis}
+    fee={ruleId:rule.id,category:rule.category??'supplies',mode:rule.mode??'percentage',fixedCents:rule.fixedCents??0,name:rule.name,basis:rule.basis,baseCents,rateBps:rule.rateBps,capCents:rule.capCents,amountCents,legalBasis:rule.legalBasis}
     const line={id:crypto.randomUUID(),kind:'fee',description:rule.name,quantity:1,quantityMilli:1000,unitCents:amountCents,taxable:rule.taxable,taxRatePercent:settings.ratePercent,taxRateMillionths:settings.rateMillionths,pierItemId:null,suppliesFee:fee}
     priced.push({...line,...price(line)})
    }
@@ -64,6 +65,7 @@ export const tax: Handler = (c, command, p) => {
     const cert=find(c.s,'taxCertificate',p.certificateId),billing=rows(c.s,'customerBilling').find(b=>b.jobId===job.id)?.snapshot,asset=find(c.s,'asset',job.assetId)
     if(!billing||billing.accountId!==cert.accountId||asset.customerAccountId!==cert.accountId||find(c.s,'customerAccount',cert.accountId).mergedInto)fail('TAX_ACCOUNT','The certificate must belong to this repair’s unchanged billing account.')
     if(certificateState(cert,c.now)!=='within recorded dates')fail('TAX_EXPIRED','The certificate is outside its recorded inclusive UTC dates.')
+    if(!priced.some((l:any)=>cert.scope==='all'||l.kind===(cert.scope==='parts'?'part':cert.scope==='fees'?'fee':'labor')))fail('TAX_SCOPE','The certificate scope covers no line in this reviewed draft.')
     certificate={id:cert.id,reference:cert.reference,jurisdiction:cert.jurisdiction,scope:cert.scope,validFrom:cert.validFrom,expiresOn:cert.expiresOn}
     priced=priced.map((l:any)=>cert.scope==='all'||l.kind===(cert.scope==='parts'?'part':cert.scope==='fees'?'fee':'labor')?{...l,taxable:false,exemption:certificate,...price({...l,taxable:false})}:l)
    }
