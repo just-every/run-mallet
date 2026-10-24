@@ -572,7 +572,7 @@
       "executable": false
     },
     "ACCEPTANCE.md": {
-      "sha256": "51dbf7eff5be21a1a460c108dc69c51464055cc2b82b0e72ce8de047e49eb726",
+      "sha256": "0087913089de6c6d69a09c619b4f6ddff6698d815e0926b033992dc55267bbb4",
       "executable": false
     },
     "AGENTS.md": {
@@ -584,7 +584,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "f73fb3e1e956ac1fa242b9cb3d8548a87e0a78b82d30c6630c7a24f74df4366a",
+      "sha256": "95749c157024f247312927941a0ad6fe7a4469dff35a6edb5999a86171bbf1b3",
       "executable": false
     },
     "deploy-demo.json": {
@@ -1616,7 +1616,7 @@
       "executable": false
     },
     "src/mallet/http.ts": {
-      "sha256": "5cfbef7537abebb424c3b7b9cd471ba7a4c23953b0e7ba7f04998690c418776c",
+      "sha256": "fa3189b1ef4071a2036c21e892a10ae42ceea007a5311b48ef5a5b0f569411e4",
       "executable": false
     },
     "src/mallet/imports/context.ts": {
@@ -1720,7 +1720,7 @@
       "executable": false
     },
     "src/mallet/invoice-documents.ts": {
-      "sha256": "23722ee28055e50df8f948fe89fb2064197ca53348a6ea29efc686a1139e2e65",
+      "sha256": "10d12e00d19659e890099bbc5e6e828e43dbbf5932cba95b1155b7dc546102bf",
       "executable": false
     },
     "src/mallet/invoices.ts": {
@@ -1956,7 +1956,7 @@
       "executable": false
     },
     "src/mallet/restore/validate-records.mjs": {
-      "sha256": "7b8e901fdfe25da97cbf293cb396cba0d0fca61af47d350c5c08431275457c37",
+      "sha256": "2a4c5f19671b577ab1a7ba8885a649e3541f6faa214999afc2e80fec29b21cf6",
       "executable": false
     },
     "src/mallet/restore/validate-staged.mjs": {
@@ -2104,7 +2104,7 @@
       "executable": false
     },
     "src/mallet/tax.ts": {
-      "sha256": "c97e3c94f5623f60cbd330b325a79de5c8ca09a2026e3b54d8ffdf68519ea6d0",
+      "sha256": "2def571a2ef6dc80d9b19a56dac0fc3bd279830e6b32d0116376dbfabbf77825",
       "executable": false
     },
     "src/mallet/time.ts": {
@@ -2328,11 +2328,11 @@
       "executable": false
     },
     "src/mallet/ui/tax-custody.ts": {
-      "sha256": "bce09dfb22cb04e5fd25231189e75cb198b6fb5f802f54e618144de9c002576a",
+      "sha256": "b1c2ae4a9b62abc5023fdd28b79ba488441b9b13b901b3b4e684de2aaa260ecf",
       "executable": false
     },
     "src/mallet/ui/tax.ts": {
-      "sha256": "d7e5401718f3964ced96550222b014f02e23c9043f68920318543da8437b318b",
+      "sha256": "972a06269b5793739339ac6f5431ab426031f8a5c071bf87114bd20505482efd",
       "executable": false
     },
     "src/mallet/ui/time.ts": {
@@ -4328,7 +4328,7 @@
       "executable": false
     },
     "tests/invoice-documents-browser.mjs": {
-      "sha256": "f63efb9ea2701659311b7af4fb6cd94585d53734e5824cb222bf187829889984",
+      "sha256": "a00863c4320f00969319bb80c4d569c0bc79d6bb8667ed1368da8b63bb90d339",
       "executable": false
     },
     "tests/jobs-browser.mjs": {
@@ -4660,7 +4660,7 @@
       "executable": false
     },
     "tests/support/tax-custody-journey.mjs": {
-      "sha256": "688915d02141d92a45dd3124f351f6d4ac0bbb330f7f1570912c9df34015f797",
+      "sha256": "5217453e8fd84ccc0d10f67b2a7b4a75b7c1660df104af438a56dc33a2b72d6a",
       "executable": false
     },
     "tests/support/time-journey.mjs": {

@@ -1,4 +1,5 @@
-import { bump, choice, event, expectVersion, fail, find, put, text, who, rows, type Handler, type Row, type State } from './model'
+import {price,totals} from './money'
+import { bump, choice, event, expectVersion, fail, find, put, text, who, rows, integer, type Handler, type Row, type State } from './model'
 
 export type TaxSettings = { currency: 'USD'; ratePercent: number; rateMillionths: number; partsTaxable: boolean; laborTaxable: boolean }
 const settingsId = 'shop-tax'
@@ -13,7 +14,13 @@ export function configuredTax(s: State, assetType?: string): TaxSettings {
   if (!settings || settings.ratePercent === null || settings.ratePercent === undefined) fail('TAX_NOT_CONFIGURED', 'Set the shop sales tax rate before preparing an estimate. Enter 0 if no sales tax applies.')
   return settings as Row & TaxSettings
 }
-export const taxCommands=['tax.certificate','tax.assignJurisdiction']
+/** Supplies use discounted pre-tax extension, half-up cents, then the saved cap. */
+export function suppliesCalculation(rule:Row,priced:any[]){
+ const baseCents=priced.filter(l=>rule.basis==='parts and labor'?['part','labor'].includes(l.kind):l.kind===(rule.basis==='parts'?'part':'labor')).reduce((n,l)=>n+l.subtotalCents,0)
+ const amountCents=Math.min(rule.capCents,Number((BigInt(baseCents)*BigInt(rule.rateBps)+5000n)/10000n))
+ return {baseCents,amountCents}
+}
+export const taxCommands=['tax.certificate','tax.assignJurisdiction','tax.suppliesRule','tax.adjustEstimate']
 export function certificateState(row:Row,now:string){return now.slice(0,10)<row.validFrom?'not yet effective':now.slice(0,10)>row.expiresOn?'expired':'within recorded dates'}
 const date=(value:unknown,label:string)=>{const v=text(value,label,10);if(!/^\d{4}-\d{2}-\d{2}$/.test(v)||!Number.isFinite(Date.parse(v))||new Date(v).toISOString().slice(0,10)!==v)fail('INPUT','Use a valid UTC calendar date.',null,400);return v}
 export function jurisdictionReport(s:State){
@@ -31,6 +38,39 @@ export function jurisdictionReport(s:State){
 export const tax: Handler = (c, command, p) => {
  if(taxCommands.includes(command)){
   if(c.actor.role!=='owner')fail('FORBIDDEN','Only the owner retains tax certificates and assigns filing jurisdictions.',null,403)
+  if(command==='tax.suppliesRule'){
+   const row=put(c.s,'taxFeeRule',{name:text(p.name,'supplies fee name'),basis:choice(p.basis,['parts','labor','parts and labor'],'supplies basis'),rateBps:integer(p.rateBps,'fee basis points',0,10000),capCents:integer(p.capCents,'fee cap in USD cents',0),taxable:p.taxable===true,legalBasis:text(p.legalBasis,'owner-reviewed legal basis',2000),by:who(c),at:c.now})
+   if(typeof p.taxable!=='boolean')fail('INPUT','Declare supplies fee tax treatment.',null,400)
+   event(c,command,null,row.id,{name:row.name});return row
+  }
+  if(command==='tax.adjustEstimate'){
+   const estimate=find(c.s,'estimate',p.estimateId);expectVersion(estimate,p.version)
+   if(estimate.status!=='draft'||estimate.authorisation)fail('TAX_FROZEN','Only an unapproved draft can receive an explicit tax adjustment.')
+   const old=estimate.revisions.at(-1),job=find(c.s,'job',estimate.jobId)
+   if(!['booked','working'].includes(job.status)||old.taxAdjustment)fail('TAX_FROZEN','Use a fresh draft revision for a new tax review.')
+   if(p.consent!==true)fail('TAX_CONSENT','Record explicit customer consent to the disclosed fee and exemption basis.')
+   const evidence=text(p.evidence,'review and customer consent evidence',2000)
+   if(!p.certificateId&&!p.feeRuleId)fail('INPUT','Choose a certificate or supplies fee rule.',null,400)
+   let priced=structuredClone(old.lines),certificate:any=null,fee:any=null
+   if(p.feeRuleId){
+    const rule=find(c.s,'taxFeeRule',p.feeRuleId);expectVersion(rule,p.feeVersion)
+    if(priced.length>=100)fail('INPUT','The supplies fee would exceed 100 estimate lines.',null,400)
+    const {baseCents,amountCents}=suppliesCalculation(rule,priced),settings=configuredTax(c.s,job.asset.assetType)
+    fee={ruleId:rule.id,name:rule.name,basis:rule.basis,baseCents,rateBps:rule.rateBps,capCents:rule.capCents,amountCents,legalBasis:rule.legalBasis}
+    const line={id:crypto.randomUUID(),kind:'fee',description:rule.name,quantity:1,quantityMilli:1000,unitCents:amountCents,taxable:rule.taxable,taxRatePercent:settings.ratePercent,taxRateMillionths:settings.rateMillionths,pierItemId:null,suppliesFee:fee}
+    priced.push({...line,...price(line)})
+   }
+   if(p.certificateId){
+    const cert=find(c.s,'taxCertificate',p.certificateId),billing=rows(c.s,'customerBilling').find(b=>b.jobId===job.id)?.snapshot,asset=find(c.s,'asset',job.assetId)
+    if(!billing||billing.accountId!==cert.accountId||asset.customerAccountId!==cert.accountId||find(c.s,'customerAccount',cert.accountId).mergedInto)fail('TAX_ACCOUNT','The certificate must belong to this repair’s unchanged billing account.')
+    if(certificateState(cert,c.now)!=='within recorded dates')fail('TAX_EXPIRED','The certificate is outside its recorded inclusive UTC dates.')
+    certificate={id:cert.id,reference:cert.reference,jurisdiction:cert.jurisdiction,scope:cert.scope,validFrom:cert.validFrom,expiresOn:cert.expiresOn}
+    priced=priced.map((l:any)=>cert.scope==='all'||l.kind===(cert.scope==='parts'?'part':cert.scope==='fees'?'fee':'labor')?{...l,taxable:false,exemption:certificate,...price({...l,taxable:false})}:l)
+   }
+   const next={...old,n:old.n+1,lines:priced,totals:totals(priced),approval:null,preparedBy:who(c),preparedAt:c.now,taxAdjustment:{certificate,fee,evidence,by:who(c),at:c.now}}
+   const saved=bump(c.s,'estimate',estimate,{revisions:[...estimate.revisions,next]})
+   event(c,command,job.id,saved.id,{revision:next.n,certificateId:certificate?.id??null,feeRuleId:fee?.ruleId??null});return saved
+  }
   if(command==='tax.certificate'){
    const account=find(c.s,'customerAccount',p.accountId);expectVersion(account,p.version)
    if(account.mergedInto)fail('TAX_ACCOUNT','Use the current customer account.')
