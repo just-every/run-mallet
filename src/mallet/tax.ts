@@ -24,7 +24,7 @@ export function suppliesCalculation(rule:Row,priced:any[]){
 export function discountCalculation(rule:Row,priced:any[]){
  return priced.map(l=>{
   if(!(rule.basis==='parts and labor'?['part','labor'].includes(l.kind):l.kind===(rule.basis==='parts'?'part':'labor')))return l
-  const remaining=l.unitCents-(l.unitDiscountCents??0),addedUnitDiscountCents=Number((BigInt(remaining)*BigInt(rule.rateBps)+5000n)/10000n)
+  const remaining=l.unitCents-(l.unitDiscountCents??0),remainingUnitCents=Number((BigInt(remaining)*BigInt(10000-rule.rateBps)+5000n)/10000n),addedUnitDiscountCents=remaining-remainingUnitCents
   const next={...l,unitDiscountCents:(l.unitDiscountCents??0)+addedUnitDiscountCents,discountRule:{id:rule.id,name:rule.name,basis:rule.basis,rateBps:rule.rateBps,unitBeforeDiscountCents:remaining,addedUnitDiscountCents,legalBasis:rule.legalBasis}}
   return {...next,...price(next)}
  })
@@ -32,17 +32,33 @@ export function discountCalculation(rule:Row,priced:any[]){
 export const taxCommands=['tax.certificate','tax.assignJurisdiction','tax.suppliesRule','tax.discountRule','tax.adjustEstimate']
 export function certificateState(row:Row,now:string){return now.slice(0,10)<row.validFrom?'not yet effective':now.slice(0,10)>row.expiresOn?'expired':'within recorded dates'}
 const date=(value:unknown,label:string)=>{const v=text(value,label,10);if(!/^\d{4}-\d{2}-\d{2}$/.test(v)||!Number.isFinite(Date.parse(v))||new Date(v).toISOString().slice(0,10)!==v)fail('INPUT','Use a valid UTC calendar date.',null,400);return v}
+/** Recorded cash and captured Stripe only; unresolved tender is disclosed separately. */
+function collectedTax(s:State,invoice:Row){
+ const payments=rows(s,'payment').filter(p=>p.invoiceId===invoice.id)
+ const included=payments.filter(p=>p.method==='cash'||(p.method==='stripe'&&p.verified===true))
+ const excluded=payments.filter(p=>!included.includes(p))
+ const collectedCents=included.reduce((n,p)=>n+p.amountCents,0),total=invoice.totals.totalCents,tax=invoice.totals.salesTaxCents
+ const collectedTaxCents=total>0?Number((BigInt(tax)*BigInt(Math.min(total,collectedCents))+BigInt(Math.floor(total/2)))/BigInt(total)):0
+ const refunds=rows(s,'refund').filter(r=>r.invoiceId===invoice.id&&(r.redirect?.status??r.status)==='refunded'&&included.some(p=>p.id===r.paymentId))
+ const reversedCollectedTaxCents=Math.min(collectedTaxCents,refunds.reduce((n,r)=>n+(rows(s,'creditNote').find(c=>c.id===r.creditNoteId)?.totals.salesTaxCents??0),0))
+ const reviewReasons=[...new Set(excluded.map(p=>'Excluded '+p.method+' tender: clearance or original cash basis is unproved.'))]
+ if(rows(s,'creditNote').some(n=>n.invoiceId===invoice.id&&(n.destination==='account-credit'||rows(s,'refund').some(r=>r.creditNoteId===n.id&&r.redirect))))reviewReasons.push('Account credit or redirected refund needs cash-basis review.')
+ if(refunds.some(r=>r.redirect))reviewReasons.push('Redirected refund needs cash-basis review.')
+ return {collectedCents,collectedTaxCents,reversedCollectedTaxCents,netCollectedTaxCents:collectedTaxCents-reversedCollectedTaxCents,paymentIds:included.map(p=>p.id),excludedPaymentIds:excluded.map(p=>p.id),refundIds:refunds.map(r=>r.id),reviewReasons}
+}
 export function jurisdictionReport(s:State){
  const groups=new Map<string,any>()
  for(const invoice of rows(s,'invoice').filter(i=>['approved','exported'].includes(i.status))){
   const assignment=rows(s,'taxJurisdiction').find(r=>r.invoiceId===invoice.id),jurisdiction=assignment?.jurisdiction??'Unassigned - not filing ready'
   const credits=rows(s,'creditNote').filter(n=>n.invoiceId===invoice.id),reversedCents=credits.reduce((n,r)=>n+r.totals.salesTaxCents,0)
-  const group=groups.get(jurisdiction)??{jurisdiction,invoicedTaxCents:0,reversedTaxCents:0,netTaxCents:0,invoices:[]}
+  const group=groups.get(jurisdiction)??{jurisdiction,invoicedTaxCents:0,reversedTaxCents:0,netTaxCents:0,collectedTaxCents:0,reversedCollectedTaxCents:0,netCollectedTaxCents:0,invoices:[]}
   group.invoicedTaxCents+=invoice.totals.salesTaxCents;group.reversedTaxCents+=reversedCents;group.netTaxCents+=invoice.totals.salesTaxCents-reversedCents
-  group.invoices.push({invoiceId:invoice.id,number:invoice.number,jobId:invoice.jobId,taxCents:invoice.totals.salesTaxCents,reversedCents,assignmentId:assignment?.id??null,creditNoteIds:credits.map(n=>n.id)})
+  const collection=collectedTax(s,invoice)
+  group.collectedTaxCents+=collection.collectedTaxCents;group.reversedCollectedTaxCents+=collection.reversedCollectedTaxCents;group.netCollectedTaxCents+=collection.netCollectedTaxCents
+  group.invoices.push({...collection,invoiceId:invoice.id,number:invoice.number,jobId:invoice.jobId,taxCents:invoice.totals.salesTaxCents,reversedCents,assignmentId:assignment?.id??null,creditNoteIds:credits.map(n=>n.id)})
   groups.set(jurisdiction,group)
  }
- return {currency:'USD',basis:'Invoice tax less issued credit-note reversals; this is not a cash-collected tax return or legal filing advice.',groups:[...groups.values()].sort((a,b)=>a.jurisdiction.localeCompare(b.jurisdiction))}
+ return {currency:'USD',basis:'Cumulative recorded cash and processor-confirmed captured Stripe receipts. Partial receipts allocate original invoice tax in proportion to the original gross total, rounding half up once per invoice. Completed original-tender refunds reverse their exact credit-note tax, bounded by collected tax. Checks, other tender and customer-credit allocations are excluded and require review. Staff cash is not independently verified. Invoice tax less issued credit-note reversals is shown separately; this is not a cash-collected tax return or legal filing advice.',groups:[...groups.values()].sort((a,b)=>a.jurisdiction.localeCompare(b.jurisdiction))}
 }
 export const tax: Handler = (c, command, p) => {
  if(taxCommands.includes(command)){
@@ -53,7 +69,9 @@ export const tax: Handler = (c, command, p) => {
   }
   if(command==='tax.suppliesRule'){
    const category=choice(p.category??'supplies',['supplies','disposal','environmental','surcharge'],'fee category'),mode=choice(p.mode??'percentage',['percentage','fixed'],'fee calculation'),fixedCents=mode==='fixed'?integer(p.fixedCents,'fixed fee in USD cents'):0
-   const row=put(c.s,'taxFeeRule',{category,mode,fixedCents,name:text(p.name,'supplies fee name'),basis:choice(p.basis,['parts','labor','parts and labor'],'supplies basis'),rateBps:integer(p.rateBps,'fee basis points',0,10000),capCents:integer(p.capCents,'fee cap in USD cents',0),taxable:p.taxable===true,legalBasis:text(p.legalBasis,'owner-reviewed legal basis',2000),by:who(c),at:c.now})
+   const capCents=integer(p.capCents,'fee cap in USD cents',0)
+   if(mode==='fixed'&&fixedCents>capCents)fail('INPUT','The fixed fee must not exceed its saved cap.',null,400)
+   const row=put(c.s,'taxFeeRule',{category,mode,fixedCents,name:text(p.name,'supplies fee name'),basis:choice(p.basis,['parts','labor','parts and labor'],'supplies basis'),rateBps:integer(p.rateBps,'fee basis points',0,10000),capCents,taxable:p.taxable===true,legalBasis:text(p.legalBasis,'owner-reviewed legal basis',2000),by:who(c),at:c.now})
    if(typeof p.taxable!=='boolean')fail('INPUT','Declare supplies fee tax treatment.',null,400)
    event(c,command,null,row.id,{name:row.name});return row
   }
@@ -73,6 +91,7 @@ export const tax: Handler = (c, command, p) => {
    }
    if(p.feeRuleId){
     const rule=find(c.s,'taxFeeRule',p.feeRuleId);expectVersion(rule,p.feeVersion)
+    if(rule.mode==='fixed'&&rule.fixedCents>rule.capCents)fail('TAX_FEE_CAP','The fixed fee exceeds its saved cap; save a valid rule before applying it.')
     if(priced.length>=100)fail('INPUT','The supplies fee would exceed 100 estimate lines.',null,400)
     const {baseCents,amountCents}=suppliesCalculation(rule,priced),settings=configuredTax(c.s,job.asset.assetType)
     fee={ruleId:rule.id,category:rule.category??'supplies',mode:rule.mode??'percentage',fixedCents:rule.fixedCents??0,name:rule.name,basis:rule.basis,baseCents,rateBps:rule.rateBps,capCents:rule.capCents,amountCents,legalBasis:rule.legalBasis}

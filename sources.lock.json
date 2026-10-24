@@ -572,7 +572,7 @@
       "executable": false
     },
     "ACCEPTANCE.md": {
-      "sha256": "eebef56cdf38d96c8ba645af01620fd412c62c2c38a6f9353e00abcd5d742fe1",
+      "sha256": "47877a07577fbcd1264233b00813f0d3ce48b8576bc93322f4c91b563f729a6a",
       "executable": false
     },
     "AGENTS.md": {
@@ -584,7 +584,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "b53153ba19037e5ec5f3d669be5858dc1467cfafdfb5aaf56386d07e1b2db60b",
+      "sha256": "5107c54543c0b8f31b0841083ddb5a60dd1885bec8abe87953360cddee1599b8",
       "executable": false
     },
     "deploy-demo.json": {
@@ -640,7 +640,7 @@
       "executable": false
     },
     "docs/invoices-and-tax.md": {
-      "sha256": "3c67e278215ac386eaf892c3e876e173e7649f151e3007927a8bcfe7f2b8205d",
+      "sha256": "ffe9f48166155e8afbcad64b11b99d9143e66cc7a1d2b8678ef0a4c4232b7776",
       "executable": false
     },
     "docs/limits.md": {
@@ -2104,7 +2104,7 @@
       "executable": false
     },
     "src/mallet/tax.ts": {
-      "sha256": "7521d3484cd13043fe9f2c6513536d7df3b32639f8a84d17a1974423af8e234c",
+      "sha256": "9b0213d35ef0f48e7ae9d408b5aa0b63701ca64b53aabe9f5d1891fb9bcb5d28",
       "executable": false
     },
     "src/mallet/time.ts": {
@@ -2328,7 +2328,7 @@
       "executable": false
     },
     "src/mallet/ui/tax-custody.ts": {
-      "sha256": "5c8c2b3c4578422993aed802cef2e191c817295fa2074dfa8da03f0fa3193aa5",
+      "sha256": "57b88bcbbd09e8c8c913d87c17b43444017303741b1523e4c5703258913babf1",
       "executable": false
     },
     "src/mallet/ui/tax.ts": {
@@ -4328,7 +4328,7 @@
       "executable": false
     },
     "tests/invoice-documents-browser.mjs": {
-      "sha256": "f63a5106881ed27099d4fae0effefe05e5e3315829dd1439ec63b73c88127ac7",
+      "sha256": "ec3b3c44f8c2c7f28c0d9015ec47fa6eeecb3612f692e240f957e0c947db0330",
       "executable": false
     },
     "tests/jobs-browser.mjs": {
@@ -4584,7 +4584,7 @@
       "executable": false
     },
     "tests/support/refunds-journey.mjs": {
-      "sha256": "322e5e53eb1b07ca2593c411343dec474a59e526d653dafcd094253b680b91e2",
+      "sha256": "ff73074a50c5fb0b8adf81facdd7746754d40237771987ab90740c82f1e39aa9",
       "executable": false
     },
     "tests/support/repair-read-journey.mjs": {
@@ -4660,7 +4660,7 @@
       "executable": false
     },
     "tests/support/tax-custody-journey.mjs": {
-      "sha256": "bbf651d09fa601e2e351673041a9ed4ec8bd107a0ee00a954ca916bba9dbcf7e",
+      "sha256": "8b1ab4f9db3137a49dc807c5497bbb440ec51a976071b94aabc57967169299af",
       "executable": false
     },
     "tests/support/time-journey.mjs": {
