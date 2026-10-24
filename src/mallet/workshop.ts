@@ -1,3 +1,4 @@
+import {stockTrace} from './stock-trace'
 import {typedAssetFields,assetSnapshot} from './asset-types'
 import {capacityConflicts,resourceFields} from './calendar-capacity'
 import {appointmentConflicts} from './bookings'
@@ -106,6 +107,13 @@ export const workshop: Handler = (c, command, p) => {
       if (used + quantityMilli > cap) fail('QUANTITY_EXCEEDED', 'Actual work cannot exceed the approved, customer authorized quantity.', { lineId, approvedQuantity: cap / 1000, recordedQuantity: used / 1000, remainingQuantity: (cap - used) / 1000 })
       const actual = { id: crypto.randomUUID(), lineId, estimateId: estimate.id, revision: rev.n, kind: line.kind, quantityMilli, quantity: quantityMilli / 1000, note: text(p.note, 'note', 2000, true), by: who(c), at: c.now }
       const row = bump(c.s, 'job', job, { status: 'working', actuals: [...job.actuals, actual] })
+      if(p.reservationId){
+        if(line.kind!=='part'||!['owner','admin'].includes(c.actor.role))fail('STOCK_AUTHORITY','Only existing stock managers commit a reserved part with work.',null,403)
+        const reservation=find(c.s,'stockReservation',p.reservationId),lot=find(c.s,'stockLot',p.lotId)
+        if(reservation.release||reservation.jobId!==job.id||reservation.quantityMilli!==quantityMilli||reservation.itemId!==lot.itemId||reservation.binId!==lot.binId)fail('RESERVATION_SCOPE','Consume this repair’s exact active reservation from its matching part and bin.')
+        bump(c.s,'stockReservation',reservation,{release:{kind:'consumed',actualId:actual.id,by:who(c),at:c.now,reason:'Committed atomically with authorized work'}})
+        stockTrace(c,'stock.useLot',{jobId:row.id,version:row.version,actualId:actual.id,lotId:lot.id,quantity:p.quantity,reference:text(p.stockReference,'unique stock usage reference'),reason:text(p.stockEvidence,'installed lot evidence',2000)})
+      }
       event(c, command, job.id, job.id, actual)
       return row
     }

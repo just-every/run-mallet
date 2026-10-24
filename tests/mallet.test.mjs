@@ -396,3 +396,7 @@ test('INV-001: exact mixed USD copies, linked corrections, single Base mail hand
 
 import {invoiceDocumentsBrowser} from './invoice-documents-browser.mjs'
 test('INV-001: owner issues, prints, emails and corrects invoice copies through native forms at 1440 and 390',invoiceDocumentsBrowser)
+
+test('PAY-004 / OPS-001: pre-order deposits, cross-invoice allocations, split tender, cancellation refunds and fresh recovery',async()=>{const {stripeEdge}=await import('./support/return-journey.mjs'),edge=stripeEdge();await run(async h=>{const {depositsJourney}=await import('./support/deposits-journey.mjs');await depositsJourney(h,{edge})},{bindings:{STRIPE_SECRET_KEY:'synthetic-mallet-91'},outboundService:edge.edge})})
+
+test('PART-003 / OPS-001: atomic reserved lot usage, last-item conflicts, cancellation release, recorded returns and recovery',()=>run(async h=>{const {stockConsumptionJourney}=await import('./support/stock-consumption-journey.mjs');await stockConsumptionJourney(h)}))

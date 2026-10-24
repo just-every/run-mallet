@@ -3,6 +3,7 @@ import {randomBytes} from 'node:crypto'
 import {mkdir} from 'node:fs/promises'
 import {join} from 'node:path'
 import {chromium} from '@playwright/test'
+import {publicDoor} from './support/portable-repair.mjs'
 import {installation} from './harness.mjs'
 export async function inventoryBrowser(){
  const h=await installation({entry:'tests/dev-worker.ts',network:true,assets:true,bindings:{AUTH_LOCAL:'true',RER_DEV_KEY:randomBytes(32).toString('base64url')}});let browser
@@ -23,6 +24,15 @@ export async function inventoryBrowser(){
   assert.ok((await p.locator('main').innerText()).includes('On hand 9'));await shot('04-variance-awaiting-approval')
   await fill('stock.approveCount',{reason:'Recount confirmed one missing'},'Approve variance')
   assert.ok((await p.locator('main').innerText()).includes('On hand 8'));assert.ok((await p.locator('main').innerText()).includes('Adjustment approved'));await shot('05-reconciled-stock-and-variance')
+  // Exercise the new public command doors, then inspect their actual native balances at both widths.
+  const {stockConsumptionJourney}=await import('./support/stock-consumption-journey.mjs');await stockConsumptionJourney(h)
+  await p.goto(h.origin+'/app/inventory');assert.match(await p.locator('main').innerText(),/Committed atomically with authorized work/);await shot('06-consumed-returned-and-canceled-reservations')
+  h.person=publicDoor(h.origin,h.owner).person
+  const {depositsJourney}=await import('./support/deposits-journey.mjs');await depositsJourney(h)
+  const state=await h.state(),paidInvoice=state.records.invoice.find(i=>state.records.payment.filter(r=>r.invoiceId===i.id).reduce((n,r)=>n+r.amountCents,0)===i.totals.totalCents),allocation=state.records.payment.find(r=>r.depositId&&r.invoiceId===paidInvoice.id)
+  await p.goto(h.origin+'/app/jobs/'+allocation.jobId);assert.match(await p.locator('main').innerText(),/Balance due \$0\.00/);await shot('07-deposit-allocated-and-split-remainder')
+  await p.locator('details').evaluateAll(sections=>sections.forEach(section=>section.open=true))
+  for(const control of await p.locator('button,a[role="button"]').all())assert.ok((await control.innerText()).trim(),'Control audit: '+await control.evaluate(el=>JSON.stringify({html:el.outerHTML,text:el.textContent,display:getComputedStyle(el).display,hiddenAncestor:!!el.closest('[hidden],details:not([open])')})))
   assert.deepEqual(errors,[])
  }finally{await browser?.close();await h.close()}
 }

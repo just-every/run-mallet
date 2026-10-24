@@ -15,7 +15,7 @@ export const supplierReturns:Handler=(c,command,p)=>{
   const lot=find(c.s,'stockLot',p.lotId),quantityMilli=amount(p.quantity),use=p.stockUseId?find(c.s,'stockUse',p.stockUseId):null,kind=choice(p.kind,['faulty','unused','warranty'],'return reason category')
   if(lot.serial&&quantityMilli!==1000)fail('SERIAL_CONFLICT','Return a complete serialized unit.')
   if(!lot.purchaseId)fail('RMA_SOURCE','Identify this lot against its original PO goods receipt before a supplier return.')
-  if(use&&(use.lotId!==lot.id||quantityMilli+rows(c.s,'stockRma').filter(r=>r.stockUseId===use.id).reduce((n,r)=>n+r.quantityMilli,0)>use.quantityMilli))fail('RMA_SCOPE','Return only the remaining installed quantity from this exact lot and repair.')
+  if(use&&(use.lotId!==lot.id||quantityMilli+rows(c.s,'stockRma').filter(r=>r.stockUseId===use.id).reduce((n,r)=>n+r.quantityMilli,0)>use.quantityMilli-(use.returns??[]).reduce((n:number,r:any)=>n+r.quantityMilli,0)))fail('RMA_SCOPE','Return only the remaining installed quantity from this exact lot and repair.')
   if(!use&&quantityMilli>lotRemaining(c.s,lot))fail('LOT_SHORTAGE','Return only available lot quantities; consumed parts require their original repair trace.')
   const warranty=p.warrantyId?find(c.s,'warranty',p.warrantyId):null
   if(warranty&&(!use||warranty.installed?.id!==use.id||warranty.originalJobId!==use.jobId||warranty.decision?.outcome!=='covered'))fail('RMA_WARRANTY','Choose approved warranty rework for this exact installed part.')

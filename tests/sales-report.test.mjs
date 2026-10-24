@@ -57,8 +57,30 @@ test('REPORT-001: known native repairs reconcile sales and decisions, download s
  for(const source of r.sales.sources)assert.ok(csv.includes(source.jobId))
  // Export retrieval is idempotent and never changes the totals or denominator.
  await h.command('invoice.export',{invoiceId:i1.id,version:i1.version});await h.command('invoice.export',{invoiceId:i1.id,version:i1.version})
- const after=await h.api(path+range)
+ let after=await h.api(path+range)
  assert.equal(after.sales.netSalesCents,19003);assert.equal(after.sales.invoicedRepairCount,2)
+ // A full void credit and a partial return adjust sales once, even before the observed refund is completed.
+ for(const [invoice,quantity,reference]of [[i1,1,'synthetic-mallet-sales-1'],[i2,0.5,'synthetic-mallet-sales-2']]){
+  const current=(await h.state()).records.invoice.find(i=>i.id===invoice.id)
+  const payment=await h.command('payment.record',{invoiceId:current.id,version:current.version,method:'cash',amountCents:current.totals.totalCents,reference:reference+'-tender',evidence:'Original cash counted'})
+  const line=current.lines[0],input={invoiceId:current.id,version:current.version,lines:[{lineId:line.id,sourceEstimateId:line.sourceEstimateId,sourceRevision:line.sourceRevision,quantity}],destination:'original-tender',paymentId:payment.id,reference,reason:quantity===1?'Void entire repair invoice':'Return half of original part',consentEvidence:'Customer explicitly requested original cash refund'}
+  const review=await h.command('credit.preview',input),note=await h.command('credit.issue',{...input,review,confirm:'issue-credit'})
+  const pending=await h.api(path+range),refund=(await h.state()).records.refund.find(r=>r.creditNoteId===note.id)
+  await h.command('refund.record',{refundId:refund.id,version:refund.version,status:'refunded',reference:reference+'-refund',evidence:'Owner returned the original counted cash',confirm:'record-refund'})
+  const settled=await h.api(path+range);assert.deepEqual(settled.sales.sources.map(r=>r.invoice),pending.sales.sources.map(r=>r.invoice),'Refund completion does not deduct the credit twice')
+ }
+ const advisor=await h.person('comparison-advisor@example.test','admin'),advisorH={...h,command:(command,input,options={})=>h.command(command,input,{as:advisor.cookie,...options})}
+ await quote(advisorH,7,{approve:false})
+ after=await h.api(path+range)
+ assert.deepEqual({...after.sales,sources:undefined},{completedVehicleCount:3,invoicedRepairCount:1,completedWithoutApprovedInvoice:2,netSalesCents:5001,salesTaxCents:375,grossSalesCents:5376,averageRepairOrderCents:5001,sources:undefined})
+ assert.equal(after.sales.sources.find(r=>r.invoice?.id===i1.id).excluded,true)
+ assert.equal(after.sales.sources.flatMap(r=>r.credits).length,2)
+ assert.deepEqual({...after.closeFunnel,sources:undefined},{estimated:7,approved:4,declined:3,undecided:0,completed:4,collected:0,closed:0,canceledOrLost:2,approvalRatioTenths:571,completionRatioTenths:1000,collectionRatioTenths:0,closeRatioTenths:0,sources:undefined})
+ assert.equal(after.advisors.length,2);assert.equal(after.advisors.find(a=>a.advisor.id===advisor.id).closeFunnel.declined,1)
+ assert.equal(after.advisors.reduce((n,a)=>n+a.netSalesCents,0),5001)
+ for(const source of [...after.closeFunnel.sources,...after.advisors.flatMap(a=>[...a.salesSources,...a.funnelSources])])assert.equal((await h.request(source.jobUrl)).status,200)
+ const adjustedCsv=await (await h.request(path+range+'&format=csv')).text();assert.match(adjustedCsv,/"credit-note","fully-credited-exclusion"/);assert.match(adjustedCsv,/"close-summary","estimated","7"/);assert.match(adjustedCsv,/"advisor"/)
+
  const state=await h.state();await h.api(path+range);assert.deepEqual(await h.state(),state,'Reporting creates no records or events')
  // OPS-001: derived reports restore from current product records; no new archive class or credential.
  const backup=await archive(h),fresh=await installation()

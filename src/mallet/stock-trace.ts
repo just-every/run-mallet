@@ -1,8 +1,8 @@
 import {bump,event,expectVersion,fail,find,integer,put,rows,text,who,type Handler,type State,type Row} from './model'
 import {amount,moveStock,receiptExists,scan,stockBalance} from './inventory'
 import {openJob} from './workshop'
-export const traceCommands=['stock.catalog','stock.lot','stock.useLot']
-export const lotRemaining=(s:State,lot:Row)=>lot.quantityMilli+rows(s,'stockLotAdjustment').filter(a=>a.lotId===lot.id).reduce((n,a)=>n+a.deltaMilli,0)-rows(s,'stockUse').filter(u=>u.lotId===lot.id).reduce((n,u)=>n+u.quantityMilli,0)
+export const traceCommands=['stock.catalog','stock.lot','stock.useLot','stock.returnUse']
+export const lotRemaining=(s:State,lot:Row)=>lot.quantityMilli+rows(s,'stockLotAdjustment').filter(a=>a.lotId===lot.id).reduce((n,a)=>n+a.deltaMilli,0)-rows(s,'stockUse').filter(u=>u.lotId===lot.id).reduce((n,u)=>n+u.quantityMilli-(u.returns??[]).reduce((m:number,r:any)=>m+r.quantityMilli,0),0)
 export function traceReport(s:State,query:string):{lots:Row[],uses:Row[]}{
  const q=text(query,'trace search',200,true).toLowerCase(),lots=rows(s,'stockLot').filter(l=>!q||[l.supplier,l.supplierLot,l.serial,l.reference,l.catalog.sku,...l.catalog.crossReferences?.split('\n')??[]].some(v=>String(v??'').toLowerCase().includes(q)))
  const ids=new Set(lots.map(l=>l.id)),uses=rows(s,'stockUse').filter(u=>ids.has(u.lotId)).map(u=>{const job=find(s,'job',u.jobId);return {...u,vehicle:job.asset.label,identifier:job.asset.identifier,customer:job.asset.customerName,repair:job.title}})
@@ -11,6 +11,18 @@ export function traceReport(s:State,query:string):{lots:Row[],uses:Row[]}{
 export const stockTrace:Handler=(c,command,p)=>{
  if(!traceCommands.includes(command))return
  if(!['owner','admin'].includes(c.actor.role))fail('FORBIDDEN','Only the owner or service advisor records stock traceability.',null,403)
+ if(command==='stock.returnUse'){
+  const use=find(c.s,'stockUse',p.stockUseId),reference=text(p.reference,'unique return reference'),reason=text(p.reason,'inspected saleable return evidence',2000),quantityMilli=amount(p.quantity)
+  const prior=rows(c.s,'stockUse').flatMap(u=>(u.returns??[]).map((r:any)=>({...r,useId:u.id}))).find(r=>r.reference===reference)
+  if(prior){if(prior.useId===use.id&&prior.quantityMilli===quantityMilli&&prior.reason===reason)return use;fail('DUPLICATE','This return reference already records different facts.')}
+  expectVersion(use,p.version)
+  if(p.confirm!=='return-to-stock')fail('STOCK_RETURN','Confirm the inspected item is saleable and physically returned. Invoice charges are unchanged.')
+  if(rows(c.s,'stockRma').some(r=>r.stockUseId===use.id))fail('STOCK_RETURN','A supplier return already holds this installed part; resolve that custody instead.')
+  const returned=(use.returns??[]).reduce((n:number,r:any)=>n+r.quantityMilli,0),lot=find(c.s,'stockLot',use.lotId)
+  if(quantityMilli>use.quantityMilli-returned||lot.serial&&quantityMilli!==1000)fail('STOCK_RETURN','Do not return more than the original unreturned use or a fractional serial.')
+  const movement=moveStock(c,use.itemId,use.binId,quantityMilli,{kind:'return',id:use.id,lotId:use.lotId,reference},reason)
+  const saved=bump(c.s,'stockUse',use,{returns:[...(use.returns??[]),{quantityMilli,reference,reason,movementId:movement.id,by:who(c),at:c.now}]});event(c,command,use.jobId,use.id,{quantityMilli,reference,movementId:movement.id});return saved
+ }
  if(command==='stock.catalog'){
   const item=find(c.s,'stockItem',p.itemId);expectVersion(item,p.version)
   const supersededBy=p.supersededBy?text(p.supersededBy,'replacement part'):null

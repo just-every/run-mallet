@@ -12,10 +12,21 @@ export async function validateTender({db,records,get,each}){
   insist(!duplicate,'duplicate_'+kind)
  }
  const account=async id=>{if(!id)return null;const row=await get('customerAccount',id);return row.mergedInto??row.id}
+ const repeatedDepositReference=await db.prepare(`SELECT 1 FROM (SELECT json_extract(value,'$.reference') AS reference FROM ${records} WHERE kind IN ('deposit','payment') UNION ALL SELECT json_extract(entry.value,'$.reference') AS reference FROM ${records} d,json_each(d.value,'$.refunds') entry WHERE d.kind='deposit') GROUP BY reference HAVING COUNT(*)>1 LIMIT 1`).first()
+ insist(!repeatedDepositReference,'duplicate_deposit_reference')
+ for await(const deposit of each('deposit')){
+  insist(whole(deposit.amountCents,1,1_000_000_000)&&['cash','check','other'].includes(deposit.method)&&Array.isArray(deposit.refunds)&&typeof deposit.reference==='string'&&deposit.request?.amountCents===deposit.amountCents&&deposit.request.accountId===deposit.accountId&&deposit.request.jobId===deposit.jobId&&deposit.request.method===deposit.method&&deposit.request.reference===deposit.reference&&deposit.request.evidence===deposit.evidence&&deposit.by?.role==='owner','deposit_shape')
+  await account(deposit.accountId)
+  if(deposit.jobId){await get('job',deposit.jobId);const billing=await db.prepare(`SELECT value FROM ${records} WHERE kind='customerBilling' AND json_extract(value,'$.jobId')=?`).bind(deposit.jobId).first();insist(billing&&await account(JSON.parse(billing.value).snapshot.accountId)===await account(deposit.accountId),'deposit_job_account')}
+  const spent=await aggregate('payment','depositId',deposit.id,"json_extract(value,'$.amountCents')"),refs=new Set([deposit.reference]);let refunded=0
+  for(const refund of deposit.refunds){insist(whole(refund.amountCents,1)&&refund.method===deposit.method&&typeof refund.reference==='string'&&!refs.has(refund.reference)&&typeof refund.evidence==='string'&&refund.by?.role==='owner','deposit_refund');refs.add(refund.reference);refunded+=refund.amountCents}
+  insist(spent+refunded<=deposit.amountCents,'deposit_overspent')
+ }
  for await(const payment of each('payment')){
   insist(whole(payment.amountCents,1,1_000_000_000)&&['cash','check','other','stripe','customer-credit'].includes(payment.method)&&typeof payment.reference==='string'&&payment.reference.length>0,'payment_shape')
   const invoice=await get('invoice',payment.invoiceId)
   insist(['approved','exported'].includes(invoice.status)&&payment.jobId===invoice.jobId&&payment.invoiceNumber===invoice.number,'payment_invoice')
+  if(payment.depositId){const deposit=await get('deposit',payment.depositId);insist(payment.method===deposit.method&&payment.verified===false&&await account(deposit.accountId)===await account(invoice.billing?.accountId)&&(!deposit.jobId||deposit.jobId===invoice.jobId),'deposit_allocation')}
   if(payment.method==='customer-credit'){
    const note=await get('creditNote',payment.creditNoteId)
    const redirected=await db.prepare(`SELECT 1 FROM ${records} WHERE kind='refund' AND json_extract(value,'$.creditNoteId')=? AND json_extract(value,'$.redirect.destination')='account-credit' LIMIT 1`).bind(note.id).first()

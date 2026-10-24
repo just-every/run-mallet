@@ -104,6 +104,10 @@ export const flow:Handler=(c,command,p)=>{
   if(job.actuals.length)fail('WORK_RECORDED','Recorded work stays on this repair: complete and invoice it instead of canceling.')
   if(list(c.s,'timeEntry').some(t=>t.kind==='job'&&t.jobId===job.id&&timeRange(t).endAt===null))fail('TIMER_RUNNING','Pause the running job timer before closing this repair.')
   const stage=flowStage(c.s,job)
+  for(const reservation of rows(c.s,'stockReservation').filter(r=>r.jobId===job.id&&!r.release)){
+   bump(c.s,'stockReservation',reservation,{release:{kind:'cancellation',by:who(c),at:c.now,reason}})
+   event(c,'stock.release',job.id,reservation.id,{reason,outcome})
+  }
   const saved=bump(c.s,'job',job,{status:outcome,closure:{outcome,reason,stage,by:who(c),at:c.now}})
   event(c,command,job.id,job.id,{outcome,reason,stage});return saved
  }

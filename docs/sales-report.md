@@ -40,13 +40,28 @@ realized sales, cash collected or processor settlement.
 
 Every completed repair and decision supplies a source repair link. Invoices
 include their ID, number, revision and totals; decisions include the estimate
-ID/revision, timestamp, recorder, method and exact authorized/declined lines.
+ID and revision, timestamp, recorder, method and exact authorized and declined lines.
 The CSV contains those same repair and line references. Totals derive from the
 current product archive without new records, credentials or side effects, so
 restoring the source product history reproduces the report under fresh native
 authority.
 
-REPORT-001 remains **partial**. Invoice void/refund adjustments, the full close
-funnel, advisor performance/comparison, multiple-location filters and their
-complete/void/refund acceptance journey remain required. This report does not
-claim payment, settlement or refund reconciliation.
+Issued credit notes reduce the original completed repair's pretax sales and tax
+once. Pending and completed refund states are disclosed, but refund completion
+never deducts the credit twice. Full credit excludes that invoice from the ARO
+denominator and the completed car count; original sources stay in the report.
+Adjustments are cumulative as of the read, attributed to the repair's completion
+period, rather than a cash-basis filing-period calculation.
+
+The close funnel uses root estimates prepared in the selected period as its
+cohort, following current outcomes. Approval and close divide by estimated
+repairs, completion by approved repairs, and collection by completed repairs.
+A repair is closed only when collection is recorded and its invoice exported.
+Each stage includes the source repair, root estimate and decision revision.
+Booking recorders are compared as accountable advisors until GOV-001 ships
+finer attribution. Their sales and funnel use the same definitions and expose
+their source repairs. This report does not disclose private refund instructions.
+
+REPORT-001 remains **partial** for SHOP-001 multiple-location reporting. There
+is no destructive invoice void operation: issue a full credit using PAY-005.
+This is not a settlement report or a completed tax return.
