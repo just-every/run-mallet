@@ -1,3 +1,4 @@
+import {guardCheckoutBalance} from './stripe/balance-guard'
 import {stripeRecords,stripeCommands} from './stripe/records'
 import {reportFilters,filterCommands} from './reports/filters'
 import {taxCreditBasis,taxBasisCommands} from './tax-credit-basis'
@@ -120,6 +121,7 @@ export function reduce(s: State, actor: Actor, command: string, payload: any, no
   if (actor.role === 'agent' && !agentCommands.has(command) || actor.role === 'member' && ![...filterCommands,...collaborationMemberCommands,...promiseMemberCommands,...timeMemberCommands,...diagnosisMemberCommands,...inspectionMemberCommands,'work.record','quality.record','quality.correct','quality.signTechnician'].includes(command)) fail('FORBIDDEN', 'This role cannot perform that command.', null, 403)
   migrateSalesTax(s)
   const c = { s, actor, now }, p = object(payload), eventCount = rows(s,'event').length
+  guardCheckoutBalance(s,command,p)
   for (const handler of [stripeRecords,reportFilters,taxCreditBasis,tenderClearance,receivables,deposits,invoiceDocuments,diagnosticResults,supplierOrders,transfers,supplierReturns,cores,replenishment,bookingWaitlist,calendarCapacity,inspectionReports,bookings,checkIns,credits,intakeForms,returns,warranty,payments,intake,stockTrace,customers,purchasing,inventory,sublets,rateProfiles,routing,specialParts,flow, promises, approvalLinks, approvalChasing, collaboration, time, payRates, diagnostics, pricing, tax, workshop, mileage, estimates, declinedWork, invoices, quality, inspections]) {
     const result = handler(c, command, p)
     if (result !== undefined) { retainStageChanges(c,rows(s,'event').slice(eventCount)); return result }

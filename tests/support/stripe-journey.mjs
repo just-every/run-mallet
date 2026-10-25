@@ -44,6 +44,7 @@ export async function stripeJourney(h,edge){
  await api('checkout',{...input,consent:false},{status:400})
  await api('checkout',{...input,version:invoice.version-1},{status:409})
  const checkout=await api('checkout',input);assert.equal(checkout.status,'open');assert.equal(checkout.amountCents,invoice.totals.totalCents)
+ await h.command('payment.record',{invoiceId:invoice.id,version:invoice.version,amountCents:1,method:'cash',reference:'synthetic-mallet-822',evidence:'Staff received counter tender while a checkout is open'},{status:409})
  assert.equal((await api('checkout',input)).id,checkout.id)
  assert.equal(edge.calls.filter(r=>r.method==='POST').length,1,'The operation is sent to Stripe once')
  await api('checkout',{...input,operationId:'synthetic-mallet-809'},{status:409})

@@ -10,6 +10,8 @@ Open an approved repair invoice, then **Collect payment with Stripe**. Confirm
 the exact outstanding USD balance and the hosted method with a freshly proved
 enrolled second factor. Mallet records the operation before asking Stripe for
 one Checkout Session. Open the resulting hosted checkout for the customer.
+While checkout is unresolved, other tender and invoice credits are refused so
+the hosted amount cannot become stale. Explicitly expire or reconcile it first.
 Card numbers, CVC and bank credentials are entered on Stripe and never pass
 through Mallet. This creates no automatic outbound charge or customer message.
 An uncertain request remains stopped for owner inspection in Stripe; Mallet

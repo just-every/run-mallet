@@ -9,7 +9,7 @@ export function stripeSettings(s:any,ownerId:string){
 export function stripeInvoice(s:any,invoice:any,ownerId:string){
  const account=connection(s),balance=invoiceBalance(s,invoice),checkouts=rows(s,'stripeCheckout').filter(r=>r.invoiceId===invoice.id)
  let body=`<p><a href="/app/invoices/${e(invoice.id)}">Issued invoice</a> · <a href="/app/stripe">Stripe settings</a></p>`
- body+=box(invoice.number,`<p>Invoice ${money(invoice.totals.totalCents)} · Outstanding ${money(balance.outstandingCents)} USD</p><p>Returning from Stripe never marks an invoice paid. The owner reconciles an authenticated provider event.</p>`)
+ body+=box(invoice.number,`<p>Invoice ${money(invoice.totals.totalCents)} · Outstanding ${money(balance.outstandingCents)} USD</p><p>Returning from Stripe never marks an invoice paid. The owner reconciles an authenticated provider event. Resolve an open checkout before recording other tender or invoice credits.</p>`)
  if(account?.by.id===ownerId&&balance.outstandingCents>0)body+=box('Collect outstanding balance',action('checkout',select('Hosted payment method','method',[['card','Card or supported wallet'],['us_bank_account','US bank account (ACH)']])+`<label class="check"><input type="checkbox" name="consent" value="yes" required> I reviewed ${money(balance.outstandingCents)} USD for this exact invoice and will open Stripe for the customer.</label>`,'Create hosted checkout',{invoiceId:invoice.id,version:invoice.version,operationId:crypto.randomUUID()}))
  else if(account?.by.id!==ownerId)body+=box('Connect Stripe','<p><a href="/app/stripe">Connect your merchant account</a> before collecting this invoice.</p>')
  for(const checkout of checkouts){

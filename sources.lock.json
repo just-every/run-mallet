@@ -708,7 +708,7 @@
       "executable": false
     },
     "docs/stripe-collection.md": {
-      "sha256": "7e2dc966401180759ccaa3a62e67f868397183152b222644a9df11468900723f",
+      "sha256": "8bfb4e6e9b43daa3d019b2a51401fe238b2824eceb8276df72ccf2f948ec61bb",
       "executable": false
     },
     "docs/supplements.md": {
@@ -1856,7 +1856,7 @@
       "executable": false
     },
     "src/mallet/model.ts": {
-      "sha256": "3b9b4849e331d0517231b632648c65bd45d62e5ff0319f39047b91169f83ded6",
+      "sha256": "3a531a34ec3cb3ec1e3310a9ee9fe7ecb74edde0e8377e62ef71e9422d956afc",
       "executable": false
     },
     "src/mallet/money.ts": {
@@ -2136,7 +2136,7 @@
       "executable": false
     },
     "src/mallet/stripe/ui.ts": {
-      "sha256": "4df3e611f33ba7cbf5d71b2ccfcd9f020df0ccc55113d03801755eaec49a0cd7",
+      "sha256": "e4d69d3eeca5ae2f0e7a7ab2a50e9dcf85b7c303dd8f227c1158b16e9a0c2620",
       "executable": false
     },
     "src/mallet/strong-auth/base-gate.ts": {
@@ -4800,7 +4800,7 @@
       "executable": false
     },
     "tests/support/stripe-journey.mjs": {
-      "sha256": "c53d977bf8b9675a2654f37e56fad629c00a0f333bb5dc5aaef6461fe63053d2",
+      "sha256": "e4b580a4577d8b33b94f3c942f6f9e0121e8e262d010120ded720dd315ad76df",
       "executable": false
     },
     "tests/support/strong-auth-journey.mjs": {
