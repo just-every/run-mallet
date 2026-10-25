@@ -572,7 +572,7 @@
       "executable": false
     },
     "ACCEPTANCE.md": {
-      "sha256": "63cae1193b2d11ac13537e0e4010cfca4962cd3bf3612a3514dfbc7e9784b56e",
+      "sha256": "c6155bda8652a29d5a8e6ff98c34b775f19ac0cc52905b4e2f533ac6a0a370c3",
       "executable": false
     },
     "AGENTS.md": {
@@ -584,7 +584,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "ee264f81982ab2e5afd8c0c162d24041246239b88c18df85f0b9b83bd950c071",
+      "sha256": "84d4d2e1e95f02a200e2ab74b375015b5d3a5ba7aec80704b49496a2df30a878",
       "executable": false
     },
     "deploy-demo.json": {
@@ -2228,7 +2228,7 @@
       "executable": false
     },
     "src/mallet/ui/inventory.ts": {
-      "sha256": "82478043a0f5665e25f100c6a7fb57849ae12361be0acf268acbc8a394fe987f",
+      "sha256": "171f6f92fd1109eb840ed5bd4374c1a2f77107bb32c83d8baff6292abe04bc2a",
       "executable": false
     },
     "src/mallet/ui/invoice-documents.ts": {
@@ -2236,7 +2236,7 @@
       "executable": false
     },
     "src/mallet/ui/job.ts": {
-      "sha256": "e7617557ab5a3b3e19b6c2008ca208c21288a3bfa3513856cad1fe3a902c7596",
+      "sha256": "36a128ddd6f803f41b6a33244672ddda8ea7b6f1b6a6757880f266e78a1582e4",
       "executable": false
     },
     "src/mallet/ui/jobs.ts": {
@@ -4332,7 +4332,7 @@
       "executable": false
     },
     "tests/inventory-browser.mjs": {
-      "sha256": "ca96b15295a7cf83bc5d7106c7fe9d0b7aeb62b953f85ed55f72e67ab98ae008",
+      "sha256": "e68f2ff96f7f4ea9ebd50e8c6e55e0358a3d551ec4eea61db9c2db8354bf8a58",
       "executable": false
     },
     "tests/invoice-documents-browser.mjs": {
@@ -4344,7 +4344,7 @@
       "executable": false
     },
     "tests/mallet.test.mjs": {
-      "sha256": "8acd4ef6f6682db03feafd1833a6258df9641416be7626846bee7cb44c5dfc32",
+      "sha256": "dcec7d1c23d22fed30b17601652fe79ac6ccf55169629874e69bf67ddbe7d5b2",
       "executable": false
     },
     "tests/media-browser.mjs": {

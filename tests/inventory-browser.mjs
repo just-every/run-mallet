@@ -100,3 +100,45 @@ export async function depositsBrowser(){
   assert.deepEqual(errors,[])
  }finally{await browser?.close();await h.close()}
 }
+
+export async function stockConsumptionBrowser(){
+ const h=await installation({entry:'tests/dev-worker.ts',network:true,assets:true,bindings:{AUTH_LOCAL:'true',RER_DEV_KEY:randomBytes(32).toString('base64url')}});let browser
+ try{
+  const {shopSetup}=await import('./support/diagnosis-journey.mjs'),{booking,authorise}=await import('./harness.mjs')
+  await shopSetup(h);await h.command('tax.configure',{ratePercent:0,partsTaxable:false,laborTaxable:false})
+  browser=await chromium.launch({headless:true,args:['--use-mock-keychain','--password-store=basic']});const context=await browser.newContext(),p=await context.newPage()
+  await context.addCookies(h.owner.split('; ').map(pair=>({name:pair.slice(0,pair.indexOf('=')),value:pair.slice(pair.indexOf('=')+1),url:h.origin})))
+  const directory=process.env.MALLET_STOCK_PROOF_DIR??'.cache/stock-consumption-browser';await mkdir(directory,{recursive:true})
+  const shot=async(name,width)=>{assert.ok(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),name+' fits '+width);assert.equal(await p.locator('button,a').evaluateAll(nodes=>nodes.filter(n=>n.querySelector('svg')&&!n.textContent.trim()&&!n.getAttribute('data-tooltip')).length),0,'Icon controls have tooltips');await p.screenshot({path:join(directory,name+'-'+width+'.png'),fullPage:true})}
+  const form=command=>p.locator(`form:has(input[name="command"][value="${command}"])`)
+  const submit=async(command,fields,selects={},status=303)=>{const f=form(command);for(const [name,value]of Object.entries(fields))await f.locator(`[name="${name}"]`).fill(String(value));for(const [name,value]of Object.entries(selects))await f.locator(`[name="${name}"]`).selectOption(value);const response=p.waitForResponse(r=>new URL(r.url()).pathname==='/app/actions'&&r.request().method()==='POST');await f.getByRole('button').click();assert.equal((await response).status(),status);await p.waitForLoadState('domcontentloaded')}
+  for(const [index,width]of [1440,390].entries()){
+   await p.setViewportSize({width,height:1000});const prefix='synthetic-mallet-native-stock-'+width
+   const asset=await h.command('asset.create',{customerName:'Native stock customer',customerEmail:'stock@example.test',label:'Native stock repair '+width,identifier:prefix}),{job}=await booking(h,{asset,bayId:'Stock '+width,startAt:`2026-12-0${index+1}T09:00:00Z`,endAt:`2026-12-0${index+1}T10:00:00Z`})
+   await authorise(h,await h.command('estimate.prepare',{jobId:job.id,version:job.version,lines:[{kind:'part',description:'Reserved replacement',quantity:1,unitCents:10000}]}))
+   const item=await h.command('stock.item',{sku:prefix,barcode:prefix+'-part',name:'Native replacement '+width,unit:'each'}),bin=await h.command('stock.bin',{code:'Native shelf '+width,barcode:prefix+'-bin'}),scans={itemBarcode:item.barcode,binBarcode:bin.barcode}
+   const lot=await h.command('stock.lot',{...scans,quantity:1,reference:prefix+'-receipt',supplier:'Synthetic supplier',supplierLot:prefix+'-lot',unitCostCents:4321,evidence:'Physical lot received with supplier evidence'})
+   await p.goto(h.origin+'/app/inventory')
+   await submit('stock.reserve',{...scans,quantity:1,reference:prefix+'-reservation'},{jobId:job.id})
+   let state=await h.state();const reservation=state.records.stockReservation.find(r=>r.jobId===job.id)
+   await p.goto(h.origin+'/app/jobs/'+job.id);await p.getByText('Consume reserved stock with this part',{exact:true}).click();await shot('01-reserved-work-form',width)
+   const fields={quantity:1,stockReference:prefix+'-use',stockEvidence:'Installed from this exact reserved physical lot'},selected={reservationId:reservation.id,lotId:lot.id}
+   await submit('work.record',{...fields,quantity:0.5},selected,409)
+   state=await h.state();assert.equal(state.records.job.find(j=>j.id===job.id).actuals.length,0);assert.equal(state.records.stockUse?.length??0,index)
+   await p.goto(h.origin+'/app/jobs/'+job.id);await p.getByText('Consume reserved stock with this part',{exact:true}).click();await submit('work.record',fields,selected)
+   state=await h.state();const use=state.records.stockUse.find(u=>u.jobId===job.id)
+   assert.equal(use.costCents,4321);assert.equal(state.records.job.find(j=>j.id===job.id).actuals.length,1);assert.equal(state.records.stockReservation.find(r=>r.id===reservation.id).release.kind,'consumed');await shot('02-work-and-stock-committed',width)
+   await p.goto(h.origin+'/app/inventory');const section=p.locator('#stock-use-'+use.id);await section.getByText('Record inspected saleable return',{exact:true}).click();await section.locator('[name="confirm"]').check()
+   await submit('stock.returnUse',{quantity:2,reference:prefix+'-return',reason:'Removed and inspected saleable; physically returned to original shelf'}, {},409)
+   assert.equal((await h.state()).records.stockUse.find(u=>u.id===use.id).returns?.length??0,0)
+   await p.goto(h.origin+'/app/inventory');await p.locator('#stock-use-'+use.id).getByText('Record inspected saleable return',{exact:true}).click();await form('stock.returnUse').locator('[name="confirm"]').check()
+   await submit('stock.returnUse',{quantity:1,reference:prefix+'-return',reason:'Removed and inspected saleable; physically returned to original shelf'})
+   state=await h.state();assert.equal(state.records.stockUse.find(u=>u.id===use.id).returns.length,1);assert.equal(state.records.job.find(j=>j.id===job.id).actuals.length,1);assert.equal(state.records.stockMovement.filter(m=>m.itemId===item.id).reduce((n,m)=>n+m.deltaMilli,0),1000);await shot('03-recorded-saleable-return',width)
+   const canceled=(await booking(h,{asset:await h.command('asset.create',{customerName:'Cancel customer',customerEmail:'cancel@example.test',label:'Canceled repair '+width,identifier:prefix+'-cancel'}),bayId:'Cancel '+width,startAt:`2026-12-0${index+3}T09:00:00Z`,endAt:`2026-12-0${index+3}T10:00:00Z`})).job
+   await submit('stock.reserve',{...scans,quantity:1,reference:prefix+'-cancel-reservation'},{jobId:canceled.id})
+   await p.goto(h.origin+'/app/jobs/'+canceled.id);await p.getByText('Cancel or mark lost',{exact:true}).click();await submit('flow.close',{reason:'Customer canceled before installation'},{outcome:'canceled'})
+   state=await h.state();assert.equal(state.records.stockReservation.find(r=>r.jobId===canceled.id).release.kind,'cancellation');await shot('04-canceled-repair',width)
+   await p.goto(h.origin+'/app/inventory');await shot('05-released-reservation-and-stock',width)
+  }
+ }finally{await browser?.close();await h.close()}
+}
