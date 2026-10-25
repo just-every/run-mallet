@@ -47,7 +47,7 @@ export async function reportBrowser(){
   await shot(owner,'07-recorded-attendance',owner.locator('main'))
   const originalObservation=(await h.state()).records.appointment.find(a=>a.id===appointment.id).attendance
   await owner.getByText('Attendance observations and correction',{exact:true}).click()
-  const correction=owner.locator('form:has(input[value="booking.attendance"])');await correction.getByLabel('Observed attendance',{exact:true}).selectOption('arrived');await correction.getByLabel('Staff observation evidence',{exact:true}).fill('synthetic-mallet-60 signed arrival log');await correction.getByLabel('Reason for attendance correction',{exact:true}).fill('synthetic-mallet-61 the signed arrival log was found later')
+  const correction=owner.locator('form:has(input[value="booking.attendance"])');await correction.getByLabel('Observed attendance').selectOption('arrived');await correction.getByLabel('Staff observation evidence',{exact:true}).fill('synthetic-mallet-60 signed arrival log');await correction.getByLabel('Reason for attendance correction',{exact:true}).fill('synthetic-mallet-61 the signed arrival log was found later')
   await shot(owner,'07b-attendance-correction-form',correction);await correction.getByRole('button',{name:'Record attendance correction',exact:true}).click();await owner.waitForLoadState('domcontentloaded')
   assert.match(await owner.locator('main').innerText(),/0 of 1 observed · 0.0%/)
   assert.deepEqual((await h.state()).records.appointment.find(a=>a.id===appointment.id).attendance,originalObservation)

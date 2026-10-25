@@ -4528,7 +4528,7 @@
       "executable": false
     },
     "tests/report-browser.mjs": {
-      "sha256": "a384502ad73ccc45e1b4af8d7616cb541772f88e5ac150df3d6c9dc565e32d1e",
+      "sha256": "762f63bec2cf9bad827a9398a391cebfbb67a704016b71416ba718dcde37330b",
       "executable": false
     },
     "tests/restore.test.mjs": {
@@ -4576,11 +4576,11 @@
       "executable": false
     },
     "tests/stripe-sandbox.mjs": {
-      "sha256": "0fe0d12984ba28fdc92565e34a96faa857a53b598e12231cfeb69ca3445782eb",
+      "sha256": "e14fbd8b48694694cd73a2a9506fc04eb6923dc5f1168f04204d6c0602d5c01a",
       "executable": false
     },
     "tests/stripe-terminal-sandbox.mjs": {
-      "sha256": "9c3767b0e4c3bf524d23a0468150b294dafd9e39c7dbfb6caa89cb6625adee5d",
+      "sha256": "f3d29c65d42cb1d0810d675ecfb246b5443488e29165069246fb115b6870733a",
       "executable": false
     },
     "tests/sublet-browser.mjs": {
@@ -4824,7 +4824,7 @@
       "executable": false
     },
     "tests/support/stripe-journey.mjs": {
-      "sha256": "e4b580a4577d8b33b94f3c942f6f9e0121e8e262d010120ded720dd315ad76df",
+      "sha256": "3ea1cd6b7c3e847aca4412e2ac0e68b7e561317a1ffb535ca41fb1f58aecb971",
       "executable": false
     },
     "tests/support/strong-auth-journey.mjs": {
@@ -4860,7 +4860,7 @@
       "executable": false
     },
     "tests/support/terminal-journey.mjs": {
-      "sha256": "0207e3857619f401ce141abf1de5a1b0293cc2c9af099193df7460fda481dfa2",
+      "sha256": "34ea29c3a63b6d7c56c08386854fb865b9ad83a03b90b9234fc2d465f3139e17",
       "executable": false
     },
     "tests/support/time-journey.mjs": {

@@ -1,3 +1,4 @@
+import {localPeople} from './local-people.mjs'
 import {shopSetup} from './diagnosis-journey.mjs'
 import assert from 'node:assert/strict'
 import {archive,installation,restore} from '../harness.mjs'
@@ -30,6 +31,7 @@ export function collectionEdge(){
  }}
 }
 export async function stripeJourney(h,edge){
+ h.person=localPeople(h)
  await shopSetup(h)
  const api=(action,input,options)=>h.api('/api/mallet/stripe/'+action,input,options)
  const {invoice}=await readyInvoice(h),admin=await h.person('synthetic-mallet-806@example.test','admin')
@@ -75,6 +77,7 @@ export async function stripeJourney(h,edge){
 }
 
 export async function stripeStoppedJourney(h,edge){
+ h.person=localPeople(h)
  await shopSetup(h)
  const api=(action,input,options)=>h.api('/api/mallet/stripe/'+action,input,options),{invoice}=await readyInvoice(h)
  await api('connect',{consent:true})

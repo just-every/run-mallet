@@ -1,3 +1,4 @@
+import {localPeople} from './local-people.mjs'
 import assert from 'node:assert/strict'
 import {archive,installation,restore} from '../harness.mjs'
 import {shopSetup} from './diagnosis-journey.mjs'
@@ -50,6 +51,7 @@ export function terminalEdge(){
 }
 
 export async function terminalJourney(h,edge){
+ h.person=localPeople(h)
  await shopSetup(h)
  const api=(action,input,options)=>h.api('/api/mallet/stripe/'+action,input,options),{invoice}=await readyInvoice(h)
  const admin=await h.person('synthetic-mallet-980@example.test','admin'),member=await h.person('synthetic-mallet-981@example.test'),key=await h.command('agent.create',{label:'Reader authority refused'})
@@ -57,8 +59,8 @@ export async function terminalJourney(h,edge){
  const denied=[{as:'',status:401},{as:admin.cookie,status:403},{as:member.cookie,status:403},{as:'',headers:{authorization:'Bearer '+key.token},status:403},{headers:{origin:'https://synthetic-mallet-983.test'},status:403}]
  for(const action of ['terminal-prepare','terminal-send','terminal-reconcile','terminal-cancel'])for(const options of denied)await api(action,input,options)
  // A native owner session without a fresh factor is refused before provider access.
- const owner=(await h.state()).actor,db=await h.mf.getD1Database('DB'),operator=await db.prepare('SELECT email FROM oa_operators WHERE id=?').bind(owner.id).first(),fresh=await h.signInAs(operator.email)
- await api('terminal-prepare',input,{as:fresh,status:403})
+ const fresh=await h.person('synthetic-mallet-989@example.test','owner')
+ await api('terminal-prepare',input,{as:fresh.cookie,status:403})
  assert.equal(edge.calls.length,0,'Refused transports never reach Stripe')
  await h.command('stripe.terminalClaim',input,{status:404});await h.command('stripe.terminalOutcome',input,{status:404})
  await api('connect',{consent:true})
@@ -103,6 +105,7 @@ export async function terminalJourney(h,edge){
 }
 
 export async function terminalStoppedJourney(h,edge){
+ h.person=localPeople(h)
  await shopSetup(h)
  const api=(action,input,options)=>h.api('/api/mallet/stripe/'+action,input,options),{invoice}=await readyInvoice(h)
  await api('connect',{consent:true})

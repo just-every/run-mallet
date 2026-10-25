@@ -1,3 +1,4 @@
+import {localPeople} from './support/local-people.mjs'
 // Real Terminal test helper; credentials enter only from the fleet injector.
 import assert from 'node:assert/strict'
 import {mkdir} from 'node:fs/promises'
@@ -17,7 +18,7 @@ const result={mode:'test',terminal:'not-run',fee:'not-run',cleanup:[]}
 try{
  const account=await stripe('/account'),balance=await stripe('/balance');assert.equal(account.country,'US');assert.equal(account.default_currency,'usd');assert.equal(balance.livemode,false)
  h=await installation({network:true,assets:true,bindings:{AUTH_LOCAL:'true',STRIPE_SECRET_KEY:secret},outboundService:async request=>fetch(request.url,{method:request.method,headers:Object.fromEntries(request.headers),...(request.method==='GET'?{}:{body:await request.arrayBuffer()})})})
- await shopSetup(h);const {invoice}=await readyInvoice(h);await h.stepUp()
+ h.person=localPeople(h);await shopSetup(h);const {invoice}=await readyInvoice(h);await h.stepUp()
  const api=async(action,input)=>{const response=await h.request('/api/mallet/stripe/'+action,{method:'POST',body:input}),value=await response.json();if(!response.ok)throw Object.assign(Error('Native Terminal door refused operation'),{code:value.error,providerCode:value.details?.code,providerStatus:value.details?.status});return value}
  await api('connect',{consent:true})
  stage='temporary-location';location=await stripe('/terminal/locations',{display_name:'Mallet sx-mallet-c-i816 sandbox','address[line1]':'510 Townsend St','address[city]':'San Francisco','address[state]':'CA','address[postal_code]':'94103','address[country]':'US'})

@@ -1,3 +1,4 @@
+import {localPeople} from './support/local-people.mjs'
 import {shopSetup} from './support/diagnosis-journey.mjs'
 // Held-key proof. Run only through the fleet injector and heavy-slot; never in push Verify.
 import assert from 'node:assert/strict'
@@ -23,7 +24,7 @@ try{
   if(!response.ok)throw Object.assign(Error('Native Stripe door refused the operation'),{code:value.error,providerStatus:value.details?.status,providerCode:value.details?.code})
   return value
  }
- await shopSetup(h)
+ h.person=localPeople(h);await shopSetup(h)
  const {invoice}=await readyInvoice(h);await h.stepUp();await api('connect',{consent:true})
  stage='card-checkout';cardSession=await api('checkout',{invoiceId:invoice.id,version:invoice.version,method:'card',operationId:crypto.randomUUID(),consent:true})
  result.checkoutId=cardSession.sessionId
