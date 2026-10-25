@@ -928,7 +928,7 @@
       "executable": false
     },
     "public/app/forms.css": {
-      "sha256": "865af975fcebfc67a19880c03d824d9adab9ef722bcf1a300331794f26186fc7",
+      "sha256": "2ce401750aec5f0bfa08c7e08d94b63e5d84b4c6adad9ddb718bc69a4ea71edb",
       "executable": false
     },
     "public/app/media.css": {
@@ -936,7 +936,7 @@
       "executable": false
     },
     "public/app/shell.css": {
-      "sha256": "4fa8008ac2d43e95bf5269d4c5fe174eb093988d47384dce9ae219145ca956b3",
+      "sha256": "6662998c4a4b5fb7141a0c0a0e367105071e1ef493ec9d3a47109632755ad133",
       "executable": false
     },
     "public/apple-touch-icon.png": {
@@ -4472,7 +4472,7 @@
       "executable": false
     },
     "tests/report-browser.mjs": {
-      "sha256": "420ee3e67ec942dbce3fa96fe8b72eba8c3355610f5d19ef752b1f48dd94d745",
+      "sha256": "326d4a83deb0fc759ff5a6bf4dd4f19d73b808433fe1af24ef77695df6d2bcd0",
       "executable": false
     },
     "tests/restore.test.mjs": {
