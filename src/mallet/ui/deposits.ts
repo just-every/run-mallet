@@ -22,7 +22,7 @@ const confirmation=(value:string,label:string)=>`<label><input type="checkbox" n
 
 export function depositsPage(s:any,accountId:string){
  const accounts=rows(s,'customerAccount').filter(a=>!a.mergedInto),account=accounts.find(a=>a.id===accountId)
- let body='<p><a href="/app/accounts?manage=all">Customer accounts</a></p><p>Record received cash, checks or other manual tender before ordering parts, or retain it as unallocated customer credit. Mallet does not move money or verify funds. Checks are not cleared. Card deposits and ACH are not available here.</p>'
+ let body='<p><a href="/app/accounts?manage=all">Customer accounts</a></p><p>Record received cash, checks or other manual tender before ordering parts, or retain it as unallocated customer credit. Every deposit action requires your fresh second-factor confirmation and the customer’s recorded instruction. Mallet does not move money or verify funds. Checks are not cleared. Card deposits and ACH are not available here.</p>'
  body+='<form method="get" action="/app/deposits">'+select('Customer account','accountId',[['','Choose an account'],...accounts.map(a=>[a.id,a.name] as [string,string])],accountId)+'<button>Review deposits</button></form>'
  if(!account)return `<div class="narrow">${body}</div>`
  const sameAccount=(id:string)=>creditAccount(s,id)===account.id

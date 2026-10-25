@@ -279,7 +279,7 @@ async function workshopResponse(request:Request,original:Bindings,execution:Pick
    submitted={command,input}
    let result:any
    if(['connector.save','connector.revoke'].includes(command)&&actor.role==='owner'&&!auth.gate?.enrolled)throw new HttpError(403,'step_up_required','Enrol your own second factor before opening the credential door.')
-   if(needsStepUp(command,actor.role))auth.authority=requireStepUp(auth)
+   if(needsStepUp(command,actor.role))auth.authority=requireStepUp(auth,command.startsWith('deposit.'))
    if(internalSupplierCommands.includes(command)||internalDocumentCommands.includes(command)||internalWaitlistCommands.includes(command)||internalReportCommands.includes(command)||internalBookingCommands.includes(command)||internalCheckInCommands.includes(command)||internalRefundCommands.includes(command)||internalIntakeFormCommands.includes(command)||command==='payment.verified'||command==='routing.sweep'||internalPromiseCommands.includes(command)||internalApprovalCommands.includes(command)||internalChaseCommands.includes(command))throw new HttpError(404,'unknown_command')
    if(command==='invoice.send')result=await sendInvoice(env,actor,auth.authority,input)
    else if(retentionCommands.includes(command))result=await retentionCommand(env,actor,auth.authority,command,input)
@@ -469,7 +469,7 @@ async function workshopResponse(request:Request,original:Bindings,execution:Pick
   if(isApi)return json({error:code,message:known?error.message:'The operation failed.',details:error instanceof MalletError?error.details:undefined},status)
   if(code==='second_factor_required'||code==='step_up_required') {
    // A person is taken to confirm, then returns to the page they were on to repeat the action.
-   const input=submitted?.input??{},back=request.method==='GET'?path+url.search:typeof input.jobId==='string'?'/app/jobs/'+encodeURIComponent(input.jobId):retentionCommands.includes(String(submitted?.command))?'/app/retention':String(submitted?.command).startsWith('agent.')?'/app/data':submitted?.command==='asset.erase'?'/app/customers':'/app'
+   const input=submitted?.input??{},back=request.method==='GET'?path+url.search:String(submitted?.command).startsWith('deposit.')?'/app/deposits?'+new URLSearchParams({accountId:String(input.accountId??'')}):typeof input.jobId==='string'?'/app/jobs/'+encodeURIComponent(input.jobId):retentionCommands.includes(String(submitted?.command))?'/app/retention':String(submitted?.command).startsWith('agent.')?'/app/data':submitted?.command==='asset.erase'?'/app/customers':'/app'
    return redirect('/app/security?'+(code==='step_up_required'?'stepUp=1&':'')+'returnTo='+encodeURIComponent(back))
   }
   if(status===401)return redirect('/signin?returnTo='+encodeURIComponent(path))

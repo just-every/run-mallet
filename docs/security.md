@@ -49,3 +49,5 @@ appointment ends. Separating that appointment-management authority from read-onl
 
 Second-factor material, recovery-code hashes, sessions and link tokens are credentials: none is ever archived or written to the audit trail
 (`mallet:*` rows in the auth audit record who enrolled, removed, reset or used a recovery code, never a secret).
+
+Deposit custody follows PAY-004: recording, allocating and recording an original-tender refund always require the current owner’s enrolled authenticator or passkey proof from the last five minutes, including local development. Email sign-in and recovery codes alone do not authorize these actions. Each action retains a recorded customer instruction. Confirming the factor returns to deposits without replaying the action.

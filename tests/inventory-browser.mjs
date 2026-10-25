@@ -5,6 +5,7 @@ import {join} from 'node:path'
 import {chromium} from '@playwright/test'
 import {publicDoor} from './support/portable-repair.mjs'
 import {installation} from './harness.mjs'
+import {totpCode} from './support/second-factor.mjs'
 export async function inventoryBrowser(){
  const h=await installation({entry:'tests/dev-worker.ts',network:true,assets:true,bindings:{AUTH_LOCAL:'true',RER_DEV_KEY:randomBytes(32).toString('base64url')}});let browser
  try{
@@ -41,15 +42,20 @@ export async function depositsBrowser(){
  const h=await installation({entry:'tests/dev-worker.ts',network:true,assets:true,bindings:{AUTH_LOCAL:'true',RER_DEV_KEY:randomBytes(32).toString('base64url')}});let browser
  try{
   h.person=publicDoor(h.origin,h.owner).person
-  const {depositsJourney}=await import('./support/deposits-journey.mjs'),fixtures=await depositsJourney(h),{account,repair,invoice}=fixtures
-  const admin=await h.person('native-deposit-admin@example.test','admin')
-  assert.equal((await h.request('/app/deposits?accountId='+account.id,{as:admin.cookie})).status,403)
-  const anonymous=await h.request('/app/deposits?accountId='+account.id,{as:''});assert.ok([303,401].includes(anonymous.status))
   browser=await chromium.launch({headless:true,args:['--use-mock-keychain','--password-store=basic']})
   const context=await browser.newContext(),p=await context.newPage(),errors=[];p.on('pageerror',error=>errors.push(error.message))
   await context.addCookies(h.owner.split('; ').map(pair=>({name:pair.slice(0,pair.indexOf('=')),value:pair.slice(pair.indexOf('=')+1),url:h.origin})))
   const directory=process.env.MALLET_DEPOSITS_PROOF_DIR??'.cache/deposits-browser';await mkdir(directory,{recursive:true})
   const shot=async(name,width)=>{assert.ok(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),name+' fits '+width);assert.equal(await p.locator('button,a').evaluateAll(nodes=>nodes.filter(n=>n.querySelector('svg')&&!n.textContent.trim()&&!n.getAttribute('data-tooltip')).length),0,'Icon controls have tooltips');await p.screenshot({path:join(directory,name+'-'+width+'.png'),fullPage:true})}
+  await p.goto(h.origin+'/app/security?stepUp=1&returnTo=%2Fapp%2Fdeposits')
+  for(const width of [1440,390]){
+   await p.setViewportSize({width,height:1000});assert.match(await p.locator('main').innerText(),/Add and confirm your own second factor/)
+   assert.equal(await p.getByRole('link',{name:'Sign in to confirm'}).count(),0);await p.getByRole('button',{name:'Set up an authenticator app'}).waitFor();await shot('00-deposit-factor-enrolment',width)
+  }
+  const {depositsJourney}=await import('./support/deposits-journey.mjs'),fixtures=await depositsJourney(h),{account,repair,invoice}=fixtures
+  const admin=await h.person('native-deposit-admin@example.test','admin')
+  assert.equal((await h.request('/app/deposits?accountId='+account.id,{as:admin.cookie})).status,403)
+  const anonymous=await h.request('/app/deposits?accountId='+account.id,{as:''});assert.ok([303,401].includes(anonymous.status))
   const form=(command,deposit)=>p.locator((deposit?'#deposit-'+deposit+' ':'')+`form:has(input[name="command"][value="${command}"])`)
   const submit=async(command,fields,{deposit,selects={},status=200}={})=>{
    const f=form(command,deposit)
@@ -59,7 +65,29 @@ export async function depositsBrowser(){
    const response=p.waitForResponse(r=>new URL(r.url()).pathname==='/app/actions'&&r.request().method()==='POST')
    await f.getByRole('button').click();assert.equal((await response).status(),status===200?303:status);await p.waitForLoadState('domcontentloaded')
   }
-  const url=h.origin+'/app/deposits?accountId='+account.id
+  const denied=await browser.newContext();await denied.addCookies(admin.cookie.split('; ').map(pair=>({name:pair.slice(0,pair.indexOf('=')),value:pair.slice(pair.indexOf('=')+1),url:h.origin})))
+  const deniedPage=await denied.newPage()
+  for(const width of [1440,390]){
+   await deniedPage.setViewportSize({width,height:1000});assert.equal((await deniedPage.goto(h.origin+'/app/deposits?accountId='+account.id)).status(),403)
+   assert.ok(await deniedPage.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));await deniedPage.screenshot({path:join(directory,'00-non-owner-refused-'+width+'.png'),fullPage:true})
+  }
+  await denied.close()
+  const url=h.origin+'/app/deposits?accountId='+account.id,db=await h.mf.getD1Database('DB'),{secret}=await h.stepUp()
+  const refusedCustody=async(command,fields,options,width)=>{
+   const before=JSON.stringify((await h.state()).records)
+   await db.prepare('UPDATE mallet_session_proofs SET step_up_until=0').run()
+   await submit(command,fields,options)
+   assert.equal(new URL(p.url()).pathname,'/app/security');assert.equal(new URL(p.url()).searchParams.get('returnTo'),new URL(url).pathname+new URL(url).search)
+   assert.match(await p.locator('main').innerText(),/Confirm again/);await shot(command+'-stale-factor',width)
+   await db.prepare('UPDATE mallet_factors SET last_step=NULL').run()
+   await p.getByLabel('Six-digit code').fill(totpCode(secret));await p.getByRole('button',{name:'Confirm with authenticator app'}).click();await p.waitForURL(url)
+   assert.equal(JSON.stringify((await h.state()).records),before,'Factor confirmation never repeats a deposit action automatically')
+   await form(command,options?.deposit).locator('[name="evidence"]').evaluate(n=>n.removeAttribute('required'))
+   await submit(command,{...fields,evidence:''},{...options,status:400})
+   assert.equal(JSON.stringify((await h.state()).records),before,'Missing customer instruction refuses native '+command)
+   assert.match(await p.locator('main').innerText(),/customer instruction and observed tender evidence must contain/)
+   await shot(command+'-missing-instruction',width);await p.goto(url)
+  }
   for(const [index,width]of [1440,390].entries()){
    await p.setViewportSize({width,height:1000})
    await p.goto(h.origin+'/app/accounts?manage='+account.id);await shot('01-account-entry',width)
@@ -71,16 +99,19 @@ export async function depositsBrowser(){
    const beforeInvalid=JSON.stringify((await h.state()).records)
    for(const fields of [{amountUsd:'0.001',confirm:'record-deposit'},{amountUsd:'1',confirm:''}]){const response=await p.request.post(h.origin+'/app/actions',{headers:{origin:h.origin},form:{command:'deposit.record',accountId:account.id,method:'cash',reference:prefix+'-invalid',evidence:'Invalid input must not record tender',...fields},maxRedirects:0});assert.ok([400,409].includes(response.status()))}
    assert.equal(JSON.stringify((await h.state()).records),beforeInvalid)
+   await refusedCustody('deposit.record',{amountUsd:'30.25',reference:prefix+'-refused-record',evidence:'Customer instruction for a pre-order cash deposit'},{selects:{method:'cash',jobId:first.id}},width)
    await submit('deposit.record',{amountUsd:'30.25',reference:prefix+'-restricted',evidence:'Customer requested a pre-order deposit; counted original cash observed'},{selects:{method:'cash',jobId:first.id}})
    let state=await h.state(),restricted=state.records.deposit.find(d=>d.reference===prefix+'-restricted')
+   assert.match(await p.locator('#deposit-'+restricted.id).innerText(),/Mallet did not verify funds/);assert.doesNotMatch(await p.locator('#deposit-'+restricted.id).innerText(),/confirmed/i)
    assert.equal(restricted.amountCents,3025);assert.equal(state.records.invoice.some(i=>i.jobId===first.id),false,'Native deposit is recorded before work and invoice')
    assert.equal(await form('deposit.refund',restricted.id).count(),0,'Open restricted repair has no refund action');await shot('02-pre-order-deposit',width)
    const i1=await invoice(first),i2=await invoice(second)
    await p.goto(url)
+   await refusedCustody('deposit.allocate',{amountUsd:'30.25',reference:prefix+'-refused-allocation',evidence:'Customer instructed deposit allocation'},{deposit:restricted.id,selects:{invoiceSource:JSON.stringify({id:i1.id,version:i1.version})}},width)
    await submit('deposit.allocate',{amountUsd:'30.25',reference:prefix+'-allocation',evidence:'Customer instructed application of existing deposit to this final invoice'},{deposit:restricted.id,selects:{invoiceSource:JSON.stringify({id:i1.id,version:i1.version})}})
    await submit('deposit.record',{amountUsd:'100.00',reference:prefix+'-account-credit',evidence:'Counted cash retained as unallocated credit on customer instruction'})
    state=await h.state();const credit=state.records.deposit.find(d=>d.reference===prefix+'-account-credit')
-   assert.equal(credit.balance.unallocatedCents,10000);await shot('03-unallocated-customer-credit',width)
+   assert.equal(credit.balance.unallocatedCents,10000);assert.match(await p.locator('#deposit-'+credit.id).innerText(),/Mallet did not verify funds/);assert.doesNotMatch(await p.locator('#deposit-'+credit.id).innerText(),/confirmed/i);await shot('03-unallocated-customer-credit',width)
    for(const [i,n]of [[i1,1],[i2,2]])await submit('deposit.allocate',{amountUsd:'50',reference:prefix+'-split-'+n,evidence:'Customer instructed split of this single receipt across these two invoices'},{deposit:credit.id,selects:{invoiceSource:JSON.stringify({id:i.id,version:i.version})}})
    state=await h.state();assert.deepEqual(state.records.deposit.find(d=>d.id===credit.id).balance,{receivedCents:10000,allocatedCents:10000,refundedCents:0,unallocatedCents:0})
    assert.equal(state.records.payment.filter(p=>p.invoiceId===i1.id).reduce((n,p)=>n+p.amountCents,0),8025);await shot('04-split-credit-final-balances',width)
@@ -88,6 +119,7 @@ export async function depositsBrowser(){
    state=await h.state();const unused=state.records.deposit.find(d=>d.reference===prefix+'-cancel')
    await h.command('flow.close',{jobId:canceled.id,version:canceled.version,outcome:'canceled',reason:'Customer canceled before parts ordering'})
    await p.goto(url)
+   await refusedCustody('deposit.refund',{amountUsd:'30',reference:prefix+'-refused-refund',evidence:'Customer requested original-tender refund'},{deposit:unused.id},width)
    await submit('deposit.refund',{amountUsd:'30',reference:prefix+'-refund',evidence:'Customer canceled and instructed original check refund; owner observed it outside Mallet'},{deposit:unused.id})
    state=await h.state();assert.deepEqual(state.records.deposit.find(d=>d.id===unused.id).balance,{receivedCents:3000,allocatedCents:0,refundedCents:3000,unallocatedCents:0})
    assert.match(await p.locator('#deposit-'+unused.id).innerText(),/Mallet did not move or verify money/);await shot('05-canceled-deposit-refund',width)
@@ -96,6 +128,12 @@ export async function depositsBrowser(){
    const f=form('deposit.allocate',bounded.id);await f.locator('[name="amountUsd"]').evaluate(n=>n.removeAttribute('max'))
    await submit('deposit.allocate',{amountUsd:'1.01',reference:prefix+'-too-much',evidence:'Attempted over-allocation is refused without writes'},{deposit:bounded.id,selects:{invoiceSource:JSON.stringify({id:i2.id,version:i2.version})},status:409})
    assert.equal(JSON.stringify((await h.state()).records),before);assert.match(await p.locator('main').innerText(),/exceeds available deposit/);await shot('06-over-allocation-refused',width)
+   await p.goto(url)
+   const other=(await h.state()).records.deposit.find(d=>d.reference==='synthetic-mallet-deposit-other')
+   await form('deposit.allocate',bounded.id).locator('[name="depositId"]').evaluate((n,id)=>n.value=id,other.id)
+   await submit('deposit.allocate',{amountUsd:'1',reference:prefix+'-wrong-payer',evidence:'A payer cannot redirect another customer’s deposit'},{deposit:bounded.id,selects:{invoiceSource:JSON.stringify({id:i2.id,version:i2.version})},status:409})
+   assert.equal(JSON.stringify((await h.state()).records),before);assert.match(await p.locator('main').innerText(),/same payer/);await shot('07-cross-payer-refused',width)
+
   }
   assert.deepEqual(errors,[])
  }finally{await browser?.close();await h.close()}
