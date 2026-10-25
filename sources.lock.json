@@ -636,7 +636,7 @@
       "executable": false
     },
     "docs/governance.md": {
-      "sha256": "8504f678a454ad1905a447a70b11ae3e418aa584820774fa228d4d093333b81d",
+      "sha256": "2f1ad328d63d793b33bac0ceee8677ea39bee8543847e24c488404c7923fbea2",
       "executable": false
     },
     "docs/inspections.md": {
@@ -4576,7 +4576,7 @@
       "executable": false
     },
     "tests/support/governance-journey.mjs": {
-      "sha256": "8cd7f27c4e52ec41144adaf1c382733654266d6ee87d67004cf5346f4446f8e3",
+      "sha256": "13e88111fcfa2d255093de266e7e008f44a007de49075f57e9256b38a6e364ab",
       "executable": false
     },
     "tests/support/handover-input.mjs": {
