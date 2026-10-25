@@ -1,3 +1,4 @@
+import {shopSetup} from './support/diagnosis-journey.mjs'
 // Held-key proof. Run only through the fleet injector and heavy-slot; never in push Verify.
 import assert from 'node:assert/strict'
 import {chromium} from '@playwright/test'
@@ -18,6 +19,7 @@ try{
  result.account={country:account.country,currency:account.default_currency,chargesEnabled:account.charges_enabled,payoutsEnabled:account.payouts_enabled}
  h=await installation({entry:'tests/worker.ts',network:true,assets:true,bindings:{AUTH_LOCAL:'true',STRIPE_SECRET_KEY:secret},outboundService:request=>fetch(request)})
  const api=(action,input,options)=>h.api('/api/mallet/stripe/'+action,input,options)
+ await shopSetup(h)
  const {invoice}=await readyInvoice(h);await api('connect',{consent:true})
  stage='card-checkout';cardSession=await api('checkout',{invoiceId:invoice.id,version:invoice.version,method:'card',operationId:crypto.randomUUID(),consent:true})
  result.checkoutId=cardSession.sessionId

@@ -1,3 +1,5 @@
+import {shopSetup} from './support/diagnosis-journey.mjs'
+import {publicDoor} from './support/portable-repair.mjs'
 import assert from 'node:assert/strict'
 import {randomBytes} from 'node:crypto'
 import {mkdir} from 'node:fs/promises'
@@ -8,7 +10,8 @@ import {collectionEdge} from './support/stripe-journey.mjs'
 export async function stripeBrowser(){
  const edge=collectionEdge(),h=await installation({entry:'tests/dev-worker.ts',network:true,assets:true,bindings:{AUTH_LOCAL:'true',RER_DEV_KEY:randomBytes(32).toString('base64url'),STRIPE_SECRET_KEY:'synthetic-mallet-800'},outboundService:edge.edge});let browser
  try{
-  const {invoice}=await readyInvoice(h);await h.stepUp()
+  await shopSetup(h)
+  const reviewer=await publicDoor(h.origin,h.owner).person('synthetic-mallet-821@example.test','admin'),{invoice}=await readyInvoice(h,{reviewer});await h.stepUp()
   browser=await chromium.launch({headless:true,args:['--use-mock-keychain','--password-store=basic']})
   const context=await browser.newContext({viewport:{width:1440,height:1000}})
   await context.addCookies(h.owner.split('; ').map(pair=>({name:pair.slice(0,pair.indexOf('=')),value:pair.slice(pair.indexOf('=')+1),url:h.origin})))

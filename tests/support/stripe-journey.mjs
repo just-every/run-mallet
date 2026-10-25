@@ -1,3 +1,4 @@
+import {shopSetup} from './diagnosis-journey.mjs'
 import assert from 'node:assert/strict'
 import {archive,installation,restore} from '../harness.mjs'
 import {readyInvoice} from './return-journey.mjs'
@@ -29,6 +30,7 @@ export function collectionEdge(){
  }}
 }
 export async function stripeJourney(h,edge){
+ await shopSetup(h)
  const api=(action,input,options)=>h.api('/api/mallet/stripe/'+action,input,options)
  const {invoice}=await readyInvoice(h),admin=await h.person('synthetic-mallet-806@example.test','admin')
  for(const options of [{as:'',status:401},{as:admin.cookie,status:403},{headers:{origin:'https://other.test'},status:403}])await api('connect',{consent:true},options)
@@ -69,6 +71,7 @@ export async function stripeJourney(h,edge){
 }
 
 export async function stripeStoppedJourney(h,edge){
+ await shopSetup(h)
  const api=(action,input,options)=>h.api('/api/mallet/stripe/'+action,input,options),{invoice}=await readyInvoice(h)
  await api('connect',{consent:true})
  const input={invoiceId:invoice.id,version:invoice.version,method:'card',operationId:'synthetic-mallet-830',consent:true}

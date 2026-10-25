@@ -4552,11 +4552,11 @@
       "executable": false
     },
     "tests/stripe-browser.mjs": {
-      "sha256": "e5e9ee4168b94cf1a371a21c705865bbfcac9f42edb36ff492d8e9ba58fa68be",
+      "sha256": "5e542bf713a5ee85225f91e2760512e53c2ef4e6ddefc6d7435340ddf49ad4c6",
       "executable": false
     },
     "tests/stripe-sandbox.mjs": {
-      "sha256": "fc5b22f518ae7c1f172793f79d550c1a685d1223d9a33df0983288989a747fdc",
+      "sha256": "75be8941e8c8c12e10271e58331b8fd04286b268811e4a9365c4e66167a907db",
       "executable": false
     },
     "tests/sublet-browser.mjs": {
@@ -4800,7 +4800,7 @@
       "executable": false
     },
     "tests/support/stripe-journey.mjs": {
-      "sha256": "65b7db4e5615fef0ca76d1d1483d83a5a5d14804df7f443c7ff4e1b5c8e25ba0",
+      "sha256": "8040e9623c4d9eeb8ed42f0b11d7460d26ef2896ad266dda775a8dd239a2e3c8",
       "executable": false
     },
     "tests/support/strong-auth-journey.mjs": {
