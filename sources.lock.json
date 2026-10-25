@@ -2064,7 +2064,7 @@
       "executable": false
     },
     "src/mallet/staff.ts": {
-      "sha256": "77cd4f105d628ed6c86fb28cef83a4a0865044cd1fb6d8a30e8a8a17d3373e35",
+      "sha256": "2a0bffa8d5650aed833f0ad62f35cdda0e006801289316788695be50f57cb5ce",
       "executable": false
     },
     "src/mallet/stock-replenishment.ts": {
