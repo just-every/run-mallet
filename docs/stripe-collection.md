@@ -40,3 +40,12 @@ webhook delivery, bank receipt and the sandbox legs named in the contract Gap
 remain unproved. PAY-005 inherits webhook transport; MONEY-001 inherits disputes
 and payout close; BILL-001 inherits recurring agreement authority. None may
 reuse this explicit invoice checkout as permission for an automatic charge.
+
+The committed held-key journey is `./tests/stripe-sandbox.mjs`. It creates its
+invoice and checkout through native authenticated doors, enters Stripe's public
+test card only on the hosted page, reconciles the provider event twice, reads
+real fees, probes hosted ACH and cleans up open sessions and payment value.
+Stripe has no per-payment deletion API: completed test charges remain in its
+transaction history after refund. No broad test-data deletion is attempted on
+the shared account. The command must receive only test credentials from the
+fleet injector and run through heavy-slot.

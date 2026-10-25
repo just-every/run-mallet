@@ -707,6 +707,10 @@
       "sha256": "8d6f91f9bfc7390f6866b8213fb8b785d5ad26dbd6816aecf1d289ce1e346b0e",
       "executable": false
     },
+    "docs/stripe-collection.md": {
+      "sha256": "8e46cdb5102eeb91a5ef7cfe9f2b6ce367f778c3ad8f884359e9f694c8729c94",
+      "executable": false
+    },
     "docs/supplements.md": {
       "sha256": "426f7a9a34e67312c627f35a88cbb06134ff3723a170d1f44149ca1a084dc313",
       "executable": false
@@ -1539,6 +1543,10 @@
       "sha256": "03d43ccb479de0185524fc04d9eb875cb025343a0896e145051dfe395ca0480f",
       "executable": false
     },
+    "src/mallet/booking-attendance.ts": {
+      "sha256": "f149c5c5251609145cf058e01e97eb2cb88457beaab255eb7a7c62b044d1f3a2",
+      "executable": false
+    },
     "src/mallet/booking-door.ts": {
       "sha256": "ea3882af5844e631768f3efbba7e13c873cbf682bb94250d6ecef71ba12d4df5",
       "executable": false
@@ -1645,6 +1653,10 @@
     },
     "src/mallet/fleet-authority.ts": {
       "sha256": "5797aa338eabd4e98d0748d25b6ad5e7f11eb6dc84d62584fc2f211a904474f5",
+      "executable": false
+    },
+    "src/mallet/fleet-pending.ts": {
+      "sha256": "055440acdbe225275586c2720160583ce276f364a02c50ca17832f9fd597b507",
       "executable": false
     },
     "src/mallet/flow.ts": {
@@ -2027,6 +2039,10 @@
       "sha256": "a1594e249ff7562256e013f146b895cbe238ac115ef1e2d947d436730db1c45e",
       "executable": false
     },
+    "src/mallet/restore/validate-stripe.mjs": {
+      "sha256": "a8c7415209c343a97a5911b395dfbc26d317fe4bdb43ed685080bef4480a2673",
+      "executable": false
+    },
     "src/mallet/restore/validate-tender.mjs": {
       "sha256": "d4a1213fb15673a86279207646831ad5d65d9ae1ca4c7318b1e1e7fef4029294",
       "executable": false
@@ -2101,6 +2117,26 @@
     },
     "src/mallet/stock-transfers.ts": {
       "sha256": "cb723da1dd9464bc3b66b4f5f2178025d0aa7810d45fbd8c67f2e1e5fe00aa28",
+      "executable": false
+    },
+    "src/mallet/stripe/door.ts": {
+      "sha256": "3b8a0d44131e6c3cdab31d62c3b009f1b4d993b407c00ce7a4b4874f77cdfc54",
+      "executable": false
+    },
+    "src/mallet/stripe/provider.ts": {
+      "sha256": "248d2a28f1947c8ed494931bef8aaa1b4bc8ff186a5e5e888f7610ca412cd326",
+      "executable": false
+    },
+    "src/mallet/stripe/records.ts": {
+      "sha256": "9ba9dabd89c0bb9ff3f002afbcfd2db28880d8aeb2baabe2135e3e34599db010",
+      "executable": false
+    },
+    "src/mallet/stripe/service.ts": {
+      "sha256": "3e6de64d321c82a91a37ce1975e0b749147c995f6e547d84435bf2f39f892f4a",
+      "executable": false
+    },
+    "src/mallet/stripe/ui.ts": {
+      "sha256": "0f6ccfe0b862d8daa29570499c35189a2884873e4b00d9ded0cb1161cf115b6d",
       "executable": false
     },
     "src/mallet/strong-auth/base-gate.ts": {
@@ -4515,6 +4551,10 @@
       "sha256": "dae32202dc4097d285f52c49823cec566edd3c14178ed815a50eba986ba3f541",
       "executable": false
     },
+    "tests/stripe-browser.mjs": {
+      "sha256": "e5e9ee4168b94cf1a371a21c705865bbfcac9f42edb36ff492d8e9ba58fa68be",
+      "executable": false
+    },
     "tests/sublet-browser.mjs": {
       "sha256": "7b662a6bc425966ebd70ebd08dcc7ab75602e7a99c086d5b4963e53bed59e58e",
       "executable": false
@@ -4753,6 +4793,10 @@
     },
     "tests/support/stock-trace-journey.mjs": {
       "sha256": "10c48c703b49ba8ea78ef083cc5d527139fd315136ab88b59418da7d4c96dde6",
+      "executable": false
+    },
+    "tests/support/stripe-journey.mjs": {
+      "sha256": "166f7f0ea98054434e75bd845398d6d544acba42f6ec088d0a2e1cbf22bd69ad",
       "executable": false
     },
     "tests/support/strong-auth-journey.mjs": {
