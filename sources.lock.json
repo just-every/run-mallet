@@ -4332,7 +4332,7 @@
       "executable": false
     },
     "tests/inventory-browser.mjs": {
-      "sha256": "e68f2ff96f7f4ea9ebd50e8c6e55e0358a3d551ec4eea61db9c2db8354bf8a58",
+      "sha256": "1e88b2f1ec87903fd1b12d940d3e635da820f2f413be8e4c7c7d24c2657d644b",
       "executable": false
     },
     "tests/invoice-documents-browser.mjs": {

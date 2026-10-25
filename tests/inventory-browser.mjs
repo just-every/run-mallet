@@ -135,6 +135,7 @@ export async function stockConsumptionBrowser(){
    await submit('stock.returnUse',{quantity:1,reference:prefix+'-return',reason:'Removed and inspected saleable; physically returned to original shelf'})
    state=await h.state();assert.equal(state.records.stockUse.find(u=>u.id===use.id).returns.length,1);assert.equal(state.records.job.find(j=>j.id===job.id).actuals.length,1);assert.equal(state.records.stockMovement.filter(m=>m.itemId===item.id).reduce((n,m)=>n+m.deltaMilli,0),1000);await shot('03-recorded-saleable-return',width)
    const canceled=(await booking(h,{asset:await h.command('asset.create',{customerName:'Cancel customer',customerEmail:'cancel@example.test',label:'Canceled repair '+width,identifier:prefix+'-cancel'}),bayId:'Cancel '+width,startAt:`2026-12-0${index+3}T09:00:00Z`,endAt:`2026-12-0${index+3}T10:00:00Z`})).job
+   await p.goto(h.origin+'/app/inventory')
    await submit('stock.reserve',{...scans,quantity:1,reference:prefix+'-cancel-reservation'},{jobId:canceled.id})
    await p.goto(h.origin+'/app/jobs/'+canceled.id);await p.getByText('Cancel or mark lost',{exact:true}).click();await submit('flow.close',{reason:'Customer canceled before installation'},{outcome:'canceled'})
    state=await h.state();assert.equal(state.records.stockReservation.find(r=>r.jobId===canceled.id).release.kind,'cancellation');await shot('04-canceled-repair',width)
