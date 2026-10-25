@@ -31,6 +31,9 @@ export async function receivablesJourney(h){
  await h.command('ar.invoice',assign(i1,{po:''}),{status:400})
  const a1=await h.command('ar.invoice',assign(i1)),a2=await h.command('ar.invoice',assign(i2))
  const reminderInput={invoiceId:i1.id,version:i1.version,outstandingCents:11000,to:manager.email,reference:'synthetic-mallet-ar-reminder',consent:true,confirm:'send-balance-reminder',consentEvidence:'Billing contact explicitly requested this balance reminder by email',evidence}
+ await (await h.mf.getD1Database('DB')).prepare('UPDATE mallet_session_proofs SET step_up_until=0').run()
+ const reminderBefore=(await h.state()).records;await h.command('ar.remind',reminderInput,{status:403});assert.deepEqual((await h.state()).records,reminderBefore,'A reminder without fresh owner confirmation writes nothing');assert.equal(h.messages.length,messages);await h.stepUp()
+ await h.command('ar.remind',{...reminderInput,consentEvidence:''},{status:400})
  for(const input of [{...reminderInput,consent:false},{...reminderInput,outstandingCents:1},{...reminderInput,to:driver.email}])await h.command('ar.remind',input,{status:409})
  await h.command('ar.remind',reminderInput,{as:admin.cookie,status:403})
  assert.equal(h.messages.length,messages,'No refused reminder reaches mail')
