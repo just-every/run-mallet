@@ -4256,7 +4256,7 @@
       "executable": false
     },
     "tests/demo.test.mjs": {
-      "sha256": "a7e881b8a7361981e307b0b2aa233dfb487674aa9016c60b15a95825a50f21ee",
+      "sha256": "cf367924585fa7f2963eb483096d2c18ee1f7ef9feb04a5eed12c7c2b10f51af",
       "executable": false
     },
     "tests/dev-worker.ts": {
