@@ -44,4 +44,5 @@ export async function depositsJourney(h,{edge}={}){
  assert.equal((await h.state({as:admin.cookie})).records.deposit,undefined,'No new finance data is exposed to delegated staff')
  const backup=await archive(h),fresh=await installation()
  try{await restore(fresh,backup);const after=await fresh.state();assert.deepEqual(after.records.deposit,(await h.state()).records.deposit);assert.equal(after.records.payment.filter(p=>p.depositId===deposit.id).length,2);await fresh.command('deposit.allocate',allocation(i2,'synthetic-mallet-deposit-10',5001),{status:409})}finally{await fresh.close()}
+ return {account,repair,invoice}
 }
