@@ -3,12 +3,12 @@
 export type Declaration={id:string;name:string;version:number;purpose:string;sends:string[];receives:string[];retention:string;licensing:string;access:string
  secrets:{name:string;label:string;rotatable:boolean}[]}
 export const CONNECTORS:Declaration[]=[
- {id:'stripe',name:'Stripe',version:1,purpose:'Confirm that a customer’s card payment was captured, and submit refunds the owner has reviewed.',
-  sends:['A payment-intent identifier to look up','For a refund: the payment-intent identifier, the refund amount in USD cents and a Mallet refund identifier, only after the owner confirms it'],
-  receives:['Payment status, captured amount, currency, charge identifier and dispute/refund flags','Refund identifier and status'],
-  retention:'Mallet keeps the processor’s receipt fields with the invoice or refund record for the life of the repair history. Stripe keeps its own records under its own policy. No card numbers ever reach Mallet.',
-  licensing:'Your own Stripe account and the Stripe Services Agreement. Use a restricted key that can read payment intents and create and read refunds only.',
-  access:'Owner only. Reads and refund requests run only when a person triggers them; Mallet never retries a refund automatically.',secrets:[{name:'STRIPE_SECRET_KEY',label:'Restricted API key',rotatable:true}]},
+ {id:'stripe',name:'Stripe',version:2,purpose:'Create owner-confirmed hosted invoice checkout, read payment events and reconcile captured amounts, processor fees and automatic payout membership; submit reviewed refunds.',
+  sends:['Merchant account and balance reads','Exact invoice identifier, revision, number, USD balance and hosted method when the owner creates checkout','Checkout identifiers for explicit open or expire actions; payment event, intent and automatic payout identifiers for owner-requested reconciliation','For a refund: the payment-intent identifier, USD cents and a Mallet refund identifier after owner confirmation'],
+  receives:['Merchant account, settlement currency and mode','Hosted checkout identifier and address, payment status, captured amount, charge and dispute or refund flags','Provider event identifiers, charge balance transactions, gross, fee, net and automatic payout membership and status','Refund identifier and status'],
+  retention:'Mallet retains non-secret account, checkout, event, payment and settlement evidence with repair history. Hosted checkout addresses are fetched for the owner and excluded from archives. Stripe keeps its records under its policy. Card numbers and bank credentials never reach Mallet.',
+  licensing:'Your own Stripe account and the Stripe Services Agreement. The key must read the account, balance, events, payment intents, charges, balance transactions and payouts; create and expire Checkout Sessions; and create and read reviewed refunds.',
+  access:'Owner initiates checkout and reconciliation with an enrolled second factor and fresh confirmation. Existing advisor receipt checks retain their scope. No automatic charge or outbound retry; provider status never proves bank receipt.',secrets:[{name:'STRIPE_SECRET_KEY',label:'Stripe API key',rotatable:true}]},
  {id:'pier',name:'Pier',version:1,purpose:'Browse the parts catalog of a connected Pier installation, read-only.',
   sends:['An authenticated read request for the parts list'],receives:['Item identifiers, SKUs, names and units; never stock balances or costs'],
   retention:'Mallet shows what it observed at the time and records the part identifiers a repair uses; nothing is written back to Pier.',

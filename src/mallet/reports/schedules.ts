@@ -44,5 +44,5 @@ export async function runReportSchedules(env:Bindings,scheduledTime:number){
 export async function reportFilterView(env:Bindings,actor:Actor,filters:any[]){
  const active=(await env.DB.prepare("SELECT r.filter_id FROM mallet_report_schedules r JOIN oa_operators o ON o.id=r.owner_id WHERE r.owner_id=? AND o.version=r.owner_version AND o.status='active' AND o.role='owner' AND o.email=r.email").bind(actor.id).all<{filter_id:string}>()).results
  const s=await load(env.DB)
- return filters.map(f=>({...f,localScheduleActive:active.some(r=>r.filter_id===f.id),deliveries:rows(s,'reportDelivery').filter(d=>d.filterId===f.id&&d.ownerId===actor.id).map(d=>({dueAt:d.dueAt,status:d.status}))}))
+ return filters.map(f=>({...f,localScheduleActive:active.some(r=>r.filter_id===f.id),deliveries:rows(s,'reportDelivery').filter(d=>d.filterId===f.id&&d.ownerId===actor.id).sort((a,b)=>b.at.localeCompare(a.at)||b.dueAt.localeCompare(a.dueAt)).map(d=>({dueAt:d.dueAt,at:d.at,outcomeAt:d.outcomeAt,status:d.status}))}))
 }

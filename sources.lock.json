@@ -572,7 +572,7 @@
       "executable": false
     },
     "ACCEPTANCE.md": {
-      "sha256": "473a17d15aa525a277a1ada6b217593b8219262e85951899332dbdb4c7fa8359",
+      "sha256": "2d6d85bbf9b834fb7b7fe303d0e020359efbd8d6a83c74336a1983fd436972e3",
       "executable": false
     },
     "AGENTS.md": {
@@ -584,7 +584,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "38b5055c6245d8de43775ac34c1a84848d74477732b67fe85163fae124c09c17",
+      "sha256": "3e8e31d844bf6b9b19774da0a5ae459a21509814b9700df303785d89ac743837",
       "executable": false
     },
     "deploy-demo.json": {
@@ -1548,7 +1548,7 @@
       "executable": false
     },
     "src/mallet/bookings.ts": {
-      "sha256": "98ed251f46c0d8c38513d896892b10b0c94eba7fe516a14d1f71b35cdb51e4a4",
+      "sha256": "331149734c04ea5d5f81fa12b45620b9691d718c5d3bad4662c41c8c7cfe3c57",
       "executable": false
     },
     "src/mallet/calendar-capacity.ts": {
@@ -1576,7 +1576,7 @@
       "executable": false
     },
     "src/mallet/connectors/registry.ts": {
-      "sha256": "404d1dddfae1bf58f2c8cbd068f24cb5789d92fc604f6fbf14b01729b92fa3c0",
+      "sha256": "3338f0728aa8bd1d7e0200d78878f50fb259274b0f84d53f1ce99e6665ea434b",
       "executable": false
     },
     "src/mallet/connectors/secrets.ts": {
@@ -1592,7 +1592,7 @@
       "executable": false
     },
     "src/mallet/customers.ts": {
-      "sha256": "ce782cfd6c591f050f83e219c261720a0c84286e33a576b02e73dae0258cc03e",
+      "sha256": "c6e5a1237773c1171f53c7ef4abf7ee3d54bc6d634ec78a624a1f206162afc99",
       "executable": false
     },
     "src/mallet/declined-work.ts": {
@@ -1644,7 +1644,7 @@
       "executable": false
     },
     "src/mallet/fleet-authority.ts": {
-      "sha256": "0071d1dee135e8e388c4ac412f7c977f2f4cff289ae3c35a2e99d03bf3826b50",
+      "sha256": "5797aa338eabd4e98d0748d25b6ad5e7f11eb6dc84d62584fc2f211a904474f5",
       "executable": false
     },
     "src/mallet/flow.ts": {
@@ -1652,7 +1652,7 @@
       "executable": false
     },
     "src/mallet/http.ts": {
-      "sha256": "dd0707758536fcbacee1fe50092775517d3c77db72b5585d3b601fd940f113b5",
+      "sha256": "d5be7e95e57b3927c46c038d48278d9a43027808fe6e66f32e9a4d495bf5f312",
       "executable": false
     },
     "src/mallet/imports/context.ts": {
@@ -1844,7 +1844,7 @@
       "executable": false
     },
     "src/mallet/model.ts": {
-      "sha256": "c3da98801eb29da78f0a2dd385a730b09463a612ed99f3c8eedab8b82806ba2d",
+      "sha256": "3b9b4849e331d0517231b632648c65bd45d62e5ff0319f39047b91169f83ded6",
       "executable": false
     },
     "src/mallet/money.ts": {
@@ -1948,7 +1948,7 @@
       "executable": false
     },
     "src/mallet/reports/filters.ts": {
-      "sha256": "fe0b7a7ce15043682648bb9e7c9047bacfd0e6338f1e6536f08b765eda62c1e6",
+      "sha256": "9f4ce8f0d372420cedacae2929b0560cd7fc6079f36867d229452e8f859487f3",
       "executable": false
     },
     "src/mallet/reports/sales.ts": {
@@ -1956,7 +1956,7 @@
       "executable": false
     },
     "src/mallet/reports/schedules.ts": {
-      "sha256": "f5398948a09da985001fdf6fa00f459ab218d5e99a91eddb8ea7478dfdbab1f0",
+      "sha256": "0ce944958cf68bd983e7577f65c34c044f0b7bca7b36659323b650aa8c3ac655",
       "executable": false
     },
     "src/mallet/reports/technicians.ts": {
@@ -1964,7 +1964,7 @@
       "executable": false
     },
     "src/mallet/reports/turnaround.ts": {
-      "sha256": "26e7a474e028a7a41403f84b27209b8dc8a1973034516518b69647a654c35a5f",
+      "sha256": "07ba875eeb0e5578bde42659364e71389fe29fceac5c30eec7c73a56926ef481",
       "executable": false
     },
     "src/mallet/reports/xlsx.ts": {
@@ -2000,7 +2000,7 @@
       "executable": false
     },
     "src/mallet/restore/validate-finance.mjs": {
-      "sha256": "3cfb75e8ddf8fad6773716ecd0cb3e18e7ab4b044c9ca7c8044f1d0a5a643900",
+      "sha256": "5264e86d0ebcc582a516c748cbb5d3e1fc6337192e6ae59e610fa294740b880b",
       "executable": false
     },
     "src/mallet/restore/validate-jobs.mjs": {
@@ -2016,7 +2016,7 @@
       "executable": false
     },
     "src/mallet/restore/validate-records.mjs": {
-      "sha256": "9a363af3d859b7d8e363ef59bc70bcd97022d4f3490e2d7c544c23a25aeab8c1",
+      "sha256": "c351b9b6cd7dc0a71e5680fa0ec911dcb4c88475b8fe96a5b1b8c5cdaf66b26f",
       "executable": false
     },
     "src/mallet/restore/validate-staged.mjs": {
@@ -2232,7 +2232,7 @@
       "executable": false
     },
     "src/mallet/ui/connectors.ts": {
-      "sha256": "5ec2433c7b0bc6c003a7e3d02e32ae8b844d948129bc74b7af7e0caca786aba8",
+      "sha256": "16fd24f18c7188d48a52182890e2127565a6835de7224d7d2be59130e2c75760",
       "executable": false
     },
     "src/mallet/ui/cores.ts": {
@@ -2268,7 +2268,7 @@
       "executable": false
     },
     "src/mallet/ui/estimates.ts": {
-      "sha256": "065ac52605e3469ae989fd951dac10d4d55aecc8ba5140e1dddc2fd6e30c8173",
+      "sha256": "91a82382881cb5411b39424b5896cbadb0ed99016f3abca97842b1ce78e2373a",
       "executable": false
     },
     "src/mallet/ui/flow.ts": {
@@ -2300,7 +2300,7 @@
       "executable": false
     },
     "src/mallet/ui/invoice-documents.ts": {
-      "sha256": "171252c5923a25b459761972f3fb1ccfbb84e1771bde675cfc4ae272dac4e41c",
+      "sha256": "a73c17c9f5206a71164003ea017c82924acb74f1a0d598d7f09aaea72f361ba4",
       "executable": false
     },
     "src/mallet/ui/job.ts": {
@@ -2356,7 +2356,7 @@
       "executable": false
     },
     "src/mallet/ui/report-filters.ts": {
-      "sha256": "891e589bede40f16666f85e7af50b78fded8c9716f686f0da6504fd2e570fbb5",
+      "sha256": "1560a67266f5ddeb2eefc5a3ac8d6e3b4bb9d5caa86374220f3e038d2a85e5ea",
       "executable": false
     },
     "src/mallet/ui/reports.ts": {
@@ -2424,7 +2424,7 @@
       "executable": false
     },
     "src/mallet/ui/turnaround.ts": {
-      "sha256": "58d5e68b60b35a0fd2976be59e5d73f50e8bf99287d494b6f0941eea5f20be37",
+      "sha256": "5abe31cf7849bb5d49f1d58eb0ed684b9f1b59cdc57a98280455f9e3533fbede",
       "executable": false
     },
     "src/mallet/ui/waitlist.ts": {
@@ -4428,7 +4428,7 @@
       "executable": false
     },
     "tests/mallet.test.mjs": {
-      "sha256": "1894ca11f13c0ee47f9b4f1dfdb5c58b4c3228e7a989ffaca397b1c3b9606910",
+      "sha256": "1c2397cfe01c1e6324cb016269ced7d0eaaf602cbfe448dfe876b9de4ad152e7",
       "executable": false
     },
     "tests/media-browser.mjs": {
@@ -4464,7 +4464,7 @@
       "executable": false
     },
     "tests/receivables-browser.mjs": {
-      "sha256": "3f7c0be987814840caddae36767255bfc820ba1ebfb1bdad00880893a3b63e1e",
+      "sha256": "921d872af5bfda81aeba5aa5c162252fe8f56593941e164c5e44cfd947f9c206",
       "executable": false
     },
     "tests/replenishment-browser.mjs": {
@@ -4472,7 +4472,7 @@
       "executable": false
     },
     "tests/report-browser.mjs": {
-      "sha256": "326d4a83deb0fc759ff5a6bf4dd4f19d73b808433fe1af24ef77695df6d2bcd0",
+      "sha256": "a384502ad73ccc45e1b4af8d7616cb541772f88e5ac150df3d6c9dc565e32d1e",
       "executable": false
     },
     "tests/restore.test.mjs": {
@@ -4544,7 +4544,7 @@
       "executable": false
     },
     "tests/support/booking-journey.mjs": {
-      "sha256": "15bc60ad56d2b086fee4c8a2d95d7dc7eeffd304e792bbb4babcc1461c718940",
+      "sha256": "d3f3e7d2b9b00b0cddedfb62c8bcb459c22ed7240d1edde98eef3357125b1349",
       "executable": false
     },
     "tests/support/calendar-journey.mjs": {
@@ -4568,7 +4568,7 @@
       "executable": false
     },
     "tests/support/connector-journey.mjs": {
-      "sha256": "f720226d002d37fb731e5465f5cf756acd1a7eb5723f0d94fa55e45b00f33eb2",
+      "sha256": "473fc846ebb5ec46a31a6e168c0956be9c135ea36946d7c59932d59ff79e0235",
       "executable": false
     },
     "tests/support/cores-journey.mjs": {
@@ -4692,7 +4692,7 @@
       "executable": false
     },
     "tests/support/receivables-journey.mjs": {
-      "sha256": "5590ca051051ad9d06a9f57347ead19437a48e7be35b0272a4c0e84e6fab24ab",
+      "sha256": "d9ced883fe399b5afdf3f0e6c73feebc38ff580878549cc3c50ce1d89b0b0d6e",
       "executable": false
     },
     "tests/support/refunds-journey.mjs": {
@@ -4712,7 +4712,7 @@
       "executable": false
     },
     "tests/support/report-journey.mjs": {
-      "sha256": "74a13429bcc725d0451101ec8585e06d7f8f58aa86fc9df5fbc8f7f0e583b176",
+      "sha256": "f127fd43e62528cad413e1e1a883f3209953a9451c1c8262432dee8feca00290",
       "executable": false
     },
     "tests/support/report-xlsx.mjs": {

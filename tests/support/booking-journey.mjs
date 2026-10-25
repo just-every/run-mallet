@@ -40,12 +40,24 @@ export async function onlineBookingJourney(h){
  const observed=await attendanceFixture(h),attendance={appointmentId:observed.id,version:observed.version,outcome:'no-show',evidence:'Counter and phone log reviewed; customer did not attend.'}
  await h.command('booking.attendance',attendance,{as:member.cookie,status:403})
  const marked=await h.command('booking.attendance',attendance);assert.equal(marked.attendance.outcome,'no-show')
- const unchanged=await h.state();await h.command('booking.attendance',{...attendance,version:marked.version,outcome:'arrived'},{status:409});assert.deepEqual(await h.state(),unchanged,'Attendance cannot be silently rewritten')
- const query='?from='+observed.startAt.slice(0,10)+'&to='+observed.startAt.slice(0,10),metrics=await h.api('/api/mallet/reports/turnaround'+query)
+ const unchanged=await h.state();await h.command('booking.attendance',{...attendance,version:marked.version,outcome:'arrived'},{status:400});assert.deepEqual(await h.state(),unchanged,'Attendance cannot be silently rewritten without a correction reason')
+ const query='?from='+observed.startAt.slice(0,10)+'&to='+new Date(Date.parse(observed.startAt)+86400000).toISOString().slice(0,10),metrics=await h.api('/api/mallet/reports/turnaround'+query)
  assert.equal(metrics.metrics.noShows,1);assert.equal(metrics.metrics.noShowRateTenths,1000);assert.equal(metrics.appointments.find(a=>a.id===observed.id).attendance.evidence,attendance.evidence)
+ const correction={...attendance,version:marked.version,outcome:'arrived',evidence:'Signed arrival log was found for this exact appointment.',reason:'The first observation missed the signed counter log.'},beforeCorrectionMail=h.messages.length
+ await h.command('booking.attendance',correction,{as:member.cookie,status:403})
+ await h.command('booking.attendance',correction,{as:'',headers:{authorization:'Bearer '+agent.token},status:403})
+ const corrected=await h.command('booking.attendance',correction)
+ assert.deepEqual(corrected.attendance,marked.attendance,'The original observation remains unchanged')
+ assert.equal(corrected.attendanceCorrections.length,1);assert.equal(corrected.attendanceCorrections[0].reason,correction.reason)
+ const correctedMetrics=await h.api('/api/mallet/reports/turnaround'+query),correctedAppointment=correctedMetrics.appointments.find(a=>a.id===observed.id)
+ assert.equal(correctedMetrics.metrics.noShows,0);assert.equal(correctedMetrics.metrics.attendanceRecorded,1);assert.equal(correctedMetrics.metrics.noShowRateTenths,0)
+ assert.deepEqual(correctedAppointment.attendanceObservations,[marked.attendance,...corrected.attendanceCorrections]);assert.equal(correctedAppointment.attendance.outcome,'arrived')
+ assert.equal(h.messages.length,beforeCorrectionMail,'Recording a correction sends no mail')
+ await attendanceFixture(h,member.id);const unknownMetrics=await h.api('/api/mallet/reports/turnaround'+query)
+ assert.equal(unknownMetrics.metrics.appointmentsDue,2);assert.equal(unknownMetrics.metrics.attendanceRecorded,1);assert.equal(unknownMetrics.metrics.noShowRateTenths,0,'Unknown attendance stays outside the denominator')
  const state=await h.state();assert.equal(state.records.job?.length??0,before.records.job?.length??0);assert.equal(state.records.estimate?.length??0,before.records.estimate?.length??0);assert.equal(state.records.approval?.length??0,before.records.approval?.length??0)
  const backup=await archive(h),fresh=await installation({bindings:{OWNER_EMAIL:'synthetic-mallet-10@example.test'}})
- try{await restore(fresh,backup);const restored=await fresh.state();assert.equal((await fresh.api('/api/mallet/reports/turnaround'+query)).metrics.noShows,1);assert.deepEqual(restored.records.appointment,state.records.appointment);assert.deepEqual(restored.records.bookingService,state.records.bookingService);assert.equal((await fresh.mf.dispatchFetch(fresh.origin+path)).status,404);assert.ok(backup[0].excludedTables.includes('mallet_booking_tokens'));assert.ok(!JSON.stringify(backup).includes(path.slice(6)))}finally{await fresh.close()}
+ try{await restore(fresh,backup);const restored=await fresh.state();assert.equal((await fresh.api('/api/mallet/reports/turnaround'+query)).metrics.noShows,0);assert.deepEqual(restored.records.appointment,state.records.appointment);assert.deepEqual(restored.records.bookingService,state.records.bookingService);assert.equal((await fresh.mf.dispatchFetch(fresh.origin+path)).status,404);assert.ok(backup[0].excludedTables.includes('mallet_booking_tokens'));assert.ok(!JSON.stringify(backup).includes(path.slice(6)))}finally{await fresh.close()}
 }
 export async function bookingAvailabilityJourney(h){
  await shopSetup(h);const service=await bookingService(h,{holdSeconds:1}),input=holdFields(service)
@@ -94,10 +106,10 @@ export async function bookingAbuseJourney(h){
 }
 
 // Uses relative seconds, so a UTC date boundary cannot affect the attendance proof.
-export async function attendanceFixture(h){
+export async function attendanceFixture(h,technicianId){
  const startAt=new Date(Date.now()+5000).toISOString(),endAt=new Date(Date.parse(startAt)+300000).toISOString()
- const service=await bookingService(h,{durationMinutes:5,leadMinutes:0,windows:[{startAt,endAt,bayId:'synthetic-mallet-attendance',technicianId:(await h.state()).actor.id,skills:['inspection']}]})
- const held=await bookingPost(h,'/book',{...holdFields(service),email:'synthetic-mallet-attendance@example.test'});assert.equal(held.status,303)
+ const service=await bookingService(h,{durationMinutes:5,leadMinutes:0,windows:[{startAt,endAt,bayId:technicianId?'synthetic-mallet-31':'synthetic-mallet-30',technicianId:technicianId??(await h.state()).actor.id,skills:['inspection']}]})
+ const held=await bookingPost(h,'/book',{...holdFields(service),email:'synthetic-mallet-30@example.test'});assert.equal(held.status,303)
  const path=held.headers.get('location'),a=(await h.state()).records.appointment.find(a=>a.serviceId===service.id)
  assert.equal((await bookingPost(h,path,{action:'confirm',version:a.version})).status,200)
  const row=(await h.state()).records.appointment.find(a=>a.serviceId===service.id)

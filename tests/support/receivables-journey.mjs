@@ -6,7 +6,7 @@ import {qualityReady} from './quality-ready.mjs'
 export async function receivablesFixture(h){
  await shopSetup(h);await h.command('tax.configure',{ratePercent:10,partsTaxable:true,laborTaxable:true})
  const driver=await h.command('contact.save',{name:'Van driver',email:'driver@example.test',phone:'',communication:'none'}),manager=await h.command('contact.save',{name:'Fleet manager',email:'manager@example.test',phone:'',communication:'email'})
- const account=await h.command('customer.save',{name:'Synthetic fleet',kind:'fleet',contactIds:[driver.id,manager.id],payerId:manager.id,billingContactId:manager.id,driverId:driver.id,authorizerId:manager.id,taxStatus:'standard'})
+ let account=await h.command('customer.save',{name:'Synthetic fleet',kind:'fleet',contactIds:[driver.id,manager.id],payerId:manager.id,billingContactId:manager.id,driverId:driver.id,authorizerId:manager.id,taxStatus:'standard'})
  async function invoice(n){let asset=await h.command('asset.create',{customerName:account.name,customerEmail:manager.email,label:'Fleet van '+n,identifier:'synthetic-mallet-ar-'+n});asset=await h.command('customer.linkAsset',{assetId:asset.id,version:asset.version,customerId:account.id,customerVersion:account.version,reason:'Explicit fleet vehicle and payer review'});let {job}=await booking(h,{asset,bayId:'Fleet '+n,startAt:`2026-10-0${n}T09:00:00Z`,endAt:`2026-10-0${n}T10:00:00Z`});const q=await authorise(h,await h.command('estimate.prepare',{jobId:job.id,version:job.version,lines:[{kind:'part',description:'Van repair part',quantity:1,unitCents:10000}]}));job=(await h.state()).records.job.find(j=>j.id===job.id);job=await h.command('work.record',{jobId:job.id,version:job.version,lineId:q.revisions[0].lines[0].id,quantity:1});await qualityReady(h,job);job=await h.command('job.complete',{jobId:job.id,version:job.version});const i=await h.command('invoice.prepare',{jobId:job.id,version:job.version});return h.command('invoice.approve',{invoiceId:i.id,version:i.version})}
  let controlAsset=await h.command('asset.create',{customerName:account.name,customerEmail:manager.email,label:'Fleet authority control',identifier:'synthetic-mallet-fleet-control'})
  controlAsset=await h.command('customer.linkAsset',{assetId:controlAsset.id,version:controlAsset.version,customerId:account.id,customerVersion:account.version,reason:'Owner reviewed fleet control vehicle'})
@@ -14,8 +14,8 @@ export async function receivablesFixture(h){
  quote=await h.command('estimate.approve',{estimateId:quote.id,version:quote.version,revision:1});quote=await h.command('estimate.markSent',{estimateId:quote.id,version:quote.version,revision:1,method:'printed'})
  const decision={estimateId:quote.id,version:quote.version,revision:1,lineIds:quote.revisions[0].lines.map(l=>l.id),customerName:manager.name,method:'phone',evidence:'Fleet manager called with exact repair authority',authorizerId:manager.id,accountVersion:account.version,po:'synthetic-mallet-control-po',fleetEvidence:'Owner recorded exact fleet instruction'}
  const before=await h.state()
- for(const wrong of [{authorizerId:driver.id},{accountVersion:account.version+1},{po:''}])await h.command('estimate.authorise',{...decision,...wrong},{status:wrong.po===''?400:409})
- assert.deepEqual(await h.state(),before,'Driver, stale account and missing PO grant no repair authority')
+ for(const wrong of [{authorizerId:driver.id},{accountVersion:account.version+1},{po:''},{fleetEvidence:''},{evidence:''}])await h.command('estimate.authorise',{...decision,...wrong},{status:Object.values(wrong).includes('')?400:409})
+ assert.deepEqual(await h.state(),before,'Driver, stale account, missing PO and missing evidence grant no repair authority')
  const admin=await h.person('fleet-control-advisor@example.test','admin');await h.command('estimate.authorise',decision,{as:admin.cookie,status:403})
  const link=await h.command('approvalLink.create',{estimateId:quote.id,version:quote.version,revision:1,days:1})
  const {decide}=await import('./approval-journey.mjs'),path=new URL(link.url).pathname
@@ -24,6 +24,36 @@ export async function receivablesFixture(h){
  const authorized=await h.command('estimate.authorise',{...decision,version:quote.version});assert.equal(authorized.authorisation.fleet.authorizer.id,manager.id)
  assert.equal(authorized.authorisation.fleet.po,decision.po)
  assert.ok(!JSON.stringify((await h.state({as:admin.cookie})).records).includes('\"fleet\":'),'New private fleet decision snapshots are absent from non-owner projections')
+ const currentQuote=async id=>(await h.state()).records.estimate.find(q=>q.id===id)
+ const pending=async()=>{
+  const job=(await h.state()).records.job.find(j=>j.id===control.job.id)
+  let q=await h.command('estimate.prepare',{jobId:job.id,version:job.version,supplement:true,reason:'synthetic-mallet-40',lines:[{kind:'labor',description:'synthetic-mallet-41',quantity:1,unitCents:100}]})
+  q=await h.command('estimate.approve',{estimateId:q.id,version:q.version,revision:1});q=await h.command('estimate.markSent',{estimateId:q.id,version:q.version,revision:1,method:'printed'})
+  const link=await h.command('approvalLink.create',{estimateId:q.id,version:q.version,revision:1,days:1})
+  return {quote:await currentQuote(q.id),path:new URL(link.url).pathname}
+ }
+ const assertVoided=async held=>{
+  const next=await currentQuote(held.quote.id)
+  assert.equal(next.status,'draft');assert.equal(next.revisions.at(-1).approval,null);assert.equal(next.revisions.at(-1).n,2)
+  assert.deepEqual(next.revisions[0],held.quote.revisions[0],'The earlier approved revision remains evidence')
+  assert.equal((await h.request(held.path,{as:''})).status,404,'A changed fleet relationship voids its pending bearer link')
+  const before=await h.state(),mail=h.messages.length
+  await h.command('estimate.authorise',{...decision,estimateId:next.id,version:next.version,revision:2,lineIds:next.revisions.at(-1).lines.map(l=>l.id),accountVersion:account.version},{status:409})
+  assert.deepEqual(await h.state(),before);assert.equal(h.messages.length,mail,'A voided approval grants no authority and sends no mail')
+  assert.deepEqual((await currentQuote(authorized.id)).authorisation,authorized.authorisation,'Existing authorized decisions stay unchanged')
+  return next
+ }
+ let held=await pending(),beforeChangeMail=h.messages.length
+ account=await h.command('customer.save',{...account,customerId:account.id,authorizerId:driver.id})
+ assert.equal(h.messages.length,beforeChangeMail);let voided=await assertVoided(held)
+ voided=await h.command('estimate.approve',{estimateId:voided.id,version:voided.version,revision:2});voided=await h.command('estimate.markSent',{estimateId:voided.id,version:voided.version,revision:2,method:'printed'})
+ await h.command('estimate.authorise',{...decision,estimateId:voided.id,version:voided.version,revision:2,lineIds:voided.revisions.at(-1).lines.map(l=>l.id),authorizerId:driver.id,accountVersion:account.version},{status:409})
+ account=await h.command('customer.save',{...account,customerId:account.id,authorizerId:manager.id})
+ held=await pending();const revisedManager=await h.command('contact.save',{...manager,contactId:manager.id,notes:'synthetic-mallet-42'});manager.version=revisedManager.version;await assertVoided(held)
+ held=await pending();const replacement=await h.command('customer.save',{name:'synthetic-mallet-43',kind:'fleet',contactIds:[driver.id,manager.id],payerId:manager.id,billingContactId:manager.id,driverId:driver.id,authorizerId:manager.id,taxStatus:'standard'})
+ let vehicle=(await h.state()).records.asset.find(a=>a.id===controlAsset.id)
+ vehicle=await h.command('customer.linkAsset',{assetId:vehicle.id,version:vehicle.version,customerId:replacement.id,customerVersion:replacement.version,reason:'synthetic-mallet-44'});await assertVoided(held)
+ await h.command('customer.linkAsset',{assetId:vehicle.id,version:vehicle.version,customerId:account.id,customerVersion:account.version,reason:'synthetic-mallet-45'})
  const i1=await invoice(1),i2=await invoice(2)
  return {account,driver,manager,i1,i2,invoice,control}
 }

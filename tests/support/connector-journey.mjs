@@ -33,7 +33,7 @@ export async function connectorJourney() {
   const refundAttempt=()=>h.command('refund.submit',{refundId:'synthetic-mallet-gov5',version:1},{status:404}).catch(error=>error)
   assert.equal((await h.request('/api/mallet/commands',{method:'POST',body:{command:'refund.submit',input:{refundId:'x',version:1}}})).status,404)
   await h.command('connector.revoke',{connector:'stripe',name:'STRIPE_SECRET_KEY'});assert.equal((await h.api('/api/mallet/commands',{command:'refund.submit',input:{refundId:'x',version:1}},{status:503})).error,'REFUND_CONFIGURATION')
-  await h.command('connector.save',{connector:'stripe',name:'STRIPE_SECRET_KEY',credential:'synthetic-mallet-gov5-stripe-2',acknowledge:1});assert.equal((await h.request('/api/mallet/commands',{method:'POST',body:{command:'refund.submit',input:{refundId:'x',version:1}}})).status,404);void refundAttempt
+  await h.command('connector.save',{connector:'stripe',name:'STRIPE_SECRET_KEY',credential:'synthetic-mallet-gov5-stripe-2',acknowledge:(await h.api('/api/mallet/connectors')).declarations.find(c=>c.id==='stripe').version});assert.equal((await h.request('/api/mallet/commands',{method:'POST',body:{command:'refund.submit',input:{refundId:'x',version:1}}})).status,404);void refundAttempt
   // Webhook origin: only the current signing secret opens the door; an old, bad or stale signature opens nothing.
   const endpoint='/api/mallet/inspection-report-events/resend',event={type:'email.delivered',created_at:new Date().toISOString(),data:{email_id:'synthetic-mallet-gov5-msg',to:['synthetic-mallet-gov5@example.test']}}
   const post=(key,options={})=>h.request(endpoint,{method:'POST',as:'',body:event,headers:options.headers??signed(key,event)})

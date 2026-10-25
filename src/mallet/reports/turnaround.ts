@@ -1,4 +1,5 @@
 import {inspectionStatus} from '../inspections'
+import {attendanceObservations,latestAttendance} from '../booking-attendance'
 import {ratio} from './technicians'
 import {flowStage} from '../flow'
 import {put,rows,who,type Context,type State} from '../model'
@@ -42,7 +43,7 @@ export function turnaroundReport(s:State,p:Period,now:string,fullVisibility=true
    stageTotalsMs:Object.fromEntries([...new Set(intervals.map(i=>i.stage))].map(stage=>[stage,intervals.filter(i=>i.stage===stage).reduce((sum,i)=>sum+i.durationMs,0)])),
    promise:pickupAt?{pickupAt,revision:promiseRevision.n,sourceId:promise!.id,completionVarianceMs:completion?Date.parse(completion)-Date.parse(pickupAt):null,overdue:!completion&&!job.closure&&now>=pickupAt}:null}
  })
- const appointments=rows(s,'appointment').filter(a=>a.status==='confirmed'&&Date.parse(a.startAt)>=p.startMs&&Date.parse(a.startAt)<p.endMs).map(a=>({id:a.id,version:a.version,startAt:a.startAt,service:a.service.name,attendance:a.attendance??null}))
+ const appointments=rows(s,'appointment').filter(a=>a.status==='confirmed'&&Date.parse(a.startAt)>=p.startMs&&Date.parse(a.startAt)<p.endMs).map(a=>({id:a.id,version:a.version,startAt:a.startAt,service:a.service.name,attendance:latestAttendance(a),attendanceObservations:attendanceObservations(a)}))
  const due=appointments.filter(a=>a.startAt<=now),observed=due.filter(a=>a.attendance),noShows=observed.filter(a=>a.attendance.outcome==='no-show').length
  const inspections=repairs.flatMap(r=>r.dvi.inspections),reports=repairs.flatMap(r=>r.dvi.reports),completed=repairs.filter(r=>r.completedAt),returned=completed.filter(r=>r.comebacks.length)
  const metrics={appointmentsDue:due.length,attendanceRecorded:observed.length,noShows,noShowRateTenths:ratio(noShows,observed.length,1000),inspections:inspections.length,inspectionsComplete:inspections.filter(i=>i.complete).length,dviCompletionRateTenths:ratio(inspections.filter(i=>i.complete).length,inspections.length,1000),reviewedReports:reports.length,reportsViewed:reports.filter(r=>r.views>0).length,viewRequests:reports.reduce((n,r)=>n+r.views,0),engagementRateTenths:ratio(reports.filter(r=>r.views>0).length,reports.length,1000),completedRepairs:completed.length,repairsWithComebacks:returned.length,comebackRateTenths:ratio(returned.length,completed.length,1000)}

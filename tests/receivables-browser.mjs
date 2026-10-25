@@ -26,7 +26,13 @@ export async function receivablesBrowser(){
    await p.setViewportSize({width,height:1000})
    let job=(await h.state()).records.job.find(j=>j.id===control.job.id),quote=await h.command('estimate.prepare',{jobId:job.id,version:job.version,supplement:true,reason:'Fleet requested incremental native scope',lines:[{kind:'labor',description:'Native fleet supplement '+width,quantity:1,unitCents:100}]})
    quote=await h.command('estimate.approve',{estimateId:quote.id,version:quote.version,revision:1});quote=await h.command('estimate.markSent',{estimateId:quote.id,version:quote.version,revision:1,method:'phone'})
+   manager.version=(await h.command('contact.save',{...manager,contactId:manager.id,notes:'synthetic-mallet-'+(50+index)})).version
    await p.goto(h.origin+'/app/jobs/'+job.id)
+   const quoteCard=p.locator('section').filter({has:p.locator('form:has(input[value="estimate.approve"]):has(input[value="'+quote.id+'"])')})
+   assert.equal(await p.locator('form:has(input[value="estimate.authorise"]):has(input[value="'+quote.id+'"])').count(),0,'A changed authorizer requires fresh approval before customer authority')
+   await quoteCard.scrollIntoViewIfNeeded();await shot('00-voided-fleet-approval',width)
+   await quoteCard.getByRole('button',{name:'Approve estimate',exact:true}).click();await p.waitForLoadState('domcontentloaded')
+   const share=p.locator('form:has(input[value="estimate.markSent"]):has(input[value="'+quote.id+'"])');await share.locator('[name="channel"]').selectOption('phone');await share.getByRole('button',{name:'Record estimate shared',exact:true}).click();await p.waitForLoadState('domcontentloaded')
    const authorization=p.locator('form:has(input[value="estimate.authorise"]):has(input[value="'+quote.id+'"])')
    await authorization.locator('[name="lineIds"]').check();await authorization.locator('[name="customerName"]').fill(manager.name);await authorization.locator('[name="po"]').fill('synthetic-mallet-native-repair-po-'+width);await authorization.locator('[name="fleetEvidence"]').fill('Owner reviewed exact fleet manager approval against this PO');await authorization.locator('[name="evidence"]').fill('Fleet manager phone instruction for these exact lines')
    await authorization.scrollIntoViewIfNeeded();await shot('00-fleet-repair-authority-form',width);await authorization.screenshot({path:join(directory,'00-authority-fields-'+width+'.png')})

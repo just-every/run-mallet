@@ -1,3 +1,5 @@
+import {stripeJourney,collectionEdge} from './support/stripe-journey.mjs'
+import {stripeBrowser} from './stripe-browser.mjs'
 import {governanceBrowser} from './governance-browser.mjs'
 import {auditJourney,staffJourney} from './support/governance-journey.mjs'
 import {routingJourney} from './support/routing-journey.mjs'
@@ -415,3 +417,9 @@ test('AR-001, FLEET-001 and TAX-002: native terms, fleet PO, disputed statement,
  test('GOV-001: owner-only grants bound staff commands, private projections, handoffs and revoked authority',()=>run(staffJourney))
 
 test('GOV-001 and GOV-002: owner grants, bounded staff handoff and private audit search and downloads at 1440 and 390',governanceBrowser)
+
+test('PAY-001: owner checkout, authenticated event replay, exact fee and payout membership and inert recovery',async()=>{
+ const edge=collectionEdge()
+ await run(h=>stripeJourney(h,edge),{bindings:{AUTH_LOCAL:'true',STRIPE_SECRET_KEY:'synthetic-mallet-800'},outboundService:edge.edge})
+})
+test('PAY-001: native merchant connection, invoice checkout and fee reconciliation at 1440 and 390',stripeBrowser)

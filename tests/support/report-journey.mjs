@@ -92,10 +92,14 @@ export async function reportJourney(h,{person=h.person}={}){
  await h.command('reportFilter.schedule',schedule,{as:advisor.cookie,status:403})
  await h.command('reportFilter.schedule',{...schedule,consent:false},{status:409})
  await h.command('reportFilter.schedule',schedule)
- const beforeScheduled=h.messages.length;await h.cron(dueAt)
+ const beforeScheduled=h.messages.length,sentAt=new Date(Date.parse(dueAt)+120000).toISOString();await h.cron(sentAt)
  const firstDelivery=(await h.state()).records.reportDelivery.find(d=>d.filterId===ownerFilter.id)
  assert.equal(firstDelivery.content,undefined,'Delivery custody retains a hash, not another private report copy');assert.match(firstDelivery.contentHash,/^[a-f0-9]{64}$/)
  assert.ok(['accepted','development'].includes(firstDelivery.status));assert.equal(firstDelivery.to,'owner@example.test','Caller cannot choose a different recipient')
+ assert.equal(firstDelivery.at,sentAt,'The retained attempt time is distinct from the planned occurrence')
+ const scheduledPage=await (await h.request('/app/reports/technicians'+q)).text()
+ assert.ok(scheduledPage.includes('datetime="'+sentAt+'"'),'The report screen retains the last actual attempt time')
+ assert.match(scheduledPage,/Turn off schedule/)
  if(firstDelivery.status==='accepted'){assert.equal(h.messages.length,beforeScheduled+1);assert.equal(h.messages.at(-1).attachments[0].filename,'mallet-technicians.csv')}
  await h.cron(dueAt);assert.equal((await h.state()).records.reportDelivery.length,1,'A repeated schedule tick never sends an occurrence twice')
  await h.restart();await h.cron(dueAt);assert.equal((await h.state()).records.reportDelivery.length,1,'Restart does not replay a claimed handoff')
@@ -117,6 +121,6 @@ export async function reportJourney(h,{person=h.person}={}){
   const successor=await fresh.person('synthetic-mallet-report-owner@example.test','owner');await fresh.stepUp(successor.cookie);await confirmOwnerAdministration(successor.cookie);await fresh.api('/auth/operator/status',{operatorId:freshOwner.id,status:'inactive'},{as:successor.cookie})
   const beforeRevoked=fresh.messages.length;await fresh.cron(nextAt);assert.equal(fresh.messages.length,beforeRevoked,'Revoked recipients cannot receive a scheduled report');await fresh.api('/api/mallet/reports/technicians'+q,undefined,{status:401})
  }finally{await fresh.close()}
- const currentFilter=(await h.state()).records.reportFilter.find(f=>f.id===ownerFilter.id);await h.command('reportFilter.schedule',{...schedule,version:currentFilter.version,active:false});await h.cron(new Date(Date.parse(dueAt)+8*86400000).toISOString());assert.equal((await h.state()).records.reportDelivery.length,1,'Explicit revocation prevents future delivery')
+ const currentFilter=(await h.state()).records.reportFilter.find(f=>f.id===ownerFilter.id);await h.command('reportFilter.schedule',{filterId:ownerFilter.id,version:currentFilter.version,active:false,evidence:'Owner switched off the report from its retained handoff receipt.'});await h.cron(new Date(Date.parse(dueAt)+8*86400000).toISOString());assert.equal((await h.state()).records.reportDelivery.length,1,'Explicit revocation prevents future delivery')
  return {a,b,advisor,q}
 }

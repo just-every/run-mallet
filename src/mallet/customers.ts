@@ -1,4 +1,5 @@
 import {createHash} from 'node:crypto'
+import {voidFleetAccountApprovals,voidFleetApprovals} from './fleet-pending'
 // Owner/admin-reviewed contacts and account aliases retain provenance; merging never rewrites a job or invoice.
 import {bump,choice,event,expectVersion,fail,find,put,rows,text,who,type Context,type Handler,type State,type Row} from './model'
 export const accountCommands=['contact.save','customer.save','customer.linkAsset','customer.driver','customer.mergePreview','customer.merge']
@@ -34,6 +35,7 @@ export const customers:Handler=(c,command,p)=>{
   const prior=p.contactId?find(c.s,'contact',p.contactId):null;if(prior)expectVersion(prior,p.version)
   const fields={name:text(p.name,'contact name'),email:email(p.email),phone:text(p.phone,'phone',100,true),communication:choice(p.communication,['none','email','phone'],'communication preference'),notes:text(p.notes,'contact notes',4000,true),by:who(c),at:c.now}
   const row=prior?bump(c.s,'contact',prior,{...fields,history:[...(prior.history??[]),{...structuredClone(prior),history:undefined}]}):put(c.s,'contact',{...fields,history:[]})
+  if(prior)voidFleetAccountApprovals(c,rows(c.s,'customerAccount').filter(a=>a.kind==='fleet'&&a.authorizerId===row.id).map(a=>a.id),'The fleet authorizer contact changed; review the account and authorize a new revision.')
   event(c,command,null,row.id,{version:row.version});return row
  }
  if(command==='customer.save'){
@@ -41,6 +43,7 @@ export const customers:Handler=(c,command,p)=>{
   const ids=contactIds(c.s,p.contactIds),role=(key:string,required=false)=>{const id=p[key]?text(p[key],key):null;if(required&&!id)fail('INPUT','Choose a payer and billing contact.',null,400);if(id&&!ids.includes(id))fail('CONTACT_SCOPE','Each account role must be one of its contacts.');return id}
   const fields={payerRevision:(prior?.payerRevision??1)+(prior&&prior.payerId!==p.payerId?1:0),name:text(p.name,'account name'),kind:choice(p.kind,['person','household','business','fleet'],'account kind'),contactIds:ids,payerId:role('payerId',true),billingContactId:role('billingContactId',true),driverId:role('driverId'),authorizerId:role('authorizerId'),taxStatus:choice(p.taxStatus,['standard','declared-exempt','unknown'],'tax status'),notes:text(p.notes,'account notes',4000,true),by:who(c),at:c.now}
   const row=prior?bump(c.s,'customerAccount',prior,{...fields,history:[...prior.history,{...structuredClone(prior),history:undefined}]}):put(c.s,'customerAccount',{...fields,history:[],mergedInto:null})
+  if(prior&&(prior.kind==='fleet'||row.kind==='fleet'))voidFleetAccountApprovals(c,[row.id],'The fleet account changed; review the account and authorize a new revision.')
   return audit(c,command,row,{version:row.version})
  }
  if(command==='customer.merge'){
@@ -51,6 +54,7 @@ export const customers:Handler=(c,command,p)=>{
   if(p.previewHash!==preview.previewHash)fail('MERGE_PREVIEW','Preview the exact current survivor before merging.')
   const identityEvidence=text(p.identityEvidence,'identity-match evidence',4000),reason=text(p.reason,'merge reason',2000),consentEvidence=text(p.consentEvidence,'explicit merge consent evidence',4000),sourceSnapshot=structuredClone(source),targetSnapshot=structuredClone(target)
   const receipt=put(c.s,'customerMerge',{sourceId:source.id,targetId:target.id,sourceSnapshot,targetSnapshot,reason,identityEvidence,consentEvidence,previewHash:preview.previewHash,by:who(c),at:c.now})
+  if(source.kind==='fleet')voidFleetAccountApprovals(c,[source.id,target.id],'The fleet accounts merged; review the surviving account and authorize a new revision.')
   // The survivor's role choices remain explicit. Alias contacts and vehicles move without granting a billing identity.
   bump(c.s,'customerAccount',target,{contactIds:[...new Set([...target.contactIds,...source.contactIds])],history:[...target.history,{...targetSnapshot,history:undefined}],mergeReceipts:[...(target.mergeReceipts??[]),receipt.id]})
   const saved=bump(c.s,'customerAccount',source,{mergedInto:target.id,mergeReceiptId:receipt.id})
@@ -64,6 +68,7 @@ export const customers:Handler=(c,command,p)=>{
  if(command==='customer.driver'&&asset.customerAccountId!==account.id)fail('ACCOUNT_SCOPE','Choose the account linked to this vehicle.')
  const driverId=p.driverId?text(p.driverId,'driver'):account.driverId
  if(driverId&&!account.contactIds.includes(driverId))fail('CONTACT_SCOPE','The driver must be one of this account’s contacts.')
+ if(command==='customer.linkAsset'&&asset.customerAccountId!==account.id&&(account.kind==='fleet'||rows(c.s,'customerAccount').some(a=>a.id===asset.customerAccountId&&a.kind==='fleet')))voidFleetApprovals(c,new Set([asset.id]),'The vehicle fleet account changed; review the account and authorize a new revision.')
  const saved=bump(c.s,'asset',asset,{customerAccountId:account.id,customerName:account.name,driverContactId:driverId,updatedAt:c.now})
  event(c,command,null,asset.id,{accountId:account.id,driverId,reason:text(p.reason,'relationship change reason',2000)});return saved
 }

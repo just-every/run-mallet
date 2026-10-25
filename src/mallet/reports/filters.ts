@@ -22,7 +22,7 @@ export const reportFilters:Handler=(c,command,p)=>{
   const row=find(c.s,'reportFilter',p.filterId);expectVersion(row,p.version)
   if(row.ownerId!==c.actor.id||row.archived)fail('FORBIDDEN','Use your own active saved filter.',null,403)
   if(typeof p.active!=='boolean')fail('INPUT','Declare schedule activity.',null,400)
-  const everyDays=integer(p.everyDays,'delivery interval in days',1,365),nextAt=instant(p.nextAt,'next scheduled UTC time')
+  const everyDays=integer(p.active?p.everyDays:row.schedule?.everyDays,'delivery interval in days',1,365),nextAt=instant(p.active?p.nextAt:row.schedule?.nextAt,'next scheduled UTC time')
   if(p.active&&(p.consent!==true||!Number.isFinite(Date.parse(nextAt))||nextAt<=c.now))fail('REPORT_CONSENT','Consent to a future schedule explicitly.')
   const schedule={active:p.active,everyDays,nextAt,to:text(p.to,'native owner email',320),evidence:text(p.evidence,'explicit report email consent',2000),at:c.now,by:who(c)}
   const next=bump(c.s,'reportFilter',row,{schedule,scheduleHistory:[...(row.scheduleHistory??[]),schedule]});event(c,command,null,row.id,{});return next

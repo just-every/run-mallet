@@ -1,8 +1,9 @@
 import {resourceFields} from './calendar-capacity'
+import {recordAttendance} from './booking-attendance'
 import {offerCanceledAppointment} from './booking-waitlist'
 import {shopTimeZone} from './promise-zone'
 import {createHash} from 'node:crypto'
-import {choice,bump,event,expectVersion,fail,find,integer,put,rows,text,who,type Handler,type State} from './model'
+import {bump,event,expectVersion,fail,find,integer,put,rows,text,who,type Handler,type State} from './model'
 import {instant,conflicts} from './workshop'
 export const bookingCommands=['booking.attendance','booking.publish','booking.hold','booking.confirm','booking.cancel','booking.reschedule','booking.outcome']
 export const internalBookingCommands=['booking.hold','booking.confirm','booking.cancel','booking.reschedule','booking.outcome']
@@ -31,13 +32,7 @@ function available(s:State,service:any,p:any,now:string,exceptId?:string){
 }
 export const bookings:Handler=(c,command,p)=>{
  if(!bookingCommands.includes(command))return
- if(command==='booking.attendance'){
-  if(c.actor.role!=='owner')fail('FORBIDDEN','Only the current owner records observed appointment attendance.',null,403)
-  const row=find(c.s,'appointment',p.appointmentId);expectVersion(row,p.version)
-  if(row.status!=='confirmed'||row.startAt>c.now||row.attendance)fail('BOOKING_ATTENDANCE','Record attendance once, after a confirmed appointment starts.')
-  const attendance={outcome:choice(p.outcome,['arrived','no-show'],'observed attendance'),evidence:text(p.evidence,'staff attendance evidence',2000),by:who(c),at:c.now}
-  const next=bump(c.s,'appointment',row,{attendance});event(c,command,null,row.id,attendance);return next
- }
+ if(command==='booking.attendance')return recordAttendance(c,p)
  if(command==='booking.publish'){
   if(!['owner','admin'].includes(c.actor.role))fail('FORBIDDEN','Only the owner or advisor publishes booking availability.',null,403)
   if(!Array.isArray(p.windows)||p.windows.length<1||p.windows.length>50)fail('INPUT','Publish 1–50 dated opening windows.',null,400)
