@@ -572,7 +572,7 @@
       "executable": false
     },
     "ACCEPTANCE.md": {
-      "sha256": "db33f2c1e76717bd71d197aadc412ea76e775d3b012c9af5bdd5e0ed324fc03c",
+      "sha256": "63cae1193b2d11ac13537e0e4010cfca4962cd3bf3612a3514dfbc7e9784b56e",
       "executable": false
     },
     "AGENTS.md": {
@@ -584,7 +584,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "85d9eb93844432ebe80289fa3d41dc925570a079d6f02b1778c33fa80816fa03",
+      "sha256": "ee264f81982ab2e5afd8c0c162d24041246239b88c18df85f0b9b83bd950c071",
       "executable": false
     },
     "deploy-demo.json": {
@@ -1620,7 +1620,7 @@
       "executable": false
     },
     "src/mallet/http.ts": {
-      "sha256": "f01090560152507cb86ed0b30f35bf95e2dced9751ad631020169e6cd6144c88",
+      "sha256": "617bb8919ed727d8f909cbd2d9bb63b234cd170d7eea854d363a488fecba3b4f",
       "executable": false
     },
     "src/mallet/imports/context.ts": {
@@ -2181,6 +2181,10 @@
     },
     "src/mallet/ui/declined-work.ts": {
       "sha256": "48445cd879d10b532a06d2973e844e538bd9d33874402ea870ac5bd2c54be1c5",
+      "executable": false
+    },
+    "src/mallet/ui/deposits.ts": {
+      "sha256": "c04a644e201122561d33d75b357259023f422f4948da62867f9d490840bb1d6c",
       "executable": false
     },
     "src/mallet/ui/diagnostic-results.ts": {
@@ -4328,7 +4332,7 @@
       "executable": false
     },
     "tests/inventory-browser.mjs": {
-      "sha256": "a076ebb3e4f257453dd710744f7d186b18f3748b16f67565693788c7ff799627",
+      "sha256": "ca96b15295a7cf83bc5d7106c7fe9d0b7aeb62b953f85ed55f72e67ab98ae008",
       "executable": false
     },
     "tests/invoice-documents-browser.mjs": {
@@ -4340,7 +4344,7 @@
       "executable": false
     },
     "tests/mallet.test.mjs": {
-      "sha256": "b335c3497e79e1e367c6025e275e44594a6df58fd726cabd65260cb0a803d165",
+      "sha256": "8acd4ef6f6682db03feafd1833a6258df9641416be7626846bee7cb44c5dfc32",
       "executable": false
     },
     "tests/media-browser.mjs": {
@@ -4488,7 +4492,7 @@
       "executable": false
     },
     "tests/support/deposits-journey.mjs": {
-      "sha256": "2f4bd743996f3edd7edd1aea6508dfc3307131ef778ad8e579dfa12c3e244b37",
+      "sha256": "1fc59814917f828358bf245426145849b3804041741637d40b6176ae383854fc",
       "executable": false
     },
     "tests/support/diagnosis-journey.mjs": {

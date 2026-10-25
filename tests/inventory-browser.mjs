@@ -64,7 +64,7 @@ export async function depositsBrowser(){
    await p.setViewportSize({width,height:1000})
    await p.goto(h.origin+'/app/accounts?manage='+account.id);await shot('01-account-entry',width)
    await p.getByRole('link',{name:'Deposits & customer credit',exact:true}).click()
-   await p.getByLabel('Customer account',{exact:true}).selectOption(account.id);await p.getByRole('button',{name:'Review deposits',exact:true}).click()
+   await p.locator('select[name="accountId"]').selectOption(account.id);await p.getByRole('button',{name:'Review deposits',exact:true}).click()
    const first=await repair(4+index*3),second=await repair(5+index*3),canceled=await repair(6+index*3)
    await p.goto(url)
    const prefix='synthetic-mallet-native-'+width
