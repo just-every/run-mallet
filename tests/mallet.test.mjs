@@ -1,3 +1,4 @@
+import {terminalEdge,terminalJourney,terminalStoppedJourney} from './support/terminal-journey.mjs'
 import {stripeJourney,stripeStoppedJourney,collectionEdge} from './support/stripe-journey.mjs'
 import {stripeBrowser} from './stripe-browser.mjs'
 import {governanceBrowser} from './governance-browser.mjs'
@@ -427,4 +428,13 @@ test('PAY-001: native merchant connection, invoice checkout and fee reconciliati
 test('PAY-001: explicit expiration and uncertain checkout stay stopped without allocating money',async()=>{
  const edge=collectionEdge()
  await run(h=>stripeStoppedJourney(h,edge),{bindings:{AUTH_LOCAL:'true',STRIPE_SECRET_KEY:'synthetic-mallet-800'},outboundService:edge.edge})
+})
+
+test('PAY-001: owner reader collection, authenticated payment and exact replay survive recovery',async()=>{
+ const edge=terminalEdge()
+ await run(h=>terminalJourney(h,edge),{bindings:{AUTH_LOCAL:'true',STRIPE_SECRET_KEY:'synthetic-mallet-800'},outboundService:edge.edge})
+})
+test('PAY-001: uncertain reader initiation and cancellation reconcile without outbound replay',async()=>{
+ const edge=terminalEdge()
+ await run(h=>terminalStoppedJourney(h,edge),{bindings:{AUTH_LOCAL:'true',STRIPE_SECRET_KEY:'synthetic-mallet-800'},outboundService:edge.edge})
 })

@@ -1584,7 +1584,7 @@
       "executable": false
     },
     "src/mallet/connectors/registry.ts": {
-      "sha256": "3338f0728aa8bd1d7e0200d78878f50fb259274b0f84d53f1ce99e6665ea434b",
+      "sha256": "7a88ada6eb8a03cd2377698cdcdb70a2ed7f48db5b9ff02f944511337ae8b131",
       "executable": false
     },
     "src/mallet/connectors/secrets.ts": {
@@ -1856,7 +1856,7 @@
       "executable": false
     },
     "src/mallet/model.ts": {
-      "sha256": "3a531a34ec3cb3ec1e3310a9ee9fe7ecb74edde0e8377e62ef71e9422d956afc",
+      "sha256": "3d4052e711c1f24c7f6904454e492388280e8284cc21f6c5886c89c15e6d7080",
       "executable": false
     },
     "src/mallet/money.ts": {
@@ -2028,7 +2028,7 @@
       "executable": false
     },
     "src/mallet/restore/validate-records.mjs": {
-      "sha256": "c351b9b6cd7dc0a71e5680fa0ec911dcb4c88475b8fe96a5b1b8c5cdaf66b26f",
+      "sha256": "c8db42e9d7dd2c914bf0e0376baaed5b2c0f5f86daa26faa52b22880eb1360d0",
       "executable": false
     },
     "src/mallet/restore/validate-staged.mjs": {
@@ -2040,7 +2040,7 @@
       "executable": false
     },
     "src/mallet/restore/validate-stripe.mjs": {
-      "sha256": "b60c5697503a7048efbfebcb05c4c676dc0b6bb2c65def0484a8667af4a4aca4",
+      "sha256": "e096807dd51168aeb142c236cd2c4005bcf4e1e206b007a519ba323d97332875",
       "executable": false
     },
     "src/mallet/restore/validate-tender.mjs": {
@@ -2124,7 +2124,7 @@
       "executable": false
     },
     "src/mallet/stripe/door.ts": {
-      "sha256": "89af105a2b2679faa7678764d4002d0d1cf2ca05717bfc0c88e86a3177740fc0",
+      "sha256": "840e7417092fa9abac0b2c6c29ff768768bccf35c6b743306df42c106d8974ff",
       "executable": false
     },
     "src/mallet/stripe/provider.ts": {
@@ -2132,7 +2132,7 @@
       "executable": false
     },
     "src/mallet/stripe/records.ts": {
-      "sha256": "ebb3e22c4a183f3f415fc90c42dff44c258d75023ab302308c3fb4a74f1dadd9",
+      "sha256": "e2210672bf63e9a5f29aa6e308372d55e949b77cd6b398e182992485c98f77f6",
       "executable": false
     },
     "src/mallet/stripe/service.ts": {
@@ -2140,7 +2140,7 @@
       "executable": false
     },
     "src/mallet/stripe/ui.ts": {
-      "sha256": "e4d69d3eeca5ae2f0e7a7ab2a50e9dcf85b7c303dd8f227c1158b16e9a0c2620",
+      "sha256": "259b40391f940921487b39f2fe13e5e7d577cd3e679626790159962923ba7ed8",
       "executable": false
     },
     "src/mallet/strong-auth/base-gate.ts": {
@@ -4468,7 +4468,7 @@
       "executable": false
     },
     "tests/mallet.test.mjs": {
-      "sha256": "cdc93db98979988cfeb99c549486759e6c57443bb009e7713efabac0e43813ed",
+      "sha256": "47bd0a084a8cd97f7c44d52917ccaeca083b291a2bdea000f8c32ef5b77c06d7",
       "executable": false
     },
     "tests/media-browser.mjs": {

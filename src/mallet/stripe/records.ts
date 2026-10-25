@@ -26,7 +26,7 @@ export const stripeRecords:Handler=(c,command,p)=>{
   const operationId=text(p.operationId,'checkout operation',200),prior=rows(c.s,'stripeCheckout').find(r=>r.operationId===operationId)
   if(prior){if(prior.invoiceId!==invoice.id||prior.method!==p.method)fail('STRIPE_REPLAY','That operation already identifies a different checkout.');return {checkout:prior,claimed:false}}
   if(rows(c.s,'stripeCheckout').some(r=>r.invoiceId===invoice.id&&['claiming','open','uncertain','processing'].includes(r.status)))fail('STRIPE_OPEN','Reconcile or expire the existing checkout before starting another.')
-  if(!['card','us_bank_account'].includes(p.method)||p.consent!==true)fail('INPUT','Confirm the exact amount and hosted payment method.',null,400)
+  if(!['card','us_bank_account','card_present'].includes(p.method)||p.consent!==true)fail('INPUT','Confirm the exact amount and hosted payment method.',null,400)
   const amountCents=invoiceBalance(c.s,invoice).outstandingCents
   integer(amountCents,'invoice balance',1)
   const row=put(c.s,'stripeCheckout',{jobId:invoice.jobId,invoiceId:invoice.id,invoiceRevision:invoice.revision,invoiceTotalCents:invoice.totals.totalCents,amountCents,method:p.method,operationId,connectionId:account.id,accountId:account.accountId,livemode:account.livemode,status:'claiming',by:who(c),at:c.now})
@@ -37,9 +37,10 @@ export const stripeRecords:Handler=(c,command,p)=>{
  if(command==='stripe.outcome'){
   if(checkout.status==='paid')return checkout
   if(checkout.status!=='claiming'&&!p.expired&&!p.reconciled)return checkout
+  if(checkout.paymentIntentId&&p.paymentIntentId&&checkout.paymentIntentId!==p.paymentIntentId)fail('STRIPE_SCOPE','A checkout cannot change its payment intent.')
   if(checkout.sessionId&&p.sessionId&&checkout.sessionId!==p.sessionId)fail('STRIPE_SCOPE','A checkout cannot change its provider session.')
-  const status=p.expired?'expired':p.rejected?'failed':p.complete?'processing':p.sessionId?'open':'uncertain'
-  const row=bump(c.s,'stripeCheckout',checkout,{status,...(p.sessionId?{sessionId:text(p.sessionId,'checkout id'),expiresAt:p.expiresAt}:{}),updatedAt:c.now})
+  const status=p.expired?'expired':p.rejected?'failed':p.complete?'processing':p.sessionId||p.paymentIntentId?'open':'uncertain'
+  const row=bump(c.s,'stripeCheckout',checkout,{status,...(p.paymentIntentId?{paymentIntentId:text(p.paymentIntentId,'payment intent id')}:{}),...(p.sessionId?{sessionId:text(p.sessionId,'checkout id'),expiresAt:p.expiresAt}:{}),updatedAt:c.now})
   event(c,command,invoice.jobId,row.id,{status});return row
  }
  if(command==='stripe.observe'){
