@@ -13,6 +13,9 @@ export async function receivablesFixture(h){
 export async function receivablesJourney(h){
  const f=await receivablesFixture(h),{account,driver,manager,i1,i2}=f,admin=await h.person('ar-admin@example.test','admin'),member=await h.person('ar-member@example.test'),key=await h.command('agent.create',{label:'No receivables authority'}),agent={as:'',headers:{authorization:'Bearer '+key.token}},evidence='Explicit fleet instruction and owner reviewed commercial authority',termsInput={accountId:account.id,version:account.version,days:30,limitCents:22000,active:true,consent:true,evidence}
  const before=JSON.stringify((await h.state()).records),messages=h.messages.length
+ await (await h.mf.getD1Database('DB')).prepare('UPDATE mallet_session_proofs SET step_up_until=0').run()
+ const stale=await h.request('/api/mallet/commands',{method:'POST',body:{command:'ar.terms',input:termsInput}});assert.equal(stale.status,403);assert.equal((await stale.json()).error,'step_up_required')
+ await h.stepUp()
  for(const outsider of [{as:admin.cookie},{as:member.cookie},agent]){
   await h.command('ar.terms',termsInput,{...outsider,status:403})
   for(const path of ['/api/mallet/receivables?accountId='+account.id,'/app/receivables?accountId='+account.id])assert.equal((await h.request(path,outsider)).status,403)
@@ -45,7 +48,8 @@ export async function receivablesJourney(h){
  for(const outsider of [{as:admin.cookie},{as:member.cookie},agent]){const s=await h.state(outsider);for(const kind of ['arTerms','arInvoice','arDispute','arPromise'])assert.equal(s.records[kind],undefined);assert.ok(!JSON.stringify(s).includes(termsInput.evidence))}
  await h.command('payment.record',{invoiceId:i1.id,version:i1.version,method:'cash',amountCents:6000,reference:'synthetic-mallet-ar-paid',evidence:'Owner observed the remaining cash payment'})
  const settled=(await statement(aged)).invoices.find(i=>i.invoiceId===i1.id);assert.equal(settled.balance.outstandingCents,0);assert.equal(settled.chaseEligible,false,'Paid balance never remains eligible for chasing')
+ const recoveredTerms=await h.command('ar.terms',{...termsInput,limitCents:50000})
  const backup=await archive(h),fresh=await installation()
- try{await restore(fresh,backup);for(const kind of ['arTerms','arInvoice','arDispute','arPromise'])assert.deepEqual((await fresh.state()).records[kind],(await h.state()).records[kind]);assert.deepEqual(await fresh.api('/api/mallet/receivables?'+new URLSearchParams({accountId:account.id,asOf:aged})),await statement(aged));await fresh.command('ar.invoice',{...assign(third),termsId:low.id},{status:409});assert.equal((await fresh.request('/api/mallet/state',{as:h.owner})).status,401)}finally{await fresh.close()}
+ try{await restore(fresh,backup);for(const kind of ['arTerms','arInvoice','arDispute','arPromise'])assert.deepEqual((await fresh.state()).records[kind],(await h.state()).records[kind]);assert.deepEqual(await fresh.api('/api/mallet/receivables?'+new URLSearchParams({accountId:account.id,asOf:aged})),await statement(aged));const refused=await fresh.command('ar.invoice',{...assign(third),termsId:recoveredTerms.id},{status:409});assert.equal(refused.error,'AR_TERMS','A solvent account still requires fresh destination-owner terms authority');assert.equal((await fresh.request('/api/mallet/state',{as:h.owner})).status,401)}finally{await fresh.close()}
  return {...f,a1,a2,check}
 }

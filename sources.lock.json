@@ -4628,7 +4628,7 @@
       "executable": false
     },
     "tests/support/receivables-journey.mjs": {
-      "sha256": "5234e96bf421294cfa0ba4578e241d291c424edcabf05ade22e83a5e5514ae0a",
+      "sha256": "bc6ad457de2bffdb5b9eaad5dcaeac7602d95b74f8cf551942a067d85dc79ae4",
       "executable": false
     },
     "tests/support/refunds-journey.mjs": {
