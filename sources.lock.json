@@ -4800,7 +4800,7 @@
       "executable": false
     },
     "tests/support/stripe-journey.mjs": {
-      "sha256": "8040e9623c4d9eeb8ed42f0b11d7460d26ef2896ad266dda775a8dd239a2e3c8",
+      "sha256": "614fba2551cf66cb77de05b365a70b203de173ee074e33dc0b94dfc10b6efeaf",
       "executable": false
     },
     "tests/support/strong-auth-journey.mjs": {

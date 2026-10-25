@@ -34,10 +34,13 @@ export async function stripeJourney(h,edge){
  const api=(action,input,options)=>h.api('/api/mallet/stripe/'+action,input,options)
  const {invoice}=await readyInvoice(h),admin=await h.person('synthetic-mallet-806@example.test','admin')
  for(const options of [{as:'',status:401},{as:admin.cookie,status:403},{headers:{origin:'https://other.test'},status:403}])await api('connect',{consent:true},options)
+ await api('connect',{consent:true},{status:403})
+ const key=await h.command('agent.create',{label:'No collection authority'})
+ await api('connect',{consent:true},{as:'',headers:{authorization:'Bearer '+key.token},status:403})
  assert.equal(edge.calls.length,0,'Denied doors never call Stripe')
  await h.command('stripe.connect',{accountId:'synthetic-mallet-807'},{status:404})
  const connection=await api('connect',{consent:true});assert.equal(connection.accountId,'synthetic-mallet-801');assert.equal(connection.livemode,false)
- const input={invoiceId:invoice.id,version:invoice.version,method:'card',operationId:'synthetic-mallet-808',consent:true}
+ const input={invoiceId:invoice.id,version:invoice.version,method:'card',operationId:'synthetic-mallet-808',amountCents:1,consent:true}
  await api('checkout',{...input,consent:false},{status:400})
  await api('checkout',{...input,version:invoice.version-1},{status:409})
  const checkout=await api('checkout',input);assert.equal(checkout.status,'open');assert.equal(checkout.amountCents,invoice.totals.totalCents)
