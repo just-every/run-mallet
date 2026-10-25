@@ -21,11 +21,19 @@ export function importPredicate(actor: ImportActor, authority: ImportAuthority):
 
 export function importContext(db: D1Database, actor: ImportActor, authority: ImportAuthority): D1ImportContext {
   importPredicate(actor, authority)
+  // The context exists only within each D1 transaction; concurrent imports cannot borrow an actor.
+  const database=new Proxy(db,{get(target,key){
+    if(key==='batch')return async(statements:any[])=>{
+      const values=await target.batch([target.prepare('INSERT INTO mallet_import_audit_context(singleton,actor) VALUES(1,?)').bind(JSON.stringify({id:actor.id,name:actor.name,role:actor.role})),...statements,target.prepare('DELETE FROM mallet_import_audit_context')])
+      return values.slice(1,-1)
+    }
+    const value=Reflect.get(target,key);return typeof value==='function'?value.bind(target):value
+  }})
   return {
     destination, namespace, mappingVersion,
     // Each invocation publishes one bounded batch. Applying the same review resumes.
     batchSize: 10, maxBatches: 1,
-    storage: { database: db, targets: assetTargets },
+    storage: { database, targets: assetTargets },
     authorization: { principalId, predicate: () => importPredicate(actor, authority) },
   }
 }

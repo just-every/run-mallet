@@ -37,7 +37,7 @@ function preview(s:State,r:ReturnType<typeof request>){
   const payment=find(s,'payment',r.paymentId)
   if(payment.invoiceId!==invoice.id)fail('CREDIT_PAYMENT','Refund only tender allocated to this invoice.')
   if(!['cash','check','other','stripe'].includes(payment.method))fail('CREDIT_PAYMENT','Return a customer-credit allocation to account credit, never to cash or another tender.')
-  const reserved=rows(s,'refund').filter(x=>x.paymentId===payment.id).reduce((n,x)=>n+x.amountCents,0)
+  const reserved=rows(s,'refund').filter(x=>x.paymentId===payment.id).reduce((n,x)=>n+x.amountCents,0)+rows(s,'taxCreditBasis').filter(b=>!rows(s,'refund').some(r=>r.creditNoteId===b.creditNoteId&&r.paymentId===payment.id)).flatMap(b=>b.allocations).filter((a:any)=>a.paymentId===payment.id).reduce((n:number,a:any)=>n+a.amountCents,0)
   if(amount.totalCents>payment.amountCents-reserved)fail('CREDIT_AMOUNT','The original tender has insufficient unreserved refundable balance.')
   method=payment.method
  }else{
@@ -47,7 +47,7 @@ function preview(s:State,r:ReturnType<typeof request>){
 }
 export const credits:Handler=(c,command,p)=>{
  if(!(creditCommands as readonly string[]).includes(command))return
- if(c.actor.role!=='owner')fail('FORBIDDEN','Only the current owner approves refunds, credits and exchanges until delegated financial authority is implemented.',null,403)
+ if(c.actor.role!=='owner'&&!['advisor','manager','cashier'].includes(c.actor.staffRole??''))fail('FORBIDDEN','Only the owner or an explicitly delegated finance operator may perform this action.',null,403)
  if(command==='credit.preview'||command==='credit.issue'){
   const r=request(c.s,p),prior=rows(c.s,'creditNote').find(n=>n.reference===r.reference)
   if(prior){if(JSON.stringify(prior.request)!==JSON.stringify(r))fail('CREDIT_REPLAY','This credit reference already records different instructions.');return prior}
@@ -99,7 +99,7 @@ export const credits:Handler=(c,command,p)=>{
   expectVersion(refund,p.version)
   if((refund.redirect?.status??refund.status)==='refunded')fail('REFUND_FINAL','Keep the original completed refund unchanged; never pay it twice.')
   if(rows(c.s,'refund').some(r=>r.redirect?.reference===reference))fail('REFUND_REPLAY','This reference already records a redirect.')
-  const outcome={status,reference,evidence,by:who(c),at:c.now,label:'Owner-recorded manual refund; Mallet did not move or verify money.'},next=bump(c.s,'refund',refund,{...(refund.redirect?{redirect:{...refund.redirect,status}}:{status}),history:[...refund.history,outcome]})
+  const outcome={status,reference,evidence,by:who(c),at:c.now,label:c.actor.staffRole?'Staff-recorded manual refund; Mallet did not move or verify money.':'Owner-recorded manual refund; Mallet did not move or verify money.'},next=bump(c.s,'refund',refund,{...(refund.redirect?{redirect:{...refund.redirect,status}}:{status}),history:[...refund.history,outcome]})
   event(c,command,refund.jobId,refund.id,{status,amountCents:refund.amountCents});return next
  }
  expectVersion(refund,p.version)

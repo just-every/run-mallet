@@ -1,3 +1,5 @@
+import {governanceBrowser} from './governance-browser.mjs'
+import {auditJourney,staffJourney} from './support/governance-journey.mjs'
 import {routingJourney} from './support/routing-journey.mjs'
 import {specialPartJourney} from './support/special-part-journey.mjs'
 import {specialPartBrowser} from './special-part-browser.mjs'
@@ -408,3 +410,8 @@ test('PART-003: reserved work, inspected stock returns and cancellation release 
 test('AR-001 and FLEET-001: owner-reviewed terms, credit limits, fleet authorizer, check allocation, disputes, promises and private recovered statements',()=>run(async h=>{const {receivablesJourney}=await import('./support/receivables-journey.mjs');await receivablesJourney(h)}))
 
 test('AR-001, FLEET-001 and TAX-002: native terms, fleet PO, disputed statement, promise and observed-clearance preview at 1440 and 390',async()=>{const {receivablesBrowser}=await import('./receivables-browser.mjs');await receivablesBrowser()})
+
+ test('GOV-002: private searchable audit retains decisions after revocation and fresh-owner recovery',()=>run(auditJourney))
+ test('GOV-001: owner-only grants bound staff commands, private projections, handoffs and revoked authority',()=>run(staffJourney))
+
+test('GOV-001 and GOV-002: owner grants, bounded staff handoff and private audit search and downloads at 1440 and 390',governanceBrowser)

@@ -1,3 +1,5 @@
+import {taxCreditBasis,taxBasisCommands} from './tax-credit-basis'
+import {retainAudit} from './audit'
 import {tenderClearance,clearanceCommands} from './tender-clearance'
 import {receivables,receivableCommands} from './receivables'
 import {deposits,depositCommands} from './deposits'
@@ -48,7 +50,7 @@ import {inspectionReports,reportCommands} from './inspection-reports'
 import {bookings,bookingCommands} from './bookings'
 
 export type Row = { id: string; version: number; [key: string]: any }
-export type Actor = { id: string; name: string; role: 'owner' | 'admin' | 'member' | 'agent' | 'customer' | 'system' }
+export type Actor = { id: string; name: string; role: 'owner' | 'admin' | 'member' | 'agent' | 'customer' | 'system'; staffRole?:string }
 export type State = { version: number; records: Record<string, Row[]> }
 export type Context = { s: State; actor: Actor; now: string }
 export type Handler = (c: Context, command: string, p: any) => any
@@ -85,7 +87,7 @@ export function expectVersion(row: Row, version: unknown) {
   integer(version, 'version', 1, Number.MAX_SAFE_INTEGER)
   if (row.version !== version) fail('VERSION', 'This record changed. Refresh before continuing.', { id: row.id, current: row.version })
 }
-export const who = (c: Context) => ({ id: c.actor.id, name: c.actor.name, role: c.actor.role })
+export const who = (c: Context) => ({ id: c.actor.id, name: c.actor.name, role: c.actor.role,...(c.actor.staffRole?{staffRole:c.actor.staffRole}:{}) })
 export function put(s: State, kind: string, value: Record<string, any>): Row {
   const row = { ...value, id: crypto.randomUUID(), version: 1 } as Row
   rows(s, kind).push(row)
@@ -106,8 +108,8 @@ export function approval(c: Context, kind: string, row: Row, revision: number, p
   return put(c.s, 'approval', { subjectKind: kind, subjectId: row.id, revision, subjectVersion: row.version, preparedBy, approvedBy: who(c), decision: 'approved', at: c.now })
 }
 const agentCommands = new Set(['estimate.prepare', 'estimate.revise', 'invoice.prepare', 'dispatch.prepare'])
-const customerCommands = ['booking.hold','booking.confirm','booking.cancel','booking.reschedule','booking.outcome','checkin.submit','estimate.customerDecide', 'chaseOptOut.customer','intakeForm.customerSave','intakeForm.copyClaim','intakeForm.copyOutcome','intakeForm.copyAccess'], systemCommands = ['routing.sweep', 'approvalChase.sweep', 'approvalChase.outcome']
-const commands = new Set([...clearanceCommands,...receivableCommands,...depositCommands,...taxCommands,...documentCommands,...diagnosticResultCommands,...supplierOrderCommands,...transferCommands,...rmaCommands,...coreCommands,...replenishmentCommands,...waitlistCommands,...calendarCommands,...reportCommands,...bookingCommands,...checkInCommands,...creditCommands,...intakeFormCommands,...returnCommands,...warrantyCommands,...paymentCommands,...intakeCommands,...traceCommands,...accountCommands,...purchasingCommands,...inventoryCommands,...subletCommands,...rateProfileCommands,...routingCommands,...specialPartCommands,...flowCommands,...promiseCommands,...approvalLinkCommands,...chaseCommands,...internalChaseCommands,...collaborationCommands,...timeCommands,...payRateCommands,...diagnosisCommands,...pricingCommands,...inspectionCommands,...qualityCommands,'decline.record', 'decline.reprice', 'reading.record', 'serviceInterval.save', 'tax.configure', 'asset.create', 'asset.update', 'job.book', 'job.complete', 'work.record', 'estimate.prepare', 'estimate.revise', 'estimate.approve', 'estimate.markSent', 'estimate.authorise', 'invoice.prepare', 'invoice.approve', 'invoice.export', 'dispatch.prepare', 'dispatch.approve'])
+const customerCommands = ['booking.hold','booking.confirm','booking.cancel','booking.reschedule','booking.outcome','checkin.submit','estimate.customerDecide', 'chaseOptOut.customer','intakeForm.customerSave','intakeForm.copyClaim','intakeForm.copyOutcome','intakeForm.copyAccess'], systemCommands = ['ar.reminderOutcome','routing.sweep', 'approvalChase.sweep', 'approvalChase.outcome']
+const commands = new Set([...taxBasisCommands,...clearanceCommands,...receivableCommands,...depositCommands,...taxCommands,...documentCommands,...diagnosticResultCommands,...supplierOrderCommands,...transferCommands,...rmaCommands,...coreCommands,...replenishmentCommands,...waitlistCommands,...calendarCommands,...reportCommands,...bookingCommands,...checkInCommands,...creditCommands,...intakeFormCommands,...returnCommands,...warrantyCommands,...paymentCommands,...intakeCommands,...traceCommands,...accountCommands,...purchasingCommands,...inventoryCommands,...subletCommands,...rateProfileCommands,...routingCommands,...specialPartCommands,...flowCommands,...promiseCommands,...approvalLinkCommands,...chaseCommands,...internalChaseCommands,...collaborationCommands,...timeCommands,...payRateCommands,...diagnosisCommands,...pricingCommands,...inspectionCommands,...qualityCommands,'decline.record', 'decline.reprice', 'reading.record', 'serviceInterval.save', 'tax.configure', 'asset.create', 'asset.update', 'job.book', 'job.complete', 'work.record', 'estimate.prepare', 'estimate.revise', 'estimate.approve', 'estimate.markSent', 'estimate.authorise', 'invoice.prepare', 'invoice.approve', 'invoice.export', 'dispatch.prepare', 'dispatch.approve'])
 export function reduce(s: State, actor: Actor, command: string, payload: any, now = new Date().toISOString()): any {
   object(actor, 'actor'); text(actor.id, 'actor.id'); text(actor.name, 'actor.name'); choice(actor.role, ['owner', 'admin', 'member', 'agent', 'customer', 'system'], 'role')
   // A customer link actor exists only to record its own decision or opt-out; the scheduler only runs reminders.
@@ -116,7 +118,7 @@ export function reduce(s: State, actor: Actor, command: string, payload: any, no
   if (actor.role === 'agent' && !agentCommands.has(command) || actor.role === 'member' && ![...collaborationMemberCommands,...promiseMemberCommands,...timeMemberCommands,...diagnosisMemberCommands,...inspectionMemberCommands,'work.record','quality.record','quality.correct','quality.signTechnician'].includes(command)) fail('FORBIDDEN', 'This role cannot perform that command.', null, 403)
   migrateSalesTax(s)
   const c = { s, actor, now }, p = object(payload), eventCount = rows(s,'event').length
-  for (const handler of [tenderClearance,receivables,deposits,invoiceDocuments,diagnosticResults,supplierOrders,transfers,supplierReturns,cores,replenishment,bookingWaitlist,calendarCapacity,inspectionReports,bookings,checkIns,credits,intakeForms,returns,warranty,payments,intake,stockTrace,customers,purchasing,inventory,sublets,rateProfiles,routing,specialParts,flow, promises, approvalLinks, approvalChasing, collaboration, time, payRates, diagnostics, pricing, tax, workshop, mileage, estimates, declinedWork, invoices, quality, inspections]) {
+  for (const handler of [taxCreditBasis,tenderClearance,receivables,deposits,invoiceDocuments,diagnosticResults,supplierOrders,transfers,supplierReturns,cores,replenishment,bookingWaitlist,calendarCapacity,inspectionReports,bookings,checkIns,credits,intakeForms,returns,warranty,payments,intake,stockTrace,customers,purchasing,inventory,sublets,rateProfiles,routing,specialParts,flow, promises, approvalLinks, approvalChasing, collaboration, time, payRates, diagnostics, pricing, tax, workshop, mileage, estimates, declinedWork, invoices, quality, inspections]) {
     const result = handler(c, command, p)
     if (result !== undefined) { retainStageChanges(c,rows(s,'event').slice(eventCount)); return result }
   }
@@ -131,10 +133,25 @@ export async function load(db: Database, normalize = true): Promise<State> {
   if (normalize) migrateSalesTax(s)
   return s
 }
-export async function execute(db: Database, actor: Actor, command: string, payload: any, authority?: { sql: string; params: any[] }, now?: string): Promise<any> {
+export async function execute(db: Database, actor: Actor, command: string, payload: any, authority?: { sql: string; params: any[] }, now?: string, limits?:{spendCents:number;refundCents:number;discountBps:number}): Promise<any> {
   const s = await load(db, false), before = new Map<string, string>()
   for (const [kind, values] of Object.entries(s.records)) for (const row of values) before.set(`${kind}:${row.id}`, JSON.stringify(row))
-  const result = reduce(s, actor, command, payload, now)
+  const at=now??new Date().toISOString()
+  if(limits){
+    for(const [kind,field] of [['job','jobId'],['estimate','estimateId'],['invoice','invoiceId'],['purchaseOrder','purchaseId'],['stockBin','binId'],['stockCount','countId'],['refund','refundId']]){
+      if(!payload[field])continue;const row=find(s,kind,payload[field]);if((row.location??row.locationId??'shop')!=='shop')fail('LOCATION_SCOPE','This record belongs to another location.',null,403)
+    }
+    if(payload.binBarcode){const bin=rows(s,'stockBin').find(b=>b.barcode===payload.binBarcode);if(bin?.location&&bin.location!=='shop')fail('LOCATION_SCOPE','This bin belongs to another location.',null,403)}
+  }
+  if(limits&&command.startsWith('purchase.')&&payload.purchaseId){const purchase=find(s,'purchaseOrder',payload.purchaseId);if(purchase.totalCents>limits.spendCents)fail('SPEND_LIMIT','This purchase exceeds your delegated spend limit.',null,403)}
+  const result = reduce(s, actor, command, payload, at)
+  if(limits){
+    if(command.startsWith('purchase.')&&Number(result.totalCents??0)>limits.spendCents)fail('SPEND_LIMIT','This purchase exceeds your delegated spend limit.',null,403)
+    if((command.startsWith('credit.')||command.startsWith('refund.'))&&Number(result.totals?.totalCents??result.amountCents??0)>limits.refundCents)fail('REFUND_LIMIT','This refund exceeds your delegated refund limit.',null,403)
+    if(command.startsWith('estimate.')&&result.revisions){for(const line of result.revisions.at(-1).lines)if((line.unitDiscountCents??0)*10000>line.unitCents*limits.discountBps)fail('DISCOUNT_LIMIT','This estimate exceeds your delegated discount limit.',null,403)}
+    if(command==='estimate.revise'){const previous=before.get('estimate:'+result.id);if(previous){const old=JSON.parse(previous).revisions[0].lines;for(const line of result.revisions.at(-1).lines){const source=old.find((l:any)=>l.id===line.id);if(!source||(line.unitCents-(line.unitDiscountCents??0))*10000<source.unitCents*(10000-limits.discountBps))fail('DISCOUNT_LIMIT','A revised line needs its original identity and must respect the delegated discount limit.',null,403)}}}
+  }
+  retainAudit(s,before,{...actor,role:actor.staffRole??actor.role},command,at)
   const statements = [db.prepare('INSERT INTO mallet_assert(ok) SELECT CASE WHEN version=? THEN 1 ELSE 0 END FROM mallet_meta WHERE id=1').bind(s.version)]
   if (authority) statements.push(db.prepare(`INSERT INTO mallet_assert(ok) SELECT CASE WHEN (${authority.sql}) THEN 1 ELSE 0 END`).bind(...authority.params))
   for (const [kind, values] of Object.entries(s.records)) for (const row of values) {

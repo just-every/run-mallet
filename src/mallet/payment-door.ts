@@ -1,5 +1,6 @@
 import type {Bindings} from '../auth.server'
 import type {Actor,Authority} from './auth'
+import {openTermsRelease} from './receivables'
 import {handoverTender} from './payments'
 import {connectorSecret} from './connectors/secrets'
 import {execute,expectVersion,fail,find,load,rows,text} from './model'
@@ -32,8 +33,9 @@ export async function verifyStripePayment(env:Bindings,actor:Actor,authority:Aut
 export async function collectionInput(env:Bindings,actor:Actor,input:any,authority:Authority){
  if(!['owner','admin'].includes(actor.role))fail('FORBIDDEN','A native owner or service advisor records handover.',null,403)
  const s=await load(env.DB),job=find(s,'job',input.jobId),invoice=rows(s,'invoice').find(i=>i.jobId===job.id)
+ if(input.termsAssignmentId){if(actor.role!=='owner')fail('FORBIDDEN','Only the current owner releases on reviewed account terms.',null,403);if(invoice)openTermsRelease(s,invoice,actor.id,input.termsAssignmentId)}
  const receipts=[]
- if(!input.overrideId&&invoice&&handoverTender(s,invoice).recordedCents<invoice.totals.totalCents)for(const p of rows(s,'payment').filter(p=>p.invoiceId===invoice.id&&p.invoiceRevision===invoice.revision&&p.invoiceTotalCents===invoice.totals.totalCents&&p.verified===true))receipts.push(await stripeReceipt(env,p.receipt.paymentIntentId,invoice))
+ if(!input.overrideId&&!input.termsAssignmentId&&invoice&&handoverTender(s,invoice).recordedCents<invoice.totals.totalCents)for(const p of rows(s,'payment').filter(p=>p.invoiceId===invoice.id&&p.invoiceRevision===invoice.revision&&p.invoiceTotalCents===invoice.totals.totalCents&&p.verified===true))receipts.push(await stripeReceipt(env,p.receipt.paymentIntentId,invoice))
  const override=rows(s,'returnOverride').find(o=>o.id===input.overrideId)
  const guard=override?{sql:`(${authority.sql}) AND EXISTS(SELECT 1 FROM oa_operators WHERE id=? AND role='owner' AND status='active')`,params:[...authority.params,override.by.id]}:authority
  return {input:{...input,settlementVersion:s.version,settlementReceipts:receipts},authority:guard}

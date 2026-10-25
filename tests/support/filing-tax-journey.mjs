@@ -31,10 +31,26 @@ export async function filingTaxJourney(h){
  assert.equal((await h.command('credit.apply',transferInput)).id,transfer.id)
  result=await report();assert.equal(result.groups[0].collectedTaxCents,2000);assert.equal(result.groups[0].netTaxCents,1900);assert.deepEqual(result.invoiceBasis,{invoicedTaxCents:3000,creditedTaxCents:200,netTaxCents:2800});assert.equal(result.reviewRequired,true)
  assert.ok(result.excluded.some(e=>e.paymentId===transfer.id&&e.amountCents===1100));assert.ok(result.excluded.some(e=>e.creditNoteId===credit.id));assert.equal(result.events.some(e=>e.paymentId===transfer.id),false,'A customer-credit transfer never invents a new cash receipt')
- const prior='2000-01-01';assert.deepEqual((await h.api('/api/mallet/tax/filing?from='+prior+'&to='+prior)).groups,[])
+ const basisInput={creditNoteId:credit.id,version:credit.version,allocations:[{paymentId:other.id,amountCents:1100}],legalBasis:'Owner reviewed the synthetic jurisdiction treatment: original credit tax moves to suspense on review; applied credit recognizes destination tax',evidence:'Owner matched the exact cleared original corporate tender receipt'}
+ const beforeBasis=JSON.stringify((await h.state()).records)
+ await h.command('tax.creditBasis',basisInput,{as:admin.cookie,status:403});await h.command('tax.creditBasis',{...basisInput,allocations:[{paymentId:other.id,amountCents:1099}]},{status:409});await h.command('tax.creditBasis',{...basisInput,allocations:[{paymentId:check.id,amountCents:1100}]},{status:409});await h.command('tax.creditBasis',{...basisInput,legalBasis:''},{status:400})
+ assert.equal(JSON.stringify((await h.state()).records),beforeBasis,'Unproved source attribution writes no product or audit records')
+ await h.command('tax.assignJurisdiction',{invoiceId:replacement.id,version:replacement.version,jurisdiction:'Replacement jurisdiction',evidence:'Owner reviewed the distinct replacement jurisdiction'})
+ const basis=await h.command('tax.creditBasis',basisInput);assert.equal((await h.command('tax.creditBasis',basisInput)).id,basis.id);await h.command('tax.creditBasis',{...basisInput,legalBasis:'Changed basis'},{status:409})
+ result=await report();assert.equal(result.reviewRequired,false);assert.deepEqual(result.excluded,[])
+ const source=result.groups.find(g=>g.jurisdiction==='Synthetic jurisdiction'),destination=result.groups.find(g=>g.jurisdiction==='Replacement jurisdiction')
+ assert.equal(source.collectedTaxCents,2000);assert.equal(source.refundTaxCents,100);assert.equal(source.creditAdjustmentTaxCents,-100);assert.equal(source.netTaxCents,1800);assert.equal(destination.collectedTaxCents,0);assert.equal(destination.creditAdjustmentTaxCents,100);assert.equal(destination.netTaxCents,100)
+ assert.equal(result.events.find(e=>e.paymentId===transfer.id).originalReceipts[0].sourceId,other.id);assert.equal(result.events.find(e=>e.paymentId===transfer.id).originalReceipts[0].receiptOn,other.at.slice(0,10));assert.equal(result.events.find(e=>e.paymentId===transfer.id).newCash,false,'Reviewed credit reuses original tender and never invents new cash');assert.equal(result.events.filter(e=>e.kind==='credit-reversal'&&e.creditNoteId===credit.id).length,1)
+ assert.equal((await h.state({as:admin.cookie})).records.taxCreditBasis,undefined)
+ const extraRequest={...creditInput,destination:'account-credit',reference:'synthetic-mallet-reserved-basis'};delete extraRequest.paymentId
+ const extraReview=await h.command('credit.preview',extraRequest),extra=await h.command('credit.issue',{...extraRequest,review:extraReview,confirm:'issue-credit'})
+ await h.command('tax.creditBasis',{...basisInput,creditNoteId:extra.id,version:extra.version,allocations:[{paymentId:allocation.id,amountCents:1100}]})
+ await h.command('credit.preview',{...creditInput,reference:'synthetic-mallet-source-already-attributed',lines:[{...creditInput.lines[0],quantity:0.3}]},{status:409})
+ result=await report();assert.equal(result.groups.find(g=>g.jurisdiction==='Synthetic jurisdiction').netTaxCents,1700,'A reviewed credit source cannot also fund an overlapping original-tender refund')
+ const prior='2000-01-01'  ,earlier=await h.api('/api/mallet/tax/filing?from='+prior+'&to='+prior);assert.deepEqual(earlier.groups,[]);assert.deepEqual(earlier.excluded,[],'A historical filing period never includes later credit transfers, refunds or uncleared tender');assert.equal(earlier.reviewRequired,false)
  assert.equal((await h.request('/api/mallet/tax/filing?from=2026-02-30&to=2026-03-01')).status,400);assert.equal((await h.request('/api/mallet/tax/filing?from=2026-03-02&to=2026-03-01')).status,400)
  assert.equal((await h.request(query,{as:admin.cookie})).status,403);assert.equal((await h.state({as:admin.cookie})).records.tenderClearance,undefined)
  const backup=await archive(h),fresh=await installation()
- try{await restore(fresh,backup);assert.deepEqual(await fresh.api(query),result);assert.deepEqual((await fresh.state()).records.tenderClearance,(await h.state()).records.tenderClearance)}finally{await fresh.close()}
+ try{await restore(fresh,backup);assert.deepEqual(await fresh.api(query),result);assert.deepEqual((await fresh.state()).records.tenderClearance,(await h.state()).records.tenderClearance);assert.deepEqual((await fresh.state()).records.taxCreditBasis,(await h.state()).records.taxCreditBasis)}finally{await fresh.close()}
  return {account,i1,i2,check,other,date}
 }

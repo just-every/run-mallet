@@ -1,3 +1,5 @@
+import {staffCommand,grantStaff,staffSettings,staffState,staffPage} from './staff'
+import {auditReport,auditPage,auditCsv} from './audit'
 import {receivablesPage,receivablesInput,filingPage} from './ui/receivables'
 import {filingTax} from './filing-tax'
 import {accountStatement,utcDate} from './receivables'
@@ -55,6 +57,7 @@ import {refundDoor} from './refund-door'
 import {intakeFormResponse,createIntakeFormLink} from './intake-form-door'
 import {internalIntakeFormCommands} from './intake-forms'
 import {intakeTemplatesPage,intakeTemplateInput,signedIntakeReceipt} from './ui/intake-forms'
+import {sendBalanceReminder} from './receivables-mail'
 import {returnPage,returnFormInput,handoverReceipt} from './ui/returns'
 import {collectionInput,verifyStripePayment} from './payment-door'
 import {warrantyPage,warrantyFormInput} from './ui/warranty'
@@ -148,8 +151,10 @@ async function nativeForm(request:Request) {
 const withoutSubletCosts=(value:any)=>{if(!value||!('sublets' in value))return value;const {sublets,...rest}=value;return rest}
 function visible(s:State,actor:Actor):State {
  if(actor.role==='owner')s={...s,records:{...s.records,deposit:rows(s,'deposit').map(d=>({...d,balance:depositBalance(s,d)}))}}
- if(actor.role!=='owner')s={...s,records:Object.fromEntries(Object.entries(s.records).filter(([kind])=>!['tenderClearance','arTerms','arInvoice','arDispute','arPromise','deposit','retentionPolicy','retentionHold','retentionReceipt','diagnosticResult'].includes(kind)))}
- if(actor.role!=='owner')s={...s,records:{...s.records,event:rows(s,'event').filter(row=>!row.kind.startsWith('tender.')&&!row.kind.startsWith('ar.')&&!row.kind.startsWith('deposit.')&&!row.kind.startsWith('diagnosticResult.'))}}
+ if(actor.role!=='owner')s={...s,records:{...s.records,handover:rows(s,'handover').map(r=>{const {accountTerms,...settlement}=r.settlement;return {...r,settlement}})}}
+ if(actor.role!=='owner'){const {audit:_audit,...records}=s.records;s={...s,records}}
+ if(actor.role!=='owner')s={...s,records:Object.fromEntries(Object.entries(s.records).filter(([kind])=>!['taxCreditBasis','tenderClearance','arTerms','arInvoice','arDispute','arPromise','arReminder','deposit','retentionPolicy','retentionHold','retentionReceipt','diagnosticResult'].includes(kind)))}
+ if(actor.role!=='owner')s={...s,records:{...s.records,event:rows(s,'event').filter(row=>!row.kind.startsWith('tax.creditBasis')&&!row.kind.startsWith('tender.')&&!row.kind.startsWith('ar.')&&!row.kind.startsWith('deposit.')&&!row.kind.startsWith('diagnosticResult.'))}}
  if(!human(actor))s={...s,records:Object.fromEntries(Object.entries(s.records).map(([k,v])=>[k,(k.startsWith('calendar')||k==='bookingWaitlist'||k==='waitlistOffer'||k==='appointment'||k==='bookingService'||k==='counterIntake'||k.startsWith('intake')||['warranty','warrantyTerms','payment','handover','returnDelegate','returnOverride'].includes(k))?[]:k==='event'?v.filter(x=>!x.kind.startsWith('calendar.')&&!x.kind.startsWith('waitlist.')&&!x.kind.startsWith('booking.')&&!x.kind.startsWith('checkin.')&&!x.kind.startsWith('intake.')&&!x.kind.startsWith('warranty.')&&!x.kind.startsWith('payment.')&&!x.kind.startsWith('return.')):v]))}
  s=scopedCollaboration(scopedPromises(s,actor),actor)
  s=scopedTime(s,actor)
@@ -173,7 +178,9 @@ async function operators(db:D1Database) {
 const bookingFields=['title','bayId','technicianId','startAt','endAt']
 function formInput(data:FormData) {
  const input:any=Object.fromEntries(data)
+ if(input.staffJob!==undefined&&input.command==='estimate.prepare'||input.staffInvoice!==undefined&&input.command==='payment.record'){let source:any;try{source=JSON.parse(input.staffJob??input.staffInvoice)}catch{throw new HttpError(400,'invalid_staff_source')};if(input.command==='estimate.prepare')input.jobId=source.jobId;else input.invoiceId=source.invoiceId;input.version=source.version}
  assetNativeInput(input)
+ if(['staff.grant','staff.revoke'].includes(input.command)){for(const key of ['discountBps','spendCents','refundCents','version'])input[key]=Number(input[key]??0);if(input.discountPercent!==undefined)input.discountBps=Math.round(Number(input.discountPercent)*100);if(input.spendUsd!==undefined)input.spendCents=Math.round(Number(input.spendUsd)*100);if(input.refundUsd!==undefined)input.refundCents=Math.round(Number(input.refundUsd)*100)}
  if(retentionCommands.includes(input.command)){input.consent=input.consent==='yes';if(['retention.preview','customer.erase','retention.run'].includes(input.command))input.categories=data.getAll('categories');for(const key of ['mediaDays','personalDays'])if(key in input)input[key]=input[key]===''?null:Number(input[key])}
  for(const name of ['flowVersion','version','itemVersion','revision','quantity','value','dueValue'])if(input[name]!==undefined&&input[name]!=='')input[name]=Number(input[name])
  if(data.has('lineIds') || input.command==='estimate.authorise')input.lineIds=data.getAll('lineIds')
@@ -247,6 +254,18 @@ async function workshopResponse(request:Request,original:Bindings,execution:Pick
  let actor:Actor|undefined,submitted:any
  try {
   const auth=await identity(request,env);actor=auth.actor;originGuard(request,env,auth.bearer)
+  if(path==='/app'&&actor.staff)return redirect('/app/staff')
+  if(['/app/staff','/api/mallet/staff/state'].includes(path)){if(!actor.staff)throw new HttpError(403,'staff_grant_required');const view=staffState(await load(env.DB),actor);if(!await env.DB.prepare(`SELECT 1 AS ok WHERE (${auth.authority.sql})`).bind(...auth.authority.params).first())throw new HttpError(403,'staff_grant_required');return path==='/app/staff'?page('Staff workspace',staffPage(view),actor,200,{section:'data'}):url.searchParams.has('download')?new Response(JSON.stringify(view,null,2),{headers:{...headers,'content-type':'application/json','content-disposition':'attachment; filename="mallet-staff.json"'}}):json(view)}
+  if(path==='/app/staff-access'){if(actor.role!=='owner')throw new HttpError(403,'owner_required');return page('Staff roles & limits',await staffSettings(env.DB),actor,200,{section:'data'})}
+  if(['/app/audit','/api/mallet/audit'].includes(path)){
+   if(!['GET','HEAD'].includes(request.method))throw new HttpError(405,'method_not_allowed')
+   const report=await auditReport(env.DB,actor,auth.authority,url.searchParams),format=url.searchParams.get('format')
+   if(format&&!['json','csv'].includes(format))throw new HttpError(400,'invalid_audit_format')
+   if(path==='/app/audit')return page('Accountable changes',auditPage(report,url.searchParams),actor,200,{section:'data'})
+   if(format==='csv')return csv(auditCsv(report.entries),'mallet-audit')
+   if(format==='json')return new Response(JSON.stringify(report,null,2),{headers:{...headers,'content-type':'application/json','content-disposition':'attachment; filename="mallet-audit.json"'}})
+   return json(report)
+  }
   if(path==='/api/mallet/board-revision'&&request.method==='GET'){if(actor.role==='agent')throw new HttpError(403,'staff_required');const row=await env.DB.prepare(`SELECT version FROM mallet_meta WHERE id=1 AND (${auth.authority.sql})`).bind(...auth.authority.params).first();if(!row)throw new HttpError(403,'staff_required');return json(row)}
   const coreRepair=path.match(/^\/api\/mallet\/repairs\/([^/]+)$/)
   if(coreRepair&&['GET','HEAD'].includes(request.method))return json({actor,...visible(await loadRepairState(env.DB,actor,auth.authority,coreRepair[1]),actor)})
@@ -284,8 +303,11 @@ async function workshopResponse(request:Request,original:Bindings,execution:Pick
    let result:any
    if(['connector.save','connector.revoke'].includes(command)&&actor.role==='owner'&&!auth.gate?.enrolled)throw new HttpError(403,'step_up_required','Enrol your own second factor before opening the credential door.')
    if(needsStepUp(command,actor.role))auth.authority=requireStepUp(auth,command.startsWith('deposit.'))
-   if(internalSupplierCommands.includes(command)||internalDocumentCommands.includes(command)||internalWaitlistCommands.includes(command)||internalReportCommands.includes(command)||internalBookingCommands.includes(command)||internalCheckInCommands.includes(command)||internalRefundCommands.includes(command)||internalIntakeFormCommands.includes(command)||command==='payment.verified'||command==='routing.sweep'||internalPromiseCommands.includes(command)||internalApprovalCommands.includes(command)||internalChaseCommands.includes(command))throw new HttpError(404,'unknown_command')
-   if(command==='invoice.send')result=await sendInvoice(env,actor,auth.authority,input)
+   if(['ar.reminderClaim','ar.reminderOutcome'].includes(command)||internalSupplierCommands.includes(command)||internalDocumentCommands.includes(command)||internalWaitlistCommands.includes(command)||internalReportCommands.includes(command)||internalBookingCommands.includes(command)||internalCheckInCommands.includes(command)||internalRefundCommands.includes(command)||internalIntakeFormCommands.includes(command)||command==='payment.verified'||command==='routing.sweep'||internalPromiseCommands.includes(command)||internalApprovalCommands.includes(command)||internalChaseCommands.includes(command))throw new HttpError(404,'unknown_command')
+   if(actor.staff){if(command==='job.book')auth.authority=await calendarAuthority(env,command,input,auth.authority);if(['payment.record','credit.issue','refund.record'].includes(command))auth.authority=requireStepUp(auth);result=await staffCommand(env.DB,actor,auth.authority,command,input)}
+   else if(['staff.grant','staff.revoke'].includes(command)){auth.authority=requireStepUp(auth);result=await grantStaff(env.DB,actor,auth.authority,command,input)}
+   else if(command==='ar.remind')result=await sendBalanceReminder(env,actor,auth.authority,input)
+   else if(command==='invoice.send')result=await sendInvoice(env,actor,auth.authority,input)
    else if(retentionCommands.includes(command))result=await retentionCommand(env,actor,auth.authority,command,input)
    else if(command.startsWith('waitlist.'))result=await waitlistCommand(env,request,actor,auth.authority,command,input)
    else if(command.startsWith('calendar.')||['job.book','dispatch.approve'].includes(command))result=await execute(env.DB,actor as any,command,input,await calendarAuthority(env,command,input,auth.authority))
@@ -300,7 +322,7 @@ async function workshopResponse(request:Request,original:Bindings,execution:Pick
    else if(['purchase.compare','purchase.submit','purchase.reconcile','purchase.cancel','purchase.rejectSubstitution'].includes(command))result=await supplierDoor(env,actor,auth.authority,command,input)
    else if(command==='refund.submit'||command==='refund.reconcile')result=await refundDoor(env,actor,auth.authority,command,input)
    else if(command==='payment.verifyStripe')result=await verifyStripePayment(env,actor,auth.authority,input)
-   else if(command==='flow.collect'){const checked=await collectionInput(env,actor,input,auth.authority);result=await execute(env.DB,actor as any,command,checked.input,checked.authority);await purgeIntakeSecrets(env,'job_id=?',[input.jobId])}
+   else if(command==='flow.collect'){if(input.termsAssignmentId)auth.authority=requireStepUp(auth);const checked=await collectionInput(env,actor,input,auth.authority);result=await execute(env.DB,actor as any,command,checked.input,checked.authority);await purgeIntakeSecrets(env,'job_id=?',[input.jobId])}
    else if(['intake.secretStore','intake.secretReveal','intake.secretEnd','intake.secretEraseCustomer'].includes(command))result=await intakeSecret(env,actor,auth.authority,command,input)
    else if(command.startsWith('routing.'))result=await routingCommand(env.DB,actor as any,auth.authority,command,input)
    else if(command==='promise.approveAndNotify')result=await sendPromiseNotice(env,actor,auth.authority,input)
@@ -321,11 +343,13 @@ async function workshopResponse(request:Request,original:Bindings,execution:Pick
    }
    else if(command==='inspection.record'&&actor.role!=='agent'){const checked=await inspectionRecordInput(env.DB,actor,auth.authority,input);result=await execute(env.DB,actor as any,command,checked.input,checked.authority)}
    else result=await execute(env.DB,actor as any,command,input,auth.authority)
+   if(actor.staff){if(isApi)return json(result);return redirect('/app/staff')}
+   if(command.startsWith('staff.')){if(isApi)return json(result);return redirect('/app/staff-access')}
    if(isApi){if(!human(actor)&&result&&typeof result==='object'&&'billing' in result){const {billing,...rest}=result;result=rest}return json(actor.role==='agent'?withoutSubletCosts(withoutInspectionSource(result)):result)}
    if(retentionCommands.includes(command)){if(command==='customer.export')return new Response(JSON.stringify(result,null,2),{headers:{...headers,'content-type':'application/json','content-disposition':'attachment; filename="customer-data.json"'}});return page('Retention & erasure',retentionPage(await load(env.DB),input.customerId??'',command==='retention.preview'?result:undefined,input,['customer.erase','retention.run'].includes(command)?result:undefined),actor,200,{section:'data'})}
    if(['invoice.issue','invoice.send'].includes(command)){const invoiceId=command==='invoice.issue'?input.invoiceId:result.invoiceId;return redirect('/app/invoices/'+encodeURIComponent(invoiceId))}
    if(command.startsWith('ar.'))return redirect('/app/receivables?'+new URLSearchParams({accountId:String(input.accountId??'')}))
-   if(command==='tender.clearance')return redirect('/app/tax/filing')
+   if(command==='tender.clearance'||command==='tax.creditBasis')return redirect('/app/tax/filing')
    if(command.startsWith('deposit.'))return redirect('/app/deposits?'+new URLSearchParams({accountId:String(input.accountId??'')}))
    if(command==='customer.mergePreview')return page('Review duplicate merge',mergePreviewPage(result,input),actor,200,{section:'customers'})
    if(command==='inspectionReport.send')return page('Inspection report email',`<section class="card"><p>${e(result.status==='accepted'?'Handed to the mail provider; delivery is not confirmed.':result.status==='development'?'Saved to the development outbox; not sent.':'Send failed or is uncertain. Contact the customer; no automatic retry will occur.')}</p><a href="${e(result.url)}">Open reviewed customer report</a><p><a href="/app/jobs/${e(result.jobId)}#inspection-reports">Return to repair</a></p></section>`,actor,200,{section:'jobs'})

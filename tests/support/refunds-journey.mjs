@@ -152,6 +152,12 @@ export async function stripeRefundJourney(){
   await h.command('refund.redirect',{...manualInput,version:manual.version,reference:'synthetic-mallet-177'},{status:409})
   await h.command('refund.record',{...observation,version:manual.version,reference:'synthetic-mallet-178'},{status:409})
   await h.command('credit.preview',creditInput(invoice,payment,'synthetic-mallet-179'),{status:409})
+  const completedFiling=await h.api('/api/mallet/tax/filing?from=2000-01-01&to=2099-01-01')
+  assert.equal(completedFiling.events.find(r=>r.refundId===manual.id).taxCents,-third.totals.salesTaxCents,'Completed redirected manual refund reverses exact original tax once')
+  const attribution={creditNoteId:second.id,version:second.version,allocations:[{paymentId:payment.id,amountCents:217}],legalBasis:'Owner reviewed the original and replacement jurisdiction treatment',evidence:'Original captured receipt identified for the exact failed-refund credit'}
+  const attributed=await h.command('tax.creditBasis',attribution);assert.equal((await h.command('tax.creditBasis',attribution)).id,attributed.id)
+  const reviewedFiling=await h.api('/api/mallet/tax/filing?from=2000-01-01&to=2099-01-01')
+  assert.equal(reviewedFiling.events.find(r=>r.paymentId===applied.id).newCash,false);assert.equal(reviewedFiling.events.find(r=>r.creditNoteId===second.id&&r.kind==='credit-reversal').taxCents,-second.totals.salesTaxCents);assert.equal(reviewedFiling.excluded.some(r=>r.refundId===redirected.id||r.paymentId===applied.id),false)
   const state=(await h.state()).records;assert.equal(state.refund.filter(r=>(r.redirect?.status??r.status)==='refunded').reduce((n,r)=>n+r.amountCents,0)+applied.amountCents,541,'Refunded plus credited equals, and cannot exceed, recorded tender')
   assert.deepEqual(state.invoice.find(i=>i.id===invoice.id),invoice);assert.deepEqual(state.creditNote.find(n=>n.id===second.id),second,'Redirect never alters the issued credit note');assert.equal(await (await h.request('/api/mallet/exports/'+exported.id)).text(),csv)
   const login=await portalSignIn(h,contact.email,account.name),view=await h.api('/api/mallet/portal/billing',undefined,{as:login.cookie}),bill=view.invoices.find(i=>i.id===invoice.id)
@@ -160,7 +166,7 @@ export async function stripeRefundJourney(){
   for(const r of bill.refunds)assert.deepEqual(Object.keys(r).sort(),['amountCents','method','status'])
   for(const secret of ['consentEvidence','synthetic-mallet-170','replacement check','paymentIntentId'])assert.ok(!JSON.stringify(view).includes(secret))
   const fresh=await installation({bindings:{OWNER_EMAIL:'redirect-recovery@example.test'}})
-  try{await restore(fresh,await archive(h));const restored=(await fresh.state()).records;for(const kind of ['invoice','export','payment','creditNote','refund'])assert.deepEqual(restored[kind],state[kind]);assert.deepEqual(await fresh.command('refund.redirect',input),redirected);await fresh.command('credit.apply',{...allocation,amountCents:1,reference:'synthetic-mallet-180'},{status:409});await fresh.command('refund.redirect',redirect(redirected,'synthetic-mallet-181'),{status:409});await fresh.state({as:h.owner,status:401});assert.equal(fresh.messages.length,0)}finally{await fresh.close()}
+  try{await restore(fresh,await archive(h));const restored=(await fresh.state()).records;for(const kind of ['invoice','export','payment','creditNote','refund','taxCreditBasis'])assert.deepEqual(restored[kind],state[kind]);assert.deepEqual(await fresh.command('refund.redirect',input),redirected);await fresh.command('credit.apply',{...allocation,amountCents:1,reference:'synthetic-mallet-180'},{status:409});await fresh.command('refund.redirect',redirect(redirected,'synthetic-mallet-181'),{status:409});await fresh.state({as:h.owner,status:401});assert.equal(fresh.messages.length,0)}finally{await fresh.close()}
 
   revoke=async()=>{assert.equal((await h.request('/auth/signout',{method:'POST',body:{}})).status,204)}
   await h.command('refund.reconcile',{refundId:refund.id,version:refund.version},{status:409})

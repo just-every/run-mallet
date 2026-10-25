@@ -1,3 +1,4 @@
+import {handoverInput} from './support/handover-input.mjs'
 import assert from 'node:assert/strict'
 import {randomBytes} from 'node:crypto'
 import {mkdir} from 'node:fs/promises'
@@ -10,7 +11,7 @@ export async function receivablesBrowser(){
  const h=await installation({entry:'tests/dev-worker.ts',network:true,assets:true,bindings:{AUTH_LOCAL:'true',RER_DEV_KEY:randomBytes(32).toString('base64url')}});let browser
  try{
   h.person=publicDoor(h.origin,h.owner).person
-  const {account,i1,i2}=await receivablesFixture(h)
+  const {account,i1,i2,invoice:makeInvoice}=await receivablesFixture(h)
   await h.stepUp()
   browser=await chromium.launch({headless:true,args:['--use-mock-keychain','--password-store=basic']})
   const context=await browser.newContext(),p=await context.newPage(),errors=[];p.on('pageerror',error=>errors.push(error.message))
@@ -28,7 +29,9 @@ export async function receivablesBrowser(){
    const invoice=index===0?i1:i2
    await submit('ar.invoice',{po:'synthetic-mallet-native-po-'+width,evidence:'Allowed fleet manager approved this PO; driver has no approval authority'},{invoiceId:invoice.id})
    await p.goto(ledger);assert.match(await p.locator('main').innerText(),/Current account statement/);assert.match(await p.locator('#ar-'+invoice.id).innerText(),/synthetic-mallet-native-po-/);await shot('03-terms-and-statement',width)
-   await submit('ar.dispute',{evidence:'Fleet disputed the recorded work pending review'},{invoiceId:invoice.id})
+   await submit('ar.remind',{evidence:'Owner reviewed the current balance and billing recipient',consentEvidence:'Billing contact explicitly requested this exact balance reminder by email'},{invoiceId:invoice.id,checks:['consent']})
+   await p.goto(ledger);assert.match(await p.locator('#ar-'+invoice.id).innerText(),/Suppressed in development/);await shot('03b-consented-balance-reminder',width)
+   await submit('ar.dispute' ,{evidence:'Fleet disputed the recorded work pending review'},{invoiceId:invoice.id})
    await p.goto(ledger);assert.match(await p.locator('#ar-'+invoice.id).innerText(),/Dispute open/);assert.match(await p.locator('#ar-'+invoice.id).innerText(),/Chasing paused/);await shot('04-dispute-pauses-chasing',width)
    await submit('ar.promise',{promisedOn:'2099-01-03',amountUsd:10,evidence:'Fleet promised ten dollars on the selected UTC date'},{invoiceId:invoice.id})
    await p.goto(ledger);assert.match(await p.locator('#ar-'+invoice.id).innerText(),/Promised \$10.00 on 2099-01-03/);await shot('05-payment-promise-and-downtime',width)
@@ -36,6 +39,22 @@ export async function receivablesBrowser(){
    await p.goto(h.origin+'/app/tax/filing?from=2000-01-01&to=2099-01-01');assert.match(await p.locator('main').innerText(),/Filing-period preview/);await shot('07-filing-review',width)
    if(index===0){await submit('tender.clearance',{observedOn:check.at.slice(0,10),reference:'synthetic-mallet-bank-native',evidence:'Owner inspected bank clearance of the recorded fleet check'})}
    await p.goto(h.origin+'/app/tax/filing?from=2000-01-01&to=2099-01-01');assert.match(await p.locator('main').innerText(),/collected tax \$4.55/);assert.equal(await form('tender.clearance').count(),0);await shot('08-observed-clearance-preview',width)
+   const input=await handoverInput(h,invoice.jobId,account.name),assignment=(await h.state()).records.arInvoice.find(r=>r.invoiceId===invoice.id)
+   await p.goto(h.origin+'/app/jobs/'+invoice.jobId+'/return');await shot('09-open-terms-handover',width)
+   await submit('flow.collect',{collectorName:account.name,identityEvidence:input.identityEvidence,warrantyAdvice:input.warrantyAdvice},{selects:{termsAssignmentId:assignment.id,comparisonId:input.comparisonId,readingId:input.readingId}})
+   assert.match(await p.locator('#handover-receipt').innerText(),/Released on account terms; balance due/);assert.match(await p.locator('#handover-receipt').innerText(),/No payment is recorded by release/);await shot('10-account-terms-receipt',width)
+  }
+  const replacement=await makeInvoice(3)
+  for(const [invoice,jurisdiction]of [[i1,'Native source jurisdiction'],[replacement,'Native replacement jurisdiction']])await h.command('tax.assignJurisdiction',{invoiceId:invoice.id,version:invoice.version,jurisdiction,evidence:'Owner reviewed the invoice jurisdiction for credit attribution'})
+  for(const width of [1440,390]){
+   const request={invoiceId:i1.id,version:i1.version,lines:[{lineId:i1.lines[0].id,sourceEstimateId:i1.lines[0].sourceEstimateId,sourceRevision:i1.lines[0].sourceRevision,quantity:0.1}],destination:'account-credit',reference:'synthetic-mallet-native-tax-credit-'+width,reason:'Return part of the original repair part',consentEvidence:'Customer explicitly requested same-account credit'}
+   const review=await h.command('credit.preview',request),note=await h.command('credit.issue',{...request,review,confirm:'issue-credit'})
+   await h.command('credit.apply',{creditNoteId:note.id,invoiceId:replacement.id,version:replacement.version,amountCents:1100,reference:'synthetic-mallet-native-tax-apply-'+width,reason:'Customer instructed replacement repair credit allocation',confirm:'apply-credit'})
+   await p.setViewportSize({width,height:1000});await p.goto(h.origin+'/app/tax/filing?from=2000-01-01&to=2099-01-01');await shot('11-credit-source-review',width)
+   const f=p.locator('form:has(input[name="command"][value="tax.creditBasis"]):has(input[name="creditNoteId"][value="'+note.id+'"])')
+   await f.locator('[name="basisUsd_'+check.id+'"]').fill('11.00');await f.locator('[name="legalBasis"]').fill('Owner reviewed the synthetic jurisdiction treatment; review original tax and recognize destination tax without new cash');await f.locator('[name="evidence"]').fill('Owner matched the cleared original fleet check to the exact credit')
+   const pending=p.waitForResponse(r=>new URL(r.url()).pathname==='/app/actions'&&r.request().method()==='POST');await f.getByRole('button',{name:'Record reviewed original tender'}).click();assert.equal((await pending).status(),303);await p.waitForLoadState('domcontentloaded')
+   assert.match(await p.locator('main').innerText(),/credit tax adjustment/);assert.equal(await f.count(),0);await shot('12-attributed-credit-adjustment',width)
   }
   assert.deepEqual(errors,[])
  }finally{await browser?.close();await h.close()}
