@@ -143,14 +143,15 @@ async function taxAdjustmentJourney(h,account,expired,admin){
 
 export async function finishTaxInvoice(h,adjusted){
  const rev=adjusted.revisions.at(-1)
- const job=(await h.state()).records.job.find(j=>j.id===adjusted.jobId)
+ const state=await h.state(),job=state.records.job.find(j=>j.id===adjusted.jobId),asset=state.records.asset.find(a=>a.id===job.assetId),account=state.records.customerAccount?.find(a=>a.id===asset.customerAccountId)
+ const fleet=account?.kind==='fleet'?{authorizerId:account.authorizerId,accountVersion:account.version,po:'synthetic-mallet-tax-approval',fleetEvidence:'Owner reviewed the allowed fleet authorizer approval for the exact revised fee and exemption basis'}:{}
  const before=(await h.state()).records
  await h.command('work.record',{jobId:job.id,version:job.version,lineId:rev.lines[0].id,quantity:1},{status:409})
  assert.deepEqual((await h.state()).records,before)
  await h.command('estimate.authorise',{estimateId:adjusted.id,version:adjusted.version,revision:rev.n,lineIds:rev.lines.map(l=>l.id),customerName:'Fleet authorizer',method:'signed',evidence:'Cannot skip renewed approval'},{status:409})
  let next=await h.command('estimate.approve',{estimateId:adjusted.id,version:adjusted.version,revision:rev.n})
  next=await h.command('estimate.markSent',{estimateId:adjusted.id,version:next.version,revision:rev.n,method:'printed'})
- next=await h.command('estimate.authorise',{estimateId:adjusted.id,version:next.version,revision:rev.n,lineIds:rev.lines.map(l=>l.id),customerName:'Recorded fleet authorizer',method:'signed',evidence:'Signed authorization to exact disclosed fee and exemption basis'})
+ next=await h.command('estimate.authorise',{...fleet,estimateId:adjusted.id,version:next.version,revision:rev.n,lineIds:rev.lines.map(l=>l.id),customerName:'Recorded fleet authorizer',method:'signed',evidence:'Signed authorization to exact disclosed fee and exemption basis'})
  let current=(await h.state()).records.job.find(j=>j.id===adjusted.jobId)
  for(const line of rev.lines)current=await h.command('work.record',{jobId:current.id,version:current.version,lineId:line.id,quantity:line.quantity})
  await qualityReady(h,current);current=await h.command('job.complete',{jobId:current.id,version:current.version})
