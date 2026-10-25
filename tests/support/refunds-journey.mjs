@@ -134,6 +134,11 @@ export async function stripeRefundJourney(){
   const applied=await h.command('credit.apply',allocation);assert.equal(applied.amountCents,217)
   assert.match((await taxCollection(invoice.id)).reviewReasons.join(' '),/redirected refund/);assert.deepEqual((await taxCollection(replacement.invoice.id)).excludedPaymentIds,[applied.id]);assert.equal((await taxCollection(replacement.invoice.id)).netCollectedTaxCents,0,'Customer credit is disclosed, never counted as new cash')
   await h.command('credit.apply',{...allocation,reference:'synthetic-mallet-173',amountCents:1},{status:409})
+  const filing=await h.api('/api/mallet/tax/filing?from=2000-01-01&to=2099-01-01')
+  assert.ok(filing.excluded.some(r=>r.refundId===redirected.id&&r.amountCents===217&&r.reason.startsWith('Redirected refund')))
+  assert.ok(filing.excluded.some(r=>r.paymentId===applied.id&&r.amountCents===217&&r.reason.startsWith('Customer-credit transfer')))
+  assert.equal(filing.events.some(r=>r.refundId===redirected.id||r.paymentId===applied.id),false,'Unresolved redirected credit neither reverses tax nor invents cash')
+  assert.equal(filing.reviewRequired,true)
   // The remaining original line first gets a pending outcome, which cannot redirect.
   mode='pending';const third=await issueCredit(h,creditInput(invoice,payment,'synthetic-mallet-174',invoice.lines[1]));let manual=(await h.state()).records.refund.find(r=>r.creditNoteId===third.id)
   manual=await h.command('refund.submit',{refundId:manual.id,version:manual.version,confirm:'send-refund'});assert.equal(manual.status,'pending')

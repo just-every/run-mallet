@@ -1,3 +1,6 @@
+import {receivablesPage,receivablesInput,filingPage} from './ui/receivables'
+import {filingTax} from './filing-tax'
+import {accountStatement,utcDate} from './receivables'
 import {depositsPage,depositFormInput} from './ui/deposits'
 import {depositBalance} from './deposits'
 import {supplierOrdersPage,supplierOrdersFormInput} from './ui/supplier-orders'
@@ -145,8 +148,8 @@ async function nativeForm(request:Request) {
 const withoutSubletCosts=(value:any)=>{if(!value||!('sublets' in value))return value;const {sublets,...rest}=value;return rest}
 function visible(s:State,actor:Actor):State {
  if(actor.role==='owner')s={...s,records:{...s.records,deposit:rows(s,'deposit').map(d=>({...d,balance:depositBalance(s,d)}))}}
- if(actor.role!=='owner')s={...s,records:Object.fromEntries(Object.entries(s.records).filter(([kind])=>!['deposit','retentionPolicy','retentionHold','retentionReceipt','diagnosticResult'].includes(kind)))}
- if(actor.role!=='owner')s={...s,records:{...s.records,event:rows(s,'event').filter(row=>!row.kind.startsWith('deposit.')&&!row.kind.startsWith('diagnosticResult.'))}}
+ if(actor.role!=='owner')s={...s,records:Object.fromEntries(Object.entries(s.records).filter(([kind])=>!['tenderClearance','arTerms','arInvoice','arDispute','arPromise','deposit','retentionPolicy','retentionHold','retentionReceipt','diagnosticResult'].includes(kind)))}
+ if(actor.role!=='owner')s={...s,records:{...s.records,event:rows(s,'event').filter(row=>!row.kind.startsWith('tender.')&&!row.kind.startsWith('ar.')&&!row.kind.startsWith('deposit.')&&!row.kind.startsWith('diagnosticResult.'))}}
  if(!human(actor))s={...s,records:Object.fromEntries(Object.entries(s.records).map(([k,v])=>[k,(k.startsWith('calendar')||k==='bookingWaitlist'||k==='waitlistOffer'||k==='appointment'||k==='bookingService'||k==='counterIntake'||k.startsWith('intake')||['warranty','warrantyTerms','payment','handover','returnDelegate','returnOverride'].includes(k))?[]:k==='event'?v.filter(x=>!x.kind.startsWith('calendar.')&&!x.kind.startsWith('waitlist.')&&!x.kind.startsWith('booking.')&&!x.kind.startsWith('checkin.')&&!x.kind.startsWith('intake.')&&!x.kind.startsWith('warranty.')&&!x.kind.startsWith('payment.')&&!x.kind.startsWith('return.')):v]))}
  s=scopedCollaboration(scopedPromises(s,actor),actor)
  s=scopedTime(s,actor)
@@ -207,6 +210,7 @@ function formInput(data:FormData) {
  if(input.command==='intakeForm.create'&&input.templateSource){let t:any;try{t=JSON.parse(input.templateSource)}catch{throw new HttpError(400,'invalid_template')};input.templateId=t.id;input.templateVersion=t.version}
  returnFormInput(data,input)
  warrantyFormInput(input)
+ receivablesInput(input)
  depositFormInput(input)
  intakeFormInput(data,input)
  customerFormInput(data,input)
@@ -320,6 +324,8 @@ async function workshopResponse(request:Request,original:Bindings,execution:Pick
    if(isApi){if(!human(actor)&&result&&typeof result==='object'&&'billing' in result){const {billing,...rest}=result;result=rest}return json(actor.role==='agent'?withoutSubletCosts(withoutInspectionSource(result)):result)}
    if(retentionCommands.includes(command)){if(command==='customer.export')return new Response(JSON.stringify(result,null,2),{headers:{...headers,'content-type':'application/json','content-disposition':'attachment; filename="customer-data.json"'}});return page('Retention & erasure',retentionPage(await load(env.DB),input.customerId??'',command==='retention.preview'?result:undefined,input,['customer.erase','retention.run'].includes(command)?result:undefined),actor,200,{section:'data'})}
    if(['invoice.issue','invoice.send'].includes(command)){const invoiceId=command==='invoice.issue'?input.invoiceId:result.invoiceId;return redirect('/app/invoices/'+encodeURIComponent(invoiceId))}
+   if(command.startsWith('ar.'))return redirect('/app/receivables?'+new URLSearchParams({accountId:String(input.accountId??'')}))
+   if(command==='tender.clearance')return redirect('/app/tax/filing')
    if(command.startsWith('deposit.'))return redirect('/app/deposits?'+new URLSearchParams({accountId:String(input.accountId??'')}))
    if(command==='customer.mergePreview')return page('Review duplicate merge',mergePreviewPage(result,input),actor,200,{section:'customers'})
    if(command==='inspectionReport.send')return page('Inspection report email',`<section class="card"><p>${e(result.status==='accepted'?'Handed to the mail provider; delivery is not confirmed.':result.status==='development'?'Saved to the development outbox; not sent.':'Send failed or is uncertain. Contact the customer; no automatic retry will occur.')}</p><a href="${e(result.url)}">Open reviewed customer report</a><p><a href="/app/jobs/${e(result.jobId)}#inspection-reports">Return to repair</a></p></section>`,actor,200,{section:'jobs'})
@@ -413,6 +419,10 @@ async function workshopResponse(request:Request,original:Bindings,execution:Pick
    const ids=new Set([id,...rows(state,'customerAccount').filter(a=>a.mergedInto===id).map(a=>a.id)])
    return json(rows(state,'invoice').filter(i=>ids.has(i.billing?.accountId)))
   }
+  if(path==='/app/receivables'){if(actor.role!=='owner')throw new HttpError(403,'owner_required');return page('Commercial receivables',receivablesPage(state,url.searchParams.get('accountId')??'',utcDate(url.searchParams.get('asOf')??new Date().toISOString().slice(0,10))),actor,200,frame('customers'))}
+  if(path==='/app/tax/filing'){if(actor.role!=='owner')throw new HttpError(403,'owner_required');const today=new Date().toISOString().slice(0,10);return page('Filing-period tax preview',filingPage(state,url.searchParams.get('from')??today.slice(0,8)+'01',url.searchParams.get('to')??today),actor,200,frame('tax'))}
+  if(path==='/api/mallet/tax/filing'){if(actor.role!=='owner')throw new HttpError(403,'owner_required');return json(filingTax(state,url.searchParams.get('from'),url.searchParams.get('to')))}
+  if(path==='/api/mallet/receivables'){if(actor.role!=='owner')throw new HttpError(403,'owner_required');return json(accountStatement(state,url.searchParams.get('accountId')??'',utcDate(url.searchParams.get('asOf')??new Date().toISOString().slice(0,10))))}
   if(path==='/app/deposits'){if(actor.role!=='owner')throw new HttpError(403,'owner_required');return page('Deposits & customer credit',depositsPage(state,url.searchParams.get('accountId')??''),actor,200,frame('customers'))}
   if(path==='/app/accounts'){
    if(!human(actor))throw new HttpError(403,'manager_required')
@@ -420,7 +430,7 @@ async function workshopResponse(request:Request,original:Bindings,execution:Pick
    const account=manage&&manage!=='all'?rows(state,'customerAccount').find(a=>a.id===manage&&!a.mergedInto):null
    if(manage!=='all'&&!account)throw new HttpError(404,'not_found')
    const result=account?{accounts:[account],nextCursor:null,total:1}:await searchAccounts(env.DB,actor,auth.authority,q,url.searchParams.get('cursor')??undefined)
-   return page('Customer accounts',(actor.role==='owner'?'<p><a href="/app/deposits">Deposits & customer credit</a></p>':'')+accountsPage(state,q,result),actor,200,frame('customers'))
+   return page('Customer accounts',(actor.role==='owner'?'<p><a href="/app/deposits">Deposits & customer credit</a> · <a href="/app/receivables">Commercial receivables</a></p>':'')+accountsPage(state,q,result),actor,200,frame('customers'))
   }
   if(['/app/purchasing/suppliers','/api/mallet/supplier-orders'].includes(path)){if(!human(actor))throw new HttpError(403,'manager_required');return path.startsWith('/api/')?json(supplierOrderReport(state)):page('Supplier stock & ordering',supplierOrdersPage(state),actor,200,frame('inventory'))}
   if(['/app/purchasing','/api/mallet/purchasing'].includes(path)){if(!human(actor))throw new HttpError(403,'manager_required');return path.startsWith('/api/')?json(rows(state,'purchaseOrder').map(po=>({...po,...purchaseStatus(state,po)}))):page('Purchase orders',purchasingPage(state),actor,200,frame('inventory'))}
@@ -469,7 +479,7 @@ async function workshopResponse(request:Request,original:Bindings,execution:Pick
   if(isApi)return json({error:code,message:known?error.message:'The operation failed.',details:error instanceof MalletError?error.details:undefined},status)
   if(code==='second_factor_required'||code==='step_up_required') {
    // A person is taken to confirm, then returns to the page they were on to repeat the action.
-   const input=submitted?.input??{},back=request.method==='GET'?path+url.search:String(submitted?.command).startsWith('deposit.')?'/app/deposits?'+new URLSearchParams({accountId:String(input.accountId??'')}):typeof input.jobId==='string'?'/app/jobs/'+encodeURIComponent(input.jobId):retentionCommands.includes(String(submitted?.command))?'/app/retention':String(submitted?.command).startsWith('agent.')?'/app/data':submitted?.command==='asset.erase'?'/app/customers':'/app'
+   const input=submitted?.input??{},back=request.method==='GET'?path+url.search:String(submitted?.command).startsWith('ar.')?'/app/receivables?'+new URLSearchParams({accountId:String(input.accountId??'')}):submitted?.command==='tender.clearance'?'/app/tax/filing':String(submitted?.command).startsWith('deposit.')?'/app/deposits?'+new URLSearchParams({accountId:String(input.accountId??'')}):typeof input.jobId==='string'?'/app/jobs/'+encodeURIComponent(input.jobId):retentionCommands.includes(String(submitted?.command))?'/app/retention':String(submitted?.command).startsWith('agent.')?'/app/data':submitted?.command==='asset.erase'?'/app/customers':'/app'
    return redirect('/app/security?'+(code==='step_up_required'?'stepUp=1&':'')+'returnTo='+encodeURIComponent(back))
   }
   if(status===401)return redirect('/signin?returnTo='+encodeURIComponent(path))

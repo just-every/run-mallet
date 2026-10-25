@@ -404,3 +404,7 @@ test('PART-003 / OPS-001: atomic reserved lot usage, last-item conflicts, cancel
 test('PAY-004: owner records pre-order deposits, allocates customer credit and refunds canceled deposits through native forms at 1440 and 390',async()=>{const {depositsBrowser}=await import('./inventory-browser.mjs');await depositsBrowser()})
 
 test('PART-003: reserved work, inspected stock returns and cancellation release through native forms at 1440 and 390',async()=>{const {stockConsumptionBrowser}=await import('./inventory-browser.mjs');await stockConsumptionBrowser()})
+
+test('AR-001 and FLEET-001: owner-reviewed terms, credit limits, fleet authorizer, check allocation, disputes, promises and private recovered statements',()=>run(async h=>{const {receivablesJourney}=await import('./support/receivables-journey.mjs');await receivablesJourney(h)}))
+
+test('AR-001, FLEET-001 and TAX-002: native terms, fleet PO, disputed statement, promise and observed-clearance preview at 1440 and 390',async()=>{const {receivablesBrowser}=await import('./receivables-browser.mjs');await receivablesBrowser()})

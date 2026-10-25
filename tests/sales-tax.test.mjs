@@ -71,3 +71,5 @@ test('TAX-002: private certificate dates and declared jurisdiction tax reverse e
 
 import {taxCustodyBrowser} from './invoice-documents-browser.mjs'
 test('TAX-002: owner retains an expired certificate and declares invoice jurisdiction through native forms at 1440 and 390',taxCustodyBrowser)
+
+test('TAX-002: dedicated filing-period deposit attribution, observed check clearance, exact partial receipt cents and completed refund recovery',()=>run(async h=>{const {filingTaxJourney}=await import('./support/filing-tax-journey.mjs');await filingTaxJourney(h)}))
