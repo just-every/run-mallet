@@ -27,7 +27,7 @@ export async function stripeResponse(request:Request,original:Bindings):Promise<
   const auth=await identity(request,env);actor=auth.actor;originGuard(request,env,auth.bearer)
   if(actor.role!=='owner'||auth.bearer||actor.staff)throw new HttpError(403,'owner_required','Only the signed-in current owner can collect Stripe payments.')
   if(request.method==='GET'||request.method==='HEAD'){
-   if(open)return new Response(null,{status:303,headers:{...headers,location:await openCheckout(env,actor,open[1])}})
+   if(open)return new Response(null,{status:303,headers:{...headers,location:await openCheckout(env,actor,open[1],auth.authority)}})
    const state=await load(env.DB)
    if(api){if(path!=='/api/mallet/stripe/status')throw new HttpError(404,'not_found');return Response.json({connections:state.records.stripeConnection??[],checkouts:state.records.stripeCheckout??[],events:state.records.stripeEvent??[],settlements:state.records.stripeSettlement??[]},{headers})}
    return page(invoicePage?'Invoice payment':'Stripe settings',invoicePage?stripeInvoice(state,find(state,'invoice',invoicePage[1]),actor.id):stripeSettings(state,actor.id),actor,200,{section:invoicePage?'jobs':'data'})

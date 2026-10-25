@@ -83,6 +83,7 @@ export async function stripeStoppedJourney(h,edge){
  assert.equal(edge.calls.filter(c=>c.method==='POST'&&c.path.endsWith('/expire')).length,1,'Expiration is not repeated after Stripe confirms it')
  edge.setLostResponse(true)
  await api('checkout',{...input,operationId:'synthetic-mallet-831'},{status:502})
+ await h.restart()
  const before=edge.calls.filter(c=>c.method==='POST').length,uncertain=await api('checkout',{...input,operationId:'synthetic-mallet-831'})
  assert.equal(uncertain.status,'uncertain');assert.equal(edge.calls.filter(c=>c.method==='POST').length,before,'An uncertain checkout creation is not retried')
  await api('checkout',{...input,operationId:'synthetic-mallet-832'},{status:409})

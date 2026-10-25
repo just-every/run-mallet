@@ -36,11 +36,12 @@ export async function createCheckout(env:Bindings,actor:Actor,authority:Authorit
 function validateSession(session:any,checkout:any){
  if(session.client_reference_id!==checkout.invoiceId||session.metadata?.mallet_checkout_id!==checkout.id||session.metadata?.mallet_invoice_id!==checkout.invoiceId||session.metadata?.mallet_invoice_revision!==String(checkout.invoiceRevision)||session.amount_total!==checkout.amountCents||session.currency!=='usd'||session.livemode!==checkout.livemode)fail('STRIPE_SCOPE','The hosted session does not match this exact invoice and checkout.')
 }
-export async function openCheckout(env:Bindings,actor:Actor,id:string){
+export async function openCheckout(env:Bindings,actor:Actor,id:string,authority:Authority){
  const {s}=await accountScope(env,actor),checkout=find(s,'stripeCheckout',id),account=currentConnection(s,actor.id)
  if((checkout.accountId!==account.accountId||checkout.livemode!==account.livemode)||checkout.status!=='open'||!checkout.sessionId)fail('STRIPE_CHECKOUT','This hosted checkout is not open.')
  const session=await stripeRequest(env,'/checkout/sessions/'+encodeURIComponent(checkout.sessionId));validateSession(session,checkout)
  if(session.status!=='open')fail('STRIPE_CHECKOUT','Reconcile this completed or expired checkout before continuing.')
+ if(!await env.DB.prepare('SELECT 1 AS ok WHERE ('+authority.sql+')').bind(...authority.params).first())fail('FORBIDDEN','Your owner session changed while reading Stripe. Sign in again.',null,403)
  return hostedUrl(session.url)
 }
 export async function expireCheckout(env:Bindings,actor:Actor,authority:Authority,input:any){
