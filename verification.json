@@ -26,11 +26,27 @@
       ]
     },
     {
-      "name": "workshop",
+      "name": "workshop-core",
       "browser": true,
       "hosted": false,
       "commands": [
-        "node --test --test-concurrency=1 --test-skip-pattern='^(?:GOV-004|GOV-005|GOV-006|OPS-002)' tests/mallet.test.mjs tests/demo.test.mjs tests/sales-tax.test.mjs"
+        "node --test --test-concurrency=1 --test-skip-pattern='(?:1440|390|^(?:GOV-004|GOV-005|GOV-006|OPS-002))' tests/mallet.test.mjs tests/demo.test.mjs"
+      ]
+    },
+    {
+      "name": "workshop-browser",
+      "browser": true,
+      "hosted": false,
+      "commands": [
+        "node --test --test-concurrency=1 --test-name-pattern='1440|390' --test-skip-pattern='^(?:GOV-004|GOV-005|GOV-006|OPS-002)' tests/mallet.test.mjs"
+      ]
+    },
+    {
+      "name": "sales-tax",
+      "browser": true,
+      "hosted": false,
+      "commands": [
+        "node --test --test-concurrency=1 tests/sales-tax.test.mjs"
       ]
     },
     {

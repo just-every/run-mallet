@@ -9,6 +9,7 @@ export async function staffGrant(db:D1Database,id:string) {
 export function staffRoute(request:Request,actor:Actor) {
  if(!actor.staff)return
  const path=new URL(request.url).pathname
+ if(!actor.staff.discount_bps&&!actor.staff.spend_cents&&!actor.staff.refund_cents&&path!=='/app/security'&&!path.startsWith('/api/mallet/security/')&&!path.startsWith('/auth/'))throw new HttpError(403,'staff_limits_required')
  if(path==='/app'&&['GET','HEAD'].includes(request.method))return
  if(['/app/staff','/api/mallet/staff/state'].includes(path)&&['GET','HEAD'].includes(request.method))return
  if(['/app/actions','/api/mallet/commands'].includes(path)&&request.method==='POST')return
@@ -22,7 +23,7 @@ export function staffAuthority(actor:Actor,authority:Authority):Authority {
 }
 const advisor=['asset.create','job.book','estimate.prepare','estimate.revise','estimate.approve','estimate.markSent','estimate.authorise'],purchaser=['stock.item','stock.bin','stock.receive','stock.count','stock.approveCount','purchase.create','purchase.approve','purchase.receive','purchase.bill','purchase.shortClose','purchase.close'],finance=['payment.record','credit.preview','credit.issue','refund.record']
 export async function staffCommand(db:D1Database,actor:Actor,authority:Authority,command:string,input:any) {
- const grant=actor.staff!;const allowed=grant.role==='manager'?[...advisor,...purchaser,...finance]:grant.role==='advisor'?[...advisor,'credit.preview','credit.issue','refund.record']:grant.role==='purchaser'?purchaser:grant.role==='cashier'?finance:[]
+ const grant=actor.staff!;if(!grant.discount_bps&&!grant.spend_cents&&!grant.refund_cents)throw new HttpError(403,'staff_limits_required');const allowed=grant.role==='manager'?[...advisor,...purchaser,...finance]:grant.role==='advisor'?[...advisor,'credit.preview','credit.issue','refund.record']:grant.role==='purchaser'?purchaser:grant.role==='cashier'?finance:[]
  if(!allowed.includes(command))throw new HttpError(403,'staff_command_denied')
  if(command.startsWith('purchase.')&&!grant.cost_right)throw new HttpError(403,'staff_cost_right_required')
  if(input.location!==undefined&&input.location!=='shop'||input.locationId!==undefined&&input.locationId!=='shop')throw new HttpError(403,'staff_location_denied')

@@ -572,7 +572,7 @@
       "executable": false
     },
     "ACCEPTANCE.md": {
-      "sha256": "7d91cfe6fc448ac705cf38f2b65806c2e6ce8b369bc176f100b82f7d6a795b4b",
+      "sha256": "911f9fe1f1c21a1a5779a08d86d9fa98903167f2e6be06da6664370ce14fd443",
       "executable": false
     },
     "AGENTS.md": {
@@ -584,7 +584,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "cd7e4887cf54822daf583a0d07bd21975b7cedc58e47acdba54f58224354e16c",
+      "sha256": "20b54cc30e26b21a0f8af62bc93c7d1e687bca7e61fe77b702f75bfe3615bbaf",
       "executable": false
     },
     "deploy-demo.json": {
@@ -1636,7 +1636,7 @@
       "executable": false
     },
     "src/mallet/filing-tax.ts": {
-      "sha256": "ab4bdfc6b72b3bee31722ef082007beb97def8bbb940a635771eae90f5523975",
+      "sha256": "82d338f6fd26f1d524a0ba88a26b2f140b22979a04c189fd18e6707e5215ebb0",
       "executable": false
     },
     "src/mallet/flow.ts": {
@@ -2068,7 +2068,7 @@
       "executable": false
     },
     "src/mallet/staff.ts": {
-      "sha256": "2a0bffa8d5650aed833f0ad62f35cdda0e006801289316788695be50f57cb5ce",
+      "sha256": "2ebdb5374485288373b271f4681c5fa6ebfc858bd0c97eba55489ee572a836b8",
       "executable": false
     },
     "src/mallet/stock-replenishment.ts": {
@@ -4568,7 +4568,7 @@
       "executable": false
     },
     "tests/support/filing-tax-journey.mjs": {
-      "sha256": "5ca5f6b1406c2e07f6ec8f6d351899223fa0c452f54dc57f895d095ea54b2ed2",
+      "sha256": "04a489f5ed26540b8db36bf353b237a63dde6ef6c56d89b68a7d943f902adf01",
       "executable": false
     },
     "tests/support/flow-journey.mjs": {
@@ -4576,7 +4576,7 @@
       "executable": false
     },
     "tests/support/governance-journey.mjs": {
-      "sha256": "cb0a028bfbbae7e94a2b0ab2ad578495d05670edfd2177a4d0441c92eb163a64",
+      "sha256": "8cd7f27c4e52ec41144adaf1c382733654266d6ee87d67004cf5346f4446f8e3",
       "executable": false
     },
     "tests/support/handover-input.mjs": {
@@ -4788,7 +4788,7 @@
       "executable": false
     },
     "verification.json": {
-      "sha256": "99e0411197873ef05101734ddc12c6788ae2bca236a6d4c1587b262dcfb7ca6e",
+      "sha256": "d6e2b8d886a8df25ca0ca51aacff93b7a4bb1812e90066cda5621442c1065a97",
       "executable": false
     },
     "VERIFY-WORKFLOW.md": {
