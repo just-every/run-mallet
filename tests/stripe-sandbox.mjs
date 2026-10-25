@@ -16,7 +16,7 @@ const result={mode:'test',currency:'usd',card:'not-run',ach:'not-run',fee:'not-r
 try{
  stage='account';const account=await stripe('/account'),balance=await stripe('/balance');assert.equal(account.default_currency,'usd');assert.equal(balance.livemode,false)
  result.account={country:account.country,currency:account.default_currency,chargesEnabled:account.charges_enabled,payoutsEnabled:account.payouts_enabled}
- h=await installation({entry:'tests/dev-worker.ts',network:true,assets:true,bindings:{AUTH_LOCAL:'true',STRIPE_SECRET_KEY:secret},outboundService:request=>fetch(request)})
+ h=await installation({entry:'tests/worker.ts',network:true,assets:true,bindings:{AUTH_LOCAL:'true',STRIPE_SECRET_KEY:secret},outboundService:request=>fetch(request)})
  const api=(action,input,options)=>h.api('/api/mallet/stripe/'+action,input,options)
  const {invoice}=await readyInvoice(h);await api('connect',{consent:true})
  stage='card-checkout';cardSession=await api('checkout',{invoiceId:invoice.id,version:invoice.version,method:'card',operationId:crypto.randomUUID(),consent:true})

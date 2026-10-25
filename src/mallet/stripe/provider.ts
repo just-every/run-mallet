@@ -1,6 +1,6 @@
 import type {Bindings} from '../../auth.server'
 import {connectorSecret} from '../connectors/secrets'
-import {fail} from '../model'
+import {fail,MalletError} from '../model'
 
 export async function stripeRequest(env:Bindings,path:string,fields?:URLSearchParams,idempotencyKey?:string){
  const key=await connectorSecret(env,'stripe','STRIPE_SECRET_KEY')
@@ -15,7 +15,7 @@ export async function stripeRequest(env:Bindings,path:string,fields?:URLSearchPa
   let value:any;try{value=JSON.parse(new TextDecoder().decode(bytes))}catch{fail('STRIPE_PROVIDER','Stripe returned an invalid response.',null,502)}
   if(!response.ok)fail('STRIPE_PROVIDER','Stripe refused this request. Inspect the merchant dashboard before another attempt.',{status:response.status,code:typeof value?.error?.code==='string'?value.error.code:null},502)
   return value
- }catch(error:any){if(error?.code)throw error;fail('STRIPE_UNCERTAIN','Stripe did not confirm the result. No automatic retry will occur. Inspect the merchant dashboard.',null,502)}finally{clearTimeout(timer)}
+ }catch(error:any){if(error instanceof MalletError)throw error;fail('STRIPE_UNCERTAIN','Stripe did not confirm the result. No automatic retry will occur. Inspect the merchant dashboard.',null,502)}finally{clearTimeout(timer)}
 }
 export function testMode(env:Bindings){return env.AUTH_LOCAL==='true'||env.RER_DEMO==='1'}
 export function hostedUrl(value:unknown){

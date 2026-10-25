@@ -65,3 +65,19 @@ export async function stripeJourney(h,edge){
  }finally{await fresh.close()}
  return {invoice,checkout,settled}
 }
+
+export async function stripeStoppedJourney(h,edge){
+ const api=(action,input,options)=>h.api('/api/mallet/stripe/'+action,input,options),{invoice}=await readyInvoice(h)
+ await api('connect',{consent:true})
+ const input={invoiceId:invoice.id,version:invoice.version,method:'card',operationId:'synthetic-mallet-830',consent:true}
+ const open=await api('checkout',input),expired=await api('expire',{checkoutId:open.id});assert.equal(expired.status,'expired')
+ assert.equal((await api('expire',{checkoutId:open.id})).id,expired.id)
+ assert.equal(edge.calls.filter(c=>c.method==='POST'&&c.path.endsWith('/expire')).length,1,'Expiration is not repeated after Stripe confirms it')
+ edge.setUnavailable(true)
+ await api('checkout',{...input,operationId:'synthetic-mallet-831'},{status:502})
+ const before=edge.calls.filter(c=>c.method==='POST').length,uncertain=await api('checkout',{...input,operationId:'synthetic-mallet-831'})
+ assert.equal(uncertain.status,'uncertain');assert.equal(edge.calls.filter(c=>c.method==='POST').length,before,'An uncertain checkout creation is not retried')
+ await api('checkout',{...input,operationId:'synthetic-mallet-832'},{status:409})
+ assert.equal((await h.state()).records.payment?.length??0,0,'Open, expired and uncertain sessions allocate no money')
+ const html=await (await h.request('/app/invoices/'+invoice.id+'/payment')).text();assert.match(html,/handoff is uncertain/)
+}

@@ -1,4 +1,4 @@
-import {stripeJourney,collectionEdge} from './support/stripe-journey.mjs'
+import {stripeJourney,stripeStoppedJourney,collectionEdge} from './support/stripe-journey.mjs'
 import {stripeBrowser} from './stripe-browser.mjs'
 import {governanceBrowser} from './governance-browser.mjs'
 import {auditJourney,staffJourney} from './support/governance-journey.mjs'
@@ -423,3 +423,8 @@ test('PAY-001: owner checkout, authenticated event replay, exact fee and payout 
  await run(h=>stripeJourney(h,edge),{bindings:{AUTH_LOCAL:'true',STRIPE_SECRET_KEY:'synthetic-mallet-800'},outboundService:edge.edge})
 })
 test('PAY-001: native merchant connection, invoice checkout and fee reconciliation at 1440 and 390',stripeBrowser)
+
+test('PAY-001: explicit expiration and uncertain checkout stay stopped without allocating money',async()=>{
+ const edge=collectionEdge()
+ await run(h=>stripeStoppedJourney(h,edge),{bindings:{AUTH_LOCAL:'true',STRIPE_SECRET_KEY:'synthetic-mallet-800'},outboundService:edge.edge})
+})

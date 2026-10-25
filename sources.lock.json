@@ -2124,7 +2124,7 @@
       "executable": false
     },
     "src/mallet/stripe/provider.ts": {
-      "sha256": "248d2a28f1947c8ed494931bef8aaa1b4bc8ff186a5e5e888f7610ca412cd326",
+      "sha256": "d19468e5743fbb5ffd28493a5f9b5985f169ae8194079ab70c5fcacaa3f3c3ee",
       "executable": false
     },
     "src/mallet/stripe/records.ts": {
@@ -4464,7 +4464,7 @@
       "executable": false
     },
     "tests/mallet.test.mjs": {
-      "sha256": "1c2397cfe01c1e6324cb016269ced7d0eaaf602cbfe448dfe876b9de4ad152e7",
+      "sha256": "cdc93db98979988cfeb99c549486759e6c57443bb009e7713efabac0e43813ed",
       "executable": false
     },
     "tests/media-browser.mjs": {
@@ -4553,6 +4553,10 @@
     },
     "tests/stripe-browser.mjs": {
       "sha256": "e5e9ee4168b94cf1a371a21c705865bbfcac9f42edb36ff492d8e9ba58fa68be",
+      "executable": false
+    },
+    "tests/stripe-sandbox.mjs": {
+      "sha256": "fc5b22f518ae7c1f172793f79d550c1a685d1223d9a33df0983288989a747fdc",
       "executable": false
     },
     "tests/sublet-browser.mjs": {
@@ -4796,7 +4800,7 @@
       "executable": false
     },
     "tests/support/stripe-journey.mjs": {
-      "sha256": "166f7f0ea98054434e75bd845398d6d544acba42f6ec088d0a2e1cbf22bd69ad",
+      "sha256": "42d80f370f545b42f47d7966416f43a1bc4675d2673f409e177716b322d73cb4",
       "executable": false
     },
     "tests/support/strong-auth-journey.mjs": {
