@@ -1,7 +1,7 @@
 import {bump,event,expectVersion,fail,find,integer,put,rows,text,who,type Handler,type Row,type State} from '../model'
 import {invoiceBalance,payments} from '../payments'
 export const stripeCommands=['stripe.connect','stripe.claim','stripe.outcome','stripe.observe','stripe.settlement']
-export const connection=(s:State)=>rows(s,'stripeConnection').at(-1)
+export const connection=(s:State)=>[...rows(s,'stripeConnection')].sort((a,b)=>a.sequence-b.sequence).at(-1)
 export function currentConnection(s:State,ownerId:string){
  const account=connection(s)
  if(!account||account.by.id!==ownerId)fail('STRIPE_CONNECTION','The current owner must connect the merchant Stripe account first.')
@@ -14,7 +14,7 @@ export const stripeRecords:Handler=(c,command,p)=>{
   const prior=connection(c.s)
   if(prior&&prior.accountId===p.accountId&&prior.livemode===p.livemode&&prior.by.id===c.actor.id)return prior
   if(rows(c.s,'stripeCheckout').some(r=>['claiming','open','uncertain','processing'].includes(r.status)&&(r.accountId!==p.accountId||r.livemode!==p.livemode)))fail('STRIPE_OPEN','Resolve outstanding checkouts before changing the connected account.')
-  const row=put(c.s,'stripeConnection',{accountId:text(p.accountId,'Stripe account'),currency:'usd',livemode:p.livemode===true,by:who(c),at:c.now})
+  const row=put(c.s,'stripeConnection',{sequence:rows(c.s,'stripeConnection').length+1,accountId:text(p.accountId,'Stripe account'),currency:'usd',livemode:p.livemode===true,by:who(c),at:c.now})
   event(c,command,null,row.id,{accountId:row.accountId,livemode:row.livemode});return row
  }
  const account=currentConnection(c.s,c.actor.id)

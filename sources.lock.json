@@ -2040,7 +2040,7 @@
       "executable": false
     },
     "src/mallet/restore/validate-stripe.mjs": {
-      "sha256": "67bccc73494f60e11a9dfbae3bdc20c1093012de95f302fb68d768d8b30a90dd",
+      "sha256": "b60c5697503a7048efbfebcb05c4c676dc0b6bb2c65def0484a8667af4a4aca4",
       "executable": false
     },
     "src/mallet/restore/validate-tender.mjs": {
@@ -2128,7 +2128,7 @@
       "executable": false
     },
     "src/mallet/stripe/records.ts": {
-      "sha256": "ccce66b13e95829887327cfaff1c60dc2c4b3b1c4f46ed42d19bf0dd142fc459",
+      "sha256": "ebb3e22c4a183f3f415fc90c42dff44c258d75023ab302308c3fb4a74f1dadd9",
       "executable": false
     },
     "src/mallet/stripe/service.ts": {

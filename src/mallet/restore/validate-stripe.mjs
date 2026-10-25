@@ -1,7 +1,7 @@
 import {insist,whole,actor} from './finance-values.mjs'
 export async function validateStripe({get,each}){
  const eventIds=new Set(),operations=new Set()
- for await(const account of each('stripeConnection'))insist(typeof account.accountId==='string'&&account.currency==='usd'&&typeof account.livemode==='boolean'&&actor(account.by,['owner']),'stripe_connection')
+ for await(const account of each('stripeConnection'))insist(whole(account.sequence,1)&&typeof account.accountId==='string'&&account.currency==='usd'&&typeof account.livemode==='boolean'&&actor(account.by,['owner']),'stripe_connection')
  for await(const checkout of each('stripeCheckout')){
   const invoice=await get('invoice',checkout.invoiceId),account=await get('stripeConnection',checkout.connectionId)
   insist(invoice.jobId===checkout.jobId&&invoice.revision===checkout.invoiceRevision&&invoice.totals.totalCents===checkout.invoiceTotalCents&&whole(checkout.amountCents,1)&&checkout.amountCents<=invoice.totals.totalCents&&checkout.accountId===account.accountId&&checkout.livemode===account.livemode&&['card','us_bank_account'].includes(checkout.method)&&['claiming','open','uncertain','processing','paid','expired','failed'].includes(checkout.status)&&actor(checkout.by,['owner']),'stripe_checkout')
