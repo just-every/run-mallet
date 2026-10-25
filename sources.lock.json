@@ -708,7 +708,7 @@
       "executable": false
     },
     "docs/stripe-collection.md": {
-      "sha256": "8e46cdb5102eeb91a5ef7cfe9f2b6ce367f778c3ad8f884359e9f694c8729c94",
+      "sha256": "7e2dc966401180759ccaa3a62e67f868397183152b222644a9df11468900723f",
       "executable": false
     },
     "docs/supplements.md": {
@@ -2040,7 +2040,7 @@
       "executable": false
     },
     "src/mallet/restore/validate-stripe.mjs": {
-      "sha256": "a8c7415209c343a97a5911b395dfbc26d317fe4bdb43ed685080bef4480a2673",
+      "sha256": "67bccc73494f60e11a9dfbae3bdc20c1093012de95f302fb68d768d8b30a90dd",
       "executable": false
     },
     "src/mallet/restore/validate-tender.mjs": {
@@ -2120,7 +2120,7 @@
       "executable": false
     },
     "src/mallet/stripe/door.ts": {
-      "sha256": "3b8a0d44131e6c3cdab31d62c3b009f1b4d993b407c00ce7a4b4874f77cdfc54",
+      "sha256": "29fa6b40712c2146c182550b1ace75132d3b8376eca526cfe8f850195050dc2c",
       "executable": false
     },
     "src/mallet/stripe/provider.ts": {
@@ -2128,15 +2128,15 @@
       "executable": false
     },
     "src/mallet/stripe/records.ts": {
-      "sha256": "9ba9dabd89c0bb9ff3f002afbcfd2db28880d8aeb2baabe2135e3e34599db010",
+      "sha256": "5f83904dfb3e6faca4d34cd220934aa09b0b3d0f2acb7271e064d4ca86bfec23",
       "executable": false
     },
     "src/mallet/stripe/service.ts": {
-      "sha256": "3e6de64d321c82a91a37ce1975e0b749147c995f6e547d84435bf2f39f892f4a",
+      "sha256": "33f2cff089792083cfb3b87cea34dfda276f6ace6805496b85671d78505e5e96",
       "executable": false
     },
     "src/mallet/stripe/ui.ts": {
-      "sha256": "0f6ccfe0b862d8daa29570499c35189a2884873e4b00d9ded0cb1161cf115b6d",
+      "sha256": "a2112d46fb3c5bcb063ee541036384f19c89a6cd40890a8c413c292001f7f1af",
       "executable": false
     },
     "src/mallet/strong-auth/base-gate.ts": {
@@ -4800,7 +4800,7 @@
       "executable": false
     },
     "tests/support/stripe-journey.mjs": {
-      "sha256": "42d80f370f545b42f47d7966416f43a1bc4675d2673f409e177716b322d73cb4",
+      "sha256": "ee3c4e420386fcdab119abf88eb517ead7615d9d95de9533e35f2378792b2da9",
       "executable": false
     },
     "tests/support/strong-auth-journey.mjs": {

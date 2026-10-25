@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import {archive,installation,restore} from '../harness.mjs'
 import {readyInvoice} from './return-journey.mjs'
 export function collectionEdge(){
- const calls=[],objects=new Map();let session,pi,unavailable=false,wrongAccount=false
+ const calls=[],objects=new Map();let session,pi,unavailable=false,wrongAccount=false,lostResponse=false,sequence=0
  const account={id:'synthetic-mallet-801',country:'US',default_currency:'usd',charges_enabled:true,payouts_enabled:true}
  const edge=async request=>{
   const url=new URL(request.url);assert.equal(url.hostname,'api.stripe.com');assert.equal(request.headers.get('authorization'),'Bearer synthetic-mallet-800');calls.push({path:url.pathname,method:request.method})
@@ -12,9 +12,9 @@ export function collectionEdge(){
   if(url.pathname==='/v1/checkout/sessions'&&request.method==='POST'){
    const p=new URLSearchParams(await request.text()),metadata=Object.fromEntries(['mallet_invoice_id','mallet_invoice_revision','mallet_checkout_id'].map(k=>[k,p.get('metadata['+k+']')]))
    assert.equal(p.get('mode'),'payment');assert.equal(p.get('payment_intent_data[metadata][mallet_invoice_id]'),metadata.mallet_invoice_id)
-   session={id:'synthetic-mallet-802',status:'open',url:'https://checkout.stripe.com/synthetic-mallet-802',livemode:false,client_reference_id:p.get('client_reference_id'),metadata,amount_total:Number(p.get('line_items[0][price_data][unit_amount]')),currency:'usd',expires_at:Math.floor(Date.now()/1000)+1800,payment_intent:'synthetic-mallet-803'}
+   sequence++;session={id:'synthetic-mallet-'+(802+sequence*10),status:'open',url:'https://checkout.stripe.com/synthetic-mallet-802',livemode:false,client_reference_id:p.get('client_reference_id'),metadata,amount_total:Number(p.get('line_items[0][price_data][unit_amount]')),currency:'usd',expires_at:Math.floor(Date.now()/1000)+1800,payment_intent:'synthetic-mallet-'+(803+sequence*10)}
    pi={id:session.payment_intent,status:'processing',metadata,amount:session.amount_total,amount_received:0,currency:'usd',livemode:false,latest_charge:null}
-   return Response.json(session)
+   return lostResponse?Response.json({error:{code:'synthetic-mallet-896'}},{status:503}):Response.json(session)
   }
   if(url.pathname==='/v1/checkout/sessions/'+session?.id)return Response.json(session)
   if(url.pathname==='/v1/checkout/sessions/'+session?.id+'/expire'){session.status='expired';return Response.json(session)}
@@ -23,7 +23,7 @@ export function collectionEdge(){
   return Response.json(objects.get(url.pathname.split('/').at(-1))??{error:{code:'synthetic-mallet-897'}})
  }
  const providerEvent=(id,type='payment_intent.succeeded')=>{objects.set(id,{id,type,livemode:false,data:{object:structuredClone(pi)}});return id}
- return {edge,calls,objects,get session(){return session},get pi(){return pi},setUnavailable(v){unavailable=v},setWrongAccount(v){wrongAccount=v},providerEvent,paid(){
+ return {edge,calls,objects,get session(){return session},get pi(){return pi},setLostResponse(v){lostResponse=v},setUnavailable(v){unavailable=v},setWrongAccount(v){wrongAccount=v},providerEvent,paid(){
   pi.status='succeeded';pi.amount_received=pi.amount;session.status='complete';session.payment_status='paid'
   pi.latest_charge={id:'synthetic-mallet-804',paid:true,captured:true,disputed:false,refunded:false,amount_refunded:0,currency:'usd',amount:pi.amount,balance_transaction:{id:'synthetic-mallet-805',source:'synthetic-mallet-804',type:'charge',currency:'usd',amount:pi.amount,fee:110,net:pi.amount-110,available_on:Math.floor(Date.now()/1000)+86400}}
  }}
@@ -73,11 +73,14 @@ export async function stripeStoppedJourney(h,edge){
  const open=await api('checkout',input),expired=await api('expire',{checkoutId:open.id});assert.equal(expired.status,'expired')
  assert.equal((await api('expire',{checkoutId:open.id})).id,expired.id)
  assert.equal(edge.calls.filter(c=>c.method==='POST'&&c.path.endsWith('/expire')).length,1,'Expiration is not repeated after Stripe confirms it')
- edge.setUnavailable(true)
+ edge.setLostResponse(true)
  await api('checkout',{...input,operationId:'synthetic-mallet-831'},{status:502})
  const before=edge.calls.filter(c=>c.method==='POST').length,uncertain=await api('checkout',{...input,operationId:'synthetic-mallet-831'})
  assert.equal(uncertain.status,'uncertain');assert.equal(edge.calls.filter(c=>c.method==='POST').length,before,'An uncertain checkout creation is not retried')
  await api('checkout',{...input,operationId:'synthetic-mallet-832'},{status:409})
  assert.equal((await h.state()).records.payment?.length??0,0,'Open, expired and uncertain sessions allocate no money')
  const html=await (await h.request('/app/invoices/'+invoice.id+'/payment')).text();assert.match(html,/handoff is uncertain/)
+ edge.setLostResponse(false)
+ const recovered=await api('session',{checkoutId:uncertain.id,sessionId:edge.session.id});assert.equal(recovered.status,'open');assert.equal(edge.calls.filter(c=>c.method==='POST').length,before,'Inspecting a lost response only reads the existing provider session')
+ await api('expire',{checkoutId:uncertain.id});assert.equal((await h.state()).records.payment?.length??0,0)
 }

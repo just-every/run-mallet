@@ -15,7 +15,8 @@ export function stripeInvoice(s:any,invoice:any,ownerId:string){
  for(const checkout of checkouts){
   let content=`<p>${money(checkout.amountCents)} USD · ${e(checkout.method==='card'?'Card or wallet':'ACH')} · ${e(checkout.status)} · ${when(checkout.at)}</p>`
   if(checkout.status==='open')content+=`<p><a class="button" href="/app/stripe/checkout/${e(checkout.id)}">Open Stripe checkout</a></p>`+action('expire','','Expire hosted checkout',{invoiceId:invoice.id,checkoutId:checkout.id})
-  if(checkout.status==='uncertain')content+='<p>Stripe handoff is uncertain. Inspect the merchant dashboard; this operation will not be sent again automatically.</p>'
+  if(checkout.status==='uncertain')content+='<p>Stripe handoff is uncertain. Inspect the merchant dashboard; this operation will not be sent again automatically.</p>'+action('session',field('Stripe hosted session ID','sessionId','text','','required maxlength="200"'),'Inspect existing session',{invoiceId:invoice.id,checkoutId:checkout.id})
+  if(checkout.status==='failed')content+='<p>Stripe refused creation. Review the merchant configuration before explicitly creating a new checkout.</p>'
   content+=action('event',field('Stripe payment event ID','eventId','text','','required maxlength="200"'),'Reconcile provider event',{invoiceId:invoice.id})
   if(checkout.status==='paid')content+=action('settlement',field('Automatic payout ID (optional)','payoutId','text','','maxlength="200"'),'Reconcile fee and payout',{invoiceId:invoice.id,checkoutId:checkout.id})
   for(const receipt of rows(s,'stripeEvent').filter(r=>r.checkoutId===checkout.id))content+=`<p>Event ${e(receipt.eventId)} · ${e(receipt.status)} · checked ${when(receipt.at)}</p>`

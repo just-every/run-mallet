@@ -28,8 +28,8 @@ export async function createCheckout(env:Bindings,actor:Actor,authority:Authorit
   const session=await stripeRequest(env,'/checkout/sessions',fields,'mallet-checkout-'+checkout.id)
   validateSession(session,checkout);hostedUrl(session.url)
   return await execute(env.DB,actor as any,'stripe.outcome',{connectionId:account.id,invoiceId:invoice.id,checkoutId:checkout.id,sessionId:providerId(session.id,'checkout'),expiresAt:new Date(session.expires_at*1000).toISOString()},authority)
- }catch(error){
-  await execute(env.DB,actor as any,'stripe.outcome',{connectionId:account.id,invoiceId:invoice.id,checkoutId:checkout.id},authority)
+ }catch(error:any){
+  await execute(env.DB,actor as any,'stripe.outcome',{connectionId:account.id,invoiceId:invoice.id,checkoutId:checkout.id,rejected:error.code==='STRIPE_PROVIDER'&&error.details?.status>=400&&error.details?.status<500},authority)
   throw error
  }
 }
@@ -52,6 +52,13 @@ export async function expireCheckout(env:Bindings,actor:Actor,authority:Authorit
   if(expired.status!=='expired')fail('STRIPE_CHECKOUT','Stripe did not confirm expiration.')
  }else if(session.status!=='expired')fail('STRIPE_CHECKOUT','A completed checkout cannot be expired. Reconcile its payment.')
  return execute(env.DB,actor as any,'stripe.outcome',{connectionId:account.id,invoiceId:checkout.invoiceId,checkoutId:checkout.id,expired:true},authority)
+}
+export async function reconcileSession(env:Bindings,actor:Actor,authority:Authority,input:any){
+ const {s,account}=await accountScope(env,actor),checkout=find(s,'stripeCheckout',input.checkoutId)
+ if(checkout.connectionId!==account.id)fail('STRIPE_SCOPE','Choose a checkout from the connected merchant account.')
+ const session=await stripeRequest(env,'/checkout/sessions/'+encodeURIComponent(text(input.sessionId,'hosted session id',200)));validateSession(session,checkout)
+ if(!['open','complete','expired'].includes(session.status))fail('STRIPE_CHECKOUT','Stripe returned an unknown session state.')
+ return execute(env.DB,actor as any,'stripe.outcome',{connectionId:account.id,invoiceId:checkout.invoiceId,checkoutId:checkout.id,sessionId:providerId(session.id,'checkout'),expiresAt:new Date(session.expires_at*1000).toISOString(),reconciled:true,expired:session.status==='expired',complete:session.status==='complete'},authority)
 }
 export async function observeEvent(env:Bindings,actor:Actor,authority:Authority,input:any){
  const {s,account}=await accountScope(env,actor),eventId=text(input.eventId,'Stripe event id',200),ev=await stripeRequest(env,'/events/'+encodeURIComponent(eventId))

@@ -5,7 +5,7 @@ import {requireStepUp} from '../strong-auth/gate'
 import {find,load,MalletError} from '../model'
 import {e} from '../ui/common'
 import {page} from '../ui/shell'
-import {connectStripe,createCheckout,expireCheckout,observeEvent,openCheckout,reconcileSettlement} from './service'
+import {connectStripe,createCheckout,expireCheckout,observeEvent,openCheckout,reconcileSession,reconcileSettlement} from './service'
 import {stripeInvoice,stripeSettings} from './ui'
 const headers={'cache-control':'no-store','x-content-type-options':'nosniff','referrer-policy':'no-referrer'}
 async function inputBody(request:Request,api:boolean){
@@ -34,7 +34,7 @@ export async function stripeResponse(request:Request,original:Bindings):Promise<
   }
   if(request.method!=='POST')throw new HttpError(405,'method_not_allowed')
   const authority=requireStepUp(auth,true),input=await inputBody(request,api),command=api?path.split('/').at(-1):input.command
-  const handlers:Record<string,Function>={connect:connectStripe,checkout:createCheckout,expire:expireCheckout,event:observeEvent,settlement:reconcileSettlement},handler=handlers[String(command)]
+  const handlers:Record<string,Function>={connect:connectStripe,checkout:createCheckout,expire:expireCheckout,event:observeEvent,session:reconcileSession,settlement:reconcileSettlement},handler=handlers[String(command)]
   if(!handler)throw new HttpError(404,'not_found')
   const result=await handler(env,actor,authority,input)
   if(api)return Response.json(result,{headers})

@@ -35,8 +35,9 @@ export const stripeRecords:Handler=(c,command,p)=>{
  const checkout=find(c.s,'stripeCheckout',p.checkoutId)
  if(checkout.connectionId!==account.id||checkout.invoiceId!==invoice.id||checkout.invoiceRevision!==invoice.revision||checkout.invoiceTotalCents!==invoice.totals.totalCents)fail('STRIPE_SCOPE','Checkout does not match the current invoice and merchant account.')
  if(command==='stripe.outcome'){
-  if(checkout.status!=='claiming'&&!p.expired)return checkout
-  const status=p.expired?'expired':p.sessionId?'open':'uncertain'
+  if(checkout.status!=='claiming'&&!p.expired&&!p.reconciled)return checkout
+  if(checkout.sessionId&&p.sessionId&&checkout.sessionId!==p.sessionId)fail('STRIPE_SCOPE','A checkout cannot change its provider session.')
+  const status=p.expired?'expired':p.rejected?'failed':p.complete?'processing':p.sessionId?'open':'uncertain'
   const row=bump(c.s,'stripeCheckout',checkout,{status,...(p.sessionId?{sessionId:text(p.sessionId,'checkout id'),expiresAt:p.expiresAt}:{}),updatedAt:c.now})
   event(c,command,invoice.jobId,row.id,{status});return row
  }

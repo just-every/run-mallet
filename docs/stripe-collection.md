@@ -13,7 +13,9 @@ one Checkout Session. Open the resulting hosted checkout for the customer.
 Card numbers, CVC and bank credentials are entered on Stripe and never pass
 through Mallet. This creates no automatic outbound charge or customer message.
 An uncertain request remains stopped for owner inspection in Stripe; Mallet
-never automatically repeats it. An open session can be explicitly expired.
+never automatically repeats it. If the dashboard shows an existing Session,
+inspect its identifier in Mallet: matching metadata and amount recover that
+session with a read only request. An open session can be explicitly expired.
 
 After payment, reconcile the Stripe event identifier from the merchant
 Dashboard on that invoice's payment screen. Mallet retrieves the event using
