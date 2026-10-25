@@ -19,7 +19,7 @@ export async function configureReportSchedule(env:Bindings,actor:Actor,authority
 /** One durable claim per occurrence; an uncertain or failed handoff disables future authority. */
 export async function runReportSchedules(env:Bindings,scheduledTime:number){
  const now=new Date(scheduledTime).toISOString(),mail=operatorMail(env);if(!mail)return
- const due=(await env.DB.prepare('SELECT * FROM mallet_report_schedules WHERE due_at<=? ORDER BY due_at LIMIT 20').bind(now).all<any>()).results
+ const due=(await env.DB.prepare(`SELECT r.* FROM mallet_report_schedules r JOIN oa_operators o ON o.id=r.owner_id JOIN mallet_records f ON f.kind='reportFilter' AND f.id=r.filter_id WHERE r.due_at<=? AND o.status='active' AND o.role='owner' AND o.version=r.owner_version AND o.email=r.email AND json_extract(f.value,'$.archived')=0 AND json_extract(f.value,'$.ownerId')=r.owner_id ORDER BY r.due_at LIMIT 20`).bind(now).all<any>()).results
  for(const schedule of due){
   const sql="EXISTS(SELECT 1 FROM mallet_report_schedules r JOIN oa_operators o ON o.id=r.owner_id WHERE r.filter_id=? AND r.due_at=? AND r.consent_at=? AND o.status='active' AND o.role='owner' AND o.version=r.owner_version AND o.email=r.email)",params=[schedule.filter_id,schedule.due_at,schedule.consent_at]
   if(!await env.DB.prepare('SELECT 1 AS ok WHERE '+sql).bind(...params).first())continue
