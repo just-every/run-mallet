@@ -17,7 +17,7 @@ const result={mode:'test',currency:'usd',card:'not-run',ach:'not-run',fee:'not-r
 try{
  stage='account';const account=await stripe('/account'),balance=await stripe('/balance');assert.equal(account.default_currency,'usd');assert.equal(balance.livemode,false)
  result.account={country:account.country,currency:account.default_currency,chargesEnabled:account.charges_enabled,payoutsEnabled:account.payouts_enabled}
- h=await installation({entry:'tests/worker.ts',network:true,assets:true,bindings:{AUTH_LOCAL:'true',STRIPE_SECRET_KEY:secret},outboundService:request=>fetch(request)})
+ h=await installation({entry:'tests/worker.ts',network:true,assets:true,bindings:{AUTH_LOCAL:'true',STRIPE_SECRET_KEY:secret},outboundService:async request=>fetch(request.url,{method:request.method,headers:Object.fromEntries(request.headers),...(request.method==='GET'?{}:{body:await request.arrayBuffer()})})})
  const api=async(action,input)=>{
   const response=await h.request('/api/mallet/stripe/'+action,{method:'POST',body:input}),value=await response.json()
   if(!response.ok)throw Object.assign(Error('Native Stripe door refused the operation'),{code:value.error,providerStatus:value.details?.status,providerCode:value.details?.code})

@@ -2139,6 +2139,22 @@
       "sha256": "bb3903d115776a2269337de376004118f9ae2e5ee40d24bed6cc8f16f73f0ad7",
       "executable": false
     },
+    "src/mallet/stripe/settlement-ui.ts": {
+      "sha256": "30810d47979410fe3408388c00f3173ae124b29b14b2bf744d7d479cb039b1f6",
+      "executable": false
+    },
+    "src/mallet/stripe/terminal-records.ts": {
+      "sha256": "e173bbf61726ced027ea0ed43f52c01dd5110a1406b53dfc6cead72201a2c595",
+      "executable": false
+    },
+    "src/mallet/stripe/terminal-ui.ts": {
+      "sha256": "f518bb72c2776bc944066d2af63afbf5e0e17a1db1d22244db71637a97823279",
+      "executable": false
+    },
+    "src/mallet/stripe/terminal.ts": {
+      "sha256": "bc01b2025b524eef937b558709db223cb585f75dbc6d5ef753703bbe3239bac9",
+      "executable": false
+    },
     "src/mallet/stripe/ui.ts": {
       "sha256": "259b40391f940921487b39f2fe13e5e7d577cd3e679626790159962923ba7ed8",
       "executable": false
@@ -4560,7 +4576,7 @@
       "executable": false
     },
     "tests/stripe-sandbox.mjs": {
-      "sha256": "8e77aa820ee19b804b1bb5e9294998288c1a061ffd8e4a6bbf582234a7af90e8",
+      "sha256": "0fe0d12984ba28fdc92565e34a96faa857a53b598e12231cfeb69ca3445782eb",
       "executable": false
     },
     "tests/sublet-browser.mjs": {
@@ -4833,6 +4849,10 @@
     },
     "tests/support/tax-custody-journey.mjs": {
       "sha256": "bc8d172a4d5c868070214ab0c28323de30043fbb67fa6e7d2cb0e3bccb59c248",
+      "executable": false
+    },
+    "tests/support/terminal-journey.mjs": {
+      "sha256": "0207e3857619f401ce141abf1de5a1b0293cc2c9af099193df7460fda481dfa2",
       "executable": false
     },
     "tests/support/time-journey.mjs": {
