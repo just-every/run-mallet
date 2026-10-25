@@ -38,14 +38,14 @@ function validateSession(session:any,checkout:any){
 }
 export async function openCheckout(env:Bindings,actor:Actor,id:string){
  const {s}=await accountScope(env,actor),checkout=find(s,'stripeCheckout',id),account=currentConnection(s,actor.id)
- if(checkout.connectionId!==account.id||checkout.status!=='open'||!checkout.sessionId)fail('STRIPE_CHECKOUT','This hosted checkout is not open.')
+ if((checkout.accountId!==account.accountId||checkout.livemode!==account.livemode)||checkout.status!=='open'||!checkout.sessionId)fail('STRIPE_CHECKOUT','This hosted checkout is not open.')
  const session=await stripeRequest(env,'/checkout/sessions/'+encodeURIComponent(checkout.sessionId));validateSession(session,checkout)
  if(session.status!=='open')fail('STRIPE_CHECKOUT','Reconcile this completed or expired checkout before continuing.')
  return hostedUrl(session.url)
 }
 export async function expireCheckout(env:Bindings,actor:Actor,authority:Authority,input:any){
  const {s,account}=await accountScope(env,actor),checkout=find(s,'stripeCheckout',input.checkoutId)
- if(checkout.connectionId!==account.id||!checkout.sessionId)fail('STRIPE_SCOPE','Choose a hosted session from this connected account.')
+ if((checkout.accountId!==account.accountId||checkout.livemode!==account.livemode)||!checkout.sessionId)fail('STRIPE_SCOPE','Choose a hosted session from this connected account.')
  const session=await stripeRequest(env,'/checkout/sessions/'+encodeURIComponent(checkout.sessionId));validateSession(session,checkout)
  if(session.status==='open'){
   const expired=await stripeRequest(env,'/checkout/sessions/'+encodeURIComponent(checkout.sessionId)+'/expire',new URLSearchParams(),'mallet-expire-'+checkout.id)
@@ -55,7 +55,7 @@ export async function expireCheckout(env:Bindings,actor:Actor,authority:Authorit
 }
 export async function reconcileSession(env:Bindings,actor:Actor,authority:Authority,input:any){
  const {s,account}=await accountScope(env,actor),checkout=find(s,'stripeCheckout',input.checkoutId)
- if(checkout.connectionId!==account.id)fail('STRIPE_SCOPE','Choose a checkout from the connected merchant account.')
+ if((checkout.accountId!==account.accountId||checkout.livemode!==account.livemode))fail('STRIPE_SCOPE','Choose a checkout from the connected merchant account.')
  const session=await stripeRequest(env,'/checkout/sessions/'+encodeURIComponent(text(input.sessionId,'hosted session id',200)));validateSession(session,checkout)
  if(!['open','complete','expired'].includes(session.status))fail('STRIPE_CHECKOUT','Stripe returned an unknown session state.')
  return execute(env.DB,actor as any,'stripe.outcome',{connectionId:account.id,invoiceId:checkout.invoiceId,checkoutId:checkout.id,sessionId:providerId(session.id,'checkout'),expiresAt:new Date(session.expires_at*1000).toISOString(),reconciled:true,expired:session.status==='expired',complete:session.status==='complete'},authority)
@@ -63,7 +63,7 @@ export async function reconcileSession(env:Bindings,actor:Actor,authority:Author
 export async function observeEvent(env:Bindings,actor:Actor,authority:Authority,input:any){
  const {s,account}=await accountScope(env,actor),eventId=text(input.eventId,'Stripe event id',200),ev=await stripeRequest(env,'/events/'+encodeURIComponent(eventId))
  if(ev.id!==eventId||ev.livemode!==account.livemode||!['payment_intent.succeeded','payment_intent.processing','payment_intent.payment_failed','checkout.session.completed','checkout.session.async_payment_succeeded','checkout.session.async_payment_failed'].includes(ev.type))fail('STRIPE_EVENT','Choose an authenticated payment or Checkout event from this merchant account.')
- const object=ev.data?.object,checkout=rows(s,'stripeCheckout').find(r=>r.id===object?.metadata?.mallet_checkout_id&&r.connectionId===account.id)
+ const object=ev.data?.object,checkout=rows(s,'stripeCheckout').find(r=>r.id===object?.metadata?.mallet_checkout_id&&r.accountId===account.accountId&&r.livemode===account.livemode)
  if(!checkout||object.metadata?.mallet_invoice_id!==checkout.invoiceId||object.metadata?.mallet_invoice_revision!==String(checkout.invoiceRevision))fail('STRIPE_SCOPE','The event does not identify this invoice checkout.')
  const paymentIntentId=providerId(ev.type.startsWith('checkout.')?object.payment_intent:object.id,'payment intent'),pi=await stripeRequest(env,'/payment_intents/'+encodeURIComponent(paymentIntentId)+'?expand%5B%5D=latest_charge.balance_transaction')
  if(pi.id!==paymentIntentId)fail('STRIPE_SCOPE','Stripe returned a different payment intent.')
@@ -80,7 +80,7 @@ function paymentReceipt(pi:any,checkout:any){
 }
 export async function reconcileSettlement(env:Bindings,actor:Actor,authority:Authority,input:any){
  const {s,account}=await accountScope(env,actor),checkout=find(s,'stripeCheckout',input.checkoutId)
- if(checkout.connectionId!==account.id||!checkout.paymentIntentId)fail('STRIPE_SCOPE','Reconcile a confirmed payment from this connected merchant account.')
+ if((checkout.accountId!==account.accountId||checkout.livemode!==account.livemode)||!checkout.paymentIntentId)fail('STRIPE_SCOPE','Reconcile a confirmed payment from this connected merchant account.')
  const pi=await stripeRequest(env,'/payment_intents/'+encodeURIComponent(checkout.paymentIntentId)+'?expand%5B%5D=latest_charge.balance_transaction');paymentReceipt(pi,checkout)
  const payment=rows(s,'payment').find(r=>r.invoiceId===checkout.invoiceId&&r.receipt?.paymentIntentId===pi.id),charge=pi.latest_charge,bt=charge?.balance_transaction
  if(!payment||!bt||typeof bt!=='object')fail('STRIPE_SETTLEMENT_PENDING','Stripe has not supplied the charge balance transaction yet. No fees or payout were inferred.')

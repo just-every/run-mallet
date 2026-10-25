@@ -62,6 +62,8 @@ export async function stripeJourney(h,edge){
   await restore(fresh,backup)
   const restored=await fresh.state();for(const kind of ['stripeConnection','stripeCheckout','stripeEvent','stripeSettlement','payment'])assert.deepEqual(restored.records[kind],(await h.state()).records[kind])
   const calls=edge.calls.length;await fresh.api('/api/mallet/stripe/event',{eventId},{status:409});assert.equal(edge.calls.length,calls,'Recovery needs a new owner connection before provider access')
+  await fresh.api('/api/mallet/stripe/connect',{consent:true})
+  assert.equal((await fresh.api('/api/mallet/stripe/event',{eventId})).id,confirmed.id,'The fresh owner can explicitly reconnect the same merchant and reconcile existing history without a new payment')
  }finally{await fresh.close()}
  return {invoice,checkout,settled}
 }

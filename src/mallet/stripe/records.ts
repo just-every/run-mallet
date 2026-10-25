@@ -13,7 +13,7 @@ export const stripeRecords:Handler=(c,command,p)=>{
  if(command==='stripe.connect'){
   const prior=connection(c.s)
   if(prior&&prior.accountId===p.accountId&&prior.livemode===p.livemode&&prior.by.id===c.actor.id)return prior
-  if(rows(c.s,'stripeCheckout').some(r=>['claiming','open','uncertain'].includes(r.status)))fail('STRIPE_OPEN','Resolve outstanding checkouts before changing the connected account.')
+  if(rows(c.s,'stripeCheckout').some(r=>['claiming','open','uncertain','processing'].includes(r.status)&&(r.accountId!==p.accountId||r.livemode!==p.livemode)))fail('STRIPE_OPEN','Resolve outstanding checkouts before changing the connected account.')
   const row=put(c.s,'stripeConnection',{accountId:text(p.accountId,'Stripe account'),currency:'usd',livemode:p.livemode===true,by:who(c),at:c.now})
   event(c,command,null,row.id,{accountId:row.accountId,livemode:row.livemode});return row
  }
@@ -33,8 +33,9 @@ export const stripeRecords:Handler=(c,command,p)=>{
   event(c,command,invoice.jobId,row.id,{amountCents,method:p.method});return {checkout:row,claimed:true}
  }
  const checkout=find(c.s,'stripeCheckout',p.checkoutId)
- if(checkout.connectionId!==account.id||checkout.invoiceId!==invoice.id||checkout.invoiceRevision!==invoice.revision||checkout.invoiceTotalCents!==invoice.totals.totalCents)fail('STRIPE_SCOPE','Checkout does not match the current invoice and merchant account.')
+ if((checkout.accountId!==account.accountId||checkout.livemode!==account.livemode)||checkout.invoiceId!==invoice.id||checkout.invoiceRevision!==invoice.revision||checkout.invoiceTotalCents!==invoice.totals.totalCents)fail('STRIPE_SCOPE','Checkout does not match the current invoice and merchant account.')
  if(command==='stripe.outcome'){
+  if(checkout.status==='paid')return checkout
   if(checkout.status!=='claiming'&&!p.expired&&!p.reconciled)return checkout
   if(checkout.sessionId&&p.sessionId&&checkout.sessionId!==p.sessionId)fail('STRIPE_SCOPE','A checkout cannot change its provider session.')
   const status=p.expired?'expired':p.rejected?'failed':p.complete?'processing':p.sessionId?'open':'uncertain'

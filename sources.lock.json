@@ -2128,11 +2128,11 @@
       "executable": false
     },
     "src/mallet/stripe/records.ts": {
-      "sha256": "5f83904dfb3e6faca4d34cd220934aa09b0b3d0f2acb7271e064d4ca86bfec23",
+      "sha256": "ccce66b13e95829887327cfaff1c60dc2c4b3b1c4f46ed42d19bf0dd142fc459",
       "executable": false
     },
     "src/mallet/stripe/service.ts": {
-      "sha256": "33f2cff089792083cfb3b87cea34dfda276f6ace6805496b85671d78505e5e96",
+      "sha256": "a4934bf54f77c6dda44ffca6cb870f27adc73261e1bd60ef56f160edd78f0df2",
       "executable": false
     },
     "src/mallet/stripe/ui.ts": {
@@ -4800,7 +4800,7 @@
       "executable": false
     },
     "tests/support/stripe-journey.mjs": {
-      "sha256": "ee3c4e420386fcdab119abf88eb517ead7615d9d95de9533e35f2378792b2da9",
+      "sha256": "65b7db4e5615fef0ca76d1d1483d83a5a5d14804df7f443c7ff4e1b5c8e25ba0",
       "executable": false
     },
     "tests/support/strong-auth-journey.mjs": {
