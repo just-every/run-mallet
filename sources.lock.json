@@ -708,7 +708,7 @@
       "executable": false
     },
     "docs/stripe-collection.md": {
-      "sha256": "8bfb4e6e9b43daa3d019b2a51401fe238b2824eceb8276df72ccf2f948ec61bb",
+      "sha256": "9604f26684a78602cc4e53980dc198dd0b231a7248c09290159c25d977a0aa74",
       "executable": false
     },
     "docs/supplements.md": {
@@ -4572,7 +4572,7 @@
       "executable": false
     },
     "tests/stripe-browser.mjs": {
-      "sha256": "2198f3c1f5dcd89dee010ab48c7662fa46e9d62e4ffd220a2432b3aaee187e7b",
+      "sha256": "4e9a5498b092c701911b2170e6a8fa23ac270c3fc9afd7a09561ef4b4f56689f",
       "executable": false
     },
     "tests/stripe-sandbox.mjs": {
@@ -4853,6 +4853,10 @@
     },
     "tests/support/tax-custody-journey.mjs": {
       "sha256": "bc8d172a4d5c868070214ab0c28323de30043fbb67fa6e7d2cb0e3bccb59c248",
+      "executable": false
+    },
+    "tests/support/terminal-browser-steps.mjs": {
+      "sha256": "a1ef85ca26d70c0af5f57f0735e48618df0dc2e451e68e1fb942a954b45c7083",
       "executable": false
     },
     "tests/support/terminal-journey.mjs": {

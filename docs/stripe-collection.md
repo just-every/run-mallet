@@ -39,7 +39,16 @@ These records inherit native export and fresh-owner restore. Old connection
 history grants no provider authority to the destination owner, who must connect
 again. Hosted checkout URLs are fetched for the current owner, not archived.
 
-PAY-001 remains PARTIAL. Stripe Terminal, ACH returns and disputes, signed
+The same invoice screen prepares an exact card-present PaymentIntent and sends
+it, once, to the merchant's WisePOS E, S700 or S710 smart reader. Reader
+acknowledgment is shown separately from payment confirmation. Inspecting a
+stopped action only reads its existing payment and reader. Explicit cancellation
+has separate durable claims for clearing the reader and canceling uncaptured
+funds; a captured payment uses the refund door. No reader action or payment
+creation is automatically retried. Card-present settlement uses the same
+invoice, authenticated event and fee reconciliation rules as hosted checkout.
+
+PAY-001 remains PARTIAL. Physical reader deployment, ACH returns and disputes, signed
 webhook delivery, bank receipt and the sandbox legs named in the contract Gap
 remain unproved. PAY-005 inherits webhook transport; MONEY-001 inherits disputes
 and payout close; BILL-001 inherits recurring agreement authority. None may
@@ -53,3 +62,9 @@ Stripe has no per-payment deletion API: completed test charges remain in its
 transaction history after refund. No broad test-data deletion is attempted on
 the shared account. The command must receive only test credentials from the
 fleet injector and run through heavy-slot.
+
+The independent real Terminal journey is `./tests/stripe-terminal-sandbox.mjs`.
+It creates a temporary test location and simulated reader, uses the native owner
+doors to bind and send the invoice payment, presents Stripe's default simulated
+card, reconciles the event exactly once and reads fees. It cancels unfinished
+actions, refunds captured test value and deletes its own reader and location.
