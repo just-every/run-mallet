@@ -2119,8 +2119,12 @@
       "sha256": "cb723da1dd9464bc3b66b4f5f2178025d0aa7810d45fbd8c67f2e1e5fe00aa28",
       "executable": false
     },
+    "src/mallet/stripe/balance-guard.ts": {
+      "sha256": "a659e9efb4d626df07c243400d86294e064165f9edafd414c4d9978cf2b4707d",
+      "executable": false
+    },
     "src/mallet/stripe/door.ts": {
-      "sha256": "6f6b9fe64cc37673579d807bd33a0733297081f54eb3de3c4091328aee90539f",
+      "sha256": "89af105a2b2679faa7678764d4002d0d1cf2ca05717bfc0c88e86a3177740fc0",
       "executable": false
     },
     "src/mallet/stripe/provider.ts": {

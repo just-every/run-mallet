@@ -41,7 +41,7 @@ export async function stripeResponse(request:Request,original:Bindings):Promise<
   return new Response(null,{status:303,headers:{...headers,location:input.invoiceId?'/app/invoices/'+encodeURIComponent(input.invoiceId)+'/payment':'/app/stripe'}})
  }catch(error:any){
   if(!(error instanceof HttpError)&&!(error instanceof MalletError))throw error
-  if(api)return Response.json({error:error.code,message:error.message,details:error.details??null},{status:error.status,headers})
+  if(api)return Response.json({error:error.code,message:error.message,details:error instanceof MalletError?error.details:null},{status:error.status,headers})
   if(error.status===401)return new Response(null,{status:303,headers:{...headers,location:'/signin?returnTo='+encodeURIComponent(path)}})
   const back=error.code==='step_up_required'?'/app/security?returnTo='+encodeURIComponent(path):invoicePage?path:'/app/stripe'
   return page('Stripe payment',`<section class="card"><p role="alert">${e(error.message)}</p><p><a href="${e(back)}">${error.code==='step_up_required'?'Confirm your identity':'Return to payment'}</a></p></section>`,actor,error.status,{section:'data'})
