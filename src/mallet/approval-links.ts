@@ -1,3 +1,4 @@
+import {fleetApproval} from './fleet-authority'
 import {createHash} from 'node:crypto'
 import {bump,choice,event,expectVersion,fail,find,integer,put,text,who,type Handler,type Row} from './model'
 import {totals} from './money'
@@ -39,6 +40,7 @@ export const approvalLinks:Handler=(c,command,p)=>{
   const line=(l:Row)=>({lineId:l.id,description:l.description,quantity:l.quantity,unitCents:l.unitCents-(l.unitDiscountCents??0),salesTaxCents:l.salesTaxCents,totalCents:l.totalCents})
   const receipt={linkId:link.id,estimateId:estimate.id,jobId:job.id,revision:rev.n,revisionTotalCents:rev.totals.totalCents,approved:chosen.map(line),declined:rev.lines.filter((l:Row)=>!approved.includes(l.id)).map(line),approvedTotals:totals(chosen),typedName,email:link.to,consent:CONSENT,signature:SIGNATURE_LABEL,at:c.now}
   const receiptSha256=createHash('sha256').update(canonical(receipt)).digest('hex')
+  fleetApproval(c,job,{})
   const authorisation={revision:rev.n,lineIds:approved,customerName:typedName,method:'signed link',evidence:`Signed through an approval link; receipt sha256 ${receiptSha256.slice(0,16)}… (full receipt on the link)`,recordedBy:who(c),at:c.now,totals:receipt.approvedTotals,linkId:link.id,email:link.to}
   const row=bump(c.s,'estimate',estimate,{status:approved.length?'authorised':'declined',authorisation})
   event(c,command,job.id,row.id,authorisation)

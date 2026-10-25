@@ -26,7 +26,7 @@ export async function warrantyJourney(h){
  await h.command('warranty.open',input,{status:409});assert.deepEqual((await h.state()).records,baseline)
  const payment={invoiceId:f.invoice.id,version:f.invoice.version,amountCents:f.invoice.totals.totalCents,method:'cash',reference:'synthetic-mallet-82',evidence:'Cash counted against the original invoice; staff declaration only'}
  await h.command('payment.record',{...payment,amountCents:payment.amountCents+1},{status:409});const paid=await h.command('payment.record',payment);assert.equal(paid.verified,false);assert.deepEqual(await h.command('payment.record',payment),paid);await h.command('payment.record',{...payment,amountCents:1},{status:409})
- let w=await h.command('warranty.open',input,{as:admin.cookie});assert.ok(f.invoice.billing);assert.equal(w.originalInvoice.billing,undefined);assert.equal(w.identifier,f.invoice.customer.identifier);assert.equal(w.lot.supplierLot,f.lot.supplierLot);assert.equal(w.installed.jobId,f.job.id);assert.equal(w.originalPayment.outstandingCents,0);assert.equal(w.withinTerms,true)
+ let w=await h.command('warranty.open',input,{as:admin.cookie});assert.ok(!JSON.stringify(w).includes('\"fleet\":'),'A non-owner command reply contains no private fleet decision snapshot');assert.ok(f.invoice.billing);assert.equal(w.originalInvoice.billing,undefined);assert.equal(w.identifier,f.invoice.customer.identifier);assert.equal(w.lot.supplierLot,f.lot.supplierLot);assert.equal(w.installed.jobId,f.job.id);assert.equal(w.originalPayment.outstandingCents,0);assert.equal(w.withinTerms,true)
  await h.command('warranty.cost',{warrantyId:w.id,version:w.version,actualId:'missing',amountCents:1,evidence:'Not approved'},{status:409})
  w=await h.command('warranty.decide',{warrantyId:w.id,version:w.version,outcome:'covered',responsibility:'supplier',reason:'Within saved term; supplier-marked pad failed; approve no-charge labor'},{as:admin.cookie})
  assert.equal(w.decision.noChargeLabor,true);await h.command('warranty.decide',{warrantyId:w.id,version:w.version,outcome:'declined',responsibility:'shop',reason:'Cannot rewrite'},{status:409})
@@ -53,5 +53,8 @@ export async function warrantyJourney(h){
  assert.equal((await h.state(bearer)).records.warranty?.length??0,0);assert.equal((await h.request('/app/jobs/'+f.job.id+'/warranty',bearer)).status,403)
  const fresh=await installation({bindings:{OWNER_EMAIL:'warranty-recovery@example.test'}})
  try{await restore(fresh,await archive(h));const s=await fresh.state();for(const kind of ['warranty','warrantyTerms','payment'])assert.deepEqual(s.records[kind],final.records[kind]);assert.deepEqual(s.records.invoice.find(i=>i.id===f.invoice.id),f.invoice);await fresh.state({as:h.owner,status:401})}finally{await fresh.close()}
+ const report=await h.api('/api/mallet/reports/turnaround?from='+f.job.createdAt.slice(0,10)+'&to='+f.job.createdAt.slice(0,10))
+ assert.equal(report.metrics.completedRepairs,1);assert.equal(report.metrics.repairsWithComebacks,1);assert.equal(report.metrics.comebackRateTenths,1000,'Multiple warranty cases count the original repair once')
+ const original=report.repairs.find(r=>r.jobId===f.job.id);assert.ok(original.comebacks.some(c=>c.id===w.id&&c.jobId===w.jobId),'Comeback drill-through names exact retained repair')
  return {f,w}
 }

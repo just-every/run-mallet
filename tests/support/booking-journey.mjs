@@ -26,6 +26,7 @@ export async function onlineBookingJourney(h){
  await h.command('job.book',{assetId:asset.id,version:asset.version,title:'synthetic-mallet-9',...service.windows[0]},{status:409})
  const confirmation=await bookingPost(h,path,{action:'confirm',version:appointment.version});assert.equal(confirmation.status,200,await confirmation.text())
  appointment=(await h.state()).records.appointment[0];assert.equal(appointment.status,'confirmed');assert.equal(appointment.delivery.status,'accepted');assert.equal(h.messages.filter(m=>m.subject==='Your confirmed appointment').length,1)
+ await h.command('booking.attendance',{appointmentId:appointment.id,version:appointment.version,outcome:'no-show',evidence:'Future appointments cannot be marked absent'},{status:409})
  assert.ok(h.messages.at(-1).text.includes(path));assert.ok(h.messages.at(-1).html.includes('href="'+h.origin+path+'"'),'HTML confirmation has a usable private management link');assert.ok(h.messages.at(-1).text.includes(service.location));assert.equal((await bookingPost(h,path,{action:'confirm',version:1})).status,409)
  const next=new Date(Date.parse(input.startAt)+3600000).toISOString()
  const moved=await bookingPost(h,path,{action:'reschedule',version:appointment.version,slotId:slotId(service,{...input,startAt:next})});assert.equal(moved.status,200,await moved.text())
@@ -36,9 +37,15 @@ export async function onlineBookingJourney(h){
  assert.ok(privateText.includes(appointment.id));assert.ok(!privateText.includes(other.id));assert.ok(!privateText.includes(asset.identifier));assert.ok(!privateText.includes(asset.customerEmail))
  assert.equal((await bookingPost(h,path,{action:'confirm',version:other.version,appointmentId:other.id})).status,409,'A management link cannot select another appointment')
  assert.equal((await h.state()).records.appointment.find(a=>a.id===other.id).status,'held');assert.equal((await h.request('/api/mallet/state',{as:''})).status,401)
+ const observed=await attendanceFixture(h),attendance={appointmentId:observed.id,version:observed.version,outcome:'no-show',evidence:'Counter and phone log reviewed; customer did not attend.'}
+ await h.command('booking.attendance',attendance,{as:member.cookie,status:403})
+ const marked=await h.command('booking.attendance',attendance);assert.equal(marked.attendance.outcome,'no-show')
+ const unchanged=await h.state();await h.command('booking.attendance',{...attendance,version:marked.version,outcome:'arrived'},{status:409});assert.deepEqual(await h.state(),unchanged,'Attendance cannot be silently rewritten')
+ const query='?from='+observed.startAt.slice(0,10)+'&to='+observed.startAt.slice(0,10),metrics=await h.api('/api/mallet/reports/turnaround'+query)
+ assert.equal(metrics.metrics.noShows,1);assert.equal(metrics.metrics.noShowRateTenths,1000);assert.equal(metrics.appointments.find(a=>a.id===observed.id).attendance.evidence,attendance.evidence)
  const state=await h.state();assert.equal(state.records.job?.length??0,before.records.job?.length??0);assert.equal(state.records.estimate?.length??0,before.records.estimate?.length??0);assert.equal(state.records.approval?.length??0,before.records.approval?.length??0)
  const backup=await archive(h),fresh=await installation({bindings:{OWNER_EMAIL:'synthetic-mallet-10@example.test'}})
- try{await restore(fresh,backup);const restored=await fresh.state();assert.deepEqual(restored.records.appointment,state.records.appointment);assert.deepEqual(restored.records.bookingService,state.records.bookingService);assert.equal((await fresh.mf.dispatchFetch(fresh.origin+path)).status,404);assert.ok(backup[0].excludedTables.includes('mallet_booking_tokens'));assert.ok(!JSON.stringify(backup).includes(path.slice(6)))}finally{await fresh.close()}
+ try{await restore(fresh,backup);const restored=await fresh.state();assert.equal((await fresh.api('/api/mallet/reports/turnaround'+query)).metrics.noShows,1);assert.deepEqual(restored.records.appointment,state.records.appointment);assert.deepEqual(restored.records.bookingService,state.records.bookingService);assert.equal((await fresh.mf.dispatchFetch(fresh.origin+path)).status,404);assert.ok(backup[0].excludedTables.includes('mallet_booking_tokens'));assert.ok(!JSON.stringify(backup).includes(path.slice(6)))}finally{await fresh.close()}
 }
 export async function bookingAvailabilityJourney(h){
  await shopSetup(h);const service=await bookingService(h,{holdSeconds:1}),input=holdFields(service)
@@ -84,4 +91,16 @@ export async function bookingAbuseJourney(h){
  const third={'cf-connecting-ip':'192.0.2.3'},races=await Promise.all([bookingPost(h,'/book',fields(13,'synthetic-mallet-23@example.test'),third),bookingPost(h,'/book',fields(14,'synthetic-mallet-23@example.test'),third)])
  assert.equal(races.filter(r=>r.status===303).length,1,'Concurrent same-email holds share the transaction fence')
  assert.equal((await h.state()).records.appointment.filter(a=>a.email==='synthetic-mallet-23@example.test').length,1)
+}
+
+// Uses relative seconds, so a UTC date boundary cannot affect the attendance proof.
+export async function attendanceFixture(h){
+ const startAt=new Date(Date.now()+5000).toISOString(),endAt=new Date(Date.parse(startAt)+300000).toISOString()
+ const service=await bookingService(h,{durationMinutes:5,leadMinutes:0,windows:[{startAt,endAt,bayId:'synthetic-mallet-attendance',technicianId:(await h.state()).actor.id,skills:['inspection']}]})
+ const held=await bookingPost(h,'/book',{...holdFields(service),email:'synthetic-mallet-attendance@example.test'});assert.equal(held.status,303)
+ const path=held.headers.get('location'),a=(await h.state()).records.appointment.find(a=>a.serviceId===service.id)
+ assert.equal((await bookingPost(h,path,{action:'confirm',version:a.version})).status,200)
+ const row=(await h.state()).records.appointment.find(a=>a.serviceId===service.id)
+ await new Promise(resolve=>setTimeout(resolve,Math.max(0,Date.parse(startAt)-Date.now()+100)))
+ return row
 }

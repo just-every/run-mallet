@@ -60,6 +60,7 @@ export async function approvalResponse(request:Request,original:Bindings):Promis
   return noStore(await page('Decision recorded',receiptPage(decided.decision)))
  } catch(error) {
   if(error instanceof MalletError&&error.status===404)return unavailable()
+  if(error instanceof MalletError&&error.status===403)return noStore(await page('Staff review required','<section class="card"><p>The current owner must record approval from the fleet’s allowed authorizer and its purchase order. Contact your repair shop.</p></section>',undefined,403))
   if(error instanceof MalletError&&error.status===409&&error.code==='LINK_USED')return noStore(await page('Decision already recorded','<section class="card"><p>This link already recorded a different decision. Contact your repair shop to change it.</p></section>',undefined,409))
   if(error instanceof MalletError&&error.status===400)return noStore(await page('Review your estimate',approvalPage(link,estimate,job,asset,sharedDiagnoses(s,job.id),error.message),undefined,400))
   throw error

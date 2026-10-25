@@ -8,8 +8,24 @@ export async function receivablesFixture(h){
  const driver=await h.command('contact.save',{name:'Van driver',email:'driver@example.test',phone:'',communication:'none'}),manager=await h.command('contact.save',{name:'Fleet manager',email:'manager@example.test',phone:'',communication:'email'})
  const account=await h.command('customer.save',{name:'Synthetic fleet',kind:'fleet',contactIds:[driver.id,manager.id],payerId:manager.id,billingContactId:manager.id,driverId:driver.id,authorizerId:manager.id,taxStatus:'standard'})
  async function invoice(n){let asset=await h.command('asset.create',{customerName:account.name,customerEmail:manager.email,label:'Fleet van '+n,identifier:'synthetic-mallet-ar-'+n});asset=await h.command('customer.linkAsset',{assetId:asset.id,version:asset.version,customerId:account.id,customerVersion:account.version,reason:'Explicit fleet vehicle and payer review'});let {job}=await booking(h,{asset,bayId:'Fleet '+n,startAt:`2026-10-0${n}T09:00:00Z`,endAt:`2026-10-0${n}T10:00:00Z`});const q=await authorise(h,await h.command('estimate.prepare',{jobId:job.id,version:job.version,lines:[{kind:'part',description:'Van repair part',quantity:1,unitCents:10000}]}));job=(await h.state()).records.job.find(j=>j.id===job.id);job=await h.command('work.record',{jobId:job.id,version:job.version,lineId:q.revisions[0].lines[0].id,quantity:1});await qualityReady(h,job);job=await h.command('job.complete',{jobId:job.id,version:job.version});const i=await h.command('invoice.prepare',{jobId:job.id,version:job.version});return h.command('invoice.approve',{invoiceId:i.id,version:i.version})}
+ let controlAsset=await h.command('asset.create',{customerName:account.name,customerEmail:manager.email,label:'Fleet authority control',identifier:'synthetic-mallet-fleet-control'})
+ controlAsset=await h.command('customer.linkAsset',{assetId:controlAsset.id,version:controlAsset.version,customerId:account.id,customerVersion:account.version,reason:'Owner reviewed fleet control vehicle'})
+ const control=await booking(h,{asset:controlAsset,bayId:'Fleet control'});let quote=await h.command('estimate.prepare',{jobId:control.job.id,version:control.job.version,lines:[{kind:'labor',description:'Fleet control repair',quantity:1,unitCents:100}]})
+ quote=await h.command('estimate.approve',{estimateId:quote.id,version:quote.version,revision:1});quote=await h.command('estimate.markSent',{estimateId:quote.id,version:quote.version,revision:1,method:'printed'})
+ const decision={estimateId:quote.id,version:quote.version,revision:1,lineIds:quote.revisions[0].lines.map(l=>l.id),customerName:manager.name,method:'phone',evidence:'Fleet manager called with exact repair authority',authorizerId:manager.id,accountVersion:account.version,po:'synthetic-mallet-control-po',fleetEvidence:'Owner recorded exact fleet instruction'}
+ const before=await h.state()
+ for(const wrong of [{authorizerId:driver.id},{accountVersion:account.version+1},{po:''}])await h.command('estimate.authorise',{...decision,...wrong},{status:wrong.po===''?400:409})
+ assert.deepEqual(await h.state(),before,'Driver, stale account and missing PO grant no repair authority')
+ const admin=await h.person('fleet-control-advisor@example.test','admin');await h.command('estimate.authorise',decision,{as:admin.cookie,status:403})
+ const link=await h.command('approvalLink.create',{estimateId:quote.id,version:quote.version,revision:1,days:1})
+ const {decide}=await import('./approval-journey.mjs'),path=new URL(link.url).pathname
+ const refused=await decide(h,path,{['line-'+quote.revisions[0].lines[0].id]:'approve',typedName:driver.name,consent:'yes'});assert.equal(refused.status,403,'A bearer link cannot bypass reviewed fleet authorizer authority')
+ quote=(await h.state()).records.estimate.find(q=>q.id===quote.id)
+ const authorized=await h.command('estimate.authorise',{...decision,version:quote.version});assert.equal(authorized.authorisation.fleet.authorizer.id,manager.id)
+ assert.equal(authorized.authorisation.fleet.po,decision.po)
+ assert.ok(!JSON.stringify((await h.state({as:admin.cookie})).records).includes('\"fleet\":'),'New private fleet decision snapshots are absent from non-owner projections')
  const i1=await invoice(1),i2=await invoice(2)
- return {account,driver,manager,i1,i2,invoice}
+ return {account,driver,manager,i1,i2,invoice,control}
 }
 export async function receivablesJourney(h){
  const f=await receivablesFixture(h),{account,driver,manager,i1,i2}=f,admin=await h.person('ar-admin@example.test','admin'),member=await h.person('ar-member@example.test'),key=await h.command('agent.create',{label:'No receivables authority'}),agent={as:'',headers:{authorization:'Bearer '+key.token}},evidence='Explicit fleet instruction and owner reviewed commercial authority',termsInput={accountId:account.id,version:account.version,days:30,limitCents:22000,active:true,consent:true,evidence}
@@ -30,19 +46,29 @@ export async function receivablesJourney(h){
  await h.command('ar.invoice',assign(i1,{authorizerId:driver.id}),{status:409})
  await h.command('ar.invoice',assign(i1,{po:''}),{status:400})
  const a1=await h.command('ar.invoice',assign(i1)),a2=await h.command('ar.invoice',assign(i2))
+ const document=await h.command('invoice.issue',{invoiceId:i1.id,version:i1.version,reference:'synthetic-mallet-term-invoice',warrantyTerms:'Shop terms reviewed with fleet accounts',confirm:'issue-invoice'})
+ assert.equal(document.snapshot.accountTerms.assignmentId,a1.id);assert.ok(document.content.includes(a1.dueOn));assert.ok(document.content.includes(a1.po));assert.ok(document.content.includes('Van repair part'))
+ const optedOut=await h.command('contact.save',{contactId:manager.id,version:manager.version,name:manager.name,email:manager.email,phone:'',communication:'none'})
+ const noTermSend=h.messages.length;await h.command('invoice.send',{documentId:document.id,version:document.version,to:manager.email,consentEvidence:'Accounts request',consent:true,confirm:'email-invoice'},{status:409});assert.equal(h.messages.length,noTermSend,'Current accounts email preference is required')
+ manager.version=(await h.command('contact.save',{contactId:manager.id,version:optedOut.version,name:manager.name,email:manager.email,phone:'',communication:'email'})).version
+ const sent=await h.command('invoice.send',{documentId:document.id,version:document.version,to:manager.email,consentEvidence:'Accounts explicitly requested this exact term invoice',consent:true,confirm:'email-invoice'})
+ assert.equal(sent.status,'accepted');assert.deepEqual(h.messages.at(-1).to,[manager.email]);assert.ok(h.messages.at(-1).text.includes(a1.dueOn));assert.ok(h.messages.at(-1).text.includes(a1.po))
+ const sentMessages=h.messages.length;await h.command('invoice.send',{documentId:document.id,version:document.version,to:manager.email,consentEvidence:'Replay',consent:true,confirm:'email-invoice'},{status:409});assert.equal(h.messages.length,sentMessages)
+
+ const termMessages=h.messages.length-messages
  const reminderInput={invoiceId:i1.id,version:i1.version,outstandingCents:11000,to:manager.email,reference:'synthetic-mallet-ar-reminder',consent:true,confirm:'send-balance-reminder',consentEvidence:'Billing contact explicitly requested this balance reminder by email',evidence}
  await (await h.mf.getD1Database('DB')).prepare('UPDATE mallet_session_proofs SET step_up_until=0').run()
- const reminderBefore=(await h.state()).records;await h.command('ar.remind',reminderInput,{status:403});assert.deepEqual((await h.state()).records,reminderBefore,'A reminder without fresh owner confirmation writes nothing');assert.equal(h.messages.length,messages);await h.stepUp()
+ const reminderBefore=(await h.state()).records;await h.command('ar.remind',reminderInput,{status:403});assert.deepEqual((await h.state()).records,reminderBefore,'A reminder without fresh owner confirmation writes nothing');assert.equal(h.messages.length,messages+termMessages);await h.stepUp()
  await h.command('ar.remind',{...reminderInput,consentEvidence:''},{status:400})
  for(const input of [{...reminderInput,consent:false},{...reminderInput,outstandingCents:1},{...reminderInput,to:driver.email}])await h.command('ar.remind',input,{status:409})
  await h.command('ar.remind',reminderInput,{as:admin.cookie,status:403})
- assert.equal(h.messages.length,messages,'No refused reminder reaches mail')
+ assert.equal(h.messages.length,messages+termMessages,'No refused reminder reaches mail')
  const refusedContact=await h.command('contact.save',{contactId:manager.id,version:manager.version,name:manager.name,email:manager.email,phone:'',communication:'none'})
  await h.command('ar.remind',reminderInput,{status:409})
  await h.command('contact.save',{contactId:manager.id,version:refusedContact.version,name:manager.name,email:manager.email,phone:'',communication:'email'})
  const reminder=await h.command('ar.remind',reminderInput)
- assert.equal(reminder.status,'accepted');assert.equal(h.messages.length,messages+1);assert.deepEqual(h.messages.at(-1).to,[manager.email]);assert.match(h.messages.at(-1).text,/USD 110.00/);assert.ok(h.messages.at(-1).text.includes(a1.dueOn));assert.doesNotMatch(h.messages.at(-1).text,/overdue/i)
- await h.command('ar.remind',reminderInput,{status:409});assert.equal(h.messages.length,messages+1,'Replay never sends twice')
+ assert.equal(reminder.status,'accepted');assert.equal(h.messages.length,messages+termMessages+1);assert.deepEqual(h.messages.at(-1).to,[manager.email]);assert.match(h.messages.at(-1).text,/USD 110.00/);assert.ok(h.messages.at(-1).text.includes(a1.dueOn));assert.doesNotMatch(h.messages.at(-1).text,/overdue/i)
+ await h.command('ar.remind',reminderInput,{status:409});assert.equal(h.messages.length,messages+termMessages+1,'Replay never sends twice')
  await h.command('ar.reminderClaim',reminderInput,{status:404});await h.command('ar.reminderOutcome',{reminderId:reminder.id,status:'accepted'},{status:404})
  const releaseInput=await handoverInput(h,i2.jobId,account.name);delete releaseInput.overrideId;releaseInput.termsAssignmentId=a2.id
  const releaseBefore=JSON.stringify((await h.state()).records)

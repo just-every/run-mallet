@@ -75,7 +75,10 @@ import {purchaseStatus} from './purchasing'
 import {inventoryPage,countPage,inventoryFormInput} from './ui/inventory'
 import {stockReport} from './inventory'
 import {subletFormInput} from './ui/sublet'
+import {configureReportSchedule,reportFilterView} from './reports/schedules'
+import {reportXlsx} from './reports/xlsx'
 import {reportFormat,technicianCsv,turnaroundCsv} from './reports/csv'
+import {turnaroundPage} from './ui/turnaround'
 import {turnaroundReport} from './reports/turnaround'
 import {rateProfilePanel} from './ui/rate-profiles'
 import {routingCommand} from './routing-door'
@@ -132,6 +135,7 @@ const headers={'cache-control':'no-store','x-content-type-options':'nosniff','re
 const json=(value:unknown,status=200)=>Response.json(value,{status,headers})
 const redirect=(path:string)=>new Response(null,{status:303,headers:{...headers,location:path}})
 const csv=(value:string,name:string)=>new Response(value,{headers:{...headers,'content-type':'text/csv; charset=utf-8','content-disposition':`attachment; filename="${name}.csv"`}})
+const xlsx=(value:string,name:string)=>new Response(reportXlsx(value),{headers:{...headers,'content-type':'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet','content-disposition':`attachment; filename="${name}.xlsx"`}})
 async function textBody(request:Request) {
  const reader=request.body?.getReader();if(!reader)return ''
  const chunks:Uint8Array[]=[];let length=0
@@ -149,7 +153,14 @@ async function nativeForm(request:Request) {
  return data
 }
 const withoutSubletCosts=(value:any)=>{if(!value||!('sublets' in value))return value;const {sublets,...rest}=value;return rest}
+function withoutFleetApproval(value:any):any {
+ if(Array.isArray(value))return value.map(withoutFleetApproval)
+ if(value&&typeof value==='object')return Object.fromEntries(Object.entries(value).filter(([key])=>key!=='fleet').map(([key,v])=>[key,withoutFleetApproval(v)]))
+ return value
+}
 function visible(s:State,actor:Actor):State {
+ s={...s,records:{...s.records,reportDelivery:rows(s,'reportDelivery').filter(r=>r.ownerId===actor.id),reportFilter:rows(s,'reportFilter').filter(r=>r.ownerId===actor.id)}}
+ if(actor.role!=='owner')s=withoutFleetApproval(s)
  if(actor.role==='owner')s={...s,records:{...s.records,deposit:rows(s,'deposit').map(d=>({...d,balance:depositBalance(s,d)}))}}
  if(actor.role!=='owner')s={...s,records:{...s.records,handover:rows(s,'handover').map(r=>{const {accountTerms,...settlement}=r.settlement;return {...r,settlement}})}}
  if(actor.role!=='owner'){const {audit:_audit,...records}=s.records;s={...s,records}}
@@ -169,7 +180,7 @@ function visible(s:State,actor:Actor):State {
  if(actor.role==='agent'){const {routingPolicy:_routingPolicy,routingCase:_routingCase,routingBlocker:_routingBlocker,specialPart:_parts,specialPartNotice:_notices,sublet:_sublets,...records}=s.records;return withoutInspections({...s,records:{...records,event:(records.event??[]).filter(x=>!x.kind.startsWith('sublet.')),invoice:(records.invoice??[]).map(withoutSubletCosts)}})}
  if(actor.role!=='member')return s
  const jobs=rows(s,'job').filter(j=>onCrew(j,actor.id)),ids=new Set(jobs.map(j=>j.id)),assets=new Set(jobs.map(j=>j.assetId))
- return {version:s.version,records:{jobNote:rows(s,'jobNote'),subtask:rows(s,'subtask'),handoff:rows(s,'handoff'),promiseSettings:rows(s,'promiseSettings'),promise:rows(s,'promise'),promisePlan:rows(s,'promisePlan'),timeEntry:rows(s,'timeEntry'),timeCorrection:rows(s,'timeCorrection'),job:jobs,asset:rows(s,'asset').filter(a=>assets.has(a.id)).map(a=>({...a,visits:a.visits.filter((id:string)=>ids.has(id))})),estimate:rows(s,'estimate').filter(x=>ids.has(x.jobId)),declinedWork:rows(s,'declinedWork').filter(x=>ids.has(x.jobId)),reading:rows(s,'reading').filter(x=>ids.has(x.jobId)),serviceInterval:rows(s,'serviceInterval').filter(x=>ids.has(x.jobId)),quality:rows(s,'quality').filter(x=>ids.has(x.jobId)),diagnosis:rows(s,'diagnosis').filter(x=>ids.has(x.jobId)),flow:scopedFlow(s,ids),inspection:rows(s,'inspection').filter(x=>ids.has(x.jobId)),stageEvent:rows(s,'stageEvent').filter(x=>ids.has(x.jobId)),event:rows(s,'event').filter(x=>!x.kind.startsWith('sublet.')&&(ids.has(x.jobId)||x.kind.startsWith('time.')&&x.data.ownerId===actor.id))}}
+ return {version:s.version,records:{reportDelivery:rows(s,'reportDelivery'),reportFilter:rows(s,'reportFilter'),jobNote:rows(s,'jobNote'),subtask:rows(s,'subtask'),handoff:rows(s,'handoff'),promiseSettings:rows(s,'promiseSettings'),promise:rows(s,'promise'),promisePlan:rows(s,'promisePlan'),timeEntry:rows(s,'timeEntry'),timeCorrection:rows(s,'timeCorrection'),job:jobs,asset:rows(s,'asset').filter(a=>assets.has(a.id)).map(a=>({...a,visits:a.visits.filter((id:string)=>ids.has(id))})),estimate:rows(s,'estimate').filter(x=>ids.has(x.jobId)),declinedWork:rows(s,'declinedWork').filter(x=>ids.has(x.jobId)),reading:rows(s,'reading').filter(x=>ids.has(x.jobId)),serviceInterval:rows(s,'serviceInterval').filter(x=>ids.has(x.jobId)),quality:rows(s,'quality').filter(x=>ids.has(x.jobId)),diagnosis:rows(s,'diagnosis').filter(x=>ids.has(x.jobId)),flow:scopedFlow(s,ids),inspection:rows(s,'inspection').filter(x=>ids.has(x.jobId)),stageEvent:rows(s,'stageEvent').filter(x=>ids.has(x.jobId)),event:rows(s,'event').filter(x=>!x.kind.startsWith('sublet.')&&(ids.has(x.jobId)||x.kind.startsWith('time.')&&x.data.ownerId===actor.id))}}
 }
 async function operators(db:D1Database) {
  const people=(await db.prepare("SELECT id,display_name AS name,role,status FROM oa_operators WHERE status IN ('active','invited') ORDER BY created_at,id").all<{id:string,name:string,role:string,status:string}>()).results
@@ -178,11 +189,12 @@ async function operators(db:D1Database) {
 const bookingFields=['title','bayId','technicianId','startAt','endAt']
 function formInput(data:FormData) {
  const input:any=Object.fromEntries(data)
+ if(input.command==='reportFilter.schedule'){input.active=data.has('active');input.consent=data.has('consent');input.everyDays=Number(input.everyDays);input.nextAt=String(input.nextAt).endsWith('Z')?input.nextAt:String(input.nextAt)+':00Z'}
  if(input.staffJob!==undefined&&input.command==='estimate.prepare'||input.staffInvoice!==undefined&&input.command==='payment.record'){let source:any;try{source=JSON.parse(input.staffJob??input.staffInvoice)}catch{throw new HttpError(400,'invalid_staff_source')};if(input.command==='estimate.prepare')input.jobId=source.jobId;else input.invoiceId=source.invoiceId;input.version=source.version}
  assetNativeInput(input)
  if(['staff.grant','staff.revoke'].includes(input.command)){for(const key of ['discountBps','spendCents','refundCents','version'])input[key]=Number(input[key]??0);if(input.discountPercent!==undefined)input.discountBps=Math.round(Number(input.discountPercent)*100);if(input.spendUsd!==undefined)input.spendCents=Math.round(Number(input.spendUsd)*100);if(input.refundUsd!==undefined)input.refundCents=Math.round(Number(input.refundUsd)*100)}
  if(retentionCommands.includes(input.command)){input.consent=input.consent==='yes';if(['retention.preview','customer.erase','retention.run'].includes(input.command))input.categories=data.getAll('categories');for(const key of ['mediaDays','personalDays'])if(key in input)input[key]=input[key]===''?null:Number(input[key])}
- for(const name of ['flowVersion','version','itemVersion','revision','quantity','value','dueValue'])if(input[name]!==undefined&&input[name]!=='')input[name]=Number(input[name])
+ for(const name of ['accountVersion','flowVersion','version','itemVersion','revision','quantity','value','dueValue'])if(input[name]!==undefined&&input[name]!=='')input[name]=Number(input[name])
  if(data.has('lineIds') || input.command==='estimate.authorise')input.lineIds=data.getAll('lineIds')
  if(['estimate.prepare','estimate.revise'].includes(input.command)) {
   input.lines=['part','labor'].map(kind=>({kind,description:input[`${kind}Description`],quantity:Number(input[`${kind}Quantity`]),unitCents:Math.round(Number(input[`${kind}Price`])*100),...(input[`${kind}Discount`]?{unitDiscountCents:Math.round(Number(input[`${kind}Discount`])*100)}:{}),...(kind==='part'&&input.partCost?{costCents:Math.round(Number(input.partCost)*100)}:{})}))
@@ -303,9 +315,11 @@ async function workshopResponse(request:Request,original:Bindings,execution:Pick
    let result:any
    if(['connector.save','connector.revoke'].includes(command)&&actor.role==='owner'&&!auth.gate?.enrolled)throw new HttpError(403,'step_up_required','Enrol your own second factor before opening the credential door.')
    if(needsStepUp(command,actor.role))auth.authority=requireStepUp(auth,command.startsWith('deposit.'))
+   if(command.startsWith('reportDelivery.'))throw new HttpError(404,'unknown_command')
    if(['ar.reminderClaim','ar.reminderOutcome'].includes(command)||internalSupplierCommands.includes(command)||internalDocumentCommands.includes(command)||internalWaitlistCommands.includes(command)||internalReportCommands.includes(command)||internalBookingCommands.includes(command)||internalCheckInCommands.includes(command)||internalRefundCommands.includes(command)||internalIntakeFormCommands.includes(command)||command==='payment.verified'||command==='routing.sweep'||internalPromiseCommands.includes(command)||internalApprovalCommands.includes(command)||internalChaseCommands.includes(command))throw new HttpError(404,'unknown_command')
    if(actor.staff){if(command==='job.book')auth.authority=await calendarAuthority(env,command,input,auth.authority);if(['payment.record','credit.issue','refund.record'].includes(command))auth.authority=requireStepUp(auth);result=await staffCommand(env.DB,actor,auth.authority,command,input)}
    else if(['staff.grant','staff.revoke'].includes(command)){auth.authority=requireStepUp(auth);result=await grantStaff(env.DB,actor,auth.authority,command,input)}
+   else if(command==='reportFilter.schedule')result=await configureReportSchedule(env,actor,auth.authority,input)
    else if(command==='ar.remind')result=await sendBalanceReminder(env,actor,auth.authority,input)
    else if(command==='invoice.send')result=await sendInvoice(env,actor,auth.authority,input)
    else if(retentionCommands.includes(command))result=await retentionCommand(env,actor,auth.authority,command,input)
@@ -343,6 +357,7 @@ async function workshopResponse(request:Request,original:Bindings,execution:Pick
    }
    else if(command==='inspection.record'&&actor.role!=='agent'){const checked=await inspectionRecordInput(env.DB,actor,auth.authority,input);result=await execute(env.DB,actor as any,command,checked.input,checked.authority)}
    else result=await execute(env.DB,actor as any,command,input,auth.authority)
+   if(actor.role!=='owner')result=withoutFleetApproval(result)
    if(actor.staff){if(isApi)return json(result);return redirect('/app/staff')}
    if(command.startsWith('staff.')){if(isApi)return json(result);return redirect('/app/staff-access')}
    if(isApi){if(!human(actor)&&result&&typeof result==='object'&&'billing' in result){const {billing,...rest}=result;result=rest}return json(actor.role==='agent'?withoutSubletCosts(withoutInspectionSource(result)):result)}
@@ -355,6 +370,7 @@ async function workshopResponse(request:Request,original:Bindings,execution:Pick
    if(command==='inspectionReport.send')return page('Inspection report email',`<section class="card"><p>${e(result.status==='accepted'?'Handed to the mail provider; delivery is not confirmed.':result.status==='development'?'Saved to the development outbox; not sent.':'Send failed or is uncertain. Contact the customer; no automatic retry will occur.')}</p><a href="${e(result.url)}">Open reviewed customer report</a><p><a href="/app/jobs/${e(result.jobId)}#inspection-reports">Return to repair</a></p></section>`,actor,200,{section:'jobs'})
    if(command.startsWith('calendar.')||command.startsWith('waitlist.'))return redirect('/app/calendar')
    if(command==='promise.timeZone'&&input.calendarReturn)return redirect('/app/calendar')
+   if(command==='booking.attendance')return redirect('/app/reports/turnaround?'+new URLSearchParams({from:String(input.from??''),to:String(input.to??'')}))
    if(command==='booking.publish'||command==='booking.revokeLink')return redirect('/app/bookings')
    if(command.startsWith('connector.'))return redirect('/app/connectors')
    if(command==='checkin.issue')return page('Customer check-in link',`<section class="card"><p>Share this private seven-day, one-request link directly with the customer. No message, booking or payment has been sent. Anyone holding the link can use it.</p><a href="${e(result.url)}">Open customer check-in</a><pre>${e(result.url)}</pre><p><a href="/app/check-ins">Return to check-in queue</a></p></section>`,actor,200,{section:'jobs'})
@@ -381,6 +397,7 @@ async function workshopResponse(request:Request,original:Bindings,execution:Pick
    if(command==='promise.timeZone')return redirect('/app/jobs#promise-plan')
    if(command.startsWith('time.')&&!input.jobId)return redirect('/app/time')
    // The saved rate is shown in the period the owner was reviewing, not silently today's.
+   if(command.startsWith('reportFilter.'))return redirect('/app/reports/'+(result.report==='technicians'?'technicians':'turnaround')+'?'+new URLSearchParams({from:result.from,to:result.to}))
    if(command==='payRate.set')return redirect('/app/reports/technicians?'+new URLSearchParams({from:String(input.from??''),to:String(input.to??'')})+'#tech-'+encodeURIComponent(input.technicianId))
    if(command==='rateProfile.save')return redirect('/app/jobs#rate-profiles')
    if(command.startsWith('customer.')||command.startsWith('contact.'))return redirect('/app/accounts?manage=all')
@@ -424,17 +441,19 @@ async function workshopResponse(request:Request,original:Bindings,execution:Pick
   if(historyMatch)return csv(assetHistoryCsv(state,historyMatch[1]),'mallet-service-history')
   const counts:Counts={board:waiting(state).total,jobs:rows(state,'job').filter(j=>repair(state,j).column!=='closed').length},frame=(section:Section,more={})=>({section,counts,...more})
   if(path==='/app'){const board=shopBoard(state,actor,(await operators(env.DB)).names,url.searchParams.get('ro'),boardFilter(url.searchParams));return page('Shop Board',taxNotice(state,actor)+board.body.replace('id="board"',`id="board" data-board-version="${state.version}"`).replace('class="empty-board"',`class="empty-board" data-board-version="${state.version}"`),actor,200,frame('board',{subtitle:board.subtitle,aside:board.aside,liveBoard:true}))}
-  if(path==='/api/mallet/reports/turnaround') {
+  if(path==='/api/mallet/reports/turnaround'||path==='/app/reports/turnaround') {
    if(actor.role==='agent')throw new HttpError(403,'staff_required')
    const format=reportFormat(url.searchParams),now=new Date().toISOString()
-   const report=turnaroundReport(state,period(url.searchParams.get('from'),url.searchParams.get('to'),now),now)
+   const report=turnaroundReport(state,period(url.searchParams.get('from'),url.searchParams.get('to'),now),now,actor.role!=='member')
+   if(path.startsWith('/app/'))return page('Turnaround and promises',turnaroundPage(report,actor.role==='owner',await reportFilterView(env,actor,rows(state,'reportFilter'))),actor,200,frame('jobs'))
+   if(format==='xlsx')return xlsx(turnaroundCsv(report),`mallet-turnaround-${report.period.from}-${report.period.to}`)
    return format==='csv'?csv(turnaroundCsv(report),`mallet-turnaround-${report.period.from}-${report.period.to}`):json(report)
   }
   if(path==='/api/mallet/reports/technicians'||path==='/app/reports/technicians') {
    if(actor.role==='agent')throw new HttpError(403,'staff_required')
    const report=technicianReport(await load(env.DB),actor,period(url.searchParams.get('from'),url.searchParams.get('to'),new Date().toISOString()))
-   if(path.startsWith('/api/'))return reportFormat(url.searchParams)==='csv'?csv(technicianCsv(report),`mallet-technicians-${report.period.from}-${report.period.to}`):json(report)
-   return page('Technician efficiency',technicianReportPage(report,actor,(await operators(env.DB)).names),actor,200,frame('jobs',{subtitle:'Sold versus actual hours, productivity and attendance, recomputed from clock events.'}))
+   if(path.startsWith('/api/')){const format=reportFormat(url.searchParams);return format==='xlsx'?xlsx(technicianCsv(report),`mallet-technicians-${report.period.from}-${report.period.to}`):format==='csv'?csv(technicianCsv(report),`mallet-technicians-${report.period.from}-${report.period.to}`):json(report)}
+   return page('Technician efficiency',technicianReportPage(report,actor,(await operators(env.DB)).names,await reportFilterView(env,actor,rows(state,'reportFilter'))),actor,200,frame('jobs',{subtitle:'Sold versus actual hours, productivity and attendance, recomputed from clock events.'}))
   }
   if(/^\/api\/mallet\/accounts\/[^/]+\/billing$/.test(path)){
    if(!human(actor))throw new HttpError(403,'manager_required')
@@ -466,7 +485,7 @@ async function workshopResponse(request:Request,original:Bindings,execution:Pick
   if(['/app/inventory','/app/inventory/count','/api/mallet/inventory'].includes(path)){if(!human(actor))throw new HttpError(403,'manager_required');if(path.startsWith('/api/'))return json(stockReport(state));return page(path.endsWith('/count')?'Blind stock count':'Stock & receiving',path.endsWith('/count')?countPage():inventoryPage(state),actor,200,frame('inventory'))}
   if(path==='/app/time'){if(actor.role==='agent')throw new HttpError(403,'staff_required');return page('Time & attendance',`<div class="narrow">${timePanel(state,actor,(await operators(env.DB)).names)}</div>`,actor,200,frame('jobs'))}
   if(path==='/app/check-ins'){if(!human(actor))throw new HttpError(403,'manager_required');return page('Counter & after-hours check-ins',checkInQueuePage(state,(await operators(env.DB)).list,actor),actor,200,frame('jobs'))}
-  if(path==='/app/jobs'){const names=(await operators(env.DB)).names;return page('Repair orders',(actor.role!=='agent'?waitingForMe(state,actor)+(human(actor)?'<p><a href="/app/bookings">Online appointments</a> · <a href="/app/check-ins">Counter & after-hours check-in queue</a></p>':'')+'<p><a href="/app/time">My time & attendance</a> · <a href="/app/reports/technicians">Technician efficiency</a></p>':'')+(human(actor)?rateProfilePanel(state,''):'')+specialPartNotices(state,actor)+promisePlan(state,actor,names)+repairOrders(state,names),actor,200,frame('jobs',{subtitle:'Open repair orders by start time, then invoiced visits.'}))}
+  if(path==='/app/jobs'){const names=(await operators(env.DB)).names;return page('Repair orders',(actor.role!=='agent'?waitingForMe(state,actor)+(human(actor)?'<p><a href="/app/bookings">Online appointments</a> · <a href="/app/check-ins">Counter & after-hours check-in queue</a></p>':'')+'<p><a href="/app/time">My time & attendance</a> · <a href="/app/reports/technicians">Technician efficiency</a> · <a href="/app/reports/turnaround">Turnaround and promises</a></p>':'')+(human(actor)?rateProfilePanel(state,''):'')+specialPartNotices(state,actor)+promisePlan(state,actor,names)+repairOrders(state,names),actor,200,frame('jobs',{subtitle:'Open repair orders by start time, then invoiced visits.'}))}
   if(path==='/app/customers')return page('Customers',customers(state,actor,url.searchParams.get('type')??'vehicle'),actor,200,frame('customers',{subtitle:'Every customer’s asset and its visits.'}))
   if(path==='/app/approvals')return page('Approvals',(human(actor)?chasePage(state):'')+approvals(state),actor,200,frame('approvals',{subtitle:'Every price, dispatch plan and invoice a person approved, at its exact revision.'}))
   if(path==='/app/tax/custody'||path==='/api/mallet/tax/report'){if(actor.role!=='owner')throw new HttpError(403,'owner_required');return path.startsWith('/api/')?json(jurisdictionReport(state)):page('Tax certificates & invoice report',taxCustodyPage(state),actor,200,frame('tax'))}

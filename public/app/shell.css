@@ -131,3 +131,7 @@ body.app{margin:0;min-height:100vh;background:color-mix(in srgb,var(--page-alt) 
  .shell{display:block;background:none}
  .card{box-shadow:none}
 }
+
+.turnaround-report p, .turnaround-report li, .turnaround-report dt, .turnaround-report dd { overflow-wrap: anywhere; }
+
+.turnaround-report dl { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }

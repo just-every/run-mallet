@@ -1,3 +1,4 @@
+import {fleetApproval} from './fleet-authority'
 import {resolveRateProfile} from './rate-profiles'
 import { approval, bump, choice, event, expectVersion, fail, find, integer, put, selfApproval, text, who, type Context, type Handler, type Row } from './model'
 import { lines, totals } from './money'
@@ -71,7 +72,8 @@ export const estimates: Handler = (c, command, p) => {
       const job = find(c.s, 'job', estimate.jobId)
       if (!['booked', 'working'].includes(job.status)) fail('JOB_STATE', 'A completed repair cannot acquire new work authority.')
       validateReplacements(c, job, rev.lines.filter((l: Row) => lineIds.includes(l.id)), estimate.id)
-      const authorisation = { revision: rev.n, lineIds, customerName: text(p.customerName, 'customerName'), method: choice(p.method, ['signed', 'email reply', 'phone', 'in person', 'other'] as const, 'authorization method'), evidence: text(p.evidence, 'evidence', 4000), recordedBy: who(c), at: c.now, totals: totals(rev.lines.filter((l: Row) => lineIds.includes(l.id))) }
+      const fleet=fleetApproval(c,job,p)
+      const authorisation = { ...(fleet?{fleet}:{}),revision: rev.n, lineIds, customerName: text(p.customerName, 'customerName'), method: choice(p.method, ['signed', 'email reply', 'phone', 'in person', 'other'] as const, 'authorization method'), evidence: text(p.evidence, 'evidence', 4000), recordedBy: who(c), at: c.now, totals: totals(rev.lines.filter((l: Row) => lineIds.includes(l.id))) }
       const row = bump(c.s, 'estimate', estimate, { status: lineIds.length ? 'authorised' : 'declined', authorisation })
       event(c, command, row.jobId, row.id, authorisation)
       return row

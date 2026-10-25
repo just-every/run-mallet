@@ -1,3 +1,4 @@
+import {downloadWorkbook} from './report-xlsx.mjs'
 import {handoverInput} from './handover-input.mjs'
 import {downloadReport} from './report-csv.mjs'
 import assert from 'node:assert/strict'
@@ -110,6 +111,9 @@ export async function flowJourney(h){
  assert.deepEqual((await h.api('/api/mallet/reports/turnaround?from='+nextDay+'&to='+nextDay)).repairs,[],'REPORT-004 the inclusive booking-date filter excludes other dates')
  // REPORT-006: stage CSV retains exact measured intervals, missing values and current job visibility.
  const exportPath='/api/mallet/reports/turnaround'+reportQuery+'&format=csv',beforeExport=await h.state()
+ const workbook=await downloadWorkbook(h,exportPath.replace('format=csv','format=xlsx'))
+ assert.equal(workbook.find(x=>x.JobId===ro.id&&x.Metric==='cycleMs').Value,String(measured.cycleMs))
+ await h.api(exportPath.replace('format=csv','format=xlsx'),undefined,{...agent,status:403})
  const exported=await downloadReport(h,exportPath),ownExport=await downloadReport(h,exportPath,A)
  const closedRows=exported.filter(x=>x.JobId===ro.id)
  assert.equal(closedRows.find(x=>x.Metric==='cycleMs').Value,String(measured.cycleMs))
@@ -119,7 +123,7 @@ export async function flowJourney(h){
  const variance=closedRows.find(x=>x.Metric==='completionVarianceMs');assert.equal(variance.Value,String(measured.promise.completionVarianceMs),'Negative numeric variance remains a number, without spreadsheet text escaping')
  assert.equal((await h.request(variance.JobURL,A)).status,200)
  await h.api(exportPath,undefined,{...agent,status:403});await h.api(exportPath,undefined,{as:'',status:401})
- for(const bad of ['&format=xlsx','&location=other','&to=2000-01-01'])await h.api('/api/mallet/reports/turnaround'+reportQuery+bad,undefined,{status:400})
+ for(const bad of ['&format=pdf','&location=other','&to=2000-01-01'])await h.api('/api/mallet/reports/turnaround'+reportQuery+bad,undefined,{status:400})
  assert.deepEqual(await h.state(),beforeExport,'REPORT-006 exports do not write product records')
  // OPS-001: board records restore exactly.
  const state=await h.state(),backup=await archive(h),target=await installation()

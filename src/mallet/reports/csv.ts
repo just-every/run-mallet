@@ -18,10 +18,10 @@ function document(schema:string,report:{period:{from:string,to:string},generated
 }
 
 /** Reject unsupported filters rather than silently exporting a broader dataset. */
-export function reportFormat(params:URLSearchParams):'json'|'csv' {
+export function reportFormat(params:URLSearchParams):'json'|'csv'|'xlsx' {
  for(const key of params.keys())if(!['from','to','format'].includes(key)||params.getAll(key).length!==1)fail('INPUT',`Unsupported or repeated report filter: ${key}.`,null,400)
  const format=params.get('format')??'json'
- if(format!=='json'&&format!=='csv')fail('INPUT','Choose json or csv report format.',null,400)
+ if(format!=='json'&&format!=='csv'&&format!=='xlsx')fail('INPUT','Choose json, csv or xlsx report format.',null,400)
  return format
 }
 
@@ -41,6 +41,8 @@ export function technicianCsv(report:ReturnType<typeof technicianReport>):string
 
 export function turnaroundCsv(report:ReturnType<typeof turnaroundReport>):string {
  const entries:Entry[]=[{Record:'definition',Metric:'coverage',Value:report.coverage}]
+ for(const [metric,value] of Object.entries(report.metrics))if(report.fullVisibility||['inspections','inspectionsComplete','dviCompletionRateTenths'].includes(metric))entries.push({Record:'outcome-summary',Metric:metric,Value:value,Unit:metric.endsWith('Tenths')?'tenths of a percent':'count'})
+ for(const a of report.appointments)entries.push({Record:'attendance',SourceId:a.id,At:a.startAt,Metric:'observedAttendance',Value:a.attendance?.outcome??'',Description:a.attendance?.evidence??'Not recorded'})
  for(const repair of report.repairs) {
   const base={JobId:repair.jobId,JobURL:jobUrl(repair.jobId),Description:repair.title}
   entries.push({...base,Record:'repair',Metric:'historyComplete',Value:repair.historyComplete,At:repair.observedFrom??'',Stage:repair.stage,From:repair.createdAt,To:repair.endedAt})

@@ -1,3 +1,4 @@
+import {downloadWorkbook} from './report-xlsx.mjs'
 import {downloadReport} from './report-csv.mjs'
 import assert from 'node:assert/strict'
 import {archive,authorise,estimate,installation,restore} from '../harness.mjs'
@@ -74,11 +75,48 @@ export async function reportJourney(h,{person=h.person}={}){
  assert.deepEqual([...new Set(myExport.map(x=>x.TechnicianId).filter(Boolean))],[a.id]);assert.ok(!myExport.some(x=>x.JobId===two.id&&x.Record==='assignment'))
  const emptyCsv=await downloadReport(h,'/api/mallet/reports/technicians?from=2000-01-01&to=2000-01-01&format=csv',A)
  assert.equal(metric(emptyCsv,a.id,'efficiencyTenths').Value,'','No denominator exports blank, never zero percent')
- for(const bad of ['&format=xlsx','&location=elsewhere','&from=2000-01-01'])await h.api('/api/mallet/reports/technicians'+q+bad,undefined,{status:400})
+ const workbook=await downloadWorkbook(h,'/api/mallet/reports/technicians'+q+'&format=xlsx')
+ assert.ok(workbook.some(r=>r.Metric==='payCents'&&Number(r.Value)>0))
+ const ownWorkbook=await downloadWorkbook(h,'/api/mallet/reports/technicians'+q+'&format=xlsx',{as:a.cookie})
+ assert.ok(!ownWorkbook.some(r=>r.Metric==='payCents'));assert.ok(ownWorkbook.filter(r=>r.TechnicianId).every(r=>r.TechnicianId===a.id))
+ for(const bad of ['&format=pdf','&location=elsewhere','&from=2000-01-01'])await h.api('/api/mallet/reports/technicians'+q+bad,undefined,{status:400})
  await h.api(csvPath,undefined,{...agent,status:403});await h.api(csvPath,undefined,{as:'',status:401})
  assert.deepEqual(await h.state(),beforeExport,'Repeated downloads create no product writes')
+ const saved=await h.command('reportFilter.save',{report:'technicians',name:'My scoped hours',from:r.period.from,to:r.period.to},A)
+ assert.equal(saved.ownerId,a.id)
+ await h.command('reportFilter.archive',{filterId:saved.id,version:saved.version},{as:advisor.cookie,status:403})
+ await h.command('reportFilter.save',{report:'unknown',name:'Wrong dataset',from:r.period.from,to:r.period.to},{status:400})
+ assert.ok((await h.state(A)).records.reportFilter.some(f=>f.id===saved.id));assert.ok(!(await h.state()).records.reportFilter.some(f=>f.id===saved.id),'Even the owner sees only personally saved filters')
+ const ownerFilter=await h.command('reportFilter.save',{report:'technicians',name:'Owner scheduled hours',from:r.period.from,to:r.period.to})
+ const dueAt=new Date(Date.now()+60000).toISOString(),schedule={filterId:ownerFilter.id,version:ownerFilter.version,active:true,everyDays:7,nextAt:dueAt,consent:true,evidence:'Owner explicitly consents to recurring private reports at their own native email'}
+ await h.command('reportFilter.schedule',schedule,{as:advisor.cookie,status:403})
+ await h.command('reportFilter.schedule',{...schedule,consent:false},{status:409})
+ await h.command('reportFilter.schedule',schedule)
+ const beforeScheduled=h.messages.length;await h.cron(dueAt)
+ const firstDelivery=(await h.state()).records.reportDelivery.find(d=>d.filterId===ownerFilter.id)
+ assert.equal(firstDelivery.content,undefined,'Delivery custody retains a hash, not another private report copy');assert.match(firstDelivery.contentHash,/^[a-f0-9]{64}$/)
+ assert.ok(['accepted','development'].includes(firstDelivery.status));assert.equal(firstDelivery.to,'owner@example.test','Caller cannot choose a different recipient')
+ if(firstDelivery.status==='accepted'){assert.equal(h.messages.length,beforeScheduled+1);assert.equal(h.messages.at(-1).attachments[0].filename,'mallet-technicians.csv')}
+ await h.cron(dueAt);assert.equal((await h.state()).records.reportDelivery.length,1,'A repeated schedule tick never sends an occurrence twice')
+ await h.restart();await h.cron(dueAt);assert.equal((await h.state()).records.reportDelivery.length,1,'Restart does not replay a claimed handoff')
  // OPS-001: rates, timers and corrections restore exactly; the fresh owner's report recomputes the same rows.
- const backup=await archive(h),fresh=await installation()
- try{await restore(fresh,backup);const again=await fresh.api('/api/mallet/reports/technicians'+q);assert.deepEqual(again.technicians,r.technicians);assert.deepEqual((await downloadReport(fresh,csvPath)).filter(x=>x.Metric!=='generatedAt'),exported.filter(x=>x.Metric!=='generatedAt'),'REPORT-006 CSV values reproduce under fresh owner authority')}finally{await fresh.close()}
+ let rejectMail=false
+ const backup=await archive(h),fresh=await installation({mailService:()=>rejectMail?Response.json({error:'synthetic-mallet-mail-failure'},{status:503}):Response.json({id:crypto.randomUUID()})})
+ try{await restore(fresh,backup);assert.deepEqual((await fresh.state()).records.reportFilter,[],'Archived source identities grant no destination filter ownership');const db=await fresh.mf.getD1Database('DB');assert.equal((await db.prepare("SELECT COUNT(*) AS n FROM mallet_records WHERE kind='reportFilter'").first()).n,2,'Saved filter history survives recovery');const beforeRestored=fresh.messages.length;await fresh.cron(new Date(Date.parse(dueAt)+8*86400000).toISOString());assert.equal(fresh.messages.length,beforeRestored,'Restored schedules have no delivery authority');const again=await fresh.api('/api/mallet/reports/technicians'+q);assert.deepEqual(again.technicians,r.technicians);assert.deepEqual((await downloadReport(fresh,csvPath)).filter(x=>x.Metric!=='generatedAt'),exported.filter(x=>x.Metric!=='generatedAt'),'REPORT-006 CSV values reproduce under fresh owner authority')
+  const freshOwner=(await fresh.state()).actor,own=await fresh.command('reportFilter.save',{report:'technicians',name:'Fresh owner permission proof',from:r.period.from,to:r.period.to}),nextAt=new Date(Date.now()+60000).toISOString(),grant={filterId:own.id,version:own.version,active:true,everyDays:1,nextAt,consent:true,evidence:'Fresh owner explicitly consents to own recurring private report'}
+  await fresh.command('reportFilter.schedule',grant);rejectMail=true;await fresh.cron(nextAt)
+  assert.equal((await fresh.state()).records.reportDelivery[0].status,'uncertain');assert.equal((await db.prepare('SELECT count(*) AS n FROM mallet_report_schedules').first()).n,0,'An uncertain handoff disables future delivery authority')
+  const failedAttempts=fresh.messages.length;await fresh.cron(new Date(Date.parse(nextAt)+86400000).toISOString());assert.equal(fresh.messages.length,failedAttempts,'No automatic retry after an uncertain handoff')
+  rejectMail=false;const current=(await fresh.state()).records.reportFilter.find(f=>f.id===own.id);await fresh.command('reportFilter.schedule',{...grant,version:current.version})
+  const confirmOwnerAdministration=async as=>{
+   await fresh.api('/auth/step-up',{action:'owner:transfer',returnTo:'/app'},{as,status:202})
+   const token=new URL(fresh.messages.at(-1).text.match(/https?:\/\/[^\s<>]+\/auth\/confirm\?token=[^\s<>]+/)[0]).searchParams.get('token')
+   assert.equal((await fresh.request('/auth/confirm',{method:'POST',as,body:{token}})).status,303)
+  }
+  await confirmOwnerAdministration(fresh.owner)
+  const successor=await fresh.person('synthetic-mallet-report-owner@example.test','owner');await fresh.stepUp(successor.cookie);await confirmOwnerAdministration(successor.cookie);await fresh.api('/auth/operator/status',{operatorId:freshOwner.id,status:'inactive'},{as:successor.cookie})
+  const beforeRevoked=fresh.messages.length;await fresh.cron(nextAt);assert.equal(fresh.messages.length,beforeRevoked,'Revoked recipients cannot receive a scheduled report');await fresh.api('/api/mallet/reports/technicians'+q,undefined,{status:401})
+ }finally{await fresh.close()}
+ const currentFilter=(await h.state()).records.reportFilter.find(f=>f.id===ownerFilter.id);await h.command('reportFilter.schedule',{...schedule,version:currentFilter.version,active:false});await h.cron(new Date(Date.parse(dueAt)+8*86400000).toISOString());assert.equal((await h.state()).records.reportDelivery.length,1,'Explicit revocation prevents future delivery')
  return {a,b,advisor,q}
 }

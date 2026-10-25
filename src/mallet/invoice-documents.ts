@@ -31,6 +31,12 @@ export function documentRecipient(s:State,invoice:Row):string {
  if(invoice.billing){
   const account=find(s,'customerAccount',invoice.billing.accountId)
   if(account.mergedInto||account.payerId!==invoice.billing.payer?.id)fail('INVOICE_PAYER','The issued billing identity changed. Review payer custody before sending.')
+  if(rows(s,'arInvoice').some(r=>r.invoiceId===invoice.id)){
+   if(account.billingContactId!==invoice.billing.billingContact?.id)fail('INVOICE_PAYER','Review the unchanged accounts contact before sending a term invoice.')
+   const contact=find(s,'contact',account.billingContactId)
+   if(contact.communication!=='email')fail('INVOICE_PAYER','Accounts must currently prefer email before a term invoice is sent.')
+   return text(contact.email,'current accounts email',254)
+  }
   return text(find(s,'contact',account.payerId).email,'current payer email',254)
  }
  return text(invoice.customer.customerEmail,'invoice email',254)
@@ -49,6 +55,7 @@ function issuedContent(d:any):string {
    'Sales tax '+money(l.salesTaxCents)+' ('+(l.taxable?String(l.taxRatePercent)+'%':'exempt')+'); line total '+money(l.totalCents)+' USD']),
   '', 'Subtotal '+money(x.totals.subtotalCents)+' USD','Sales tax '+money(x.totals.salesTaxCents)+' USD','Total '+money(x.totals.totalCents)+' USD',
   'Credits '+money(b.creditedCents)+'; tender net of refunds and account credit '+money(b.paidCents)+'; balance '+money(b.outstandingCents)+' USD',
+  ...(x.accountTerms?['Commercial terms: net '+x.accountTerms.days+' days; balance due '+x.accountTerms.dueOn+'; PO '+(x.accountTerms.po??'not required')+'; approval '+x.accountTerms.assignmentId]:[]),
   'Recorded tender is an allocation; Mallet does not verify cleared funds.',
   ...x.payments.map((p:any)=>p.method+': '+money(p.amountCents)+' USD'+(p.method==='check'?'; check not cleared':'')),
   'Warranty terms: '+d.warrantyTerms,
@@ -73,7 +80,8 @@ export const invoiceDocuments:Handler=(c,command,p)=>{
   if(documents.length&&!original)fail('INVOICE_CORRECTION','Retain the original and reference it for a corrected copy.')
   if(original&&original.id!==documents.at(-1)?.id)fail('INVOICE_CORRECTION','Correct the latest document to preserve the complete chain.')
   const corrected=new Set(rows(c.s,'reading').filter(r=>r.corrects).map(r=>r.corrects))
-  const balance=invoiceBalance(c.s,invoice),snapshot={number:invoice.number,revision:invoice.revision,jobId:invoice.jobId,customer:structuredClone(invoice.customer),payerName:invoice.billing?.payer?.name??'',
+  const assigned=rows(c.s,'arInvoice').find(r=>r.invoiceId===invoice.id)
+  const balance=invoiceBalance(c.s,invoice),snapshot={number:invoice.number,revision:invoice.revision,jobId:invoice.jobId,customer:structuredClone(invoice.customer),payerName:invoice.billing?.payer?.name??'',...(assigned?{accountTerms:{assignmentId:assigned.id,days:assigned.terms.days,dueOn:assigned.dueOn,po:assigned.po}}:{}),
    lines:invoice.lines.map((l:any)=>Object.fromEntries(['id','kind','description','quantity','unitCents','unitDiscountCents','subtotalCents','salesTaxCents','totalCents','taxable','taxRatePercent','taxRateMillionths','sourceEstimateId','sourceRevision','exemption','suppliesFee','discountRule'].filter(k=>l[k]!==undefined).map(k=>[k,l[k]]))),totals:structuredClone(invoice.totals),
    readings:rows(c.s,'reading').filter(r=>r.jobId===invoice.jobId&&!corrected.has(r.id)).map(r=>({stage:r.stage,unit:r.unit,value:r.value,observedAt:r.observedAt})),
    balance:{creditedCents:balance.creditedCents,paidCents:balance.paidCents,outstandingCents:balance.outstandingCents},payments:balance.payments.map(r=>({method:r.method,amountCents:r.amountCents}))}
@@ -84,6 +92,8 @@ export const invoiceDocuments:Handler=(c,command,p)=>{
  }
  if(command==='invoice.deliveryClaim'){
   const doc=find(c.s,'invoiceDocument',p.documentId);expectVersion(doc,p.version)
+  const assigned=rows(c.s,'arInvoice').find(r=>r.invoiceId===doc.invoiceId)
+  if(assigned&&doc.snapshot.accountTerms?.assignmentId!==assigned.id)fail('INVOICE_TERMS','Issue a corrected exact copy with the current term assignment before sending.')
   if(rows(c.s,'invoiceDocument').some(d=>d.invoiceId===doc.invoiceId&&d.sequence>doc.sequence))fail('INVOICE_SUPERSEDED','Review and send the latest corrected copy.')
   if(doc.by.id!==c.actor.id)fail('INVOICE_AUTHORITY','Historical or restored issue authority cannot send. Issue a reviewed corrected copy under the current owner.')
   if(p.confirm!=='email-invoice'||p.consent!==true)fail('INVOICE_CONSENT','Explicitly confirm customer consent and email this exact copy.')

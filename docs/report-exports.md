@@ -6,7 +6,7 @@ Use an active native session to request either current dataset:
 - `GET /api/mallet/reports/turnaround?from=2026-10-01&to=2026-10-31`
 
 The default is JSON; `format=json` is equivalent. Add `format=csv` for a CSV
-attachment. Both formats use the same report projection and permissions on
+attachment or `format=xlsx` for an Office Open XML workbook. All formats use the same report projection and permissions on
 every request. No export token or additional permission is created. Technician
 reports give owners all rows and payroll cost, admins all rows without payroll
 cost, and members only their own row without payroll cost. Turnaround reports
@@ -56,10 +56,8 @@ format or a replacement for the complete product archive.
 Downloads are read-only, private and not cached. Each is computed from current
 native records, so live running timers can change between requests; it is not
 an issued, retained financial snapshot. Restoring product history reproduces
-closed-job and stopped-timer values under fresh native authority. The export
-adds no new stored record class and includes no credentials.
+closed-job and stopped-timer values under fresh native authority. The export includes no credentials. Personally saved filters and durable scheduled delivery receipts are product records; local standing delivery authority is excluded from archives.
 
-REPORT-006 remains partial: saved filters, scheduled permission-scoped email,
-XLSX, reconciled imported-history coverage and the complete location-manager
-scheduling/revocation acceptance remain required. Current exports explicitly
-make no migrated-history completeness claim.
+Personally saved filters retain fixed inclusive UTC dates and never grant report access. JSON, CSV and XLSX downloads use the same current permissions; XLSX contains data cells without formulas. Current-owner schedules require fresh confirmation and explicit recorded recurring consent, send CSV only to that owner’s unchanged native email, and recheck active owner role, account version and address per occurrence. One durable claim prevents replay; failed or uncertain handoff disables future delivery. Local schedule authority is excluded from archives; restored consent and delivery receipts are evidence only. Delivery receipts retain a SHA-256 hash rather than another copy of private report contents. Base mail acceptance is labelled handed to the provider, never delivered.
+
+Native personally saved filters, JSON, formula-safe CSV and XLSX exports and explicit owner-to-self scheduled CSV Base mail handoffs now ship. Conservative personal-filter and scheduled-mail scope awaits ct mallet-report-delivery-i797: personal filters confer no authority; fresh-confirmed current-owner consent only, unchanged native owner email, current role and account-version recheck per occurrence, one claim without retry, failed or uncertain outcome disables delivery, and no restored schedule authority. Location-manager scheduling remains GOV-001 and SHOP-001; reconciled imported-history provenance and completeness remain MOVE-009 through MOVE-013 and require authorized source evidence. No delivery or migrated-history completeness claim is made. REPORT-006 remains PARTIAL.

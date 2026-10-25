@@ -82,7 +82,9 @@ export async function estimate(h,job,options={}) {
 export async function authorise(h,q,lineIds=q.revisions[0].lines.map(l=>l.id)) {
  q=await h.command('estimate.approve',{estimateId:q.id,version:q.version,revision:1})
  q=await h.command('estimate.markSent',{estimateId:q.id,version:q.version,revision:1,method:'printed'})
- return h.command('estimate.authorise',{estimateId:q.id,version:q.version,revision:1,lineIds,customerName:'Cedar Bikes',method:'signed',evidence:'Signed paper estimate in workshop custody, reference CB-20'})
+ const s=await h.state(),job=s.records.job.find(j=>j.id===q.jobId),asset=s.records.asset.find(a=>a.id===job.assetId),account=s.records.customerAccount?.find(a=>a.id===asset.customerAccountId)
+ const fleet=account?.kind==='fleet'?{authorizerId:account.authorizerId,accountVersion:account.version,po:'synthetic-mallet-fleet-po',fleetEvidence:'Owner reviewed exact fleet manager instruction for this revision'}:{}
+ return h.command('estimate.authorise',{...fleet,estimateId:q.id,version:q.version,revision:1,lineIds,customerName:'Cedar Bikes',method:'signed',evidence:'Signed paper estimate in workshop custody, reference CB-20'})
 }
 export async function archive(h) {
  const {id}=await h.api('/api/portability/exports',{},{status:201})
