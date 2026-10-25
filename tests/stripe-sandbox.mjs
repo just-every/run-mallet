@@ -18,9 +18,13 @@ try{
  stage='account';const account=await stripe('/account'),balance=await stripe('/balance');assert.equal(account.default_currency,'usd');assert.equal(balance.livemode,false)
  result.account={country:account.country,currency:account.default_currency,chargesEnabled:account.charges_enabled,payoutsEnabled:account.payouts_enabled}
  h=await installation({entry:'tests/worker.ts',network:true,assets:true,bindings:{AUTH_LOCAL:'true',STRIPE_SECRET_KEY:secret},outboundService:request=>fetch(request)})
- const api=(action,input,options)=>h.api('/api/mallet/stripe/'+action,input,options)
+ const api=async(action,input)=>{
+  const response=await h.request('/api/mallet/stripe/'+action,{method:'POST',body:input}),value=await response.json()
+  if(!response.ok)throw Object.assign(Error('Native Stripe door refused the operation'),{code:value.error,providerStatus:value.details?.status,providerCode:value.details?.code})
+  return value
+ }
  await shopSetup(h)
- const {invoice}=await readyInvoice(h);await api('connect',{consent:true})
+ const {invoice}=await readyInvoice(h);await h.stepUp();await api('connect',{consent:true})
  stage='card-checkout';cardSession=await api('checkout',{invoiceId:invoice.id,version:invoice.version,method:'card',operationId:crypto.randomUUID(),consent:true})
  result.checkoutId=cardSession.sessionId
  const open=await h.request('/app/stripe/checkout/'+cardSession.id);assert.equal(open.status,303)
@@ -45,13 +49,17 @@ try{
  const observed=await api('event',{eventId:event.id});assert.equal(observed.status,'succeeded');assert.equal((await api('event',{eventId:event.id})).id,observed.id)
  const payment=(await h.state()).records.payment.filter(p=>p.invoiceId===invoice.id);assert.equal(payment.length,1);assert.equal(payment[0].amountCents,invoice.totals.totalCents)
  result.card='passed';result.paymentIntentId=paymentIntentId;result.eventId=event.id;result.amountCents=payment[0].amountCents
- stage='settlement';const settlement=await api('settlement',{checkoutId:cardSession.id});assert.equal(settlement.grossCents-settlement.feeCents,settlement.netCents);result.fee={grossCents:settlement.grossCents,feeCents:settlement.feeCents,netCents:settlement.netCents};result.payout='not-proved: account automatic payout receipt unavailable'
+ stage='settlement';let settlement
+ for(let attempt=0;attempt<6&&!settlement;attempt++){
+  try{settlement=await api('settlement',{checkoutId:cardSession.id})}catch(error){if(error.code!=='STRIPE_SETTLEMENT_PENDING')throw error;await new Promise(r=>setTimeout(r,2000))}
+ }
+ assert.ok(settlement,'Stripe must supply the charge balance transaction');assert.equal(settlement.grossCents-settlement.feeCents,settlement.netCents);result.fee={grossCents:settlement.grossCents,feeCents:settlement.feeCents,netCents:settlement.netCents};result.payout='not-proved: account automatic payout receipt unavailable'
  stage='ach-checkout'
  // The card invoice is paid. A second real repair invoice is required for an ACH checkout.
- const {invoice:achInvoice}=await readyInvoice(h)
- try{achSession=await api('checkout',{invoiceId:achInvoice.id,version:achInvoice.version,method:'us_bank_account',operationId:crypto.randomUUID(),consent:true});result.ach='hosted-session-created; collection and return not proved'}catch{result.ach='account-refused-hosted-ACH; collection and return not proved'}
+ const achAsset=await h.command('asset.create',{customerName:'Cedar Bikes',label:'Second repair for ACH test',identifier:'synthetic-mallet-816'}),{invoice:achInvoice}=await readyInvoice(h,{asset:achAsset})
+ try{achSession=await api('checkout',{invoiceId:achInvoice.id,version:achInvoice.version,method:'us_bank_account',operationId:crypto.randomUUID(),consent:true});result.ach='hosted-session-created; collection and return not proved'}catch(error){if(error.code!=='STRIPE_PROVIDER'||error.providerStatus!==400)throw error;result.ach={status:'account-refused-hosted-ACH',code:error.providerCode??null,collectionAndReturn:'not-proved'}}
  stage='complete'
-}catch(error){result.failure={stage,code:error.code??error.name??'sandbox-failed'};process.exitCode=1}
+}catch(error){result.failure={stage,code:error.code??error.name??'sandbox-failed',providerStatus:error.providerStatus??null,providerCode:error.providerCode??null};process.exitCode=1}
 finally{
  for(const checkout of [cardSession,achSession].filter(Boolean)){
   try{

@@ -4556,7 +4556,7 @@
       "executable": false
     },
     "tests/stripe-sandbox.mjs": {
-      "sha256": "75be8941e8c8c12e10271e58331b8fd04286b268811e4a9365c4e66167a907db",
+      "sha256": "8e77aa820ee19b804b1bb5e9294998288c1a061ffd8e4a6bbf582234a7af90e8",
       "executable": false
     },
     "tests/sublet-browser.mjs": {
