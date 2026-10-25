@@ -4556,7 +4556,7 @@
       "executable": false
     },
     "tests/stripe-browser.mjs": {
-      "sha256": "5e542bf713a5ee85225f91e2760512e53c2ef4e6ddefc6d7435340ddf49ad4c6",
+      "sha256": "21fdaed75d57ba490be37dfedd438738f8cf5bea2b6c3c94ff02583887050f13",
       "executable": false
     },
     "tests/stripe-sandbox.mjs": {
