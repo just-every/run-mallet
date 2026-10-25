@@ -572,7 +572,7 @@
       "executable": false
     },
     "ACCEPTANCE.md": {
-      "sha256": "13a9cfe1c22d189d562ef69c55469de23a51f05a84ca60142897e6744bf438e7",
+      "sha256": "8db9068850eda5a0ef3146cfebda4281785f22de9163e4863e509a853a9831c1",
       "executable": false
     },
     "AGENTS.md": {
@@ -584,7 +584,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "c8e1df40f8a8b0276915f39d634bcd246cf36175a2b3fa1eb76ba90192aae971",
+      "sha256": "cac16d8d5e59b68bbb3e15487e127cddb3fbce7d7f860828325dce1343a238c9",
       "executable": false
     },
     "deploy-demo.json": {
@@ -4472,7 +4472,7 @@
       "executable": false
     },
     "tests/support/check-in-journey.mjs": {
-      "sha256": "7419982c62c9885f31f56b734364c63c0bfed37de51e6a42be5c82f52db40df8",
+      "sha256": "4f93d72e78ba0c464a6627aaf1a1e54b39c9ec89b7ffac1d6f3b489c52b9667b",
       "executable": false
     },
     "tests/support/collaboration-journey.mjs": {

@@ -27,12 +27,14 @@ export async function checkInJourney(h){
  const initial=await page.text();assert.ok(initial.includes(checkInTemplate.name));assert.ok(initial.includes(checkInTemplate.acknowledgments[0].text))
  for(const disclosure of Object.values(invitation.electronicDisclosures)){const position=initial.indexOf(disclosure.replaceAll('&','&amp;'));assert.ok(position>=0&&position<initial.indexOf('name="electronicConsent"'),'Disclosures precede electronic consent')}
  assert.equal(invitation.quote.totals.totalCents,8063,'Diagnostic quote includes configured labor sales tax rounded to cents')
+ assert.equal(Date.parse(invitation.expiresAt)-Date.parse(invitation.at),7*86400000,'Invitation lasts seven days from issue')
  const fields={...checkInFields,diagnosticTotalCents:invitation.quote.totals.totalCents}
  await checkInPost(h,invitation.url,fields,{origin:'https://other.test',status:403})
  const missingAcknowledgment={...fields};delete missingAcknowledgment['acknowledgment:storageCharges']
  await checkInPost(h,invitation.url,missingAcknowledgment,{status:422})
  const missingAnswer={...fields};delete missingAnswer['answer:concern']
  await checkInPost(h,invitation.url,missingAnswer,{status:422})
+ for(const name of ['diagnosticConsent','electronicConsent']){const missingConsent={...fields};delete missingConsent[name];await checkInPost(h,invitation.url,missingConsent,{status:422})}
  await checkInPost(h,invitation.url,{...fields,diagnosticTotalCents:7500},{status:409})
  assert.equal((await requestRow(h,invitation.id)).status,'invited')
  const sends=h.messages.length
@@ -53,6 +55,12 @@ export async function checkInJourney(h){
  const published=await h.command('intakeForm.publish',{...checkInTemplate,templateId:template.id,version:template.version,diagnosticFeeCents:9500,storageTerms:'Changed terms apply to later invitations only.'})
  assert.equal(published.revisions.length,2);assert.deepEqual((await requestRow(h,row.id)).receipt,receipt)
  const confirm={requestId:row.id,version:row.version,assetId:asset.id,assetVersion:asset.version,contactEvidence:'Advisor called the supplied contact and verified their existing customer record.',vehicleEvidence:'Advisor inspected the vehicle identifier and matched the existing vehicle.',keyReceipt:'Advisor received the sealed envelope and physical key.',bayId:'synthetic-mallet-6',technicianId:before.actor.id,startAt:'2026-10-23T09:00:00+10:00',endAt:'2026-10-23T10:00:00+10:00',reviewedDiagnosticTotalCents:8063,confirmBooking:true,confirmDiagnosticSpend:true}
+ const wrongAsset=await h.command('asset.create',{customerName:'synthetic-mallet-9',label:'synthetic-mallet-10',identifier:'synthetic-mallet-11'})
+ const unconfirmed=await h.state()
+ await h.command('checkin.confirm',confirm,{as:member.cookie,status:403})
+ for(const name of ['contactEvidence','vehicleEvidence','keyReceipt'])await h.command('checkin.confirm',{...confirm,[name]:''},{status:400})
+ await h.command('checkin.confirm',{...confirm,assetId:wrongAsset.id,assetVersion:wrongAsset.version},{status:409})
+ assert.deepEqual((await h.state()).records,unconfirmed.records,'Failed staff verification leaves the request queued without a booking or diagnostic decision')
  await h.command('checkin.confirm',{...confirm,confirmBooking:false},{status:409})
  await h.command('checkin.confirm',{...confirm,confirmDiagnosticSpend:false},{status:409})
  await h.command('checkin.confirm',{...confirm,reviewedDiagnosticTotalCents:7500},{status:409})
