@@ -26,8 +26,9 @@ let restoreHash:Promise<string>|undefined
 let securityHash:Promise<string>|undefined
 
 function rail(actor:Actor,current:Section|null,counts:Counts) {
- const links=sections.map(([id,href,label,glyph])=>`<a href="${href}"${id===current?' aria-current="page"':''}>${icon(glyph)}<span>${e(label)}</span>${counts[id as Section]?`<span class="count">${counts[id as Section]}</span>`:''}</a>`).join('')
- return `<aside class="rail"><a class="brand" href="/app"><img src="/brand/mark.svg" alt="" width="40" height="40"><span data-rer-name>Mallet</span></a><nav class="navlinks" aria-label="Main">${links}</nav><div class="profile"><span class="avatar" aria-hidden="true">${e(initials(actor.name))}</span><p><strong>${e(actor.name)}</strong><span>${e(role(actor.role))}</span></p></div></aside>`
+ const allowed=actor.staff?[['data','/app/staff','Staff workspace','document'],['settings','/app/security','My security','key']] as typeof sections:sections
+ const links=allowed.map(([id,href,label,glyph])=>`<a href="${href}"${id===current?' aria-current="page"':''}>${icon(glyph)}<span>${e(label)}</span>${counts[id as Section]?`<span class="count">${counts[id as Section]}</span>`:''}</a>`).join('')
+ return `<aside class="rail"><a class="brand" href="/app"><img src="/brand/mark.svg" alt="" width="40" height="40"><span data-rer-name>Mallet</span></a><nav class="navlinks" aria-label="Main">${links}</nav><div class="profile"><span class="avatar" aria-hidden="true">${e(initials(actor.name))}</span><p><strong>${e(actor.name)}</strong><span>${e(actor.staff?.role??role(actor.role))}</span></p></div></aside>`
 }
 
 export async function page(title:string,body:string,actor?:Actor,status=200,frame:Frame={}) {
