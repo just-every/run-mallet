@@ -459,7 +459,7 @@ OPEN-001 was added on 18 October 2026. Its acceptance builds the candidate run s
 | Clauses | Done | Partial | Missing | Total |
 | --- | ---: | ---: | ---: | ---: |
 | Published | 9 | 0 | 0 | 9 |
-| Target and push further | 37 | 28 | 61 | 126 |
+| Target and push further | 37 | 31 | 66 | 134 |
 | All | 46 | 31 | 66 | 143 |
 
 | Clause | Title | Kind | Status | Evidence | Gap |
