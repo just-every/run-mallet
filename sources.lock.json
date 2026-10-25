@@ -4572,11 +4572,15 @@
       "executable": false
     },
     "tests/stripe-browser.mjs": {
-      "sha256": "21fdaed75d57ba490be37dfedd438738f8cf5bea2b6c3c94ff02583887050f13",
+      "sha256": "2198f3c1f5dcd89dee010ab48c7662fa46e9d62e4ffd220a2432b3aaee187e7b",
       "executable": false
     },
     "tests/stripe-sandbox.mjs": {
       "sha256": "0fe0d12984ba28fdc92565e34a96faa857a53b598e12231cfeb69ca3445782eb",
+      "executable": false
+    },
+    "tests/stripe-terminal-sandbox.mjs": {
+      "sha256": "9c3767b0e4c3bf524d23a0468150b294dafd9e39c7dbfb6caa89cb6625adee5d",
       "executable": false
     },
     "tests/sublet-browser.mjs": {

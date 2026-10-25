@@ -1,0 +1,14 @@
+import assert from 'node:assert/strict'
+import {readyInvoice} from './return-journey.mjs'
+export async function terminalBrowserSteps({h,page,edge,reviewer,shot}){
+ const form=command=>page.locator('form:has(input[name="command"][value="'+command+'"])')
+ const asset=await h.command('asset.create',{customerName:'Cedar Bikes',label:'Counter card reader repair',identifier:'synthetic-mallet-840'}),{invoice}=await readyInvoice(h,{asset,reviewer})
+ await page.goto(h.origin+'/app/invoices/'+invoice.id+'/payment')
+ await form('terminal-prepare').getByRole('checkbox').check();await form('terminal-prepare').getByRole('button',{name:'Prepare reader payment'}).click();await page.waitForLoadState('domcontentloaded');await shot('06-reader-prepared')
+ await form('terminal-send').getByLabel('Merchant reader ID').fill(edge.reader.id);await form('terminal-send').getByRole('button',{name:'Send to reader'}).click();await page.waitForLoadState('domcontentloaded');await shot('07-reader-waiting');assert.equal((await h.state()).records.payment.filter(p=>p.invoiceId===invoice.id).length,0)
+ edge.paid();await form('terminal-reconcile').getByRole('button',{name:'Inspect reader payment'}).click();await page.waitForLoadState('domcontentloaded');await shot('08-reader-finished-unallocated');assert.equal((await h.state()).records.payment.filter(p=>p.invoiceId===invoice.id).length,0)
+ await form('event').getByLabel('Stripe payment event ID').fill(edge.providerEvent('synthetic-mallet-841'));await form('event').getByRole('button',{name:'Reconcile provider event'}).click();await page.waitForLoadState('domcontentloaded');assert.match(await page.locator('main').innerText(),/Outstanding \$0.00/);await shot('09-reader-paid')
+ await form('settlement').getByRole('button',{name:'Reconcile fee and payout'}).click();await page.waitForLoadState('domcontentloaded');assert.match(await page.locator('main').innerText(),/Fee \$1.10/);await shot('10-reader-fee')
+ const otherAsset=await h.command('asset.create',{customerName:'Cedar Bikes',label:'Canceled reader payment',identifier:'synthetic-mallet-842'}),other=await readyInvoice(h,{asset:otherAsset,reviewer})
+ await page.goto(h.origin+'/app/invoices/'+other.invoice.id+'/payment');await form('terminal-prepare').getByRole('checkbox').check();await form('terminal-prepare').getByRole('button',{name:'Prepare reader payment'}).click();await page.waitForLoadState('domcontentloaded');await page.getByText('Cancel reader payment',{exact:true}).click();await form('terminal-cancel').getByLabel('Merchant reader ID').fill(edge.reader.id);await shot('11-reader-cancel-confirm');await form('terminal-cancel').getByRole('button',{name:'Cancel uncaptured payment'}).click();await page.waitForLoadState('domcontentloaded');assert.match(await page.locator('main').innerText(),/expired/);await shot('12-reader-canceled');assert.equal((await h.state()).records.payment.filter(p=>p.invoiceId===other.invoice.id).length,0)
+}
