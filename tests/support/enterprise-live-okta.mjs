@@ -12,7 +12,8 @@ export async function liveOkta(){
  const api=async(path,{method='GET',body,allowed=[200]}={})=>{
   const r=await fetch(origin+path,{method,redirect:'manual',headers:{authorization:'SSWS '+admin,'content-type':'application/json',accept:'application/json'},...(body?{body:JSON.stringify(body)}:{})})
   if(!allowed.includes(r.status)){await r.body?.cancel();throw Error('Okta management request refused: HTTP '+r.status)}
-  return r.status===204?null:r.json()
+  if(r.status===204)return null
+  const text=await r.text();return text?JSON.parse(text):null
  }
  try{
   h=await installation({outboundService:request=>fetch(request)})
@@ -42,10 +43,13 @@ export async function liveOkta(){
   assert.equal((await h.state()).records.job.find(j=>j.id===job.id).technicianId,native.id);receipt.attribution=true
  }finally{
   if(h)await h.close()
-  if(userId){const user=await api('/api/v1/users/'+userId);if(user.status!=='DEPROVISIONED')await api('/api/v1/users/'+userId+'/lifecycle/deactivate?sendEmail=false',{method:'POST'});await api('/api/v1/users/'+userId+'?sendEmail=false',{method:'DELETE',allowed:[204]})}
-  if(appId){await api('/api/v1/apps/'+appId+'/lifecycle/deactivate',{method:'POST',allowed:[200]});await api('/api/v1/apps/'+appId,{method:'DELETE',allowed:[204]})}
-  receipt.cleanup=true
+  const cleanup=await Promise.allSettled([
+   (async()=>{if(!userId)return;const user=await api('/api/v1/users/'+userId);if(user.status!=='DEPROVISIONED')await api('/api/v1/users/'+userId+'/lifecycle/deactivate?sendEmail=false',{method:'POST'});await api('/api/v1/users/'+userId+'?sendEmail=false',{method:'DELETE',allowed:[204]})})(),
+   (async()=>{if(!appId)return;await api('/api/v1/apps/'+appId+'/lifecycle/deactivate',{method:'POST',allowed:[200]});await api('/api/v1/apps/'+appId,{method:'DELETE',allowed:[204]})})(),
+  ])
+  receipt.cleanup=cleanup.every(r=>r.status==='fulfilled')
   console.log(JSON.stringify(receipt))
+  if(!receipt.cleanup)throw Error('Isolated Okta fixture cleanup did not complete')
  }
 }
 if(process.argv[1]===import.meta.filename)await liveOkta()
