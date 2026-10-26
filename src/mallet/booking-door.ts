@@ -29,9 +29,9 @@ export async function bookingResponse(request:Request,original:Bindings):Promise
  let row:any,authority:any
  if(manage){
   if(!/^[A-Za-z0-9_-]{43}$/.test(manage))return view('<p>Not available.</p>',404)
-  const hash=await digest(manage),found=await env.DB.prepare('SELECT appointment_id FROM mallet_booking_tokens WHERE token_hash=? AND revoked_at IS NULL').bind(hash).first<{appointment_id:string}>()
+  const hash=await digest(manage),found=await env.DB.prepare('SELECT appointment_id FROM mallet_booking_tokens WHERE revoked_at IS NULL AND (token_hash=? OR appointment_id IN (SELECT appointment_id FROM mallet_booking_reminder_tokens WHERE token_hash=?))').bind(hash,hash).first<{appointment_id:string}>()
   row=found&&rows(await load(env.DB),'appointment').find(x=>x.id===found.appointment_id);if(!row||Date.parse(row.endAt)+LINK_GRACE_MS<=Date.now())return view('<p>Not available.</p>',404)
-  authority={sql:'EXISTS(SELECT 1 FROM mallet_booking_tokens WHERE appointment_id=? AND token_hash=?)',params:[row.id,hash]}
+  authority={sql:'EXISTS(SELECT 1 FROM mallet_booking_tokens WHERE appointment_id=? AND revoked_at IS NULL AND (token_hash=? OR appointment_id IN (SELECT appointment_id FROM mallet_booking_reminder_tokens WHERE token_hash=?)))',params:[row.id,hash,hash]}
  }
  try{
   if(request.method==='POST'){

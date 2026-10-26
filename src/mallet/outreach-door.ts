@@ -1,0 +1,55 @@
+import {execute,rows,load} from './model'
+import {digest,type Actor,type Authority} from './auth'
+import {runtimeBindings,type Bindings} from '../auth.server'
+import {operatorMail} from '../mail.server.mjs'
+import {outreachDue,outreachStop} from './outreach'
+import {shopTime} from './promise-zone'
+import {e} from './ui/common'
+const scheduler={id:'mallet-scheduler',name:'Scheduled reminders',role:'system' as const}
+export async function outreachCommand(env:Bindings,actor:Actor,authority:Authority,command:string,input:any){
+ const row=await execute(env.DB,actor as any,command,input,authority)
+ if(command==='outreach.schedule'){
+  // A crash here leaves an inert business record, never an authorized send.
+  await env.DB.prepare(`INSERT INTO mallet_outreach_authority SELECT ?,id,version FROM oa_operators WHERE id=? AND role='owner' AND status='active' AND (${authority.sql})`).bind(row.id,actor.id,...authority.params).run()
+ }
+ return row
+}
+async function authorized(env:Bindings,id:string){
+ return !!await env.DB.prepare("SELECT a.outreach_id FROM mallet_outreach_authority a JOIN oa_operators o ON o.id=a.owner_id WHERE a.outreach_id=? AND o.version=a.owner_version AND o.role='owner' AND o.status='active'").bind(id).first()
+}
+/** Bounded cron work; a persisted claim can never initiate a second send. */
+export async function runOutreach(original:Bindings,at:number){
+ const env=runtimeBindings(original),now=new Date(at).toISOString(),snapshot=await load(env.DB)
+ for(const candidate of rows(snapshot,'outreach').filter(r=>r.status==='claimed'||r.status==='pending'&&(outreachStop(snapshot,r,now)||outreachDue(snapshot,r,now))).sort((a,b)=>a.dueAt.localeCompare(b.dueAt)||a.id.localeCompare(b.id)).slice(0,100)){
+  let r=candidate
+  if(r.status==='claimed'){
+   if(Date.parse(r.claimedAt)+60000<=at)try{await execute(env.DB,scheduler,'outreach.outcome',{id:r.id,version:r.version,status:'uncertain',provider:'interrupted'},undefined,now)}catch{}
+   continue
+  }
+  const stop=outreachStop(snapshot,r,now)
+  if(!stop&&!outreachDue(snapshot,r,now))continue
+  try{r=await execute(env.DB,scheduler,'outreach.claim',{id:r.id,version:r.version},undefined,now)}catch{continue}
+  if(r.status!=='claimed')continue
+  let status='skipped',provider='none'
+  try{
+   const current=await load(env.DB)
+   if(await authorized(env,r.id)&&!outreachStop(current,rows(current,'outreach').find(x=>x.id===r.id)!,now)){
+    let content=r.instructions
+    if(r.kind==='appointment'){
+     const a=rows(current,'appointment').find(a=>a.id===r.subjectId)!
+     // Revoked or restored management authority never grows a new link.
+     if(!await env.DB.prepare('SELECT appointment_id FROM mallet_booking_tokens WHERE appointment_id=? AND revoked_at IS NULL').bind(a.id).first())throw Error('Management authority unavailable')
+     const secret=btoa(String.fromCharCode(...crypto.getRandomValues(new Uint8Array(32)))).replaceAll('+','-').replaceAll('/','_').replaceAll('=','')
+     await env.DB.prepare('INSERT INTO mallet_booking_reminder_tokens(appointment_id,token_hash) VALUES(?,?)').bind(a.id,await digest(secret)).run()
+     content=`${a.service.name}\n${a.service.location}\n${shopTime(a.startAt,a.service.timeZone)}\n${r.instructions}\nReschedule or cancel: ${env.AUTH_ORIGIN}/book/${secret}\nNo repair work or payment is authorized.`
+    }else content+=`\nRefreshed quote: USD ${(r.totalCents/100).toFixed(2)}. Contact the shop to review and book. No work or payment is authorized.`
+    const mail=operatorMail(env)
+    if(mail){
+     const result=await mail.send({deliveryId:r.id,from:String(env.MAIL_FROM??''),to:[r.to],subject:r.kind==='appointment'?'Your appointment reminder':'Your declined-work follow-up',text:content,html:'<p>'+e(content).replaceAll('\n','<br>')+'</p>',headers:{}})
+     status=['rejected','rate_limited','unavailable'].includes(result.status)?'failed':result.status;provider=result.provider??'mail'
+    }else{status='failed';provider='unavailable'}
+   }
+  }catch{status='uncertain';provider='mail'}
+  try{await execute(env.DB,scheduler,'outreach.outcome',{id:r.id,version:r.version,status,provider},undefined,now)}catch{}
+ }
+}

@@ -232,6 +232,30 @@
       "name": "core-0096_dependency_keys_sealed.sql",
       "sha256": "9c8fa5f94c48a230f326cd4d666cbc2bd1e7d5a18327b89e65b339ac6a533d9a",
       "sql": "ALTER TABLE rer_dependency_installation ADD COLUMN keys_sealed INTEGER NOT NULL DEFAULT 0 CHECK(keys_sealed IN (0,1));\n-- Nonsecret version history lets restored rows name an unavailable retired key\n-- without confusing ciphertext tampering or a wrong current secret with restore.\nALTER TABLE rer_dependency_installation ADD COLUMN key_ids TEXT NOT NULL DEFAULT '[]' CHECK(json_valid(key_ids) AND json_type(key_ids)='array');\n"
+    },
+    {
+      "binding": "DB",
+      "name": "core-0097_mallet_audit.sql",
+      "sha256": "1edd864e3f1e20fe54ee60d526fe1d0a90282254b35a0c50f13b787fe7247d47",
+      "sql": "-- Evidence writes do not change the business revision used by exact financial reviews.\nDROP TRIGGER mallet_insert;\nDROP TRIGGER mallet_update;\nDROP TRIGGER mallet_delete;\nCREATE TRIGGER mallet_insert AFTER INSERT ON mallet_records WHEN NEW.kind<>'audit' BEGIN\n UPDATE mallet_meta SET version=version+1 WHERE id=1;\nEND;\nCREATE TRIGGER mallet_update AFTER UPDATE ON mallet_records WHEN NEW.kind<>'audit' OR OLD.kind<>'audit' BEGIN\n UPDATE mallet_meta SET version=version+1 WHERE id=1;\nEND;\nCREATE TRIGGER mallet_delete AFTER DELETE ON mallet_records WHEN OLD.kind<>'audit' BEGIN\n UPDATE mallet_meta SET version=version+1 WHERE id=1;\nEND;\n-- Preserve authentication decisions as portable evidence without copying their raw value.\nCREATE TRIGGER mallet_auth_audit AFTER INSERT ON oa_auth_audit BEGIN\n INSERT INTO mallet_records(kind,id,revision,value)\n VALUES('audit','auth:'||NEW.id,1,json_object('id','auth:'||NEW.id,'version',1,\n  'action','auth.'||NEW.action,'at',strftime('%Y-%m-%dT%H:%M:%fZ',NEW.created_at / 1000.0,'unixepoch'),\n  'actor',json_object('id',NEW.actor_id,'name',COALESCE((SELECT display_name FROM oa_operators WHERE id=NEW.actor_id),'Former operator'),'role',COALESCE((SELECT role FROM oa_operators WHERE id=NEW.actor_id),'system')),\n  'policy','native-auth-v1','changes',json('[]'),'evidence',json_array('auth:'||NEW.id)));\nEND;\n-- Each import transaction binds the real current actor, independently of the portable role principal.\nCREATE TABLE mallet_import_audit_context(singleton INTEGER PRIMARY KEY CHECK(singleton=1),actor TEXT NOT NULL CHECK(json_valid(actor)));\nCREATE TRIGGER mallet_import_audit AFTER INSERT ON ik_batches WHEN EXISTS(SELECT 1 FROM mallet_import_audit_context WHERE singleton=1) BEGIN\n INSERT INTO mallet_records(kind,id,revision,value)\n VALUES('audit','import:'||NEW.job_id||':'||NEW.action||':'||NEW.position,1,\n json_object('id','import:'||NEW.job_id||':'||NEW.action||':'||NEW.position,'version',1,\n 'action','import.'||NEW.action,'at',strftime('%Y-%m-%dT%H:%M:%fZ','now'),\n 'actor',json((SELECT actor FROM mallet_import_audit_context WHERE singleton=1)),\n 'policy','reviewed-import-v1','changes',json_array(json_object('kind','importBatch','id',NEW.job_id,'beforeRevision',NEW.position,'afterRevision',NEW.end_position)),\n 'evidence',json_array('import:'||NEW.job_id)));\nEND;\nCREATE INDEX mallet_audit_time ON mallet_records(kind,json_extract(value,'$.at'),id);\n"
+    },
+    {
+      "binding": "DB",
+      "name": "core-0098_mallet_staff_grants.sql",
+      "sha256": "6a108e1522aea09def6b8b1c536f8919990e9a2c7a43364bdd707cdb1e76413e",
+      "sql": "-- Standing delegation is local authority, never portable product data.\nCREATE TABLE mallet_staff_grants (\n operator_id TEXT PRIMARY KEY, operator_version INTEGER NOT NULL, revision INTEGER NOT NULL,\n role TEXT NOT NULL CHECK(role IN ('advisor','manager','purchaser','cashier','accountant')),\n location TEXT NOT NULL CHECK(location='shop'), discount_bps INTEGER NOT NULL CHECK(discount_bps BETWEEN 0 AND 10000),\n spend_cents INTEGER NOT NULL CHECK(spend_cents>=0), refund_cents INTEGER NOT NULL CHECK(refund_cents>=0),\n cost_right INTEGER NOT NULL CHECK(cost_right IN (0,1)), granted_by TEXT NOT NULL, owner_version INTEGER NOT NULL,\n revoked_at INTEGER\n);\n"
+    },
+    {
+      "binding": "DB",
+      "name": "core-0099_mallet_report_schedules.sql",
+      "sha256": "a78b34d0b8bed6b13be6b6b30af22cdbd36c84a037914c3c35569a5567bf4cff",
+      "sql": "-- Local standing mail authority is excluded from archives; evidence remains product data.\nCREATE TABLE mallet_report_schedules (\n filter_id TEXT PRIMARY KEY,\n owner_id TEXT NOT NULL,\n owner_version INTEGER NOT NULL,\n email TEXT NOT NULL,\n due_at TEXT NOT NULL,\n every_days INTEGER NOT NULL,\n consent_at TEXT NOT NULL\n);\n"
+    },
+    {
+      "binding": "DB",
+      "name": "core-0110_mallet_outreach.sql",
+      "sha256": "df179aab1fd4621e7179695acf3d32f13b1b169a3db8d3619de2144383299c4e",
+      "sql": "-- Installation-local approval is deliberately excluded from owner archives.\nCREATE TABLE mallet_outreach_authority (\n outreach_id TEXT PRIMARY KEY,\n owner_id TEXT NOT NULL,\n owner_version INTEGER NOT NULL\n);\nCREATE TABLE mallet_booking_reminder_tokens (\n token_hash TEXT PRIMARY KEY,\n appointment_id TEXT NOT NULL\n);\n"
     }
   ],
   "compatibilityDate": "2026-09-08",

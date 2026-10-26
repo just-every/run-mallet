@@ -1,3 +1,4 @@
+import {runOutreach} from '../outreach-door'
 import {runtimeBindings,type Bindings} from '../../auth.server'
 import {operatorMail} from '../../mail.server.mjs'
 import {digest} from '../auth'
@@ -62,5 +63,6 @@ export async function runReminderJobs(original:Bindings,at:number){
   handled+=result.filter(Boolean).length
  }
  await projectOutcomes(env,now)
+ await runOutreach(env,at)
  return handled
 }

@@ -445,3 +445,7 @@ test('PAY-001: authenticated ACH returns and reinstatement preserve captured pay
  const edge=stripeReturnsEdge()
  await run(h=>stripeReturnsJourney(h,edge),{entry:'tests/dev-worker.ts',bindings:{AUTH_LOCAL:'true',RER_DEV_KEY:randomBytes(32).toString('base64url'),STRIPE_SECRET_KEY:'synthetic-mallet-800'},outboundService:edge.edge})
 })
+
+test('AUTO-001: appointment email quiet hours across DST, replacement, cancellation, failure and inert recovery',async()=>{const {appointmentOutreachJourney}=await import('./support/outreach-journey.mjs');await appointmentOutreachJourney()})
+test('AUTO-004: approved refreshed quote, observed mileage, explicit stop and repeat decline preserve decisions',async()=>{const {declinedOutreachJourney}=await import('./support/outreach-journey.mjs');await declinedOutreachJourney()})
+test('AUTO-001 and AUTO-004: owner schedules and stops email through native forms at 1440 and 390',async()=>{const {outreachBrowser}=await import('./outreach-browser.mjs');await outreachBrowser()})
