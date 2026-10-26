@@ -38,7 +38,7 @@ export async function reviewCommand(original:Bindings,actor:Actor,authority:Auth
   const state=await load(env.DB),consent=find(state,'reviewConsent',row.consentId)
   currentReviewConsent(state,consent)
   if(consent.version!==row.consentVersion||!await env.DB.prepare(`SELECT 1 AS ok WHERE (${local.sql})`).bind(...local.params).first())throw Error('Review permission changed')
-  const text=row.content.replace('[installation-local link]',`${env.AUTH_ORIGIN}/review/${token}`),mail=operatorMail(env)
+  const text=row.content.replace('[private feedback link]',`${env.AUTH_ORIGIN}/review/${token}`),mail=operatorMail(env)
   if(!mail){status='failed';provider='unavailable'}
   else{
    const result=await mail.send({deliveryId:row.id,from:String(env.MAIL_FROM??''),to:[row.to],subject:'Your repair visit: review and private feedback',text,html:'<p>'+e(text).replaceAll('\n','<br>')+'</p>',headers:{}})
