@@ -50,7 +50,7 @@ export async function receivablesBrowser(){
    await p.goto(ledger)
    await submit('ar.remind',{evidence:'Owner reviewed the current balance and billing recipient',consentEvidence:'Billing contact explicitly requested this exact balance reminder by email'},{invoiceId:invoice.id,checks:['consent']})
    await p.goto(ledger);assert.match(await p.locator('#ar-'+invoice.id).innerText(),/Suppressed in development/);await shot('03b-consented-balance-reminder',width)
-   await submit('outreach.schedule',{dueAt:'2026-11-01T14:00:00Z',expiresAt:'2026-11-02T14:00:00Z',timeZone:'America/New_York',allowedStart:9,allowedEnd:18,instructions:'Exact approved account balance',consentEvidence:'Billing contact requested one scheduled balance email'},{invoiceId:invoice.id,checks:['consent']})
+   await submit('outreach.schedule',{dueAt:'2026-11-01T14:00:00Z',expiresAt:'2026-11-02T14:00:00Z',timeZone:'America/New_York',allowedStart:9,allowedEnd:18,consentEvidence:'Billing contact requested one scheduled balance email'},{invoiceId:invoice.id,checks:['consent']})
    await p.goto(ledger);assert.match(await p.locator('#ar-'+invoice.id).innerText(),/Scheduled balance reminder/);await shot('03c-scheduled-balance-reminder',width)
    await submit('outreach.stop',{reason:'Billing contact canceled this scheduled request'},{invoiceId:invoice.id})
 

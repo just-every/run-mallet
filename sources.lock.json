@@ -2472,7 +2472,7 @@
       "executable": false
     },
     "src/mallet/ui/outreach.ts": {
-      "sha256": "398dfbe556030cfc416733682d7b7c04cc1902fe6c56fc110e6f502f2370e837",
+      "sha256": "5bd2ac52d12ba39cd0cf81b3e8d031cea6377df1c466993f0c0ca887efb16ad3",
       "executable": false
     },
     "src/mallet/ui/portal.ts": {
@@ -4632,7 +4632,7 @@
       "executable": false
     },
     "tests/receivables-browser.mjs": {
-      "sha256": "1384d7c10e1a502e6b4f2337ef8e631cde84aabaa485769d7548237b3686fbc3",
+      "sha256": "5b6b758da564e9957b0f9e851e06478d63f7c87ae5864a93670c1846119b0167",
       "executable": false
     },
     "tests/replenishment-browser.mjs": {
