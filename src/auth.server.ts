@@ -68,7 +68,9 @@ export async function operatorAuth(env: Bindings) {
 }
 
 async function handleAuthResponse(request: Request, original: Bindings): Promise<Response | null> {
- const env = runtimeBindings(original), url = new URL(request.url), auth=await operatorAuth(env)
+ const env = runtimeBindings(original), url = new URL(request.url)
+ // Deployment recovery has no dependency on enterprise configuration or provider reachability.
+ const auth=url.pathname==='/auth/owner-signin'?{...createOperatorAuth({db:env.DB,config:authConfig(env),mailSender:operatorMail(env),clientIp:req=>req.headers.get('CF-Connecting-IP')??''}),rejectedEnterpriseSession:async()=>false}:await operatorAuth(env)
  if (url.pathname.startsWith('/.well-known/rer-') || url.pathname.startsWith('/auth/dependencies/')) {
   const linked = await createDependencies({ db: env.DB, origin: env.AUTH_ORIGIN, name: branding.name, provider: env.IDENTITY_PROVIDER, INSTALLATION_KEY: env.INSTALLATION_KEY, INSTALLATION_KEY_PREVIOUS: env.INSTALLATION_KEY_PREVIOUS, local: env.AUTH_LOCAL === 'true', auth, claimOwner: token => createIdpOwnerClaimHandler({db:env.DB,authConfig:authConfig(env),clientIp:()=>request.headers.get('CF-Connecting-IP')??''})(new Request(env.AUTH_ORIGIN+'/auth/owner-claim',{method:'POST',headers:{Host:new URL(env.AUTH_ORIGIN).host,Origin:env.AUTH_ORIGIN,'Content-Type':'application/json'},body:JSON.stringify({token})})) }).handle(request)
   if (linked) return linked

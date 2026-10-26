@@ -15,9 +15,9 @@ export function configuredProviders(env:Bindings):EnterpriseProvider[]{
  })
 }
 export async function enterpriseProviders(env:Bindings){
- const configured=configuredProviders(env)
- if(!configured.length)return []
  const connections=(await env.DB.prepare('SELECT provider,issuer,client_id FROM mallet_enterprise_connections WHERE enabled=1').all<any>()).results
+ if(!connections.length)return []
+ const configured=configuredProviders(env)
  const users=(await env.DB.prepare('SELECT provider,external_id,email FROM mallet_enterprise_users WHERE active=1').all<any>()).results
  return configured.filter(p=>connections.some(c=>c.provider===p.id&&c.issuer===p.issuer&&c.client_id===p.clientId)).map(p=>({...p,subjectEmails:Object.fromEntries(users.filter(u=>u.provider===p.id).map(u=>[u.external_id,u.email]))}))
 }

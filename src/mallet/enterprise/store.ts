@@ -2,6 +2,7 @@ import type {Bindings} from '../../auth.server'
 import {digest,HttpError,type Identity,type Authority} from '../auth'
 import {requireStepUp} from '../strong-auth/gate'
 import {configuredProviders} from './config'
+import {createOperatorAuth} from '../../modules/operator-auth/index.mjs'
 export type Connection={provider:string;issuer:string;client_id:string;revision:number;owner_id:string;owner_version:number;token_hash:string;enabled:number}
 export const connectionFence=(c:Connection):Authority=>({sql:"EXISTS(SELECT 1 FROM mallet_enterprise_connections c JOIN oa_operators o ON o.id=c.owner_id WHERE c.provider=? AND c.revision=? AND c.enabled=1 AND c.token_hash=? AND o.role='owner' AND o.status='active' AND o.version=c.owner_version)",params:[c.provider,c.revision,c.token_hash]})
 export function assertion(db:D1Database,a:Authority){return db.prepare(`INSERT INTO mallet_assert(ok) SELECT CASE WHEN (${a.sql}) THEN 1 ELSE 0 END`).bind(...a.params)}
@@ -11,6 +12,7 @@ export async function configureConnection(env:Bindings,auth:Identity,action:stri
  if(!auth.gate?.enrolled)throw new HttpError(403,'owner_factor_required')
  const authority=requireStepUp(auth),p=configuredProviders(env).find(p=>p.id===input.provider)
  if(!p)throw new HttpError(400,'configured_provider_required')
+ if(action!=='revoke'){try{createOperatorAuth({db:env.DB,clientIp:()=>'',config:{origin:env.AUTH_ORIGIN,local:env.AUTH_LOCAL==='true',OWNER_EMAIL:env.OWNER_EMAIL,SESSION_SECRET:env.SESSION_SECRET,OIDC_TRANSACTION_SECRET:env.OIDC_TRANSACTION_SECRET,providers:[p]}})}catch{throw new HttpError(400,'invalid_enterprise_configuration')}}
  const reason=String(input.reason??'').trim()
  if(input.consent!=='yes'||!reason||reason.length>500)throw new HttpError(400,'explicit_consent_required')
  if(action==='enable'&&(input.role!=='technician'||input.location!=='shop'))throw new HttpError(403,'mapping_refused')

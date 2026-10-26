@@ -1,7 +1,6 @@
 // Opt-in held-org journey. It creates only this run's disposable app and technician, then removes both.
 import assert from 'node:assert/strict'
 import {randomBytes} from 'node:crypto'
-import {writeFile} from 'node:fs/promises'
 import {installation,booking} from '../harness.mjs'
 import {enableConnection,scim} from './enterprise-provider.mjs'
 export async function liveOkta(){
@@ -46,7 +45,6 @@ export async function liveOkta(){
   if(userId){const user=await api('/api/v1/users/'+userId);if(user.status!=='DEPROVISIONED')await api('/api/v1/users/'+userId+'/lifecycle/deactivate?sendEmail=false',{method:'POST'});await api('/api/v1/users/'+userId+'?sendEmail=false',{method:'DELETE',allowed:[204]})}
   if(appId){await api('/api/v1/apps/'+appId+'/lifecycle/deactivate',{method:'POST',allowed:[200]});await api('/api/v1/apps/'+appId,{method:'DELETE',allowed:[204]})}
   receipt.cleanup=true
-  if(process.env.MALLET_OKTA_RECEIPT)await writeFile(process.env.MALLET_OKTA_RECEIPT,JSON.stringify(receipt,null,2)+'\n',{mode:0o600})
   console.log(JSON.stringify(receipt))
  }
 }
