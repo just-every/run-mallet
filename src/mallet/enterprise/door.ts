@@ -25,7 +25,7 @@ export async function enterpriseResponse(request:Request,original:Bindings):Prom
    const user=id?await env.DB.prepare('SELECT * FROM mallet_enterprise_users WHERE id=? AND provider=?').bind(id,c.provider).first<any>():null
    if(id&&!user)throw new HttpError(404,'not_found')
    if(request.method==='GET')return json(user?resource(user):await listUsers(env.DB,c,url),200,true)
-   if(request.method==='POST'&&!id)return json(await writeUser(env,c,await body(request)),201,true)
+   if(request.method==='POST'&&!id){const user=await writeUser(env,c,await body(request)),response=json(user,201,true);response.headers.set('location',url.origin+url.pathname+'/'+user.id);return response}
    if(['PATCH','PUT'].includes(request.method)&&user){const input=await body(request);return json(await writeUser(env,c,request.method==='PATCH'?patched(input,user):input,user),200,true)}
    if(request.method==='DELETE'&&user){await writeUser(env,c,{userName:user.email,externalId:user.external_id,active:false},user);return json(null,204,true)}
    throw new HttpError(405,'method_not_allowed')

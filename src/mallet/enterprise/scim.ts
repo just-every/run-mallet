@@ -1,8 +1,8 @@
 import type {Bindings} from '../../auth.server'
 import {HttpError} from '../auth'
 import {assertion,audit,connectionFence,type Connection} from './store'
-export const USER='urn:ietf:params:scim:schemas:core:2.0:User',LIST='urn:ietf:params:scim:api:messages:2.0:ListResponse'
-export const resource=(u:any)=>({schemas:[USER],id:u.id,externalId:u.external_id,userName:u.email,displayName:u.display_name,active:!!u.active,roles:[{value:u.role,primary:true}],meta:{resourceType:'User',version:String(u.revision)},'urn:ietf:params:scim:schemas:extension:enterprise:2.0:User':{department:u.location}})
+export const USER='urn:ietf:params:scim:schemas:core:2.0:User',LIST='urn:ietf:params:scim:api:messages:2.0:ListResponse',ENTERPRISE='urn:ietf:params:scim:schemas:extension:enterprise:2.0:User'
+export const resource=(u:any)=>({schemas:[USER,ENTERPRISE],id:u.id,externalId:u.external_id,userName:u.email,displayName:u.display_name,active:!!u.active,roles:[{value:u.role,primary:true}],meta:{resourceType:'User',version:String(u.revision)},[ENTERPRISE]:{department:u.location}})
 const text=(value:any,max=255)=>{if(typeof value!=='string'||!value.trim()||value.length>max||/[\x00-\x1f\x7f]/.test(value))throw new HttpError(400,'invalid_scim_value');return value.trim()}
 function normalized(body:any,previous?:any){
  const email=text(body.userName??previous?.email).toLowerCase(),external=text(body.externalId??previous?.external_id),name=text(body.displayName??(body.name?.givenName&&body.name?.familyName?body.name.givenName+' '+body.name.familyName:undefined)??previous?.display_name??email)
