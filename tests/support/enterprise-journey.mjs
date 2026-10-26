@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict'
+import {randomBytes,createHash} from 'node:crypto'
 import {installation,booking,archive,restore,assetInput} from '../harness.mjs'
 import {enterpriseProviderEdge,enableConnection,scim} from './enterprise-provider.mjs'
 export async function enterpriseJourney(){
@@ -7,7 +8,7 @@ export async function enterpriseJourney(){
   const admin=await h.person('synthetic-mallet-admin@example.test','admin')
   await h.api('/api/mallet/enterprise/enable',{provider:edge.providers[0].id,role:'technician',location:'shop',reason:'No owner proof',consent:'yes'},{as:admin.cookie,status:403})
   await h.api('/api/mallet/enterprise/enable',{provider:edge.providers[0].id,role:'technician',location:'shop',reason:'No factor',consent:'yes'},{status:403})
-  await h.stepUp()
+  const ownerFactor=await h.stepUp()
   for(const [i,p] of edge.providers.entries()){
    const {token}=await enableConnection(h,p),email=`synthetic-mallet-${i}@example.com`,externalId='synthetic-mallet-subject-'+i
    const user=await scim(h,p,token,'',{method:'POST',body:{userName:email,externalId,displayName:'Taylor Technician '+i,active:true},status:201})
@@ -41,5 +42,17 @@ export async function enterpriseJourney(){
   }
   const history=(await h.api('/api/mallet/audit?action=enterprise.user.updated')).entries;assert.equal(history.length,6)
   const backup=await archive(h),fresh=await installation();try{await restore(fresh,backup);assert.equal((await fresh.state()).records.job.length,3);assert.equal((await fresh.api('/api/mallet/enterprise')).users.length,0);assert.ok((await fresh.api('/api/mallet/audit?action=enterprise.user.provisioned')).entries.length===3)}finally{await fresh.close()}
+  await enableConnection(h,edge.providers[2]);edge.setAvailable(false)
+  // The deployment-authorized mint is the external Cloudflare edge; admission,
+  // one-time consumption and the owner's own factor use the real public doors.
+  const db=await h.mf.getD1Database('DB'),owner=await db.prepare("SELECT id,version FROM oa_operators WHERE role='owner' AND status='active'").first(),token=randomBytes(32).toString('base64url'),now=Date.now()
+  await db.prepare('INSERT INTO oa_owner_signins(id,token_hash,operator_id,operator_version,created_at,expires_at) VALUES(?,?,?,?,?,?)').bind('synthetic-mallet-enterprise-recovery',createHash('sha256').update('owner-signin\0'+token).digest('hex'),owner.id,owner.version,now,now+600000).run()
+  const recovered=await h.request('/auth/owner-signin',{method:'POST',as:'',body:{token}});assert.equal(recovered.status,303)
+  const recovery=recovered.headers.getSetCookie().map(value=>value.split(';')[0]).join('; ')
+  assert.equal((await h.api('/api/mallet/security',undefined,{as:recovery})).session.deploymentRecovery,true)
+  await h.api('/api/mallet/state',undefined,{as:recovery,status:403})
+  await h.api('/api/mallet/security/verify/recovery',{code:ownerFactor.recoveryCodes[0]},{as:recovery})
+  assert.equal((await h.state({as:recovery})).records.job.length,3)
+  assert.equal((await h.request('/auth/owner-signin',{method:'POST',as:'',body:{token}})).status,400)
  }finally{await h.close()}
 }

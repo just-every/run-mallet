@@ -1,10 +1,12 @@
 import assert from 'node:assert/strict'
 import {generateKeyPairSync,sign,createHash,randomBytes} from 'node:crypto'
 export function enterpriseProviderEdge(){
+ let available=true
  const {privateKey,publicKey}=generateKeyPairSync('rsa',{modulusLength:2048}),jwk={...publicKey.export({format:'jwk'}),kid:'synthetic-mallet-1',alg:'RS256',use:'sig'},pending=new Map()
  const providers=[{id:'enterprise-google',preset:'google',issuer:'https://accounts.google.com',clientId:'synthetic-mallet-google',clientSecret:'synthetic-mallet-1',tokenAuthMethod:'client_secret_basic'},{id:'enterprise-entra',preset:'microsoft',tenant:'synthetic-mallet-tenant',issuer:'https://login.microsoftonline.com/synthetic-mallet-tenant/v2.0',clientId:'synthetic-mallet-entra',clientSecret:'synthetic-mallet-2',tokenAuthMethod:'client_secret_basic'},{id:'enterprise-okta',preset:'okta',issuer:'https://synthetic-mallet-1.okta.example',clientId:'synthetic-mallet-okta',clientSecret:'synthetic-mallet-3',tokenAuthMethod:'client_secret_basic'}]
  const b64=value=>Buffer.from(typeof value==='string'?value:JSON.stringify(value)).toString('base64url')
  const outbound=async request=>{
+  assert.ok(available,'The configured identity provider is unreachable')
   const url=new URL(request.url),p=providers.find(p=>url.origin===new URL(p.issuer).origin);assert.ok(p,'Only configured provider edge requested')
   if(url.pathname.endsWith('/.well-known/openid-configuration'))return Response.json({issuer:p.issuer,authorization_endpoint:p.issuer+'/authorize',token_endpoint:p.issuer+'/token',jwks_uri:p.issuer+'/keys',response_types_supported:['code'],id_token_signing_alg_values_supported:['RS256'],token_endpoint_auth_methods_supported:['client_secret_basic'],code_challenge_methods_supported:['S256']})
   if(url.pathname.endsWith('/keys'))return Response.json({keys:[jwk]})
@@ -21,7 +23,7 @@ export function enterpriseProviderEdge(){
   pending.set(code,{subject,email,nonce:url.searchParams.get('nonce'),challenge:url.searchParams.get('code_challenge'),redirect:url.searchParams.get('redirect_uri')})
   const response=await h.request('/auth/oidc/'+p.id+'/callback?'+new URLSearchParams({code,state}),{as:cookie});assert.equal(response.status,status,await response.clone().text());return {response,cookie:response.headers.getSetCookie().map(x=>x.split(';')[0]).join('; ')}
  }
- return {providers,outbound,signIn}
+ return {providers,outbound,signIn,setAvailable(value){available=value}}
 }
 export const enableConnection=(h,p,overrides={})=>h.api('/api/mallet/enterprise/enable',{provider:p.id,role:'technician',location:'shop',reason:'Explicit fixture directory authority',consent:'yes',...overrides})
 export async function scim(h,p,token,path='',{method='GET',body,status=200}={}){
