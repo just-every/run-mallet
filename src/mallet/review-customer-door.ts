@@ -10,7 +10,7 @@ async function feedbackForm(request:Request):Promise<URLSearchParams|null>{
  const reader=request.body?.getReader();if(!reader)return new URLSearchParams()
  const chunks:Uint8Array[]=[];let size=0
  try{
-  for(;;){const {value,done}=await reader.read();if(done)break;size+=value.length;if(size>10000)return null;chunks.push(value)}
+  for(;;){const {value,done}=await reader.read();if(done)break;size+=value.length;if(size>65536)return null;chunks.push(value)}
   const bytes=new Uint8Array(size);let offset=0;for(const chunk of chunks){bytes.set(chunk,offset);offset+=chunk.length}
   return new URLSearchParams(new TextDecoder('utf-8',{fatal:true}).decode(bytes))
  }catch{return null}finally{await reader.cancel();reader.releaseLock()}
@@ -34,7 +34,7 @@ export async function reviewResponse(request:Request,original:Bindings):Promise<
  if(request.method!=='POST')return response(row,url.pathname,consent.withdrawnAt)
  if(request.headers.get('origin')!==url.origin)return new Response('Same-origin form required',{status:403})
  if(!request.headers.get('content-type')?.startsWith('application/x-www-form-urlencoded'))return new Response('Form required',{status:415})
- if(Number(request.headers.get('content-length')??0)>10000)return new Response('Form too large',{status:413})
+ if(Number(request.headers.get('content-length')??0)>65536)return new Response('Form too large',{status:413})
  const form=await feedbackForm(request);if(!form)return new Response('Form too large or invalid',{status:413})
  const authority={sql:'EXISTS(SELECT 1 FROM mallet_review_tokens WHERE request_id=? AND token_hash=?)',params:[row.id,await digest(match[1])]}
  try{
