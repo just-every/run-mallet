@@ -59,7 +59,7 @@ export async function terminalJourney(h,edge){
  const denied=[{as:'',status:401},{as:admin.cookie,status:403},{as:member.cookie,status:403},{as:'',headers:{authorization:'Bearer '+key.token},status:403},{headers:{origin:'https://synthetic-mallet-983.test'},status:403}]
  for(const action of ['terminal-prepare','terminal-send','terminal-reconcile','terminal-cancel'])for(const options of denied)await api(action,input,options)
  // A native owner session without a fresh factor is refused before provider access.
- const fresh=await localSignIn(h,'owner');assert.equal(fresh.id,(await h.state()).actor.id)
+ const fresh=await localSignIn(h,(await h.api('/auth/session')).operator.email);assert.equal(fresh.id,(await h.state()).actor.id)
  assert.equal((await api('terminal-prepare',input,{as:fresh.cookie,status:403})).error,'step_up_required')
  assert.equal(edge.calls.length,0,'Refused transports never reach Stripe')
  await h.command('stripe.terminalClaim',input,{status:404});await h.command('stripe.terminalOutcome',input,{status:404})
