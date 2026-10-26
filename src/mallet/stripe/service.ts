@@ -22,7 +22,7 @@ export async function createCheckout(env:Bindings,actor:Actor,authority:Authorit
  const checkout=claim.checkout
  if(!claim.claimed)return checkout
  const metadata={mallet_invoice_id:invoice.id,mallet_invoice_revision:String(invoice.revision),mallet_checkout_id:checkout.id}
- const fields=new URLSearchParams({mode:'payment','payment_method_types[0]':checkout.method,client_reference_id:invoice.id,'line_items[0][price_data][currency]':'usd','line_items[0][price_data][unit_amount]':String(checkout.amountCents),'line_items[0][price_data][product_data][name]':'Repair invoice '+invoice.number,'line_items[0][quantity]':'1',success_url:env.AUTH_ORIGIN+'/app/invoices/'+encodeURIComponent(invoice.id)+'/payment',cancel_url:env.AUTH_ORIGIN+'/app/invoices/'+encodeURIComponent(invoice.id)+'/payment',expires_at:String(Math.floor(Date.now()/1000)+1800)})
+ const fields=new URLSearchParams({mode:'payment','payment_method_types[0]':checkout.method,client_reference_id:invoice.id,'line_items[0][price_data][currency]':'usd','line_items[0][price_data][unit_amount]':String(checkout.amountCents),'line_items[0][price_data][product_data][name]':'Repair invoice '+invoice.number,'line_items[0][quantity]':'1',success_url:env.AUTH_ORIGIN+'/app/invoices/'+encodeURIComponent(invoice.id)+'/payment',cancel_url:env.AUTH_ORIGIN+'/app/invoices/'+encodeURIComponent(invoice.id)+'/payment',expires_at:String(Math.floor(Date.now()/1000)+2100)})
  for(const [key,value] of Object.entries(metadata)){fields.set('metadata['+key+']',value);fields.set('payment_intent_data[metadata]['+key+']',value)}
  try{
   const session=await stripeRequest(env,'/checkout/sessions',fields,'mallet-checkout-'+checkout.id)
