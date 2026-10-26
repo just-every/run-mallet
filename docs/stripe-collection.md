@@ -69,7 +69,7 @@ reuse this explicit invoice checkout as permission for an automatic charge.
 The committed held-key journey is `./tests/stripe-sandbox.mjs`. It creates its
 invoice and checkout through native authenticated doors, enters Stripe's public
 test card only on the hosted page, reconciles the provider event twice, reads
-real fees, probes hosted ACH and cleans up open sessions and payment value.
+real fees and cleans up open sessions and payment value.
 Stripe has no per-payment deletion API: completed test charges remain in its
 transaction history after refund. No broad test-data deletion is attempted on
 the shared account. The command must receive only test credentials from the
@@ -80,3 +80,15 @@ It creates a temporary test location and simulated reader, uses the native owner
 doors to bind and send the invoice payment, presents Stripe's default simulated
 card, reconciles the event exactly once and reads fees. It cancels unfinished
 actions, refunds captured test value and deletes its own reader and location.
+
+The independent ACH leg is `./tests/stripe-ach-sandbox.mjs`. It uses a separate
+real repair invoice and the same owner connection and hosted checkout door.
+Card refusal cannot skip this bank-method probe. The 26 Oct held US account
+refused the native ACH request with HTTP 400 on payment_method_types; no bank
+collection or return receipt is claimed.
+
+Checkout catalogue cleanup archives only the inline prices and products created
+for this run's sessions. Stripe [does not delete products with associated
+prices](https://docs.stripe.com/api/products/delete), so these and completed
+transaction history remain inactive or refunded test records. No shared account
+profile, bank account or payment schedule is changed.
