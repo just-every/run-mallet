@@ -12,8 +12,16 @@ const cookies=(h,cookie)=>cookie.split('; ').map(pair=>({name:pair.slice(0,pair.
 const escape=value=>String(value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))
 
 export async function samlBrowser(){
- const edge=samlProviderEdge(),provider=edge.providers[0],h=await installation({network:true,secureNetwork:true,assets:true,bindings:{MALLET_ENTERPRISE_SAML:JSON.stringify([provider])}});let browser
+ const edge=samlProviderEdge(),provider=edge.providers[0];let browser,h,idp,invalid=true
  try{
+  // A real HTTPS external provider is needed here: browser routing does not
+  // intercept the destination of a native form's redirect chain.
+  idp=await edge.listen(url=>{
+   const xml=inflateRawSync(Buffer.from(url.searchParams.get('SAMLRequest'),'base64')).toString('utf8'),request=new DOMParser().parseFromString(xml,'text/xml').documentElement
+   const response=edge.issue(h,provider,{id:request.getAttribute('ID')},'synthetic-mallet-browser-saml',invalid?{audience:samlEndpoints(h,provider).audience+'-other-shop'}:{})
+   return '<!doctype html><html><body><form method="post" action="'+escape(samlEndpoints(h,provider).acs)+'"><input name="SAMLResponse" type="hidden" value="'+Buffer.from(response).toString('base64')+'"><button>Continue to workshop</button></form></body></html>'
+  });provider.ssoUrl=idp.origin+'/sso'
+  h=await installation({network:true,secureNetwork:true,assets:true,bindings:{MALLET_ENTERPRISE_SAML:JSON.stringify([provider])}})
   const dir=process.env.MALLET_ENTERPRISE_PROOF_DIR??'.cache/enterprise-browser';await mkdir(dir,{recursive:true})
   browser=await chromium.launch({headless:true,args:['--use-mock-keychain','--password-store=basic']})
   const context=await browser.newContext({ignoreHTTPSErrors:true});await context.addCookies(cookies(h,h.owner));const page=await context.newPage()
@@ -28,12 +36,6 @@ export async function samlBrowser(){
   tech.on('console',message=>{if(message.type()==='error')errors.push(message.text().replace(/https?:\/\/[^\s"']+/g,'[URL]'))})
   // Only the external IdP is controlled. The browser submits the real signed POST
   // response across origins, including the request cookie and native admission.
-  let invalid=true
-  await tech.route(url=>url.origin===new URL(provider.ssoUrl).origin,async route=>{
-   const url=new URL(route.request().url()),xml=inflateRawSync(Buffer.from(url.searchParams.get('SAMLRequest'),'base64')).toString('utf8'),request=new DOMParser().parseFromString(xml,'text/xml').documentElement
-   const response=edge.issue(h,provider,{id:request.getAttribute('ID')},subject,invalid?{audience:samlEndpoints(h,provider).audience+'-other-shop'}:{})
-   await route.fulfill({contentType:'text/html',body:'<!doctype html><html><body><form method="post" action="'+escape(samlEndpoints(h,provider).acs)+'"><input name="SAMLResponse" type="hidden" value="'+Buffer.from(response).toString('base64')+'"><button>Continue to workshop</button></form></body></html>'})
-  })
   await tech.goto(h.origin+'/signin?returnTo='+encodeURIComponent('/app/jobs/'+job.id));await tech.getByRole('button',{name:/Okta SAML/}).waitFor();await shot('09-saml-sign-in',tech)
   await tech.getByRole('button',{name:/Okta SAML/}).click()
   try{await tech.getByRole('button',{name:'Continue to workshop'}).waitFor({timeout:5000})}catch{await shot('09b-saml-start-stopped',tech);throw Error('SAML redirect stopped at '+new URL(tech.url()).pathname+'; '+transport.join(', ')+'; '+errors.join('; '))}
@@ -42,5 +44,5 @@ export async function samlBrowser(){
   await scim(h,provider,token,'/'+user.id,{method:'PATCH',body:{Operations:[{op:'replace',path:'active',value:false}]}})
   await tech.reload();assert.ok(tech.url().includes('/signin'));await shot('11-saml-old-session-refused',tech)
   await technician.close()
- }finally{await browser?.close();await h.close()}
+ }finally{await browser?.close();await h?.close();await idp?.close()}
 }

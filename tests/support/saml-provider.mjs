@@ -5,6 +5,7 @@ import {mkdtempSync,readFileSync,rmSync} from 'node:fs'
 import {tmpdir} from 'node:os'
 import {join} from 'node:path'
 import {inflateRawSync} from 'node:zlib'
+import {createServer} from 'node:https'
 import {DOMParser} from '@xmldom/xmldom'
 import {SignedXml} from 'xml-crypto'
 
@@ -87,5 +88,16 @@ export function samlProviderEdge(){
   assert.equal(response.status,303,await response.clone().text())
   return {transaction,document,response,cookie:responseCookies(response)}
  }
- return {providers,start,issue,post,signIn}
+ async function listen(render){
+  const server=createServer({key:privateKey,cert:certificate},(request,response)=>{
+   try{
+    const url=new URL(request.url,'https://localhost')
+    if(request.method!=='GET'||url.pathname!=='/sso'){response.writeHead(404);response.end();return}
+    response.writeHead(200,{'content-type':'text/html; charset=utf-8','cache-control':'no-store'});response.end(render(url))
+   }catch{response.writeHead(500);response.end('Synthetic provider request failed')}
+  })
+  await new Promise((resolve,reject)=>{server.once('error',reject);server.listen(0,'127.0.0.1',resolve)})
+  return {origin:'https://localhost:'+server.address().port,async close(){server.closeAllConnections();await new Promise(resolve=>server.close(resolve))}}
+ }
+ return {providers,start,issue,post,signIn,listen}
 }
