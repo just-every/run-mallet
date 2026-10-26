@@ -40,7 +40,11 @@ export async function samlBrowser(){
   await tech.getByRole('button',{name:/Okta SAML/}).click()
   try{await tech.getByRole('button',{name:'Continue to workshop'}).waitFor({timeout:5000})}catch{await shot('09b-saml-start-stopped',tech);throw Error('SAML redirect stopped at '+new URL(tech.url()).pathname+'; '+transport.join(', ')+'; '+errors.join('; '))}
   await tech.getByRole('button',{name:'Continue to workshop'}).click();await tech.getByRole('heading',{name:'Sign-in not completed'}).waitFor();await shot('09a-saml-sign-in-refused',tech)
-  invalid=false;await tech.getByRole('link',{name:'Return to sign-in'}).click();await tech.getByRole('button',{name:/Okta SAML/}).click();await tech.getByRole('button',{name:'Continue to workshop'}).click();await tech.waitForURL('**/app');await tech.goto(h.origin+'/app/jobs/'+job.id);await shot('10-saml-assigned-repair',tech)
+  invalid=false;await tech.getByRole('link',{name:'Return to sign-in'}).click();await tech.getByRole('button',{name:/Okta SAML/}).click();await tech.getByRole('button',{name:'Continue to workshop'}).click()
+  try{await tech.waitForURL('**/app/jobs',{timeout:5000})}catch{await shot('09c-saml-admission-stopped',tech);throw Error('SAML admission stopped at '+new URL(tech.url()).pathname+'; '+transport.join(', ')+'; '+errors.join('; '))}
+  const admitted=(await technician.cookies(h.origin)).map(value=>value.name+'='+value.value).join('; ')
+  assert.equal((await h.api('/auth/session',undefined,{as:admitted})).operator.id,user.id)
+  await tech.goto(h.origin+'/app/jobs/'+job.id);await shot('10-saml-assigned-repair',tech)
   await scim(h,provider,token,'/'+user.id,{method:'PATCH',body:{Operations:[{op:'replace',path:'active',value:false}]}})
   await tech.reload();assert.ok(tech.url().includes('/signin'));await shot('11-saml-old-session-refused',tech)
   await technician.close()
