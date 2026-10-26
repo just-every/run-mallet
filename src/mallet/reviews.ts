@@ -63,7 +63,7 @@ export const reviews:Handler=(c,command,p)=>{
  if(command==='review.outcome'){
   if(row.status!=='claimed')fail('REVIEW_OUTCOME','The handoff outcome was already recorded.')
   if(!['accepted','development','failed','uncertain'].includes(p.status))fail('INPUT','Invalid handoff outcome.',null,400)
-  const next=bump(c.s,'reviewRequest',row,{status:p.status,provider:text(p.provider,'provider',100),providerReference:text(p.providerReference,'provider reference',200,true),outcomeAt:c.now})
+  const next=bump(c.s,'reviewRequest',row,{status:p.status,provider:text(p.provider,'provider',100),providerReference:text(p.providerReference,'provider reference',1024,true),outcomeAt:c.now})
   event(c,command,row.jobId,row.id,{status:p.status});return next
  }
  if(command==='review.resolve'){
