@@ -83,9 +83,11 @@ actions, refunds captured test value and deletes its own reader and location.
 
 The independent ACH leg is `./tests/stripe-ach-sandbox.mjs`. It uses a separate
 real repair invoice and the same owner connection and hosted checkout door.
-Card refusal cannot skip this bank-method probe. The 26 Oct held US account
-refused the native ACH request with HTTP 400 on payment_method_types; no bank
-collection or return receipt is claimed.
+Card refusal cannot skip this bank-method probe. The 26 Oct held US merchant
+reports charges and payouts disabled. Both native hosted card and ACH requests
+returned HTTP 400 on payment_method_types; reader payment-intent creation also
+returned HTTP 400. Its temporary reader and location were deleted. No successful
+collection, fee, ACH return or automatic payout receipt is claimed.
 
 Checkout catalogue cleanup archives only the inline prices and products created
 for this run's sessions. Stripe [does not delete products with associated
