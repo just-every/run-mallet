@@ -37,7 +37,7 @@ export async function enterpriseJourney(){
    await scim(h,p,token,'',{status:401});await scim(h,p,rotated.token)
    await h.api('/api/mallet/enterprise/revoke',{provider:p.id,reason:'Connection withdrawn',consent:'yes'})
    await scim(h,p,rotated.token,'',{status:401});await h.api('/api/mallet/state',undefined,{as:again.cookie,status:401})
-   const dump=JSON.stringify(await archive(h));assert.ok(!dump.includes(token));assert.ok(!dump.includes(rotated.token));assert.ok(!dump.includes('mallet_enterprise_users'))
+   const dump=JSON.stringify(await archive(h));assert.ok(!dump.includes(token));assert.ok(!dump.includes(rotated.token));assert.ok(!dump.includes(email));assert.ok(!dump.includes(externalId))
   }
   const history=(await h.api('/api/mallet/audit?action=enterprise.user.updated')).entries;assert.equal(history.length,6)
   const backup=await archive(h),fresh=await installation();try{await restore(fresh,backup);assert.equal((await fresh.state()).records.job.length,3);assert.equal((await fresh.api('/api/mallet/enterprise')).users.length,0);assert.ok((await fresh.api('/api/mallet/audit?action=enterprise.user.provisioned')).entries.length===3)}finally{await fresh.close()}
