@@ -1,3 +1,4 @@
+import {randomBytes} from 'node:crypto'
 import {stripeReturnsEdge,stripeReturnsJourney} from './support/stripe-returns-journey.mjs'
 import {terminalEdge,terminalJourney,terminalStoppedJourney} from './support/terminal-journey.mjs'
 import {stripeJourney,stripeStoppedJourney,collectionEdge} from './support/stripe-journey.mjs'
@@ -422,25 +423,25 @@ test('GOV-001 and GOV-002: owner grants, bounded staff handoff and private audit
 
 test('PAY-001: owner checkout, authenticated event replay, exact fee and payout membership and inert recovery',async()=>{
  const edge=collectionEdge()
- await run(h=>stripeJourney(h,edge),{bindings:{AUTH_LOCAL:'true',STRIPE_SECRET_KEY:'synthetic-mallet-800'},outboundService:edge.edge})
+ await run(h=>stripeJourney(h,edge),{entry:'tests/dev-worker.ts',bindings:{AUTH_LOCAL:'true',RER_DEV_KEY:randomBytes(32).toString('base64url'),STRIPE_SECRET_KEY:'synthetic-mallet-800'},outboundService:edge.edge})
 })
 test('PAY-001: native merchant connection, invoice checkout and fee reconciliation at 1440 and 390',stripeBrowser)
 
 test('PAY-001: explicit expiration and uncertain checkout stay stopped without allocating money',async()=>{
  const edge=collectionEdge()
- await run(h=>stripeStoppedJourney(h,edge),{bindings:{AUTH_LOCAL:'true',STRIPE_SECRET_KEY:'synthetic-mallet-800'},outboundService:edge.edge})
+ await run(h=>stripeStoppedJourney(h,edge),{entry:'tests/dev-worker.ts',bindings:{AUTH_LOCAL:'true',RER_DEV_KEY:randomBytes(32).toString('base64url'),STRIPE_SECRET_KEY:'synthetic-mallet-800'},outboundService:edge.edge})
 })
 
 test('PAY-001: owner reader collection, authenticated payment and exact replay survive recovery',async()=>{
  const edge=terminalEdge()
- await run(h=>terminalJourney(h,edge),{bindings:{AUTH_LOCAL:'true',STRIPE_SECRET_KEY:'synthetic-mallet-800'},outboundService:edge.edge})
+ await run(h=>terminalJourney(h,edge),{entry:'tests/dev-worker.ts',bindings:{AUTH_LOCAL:'true',RER_DEV_KEY:randomBytes(32).toString('base64url'),STRIPE_SECRET_KEY:'synthetic-mallet-800'},outboundService:edge.edge})
 })
 test('PAY-001: uncertain reader initiation and cancellation reconcile without outbound replay',async()=>{
  const edge=terminalEdge()
- await run(h=>terminalStoppedJourney(h,edge),{bindings:{AUTH_LOCAL:'true',STRIPE_SECRET_KEY:'synthetic-mallet-800'},outboundService:edge.edge})
+ await run(h=>terminalStoppedJourney(h,edge),{entry:'tests/dev-worker.ts',bindings:{AUTH_LOCAL:'true',RER_DEV_KEY:randomBytes(32).toString('base64url'),STRIPE_SECRET_KEY:'synthetic-mallet-800'},outboundService:edge.edge})
 })
 
 test('PAY-001: authenticated ACH returns and reinstatement preserve captured payments across replay and recovery',async()=>{
  const edge=stripeReturnsEdge()
- await run(h=>stripeReturnsJourney(h,edge),{bindings:{AUTH_LOCAL:'true',STRIPE_SECRET_KEY:'synthetic-mallet-800'},outboundService:edge.edge})
+ await run(h=>stripeReturnsJourney(h,edge),{entry:'tests/dev-worker.ts',bindings:{AUTH_LOCAL:'true',RER_DEV_KEY:randomBytes(32).toString('base64url'),STRIPE_SECRET_KEY:'synthetic-mallet-800'},outboundService:edge.edge})
 })
