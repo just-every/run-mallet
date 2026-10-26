@@ -1,6 +1,6 @@
 // The real HTTP network boundary: Node has already decoded content compression.
 export const liveStripe=results=>async request=>{
- const forwarded=new Headers(request.headers);for(const name of ['host','connection','content-length','transfer-encoding'])forwarded.delete(name)
+ const forwarded=new Headers(request.headers);for(const name of ['host','connection','content-length','transfer-encoding','keep-alive','proxy-authenticate','proxy-authorization','te','trailer','upgrade','expect'])forwarded.delete(name)
  let response
  try{response=await fetch(request.url,{method:request.method,headers:Object.fromEntries(forwarded),...(request.method==='GET'?{}:{body:await request.arrayBuffer()})})}catch(error){results.transportFailure={name:error.name,code:error.cause?.code??null};throw error}
  ;(results.http??=[]).push({resource:new URL(request.url).pathname,method:request.method,status:response.status,bytes:(await response.clone().arrayBuffer()).byteLength,compression:response.headers.get('content-encoding')})
