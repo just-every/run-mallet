@@ -1,3 +1,4 @@
+import {liveStripe} from './support/stripe-live.mjs'
 import {randomBytes} from 'node:crypto'
 import {localPeople} from './support/local-people.mjs'
 // Real Terminal test helper; credentials enter only from the fleet injector.
@@ -18,7 +19,7 @@ let h,browser,reader,location,paymentIntentId,stage='account'
 const result={mode:'test',terminal:'not-run',fee:'not-run',cleanup:[]}
 try{
  const account=await stripe('/account'),balance=await stripe('/balance');assert.equal(account.country,'US');assert.equal(account.default_currency,'usd');assert.equal(balance.livemode,false)
- h=await installation({entry:'tests/dev-worker.ts',network:true,assets:true,bindings:{AUTH_LOCAL:'true',RER_DEV_KEY:randomBytes(32).toString('base64url'),STRIPE_SECRET_KEY:secret},outboundService:async request=>fetch(request.url,{method:request.method,headers:Object.fromEntries(request.headers),...(request.method==='GET'?{}:{body:await request.arrayBuffer()})})})
+ h=await installation({entry:'tests/dev-worker.ts',network:true,assets:true,bindings:{AUTH_LOCAL:'true',RER_DEV_KEY:randomBytes(32).toString('base64url'),STRIPE_SECRET_KEY:secret},outboundService:liveStripe(result)})
  h.person=localPeople(h);await shopSetup(h);const {invoice}=await readyInvoice(h);await h.stepUp()
  const api=async(action,input)=>{const response=await h.request('/api/mallet/stripe/'+action,{method:'POST',body:input}),value=await response.json();if(!response.ok)throw Object.assign(Error('Native Terminal door refused operation'),{code:value.error,providerCode:value.details?.code,providerStatus:value.details?.status});return value}
  await api('connect',{consent:true})
