@@ -5064,11 +5064,11 @@
       "executable": false
     },
     "verification.json": {
-      "sha256": "d6e2b8d886a8df25ca0ca51aacff93b7a4bb1812e90066cda5621442c1065a97",
+      "sha256": "46057a5afbd4efdc4b48235e7e63951721fe83b871c31361e87009ef05d2363c",
       "executable": false
     },
     "VERIFY-WORKFLOW.md": {
-      "sha256": "97d25a60dabe02ab4c30efbe226c8967b8fbac25b39f61467c2ef5a26186261d",
+      "sha256": "cc0fc3001b1de58655f0f8011c7fd8017678e84ad41ac50762dabcb6a9199a8c",
       "executable": false
     },
     "vite.config.ts": {

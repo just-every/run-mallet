@@ -82,11 +82,43 @@
       ]
     },
     {
-      "name": "security-and-operations",
+      "name": "security",
       "browser": true,
       "hosted": false,
       "commands": [
-        "node --test --test-concurrency=1 --test-name-pattern='^(?:GOV-004|GOV-005|GOV-006|OPS-002)' tests/mallet.test.mjs"
+        "node --test --test-concurrency=1 --test-name-pattern='^(?:GOV-004|GOV-005)' tests/mallet.test.mjs"
+      ]
+    },
+    {
+      "name": "retention",
+      "browser": true,
+      "hosted": false,
+      "commands": [
+        "node --test --test-concurrency=1 --test-name-pattern='^GOV-006' tests/mallet.test.mjs"
+      ]
+    },
+    {
+      "name": "operations-core",
+      "browser": true,
+      "hosted": false,
+      "commands": [
+        "node --test --test-concurrency=1 --test-name-pattern='^OPS-002' --test-skip-pattern='1440|390|^OPS-002: native capacity import' tests/mallet.test.mjs"
+      ]
+    },
+    {
+      "name": "operations-browser",
+      "browser": true,
+      "hosted": false,
+      "commands": [
+        "node --test --test-concurrency=1 --test-name-pattern='^OPS-002:.*(?:1440|390)' tests/mallet.test.mjs"
+      ]
+    },
+    {
+      "name": "operations-import",
+      "browser": true,
+      "hosted": false,
+      "commands": [
+        "node --test --test-concurrency=1 --test-name-pattern='^OPS-002: native capacity import' tests/mallet.test.mjs"
       ]
     }
   ],

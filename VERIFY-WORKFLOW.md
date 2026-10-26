@@ -116,3 +116,5 @@ The action pins were checked against the official
 [checkout v7.0.1 release](https://github.com/actions/checkout/releases/tag/v7.0.1)
 and [setup-node v7.1.0 release](https://github.com/actions/setup-node/releases/tag/v7.1.0).
 Their pinned `action.yml` files declare `runs.using: node24`.
+
+The security, retention, operations-core, operations-browser and operations-import shards partition the former combined security and operations selection. All existing registrations remain in push Verify exactly once, with the same 12-minute job limit; the native capacity-import journey has its own job.
