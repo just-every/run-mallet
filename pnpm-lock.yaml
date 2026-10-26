@@ -77,6 +77,9 @@ importers:
       wrangler:
         specifier: 4.129.1
         version: 4.129.1(@cloudflare/workers-types@5.20260908.1)(@types/node@22.20.5)
+      xml-crypto:
+        specifier: 6.1.2
+        version: 6.1.2
 
 packages:
 
@@ -1354,8 +1357,8 @@ packages:
       utf-8-validate:
         optional: true
 
-  xml-crypto@6.4.0:
-    resolution: {integrity: sha512-d21ModhBO/+QWWAmOjyDeQJuHNmsR/HtOxyBchiTbKfGNKuHYwQNd+SlLhwyyrwoAGLp4Qc6BQ7nAtnM47dHSQ==}
+  xml-crypto@6.1.2:
+    resolution: {integrity: sha512-leBOVQdVi8FvPJrMYoum7Ici9qyxfE4kVi+AkpUoYCSXaQF4IlBm1cneTK9oAxR61LpYxTx7lNcsnBIeRpGW2w==}
     engines: {node: '>=16'}
 
   xml-encryption@3.1.0:
@@ -1768,7 +1771,7 @@ snapshots:
       '@xmldom/is-dom-node': 1.0.1
       '@xmldom/xmldom': 0.8.15
       debug: 4.4.3
-      xml-crypto: 6.4.0
+      xml-crypto: 6.1.2
       xml-encryption: 3.1.0
       xml2js: 0.6.2
       xmlbuilder: 15.1.1
@@ -2513,7 +2516,7 @@ snapshots:
 
   ws@8.21.0: {}
 
-  xml-crypto@6.4.0:
+  xml-crypto@6.1.2:
     dependencies:
       '@xmldom/is-dom-node': 1.0.1
       '@xmldom/xmldom': 0.8.15

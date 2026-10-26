@@ -54,7 +54,8 @@
     "miniflare": "5.20260907.0-alpha",
     "typescript": "5.9.3",
     "vite": "8.2.2",
-    "wrangler": "4.129.1"
+    "wrangler": "4.129.1",
+    "xml-crypto": "6.1.2"
   },
   "packageManager": "pnpm@10.12.4",
   "pnpm": {
