@@ -38,7 +38,7 @@ try{
  const observed=await api('event',{eventId:event.id});assert.equal((await api('event',{eventId:event.id})).id,observed.id);assert.equal((await h.state()).records.payment.filter(p=>p.invoiceId===invoice.id).length,1)
  await shot('02-reader-paid');result.terminal='passed';result.paymentIntentId=paymentIntentId;result.eventId=event.id;result.readerId=reader.id;result.deviceType=reader.device_type;result.amountCents=invoice.totals.totalCents
  stage='native-fee'
- for(let attempt=0;attempt<6;attempt++){try{const r=await api('settlement',{checkoutId:checkout.id});result.fee={grossCents:r.grossCents,feeCents:r.feeCents,netCents:r.netCents};break}catch(error){if(error.code!=='STRIPE_SETTLEMENT_PENDING')throw error;await new Promise(r=>setTimeout(r,2000))}}
+ for(let attempt=0;attempt<6;attempt++){try{const r=await api('settlement',{checkoutId:checkout.id});result.fee={balanceTransactionId:r.balanceTransactionId,chargeId:r.chargeId,grossCents:r.grossCents,feeCents:r.feeCents,netCents:r.netCents};break}catch(error){if(error.code!=='STRIPE_SETTLEMENT_PENDING')throw error;await new Promise(r=>setTimeout(r,2000))}}
  await shot('03-reader-fee');stage='complete'
 }catch(error){result.failure={stage,code:error.code??error.name,providerCode:error.providerCode??null,providerStatus:error.providerStatus??null};process.exitCode=1}
 finally{

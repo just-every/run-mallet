@@ -4,6 +4,7 @@ import {shopSetup} from './support/diagnosis-journey.mjs'
 // Held-key proof. Run only through the fleet injector and heavy-slot; never in push Verify.
 import assert from 'node:assert/strict'
 import {chromium} from '@playwright/test'
+import {mkdir} from 'node:fs/promises'
 import {installation} from './harness.mjs'
 import {readyInvoice} from './support/return-journey.mjs'
 const secret=process.env.STRIPE_SECRET_KEY
@@ -49,17 +50,18 @@ try{
  }
  assert.ok(event,'Stripe succeeded event must be available')
  const observed=await api('event',{eventId:event.id});assert.equal(observed.status,'succeeded');assert.equal((await api('event',{eventId:event.id})).id,observed.id)
+ const completedEvents=await stripe('/events?type=checkout.session.completed&limit=50'),completed=completedEvents.data.find(e=>e.data.object.id===cardSession.sessionId);assert.ok(completed);await api('event',{eventId:completed.id});await api('event',{eventId:event.id});result.completedEventId=completed.id
  const payment=(await h.state()).records.payment.filter(p=>p.invoiceId===invoice.id);assert.equal(payment.length,1);assert.equal(payment[0].amountCents,invoice.totals.totalCents)
  result.card='passed';result.paymentIntentId=paymentIntentId;result.eventId=event.id;result.amountCents=payment[0].amountCents
  stage='settlement';let settlement
  for(let attempt=0;attempt<6&&!settlement;attempt++){
   try{settlement=await api('settlement',{checkoutId:cardSession.id})}catch(error){if(error.code!=='STRIPE_SETTLEMENT_PENDING')throw error;await new Promise(r=>setTimeout(r,2000))}
  }
- assert.ok(settlement,'Stripe must supply the charge balance transaction');assert.equal(settlement.grossCents-settlement.feeCents,settlement.netCents);result.fee={grossCents:settlement.grossCents,feeCents:settlement.feeCents,netCents:settlement.netCents};result.payout='not-proved: account automatic payout receipt unavailable'
+ assert.ok(settlement,'Stripe must supply the charge balance transaction');assert.equal(settlement.grossCents-settlement.feeCents,settlement.netCents);result.fee={balanceTransactionId:settlement.balanceTransactionId,chargeId:settlement.chargeId,grossCents:settlement.grossCents,feeCents:settlement.feeCents,netCents:settlement.netCents};result.payout='not-proved: account automatic payout receipt unavailable'
  stage='ach-checkout'
  // The card invoice is paid. A second real repair invoice is required for an ACH checkout.
  const achAsset=await h.command('asset.create',{customerName:'Cedar Bikes',label:'Second repair for ACH test',identifier:'synthetic-mallet-816'}),{invoice:achInvoice}=await readyInvoice(h,{asset:achAsset})
- try{achSession=await api('checkout',{invoiceId:achInvoice.id,version:achInvoice.version,method:'us_bank_account',operationId:crypto.randomUUID(),consent:true});result.ach='hosted-session-created; collection and return not proved'}catch(error){if(error.code!=='STRIPE_PROVIDER'||error.providerStatus!==400)throw error;result.ach={status:'account-refused-hosted-ACH',code:error.providerCode??null,collectionAndReturn:'not-proved'}}
+ try{achSession=await api('checkout',{invoiceId:achInvoice.id,version:achInvoice.version,method:'us_bank_account',operationId:crypto.randomUUID(),consent:true});result.ach='hosted-session-created; collection and return not proved';const bankOpen=await h.request('/app/stripe/checkout/'+achSession.id);assert.equal(bankOpen.status,303);await page.goto(bankOpen.headers.get('location'));await page.waitForLoadState('domcontentloaded');await mkdir('.cache/stripe-ach-sandbox',{recursive:true});for(const width of [1440,390]){await page.setViewportSize({width,height:1000});await page.screenshot({path:'.cache/stripe-ach-sandbox/entry-'+width+'.png',fullPage:true})};result.achControls={inputs:await page.locator('input').evaluateAll(nodes=>nodes.map(n=>({name:n.name,type:n.type}))),buttons:(await page.getByRole('button').allTextContents()).slice(0,20)}}catch(error){if(error.code!=='STRIPE_PROVIDER'||error.providerStatus!==400)throw error;result.ach={status:'account-refused-hosted-ACH',code:error.providerCode??null,collectionAndReturn:'not-proved'}}
  stage='complete'
 }catch(error){result.failure={stage,code:error.code??error.name??'sandbox-failed',providerStatus:error.providerStatus??null,providerCode:error.providerCode??null};process.exitCode=1}
 finally{
