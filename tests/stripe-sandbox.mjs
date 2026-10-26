@@ -67,14 +67,15 @@ try{
  stage='complete'
 }catch(error){result.failure={stage,code:error.code??error.name??'sandbox-failed',providerStatus:error.providerStatus??null,providerCode:error.providerCode??null};process.exitCode=1}
 finally{
- for(const checkout of [cardSession,achSession].filter(Boolean)){
+ const intents=new Set([paymentIntentId,...(result.createdPaymentIntentIds??[])].filter(Boolean))
+ for(const sessionId of new Set([cardSession?.sessionId,achSession?.sessionId,...(result.createdSessionIds??[])].filter(Boolean))){
   try{
-   const session=await stripe('/checkout/sessions/'+encodeURIComponent(checkout.sessionId))
-   if(session.status==='open'){await stripe('/checkout/sessions/'+encodeURIComponent(checkout.sessionId)+'/expire',{});result.cleanup.push('open session expired')}
-   if(session.payment_intent&&!paymentIntentId)paymentIntentId=session.payment_intent
+   const session=await stripe('/checkout/sessions/'+encodeURIComponent(sessionId))
+   if(session.status==='open'){await stripe('/checkout/sessions/'+encodeURIComponent(sessionId)+'/expire',{});result.cleanup.push('open session expired')}
+   if(session.payment_intent)intents.add(session.payment_intent)
   }catch{result.cleanup.push('session cleanup requires inspection');process.exitCode=1}
  }
- if(paymentIntentId){
+ for(const paymentIntentId of intents){
   try{const pi=await stripe('/payment_intents/'+encodeURIComponent(paymentIntentId));if(pi.status==='succeeded'){const refund=await stripe('/refunds',{payment_intent:paymentIntentId});result.cleanup.push('test payment refund '+refund.status)}else if(!['canceled','succeeded'].includes(pi.status)){result.cleanup.push('unpaid Checkout intent remains in provider history')}}catch{result.cleanup.push('refund cleanup requires inspection');process.exitCode=1}
  }
  await browser?.close();await h?.close()

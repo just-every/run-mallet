@@ -1,6 +1,9 @@
 // The real HTTP network boundary: Node has already decoded content compression.
 export const liveStripe=results=>async request=>{
  const response=await fetch(request.url,{method:request.method,headers:Object.fromEntries(request.headers),...(request.method==='GET'?{}:{body:await request.arrayBuffer()})})
+ if(response.ok&&request.method==='POST'&&['/v1/checkout/sessions','/v1/payment_intents'].includes(new URL(request.url).pathname)){
+  const object=await response.clone().json();if(typeof object.id==='string')((new URL(request.url).pathname.endsWith('/sessions')?results.createdSessionIds??=[]:results.createdPaymentIntentIds??=[])).push(object.id)
+ }
  if(!response.ok){
   const body=await response.clone().json().catch(()=>null),error=body?.error,message=typeof error?.message==='string'?error.message:''
   const safe=value=>typeof value==='string'&&/^[a-zA-Z0-9_.\[\]-]{1,120}$/.test(value)?value:null
