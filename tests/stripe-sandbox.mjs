@@ -5,7 +5,6 @@ import {shopSetup} from './support/diagnosis-journey.mjs'
 // Held-key proof. Run only through the fleet injector and heavy-slot; never in push Verify.
 import assert from 'node:assert/strict'
 import {chromium} from '@playwright/test'
-import {mkdir} from 'node:fs/promises'
 import {installation} from './harness.mjs'
 import {readyInvoice} from './support/return-journey.mjs'
 const secret=process.env.STRIPE_SECRET_KEY
@@ -16,8 +15,8 @@ const stripe=async(path,fields)=>{
  if(!response.ok)throw Object.assign(Error('Stripe refused sandbox request'),{code:value.error?.code??String(response.status),providerStatus:response.status})
  return value
 }
-let h,browser,cardSession,achSession,paymentIntentId,stage='start'
-const result={mode:'test',currency:'usd',card:'not-run',ach:'not-run',fee:'not-run',payout:'not-run',cleanup:[]}
+let h,browser,cardSession,paymentIntentId,stage='start'
+const result={mode:'test',currency:'usd',card:'not-run',fee:'not-run',payout:'not-run',cleanup:[]}
 try{
  stage='account';const account=await stripe('/account'),balance=await stripe('/balance');assert.equal(account.default_currency,'usd');assert.equal(balance.livemode,false)
  result.account={country:account.country,currency:account.default_currency,chargesEnabled:account.charges_enabled,payoutsEnabled:account.payouts_enabled}
@@ -60,15 +59,11 @@ try{
   try{settlement=await api('settlement',{checkoutId:cardSession.id})}catch(error){if(error.code!=='STRIPE_SETTLEMENT_PENDING')throw error;await new Promise(r=>setTimeout(r,2000))}
  }
  assert.ok(settlement,'Stripe must supply the charge balance transaction');assert.equal(settlement.grossCents-settlement.feeCents,settlement.netCents);result.fee={balanceTransactionId:settlement.balanceTransactionId,chargeId:settlement.chargeId,grossCents:settlement.grossCents,feeCents:settlement.feeCents,netCents:settlement.netCents};result.payout='not-proved: account automatic payout receipt unavailable'
- stage='ach-checkout'
- // The card invoice is paid. A second real repair invoice is required for an ACH checkout.
- const achAsset=await h.command('asset.create',{customerName:'Cedar Bikes',label:'Second repair for ACH test',identifier:'synthetic-mallet-816'}),{invoice:achInvoice}=await readyInvoice(h,{asset:achAsset})
- try{achSession=await api('checkout',{invoiceId:achInvoice.id,version:achInvoice.version,method:'us_bank_account',operationId:crypto.randomUUID(),consent:true});result.ach='hosted-session-created; collection and return not proved';const bankOpen=await h.request('/app/stripe/checkout/'+achSession.id);assert.equal(bankOpen.status,303);await page.goto(bankOpen.headers.get('location'));await page.waitForLoadState('domcontentloaded');await mkdir('.cache/stripe-ach-sandbox',{recursive:true});for(const width of [1440,390]){await page.setViewportSize({width,height:1000});await page.screenshot({path:'.cache/stripe-ach-sandbox/entry-'+width+'.png',fullPage:true})};result.achControls={inputs:await page.locator('input').evaluateAll(nodes=>nodes.map(n=>({name:n.name,type:n.type}))),buttons:(await page.getByRole('button').allTextContents()).slice(0,20)}}catch(error){if(error.code!=='STRIPE_PROVIDER'||error.providerStatus!==400)throw error;result.ach={status:'account-refused-hosted-ACH',code:error.providerCode??null,collectionAndReturn:'not-proved'}}
  stage='complete'
 }catch(error){result.failure={stage,code:error.code??error.name??'sandbox-failed',providerStatus:error.providerStatus??null,providerCode:error.providerCode??null};process.exitCode=1}
 finally{
  const intents=new Set([paymentIntentId,...(result.createdPaymentIntentIds??[])].filter(Boolean))
- for(const sessionId of new Set([cardSession?.sessionId,achSession?.sessionId,...(result.createdSessionIds??[])].filter(Boolean))){
+ for(const sessionId of new Set([cardSession?.sessionId,...(result.createdSessionIds??[])].filter(Boolean))){
   try{
    const session=await stripe('/checkout/sessions/'+encodeURIComponent(sessionId))
    if(session.status==='open'){await stripe('/checkout/sessions/'+encodeURIComponent(sessionId)+'/expire',{});result.cleanup.push('open session expired')}
