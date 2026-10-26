@@ -18,7 +18,7 @@ export async function identity(request: Request, original: Bindings, options:{pe
   if(!key) throw new HttpError(401,'invalid_agent_key')
   return {actor:{id:key.id,name:key.label,role:'agent'},authority:{sql,params:[hash,now]},bearer:true}
  }
- const session=await operatorAuth(env).getSession(request)
+ const session=await (await operatorAuth(env)).getSession(request)
  if(!session) throw new HttpError(401,'sign_in_required')
  const {operator:o}=session,gate=await gateState(env,session,o.id)
  if(blocked(gate)&&!options.pending)throw new HttpError(403,'second_factor_required','Confirm with your second factor first.')

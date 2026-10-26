@@ -39,6 +39,7 @@ import {calendarFormInput} from './ui/calendar-forms'
 import {waitlistCommand} from './waitlist-door'
 import {internalWaitlistCommands} from './booking-waitlist'
 import {waitlistFormInput} from './ui/waitlist'
+import {enterpriseResponse} from './enterprise/door'
 import {securityResponse} from './strong-auth/door'
 import {connectorsResponse} from './connectors/door'
 import {saveSecret,revokeSecret} from './connectors/secrets'
@@ -254,6 +255,7 @@ export async function malletResponse(request:Request,original:Bindings,execution
 }
 async function workshopResponse(request:Request,original:Bindings,execution:Pick<ExecutionContext,'waitUntil'>):Promise<Response|null> {
  const url=new URL(request.url),path=url.pathname
+ const enterprise=await enterpriseResponse(request,original);if(enterprise)return enterprise
  const stripe=await stripeResponse(request,original);if(stripe)return stripe
  const deliveryEvent=await inspectionReportEventResponse(request,original);if(deliveryEvent)return deliveryEvent
  const customerDoor=await guardLinks(request,original,async()=>{
