@@ -1,6 +1,6 @@
 import {Miniflare,Log,LogLevel,convertV4MiniflareOptions} from 'miniflare'
 import {unstable_splitSqlQuery} from 'wrangler'
-import {build} from 'esbuild'
+import {workerBundle} from './support/worker-bundle.mjs'
 import {createHmac,randomBytes,randomUUID} from 'node:crypto'
 import {mkdtemp,readFile,readdir,rm} from 'node:fs/promises'
 import {tmpdir} from 'node:os'
@@ -11,7 +11,7 @@ import {localHttps} from './support/local-https.mjs'
 const bundles={}
 // entry: the Worker under test; bindings: extra Worker bindings (the demo test sets RER_DEMO).
 export async function installation({entry='tests/worker.ts',bindings={},outboundService,mailService,network=false,assets=false,secureNetwork=false,localhost=false,onScratch}={}) {
- const bundle=bundles[entry]??=await build({entryPoints:[entry],bundle:true,write:false,format:'esm',platform:'neutral',target:'es2022',external:['node:*','cloudflare:*']})
+ const bundle=bundles[entry]??=await workerBundle(entry)
  const directory=await mkdtemp(join(tmpdir(),'mallet-api-')),setup=randomBytes(32).toString('hex'),messages=[]
  let origin='https://127.0.0.1'
  // Everything the Worker logs, kept for tests that prove a secret never reaches a log.
