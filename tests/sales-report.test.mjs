@@ -119,3 +119,40 @@ test('REPORT-001: local calendar boundaries, empty ratios, filter refusal and na
  await h.api('/auth/operator/status',{operatorId:admin.id,status:'inactive'})
  await h.api(path+query,undefined,{as:admin.cookie,status:401})
 }))
+
+test('REPORT-002: higher purchase cost, discounted repair, loaded labor and comeback reconcile margins and recover sources',async()=>{
+ const {profitabilityJourney}=await import('./support/profitability-journey.mjs')
+ await run(h=>profitabilityJourney(h))
+})
+
+test('REPORT-002: incomplete costs stay unavailable and private reports refuse unauthorized or invalid requests',()=>run(async h=>{
+ const {profitabilityFixture,profitPath}=await import('./support/profitability-journey.mjs'),f=await profitabilityFixture(h)
+ const member=await h.person('profit-member@example.test'),key=await h.command('agent.create',{label:'Profit boundary'}),agent={as:'',headers:{authorization:'Bearer '+key.token}}
+ const before=await h.state()
+ for(const options of [{as:'',status:401},{as:f.advisor.cookie,status:403},{as:member.cookie,status:403},{...agent,status:403}]){
+  await h.api(profitPath+f.query,undefined,options)
+  assert.equal((await h.request('/app/reports/profitability'+f.query,options)).status,options.as===''&&!options.headers?303:options.status)
+  assert.equal((await h.request('/app/settings/profitability',options)).status,options.as===''&&!options.headers?303:options.status)
+  await h.command('costRate.set',f.rateInput,options)
+ }
+ assert.equal((await h.state({as:f.advisor.cookie})).records.costRate,undefined)
+ for(const suffix of ['&location=other','&format=csv','&from=2026-02-30','&to=2026-99-01','&to=2000-01-01'])await h.api(profitPath+f.query+suffix,undefined,{status:400})
+ await h.api(profitPath,{}, {status:405});await h.api(profitPath,undefined,{headers:{'sec-fetch-site':'cross-site'},status:403})
+ await h.command('costRate.set',{...f.rateInput,version:1},{status:409})
+ await h.command('costRate.set',{...f.rateInput,version:f.rate.version,effectiveFrom:'not-a-date'},{status:400})
+ assert.deepEqual((await h.state()).records,before.records,'Refused reads and rates change no product data')
+ const asset=await h.command('asset.create',{customerName:'Uncosted Repair',label:'Ford Transit',identifier:'synthetic-mallet-profit-unknown'}),j=await h.command('job.book',{assetId:asset.id,version:asset.version,title:'Untraced part',technicianId:f.owner.id,bayId:'Unknown bay',startAt:'2026-11-04T09:00:00Z',endAt:'2026-11-04T10:00:00Z'})
+ const quote=await authorise(h,await h.command('estimate.prepare',{jobId:j.id,version:j.version,lines:[{kind:'part',description:'Part without cost',quantity:1,unitCents:1000}]}))
+ await h.command('work.record',{jobId:j.id,version:(await currentJob(h,j.id)).version,lineId:quote.revisions[0].lines[0].id,quantity:1})
+ const report=await h.api(profitPath+f.query),unknown=report.repairs.find(r=>r.jobId===j.id)
+ assert.equal(unknown.estimated.grossProfitCents,null);assert.equal(unknown.realized.costCents,null);assert.equal(unknown.realized.grossProfitCents,null)
+ assert.match(unknown.missing.join(' '),/Uncosted part actual/);assert.ok(unknown.missing.includes('No approved invoice'))
+ assert.equal(report.realized.grossProfitCents,null)
+ await h.api('/auth/operator/status',{operatorId:f.advisor.id,status:'inactive'})
+ await h.api(profitPath,undefined,{as:f.advisor.cookie,status:401})
+}))
+
+test('REPORT-002: native cost settings, margins, comparisons and source events at 1440 and 390',async()=>{
+ const {profitabilityBrowser}=await import('./profitability-browser.mjs')
+ await profitabilityBrowser()
+})

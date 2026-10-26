@@ -1,3 +1,4 @@
+import {validateCostRates} from './validate-cost-rates.mjs'
 import { PortabilityError } from '@runeditrun/rer/modules/portability/storage'
 import { validateRecords } from './validate-records.mjs'
 import { validateStock } from './validate-stock.mjs'
@@ -24,6 +25,7 @@ export async function validateStaged({ db, tables, manifest }) {
  }
  const context = { db, tables, table, rejectIf, index }
  await validateRecords(context)
+ await validateCostRates(context)
  await validateFinance(context)
  await validateStock(context)
  await validateMedia(context)

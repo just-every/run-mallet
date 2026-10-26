@@ -1,3 +1,5 @@
+import {profitabilityReport} from './reports/profitability'
+import {profitabilityPage,profitabilitySettings} from './ui/profitability'
 import {reviewCommand,reviewState} from './review-door'
 import {reviewResponse} from './review-customer-door'
 import {internalReviewCommands} from './reviews'
@@ -184,7 +186,7 @@ function visible(s:State,actor:Actor):State {
  if(!human(actor)){const records=Object.fromEntries(Object.entries(s.records).filter(([k])=>!k.startsWith('stock')&&!k.startsWith('purchase')));s={...s,records:{...records,event:(records.event??[]).filter(x=>!x.kind.startsWith('stock.')&&!x.kind.startsWith('purchase.'))}}}
  if(!human(actor))s={...s,records:{...s.records,event:rows(s,'event').filter(e=>!e.kind.startsWith('routing.'))}}
  if(actor.role!=='owner')s={...s,records:{...s.records,payment:rows(s,'payment').map(p=>{if(!p.depositId)return p;const {depositId,evidence,...allocation}=p;return allocation})}}
- if(actor.role!=='owner'){const {payRate:_rates,creditNote:_credits,refund:_refunds,...records}=s.records;s={...s,records:{...records,event:rows(s,'event').filter(x=>!x.kind.startsWith('credit.')&&!x.kind.startsWith('refund.'))}}}
+ if(actor.role!=='owner'){const {costRate:_costRates,payRate:_rates,creditNote:_credits,refund:_refunds,...records}=s.records;s={...s,records:{...records,event:rows(s,'event').filter(x=>!x.kind.startsWith('credit.')&&!x.kind.startsWith('refund.'))}}}
  // Diagnostic notes and customer links are native staff evidence; agents never receive them.
  if(actor.role==='agent'){const {diagnosis:_d,diagnosisLink:_l,diagnosisLinkView:_v,approvalLink:_a,approvalChase:_c,chaseOptOut:_o,chaseTask:_t,...records}=s.records;s={...s,records:{...records,event:rows(s,'event').filter(x=>!x.kind.startsWith('diagnosis'))}}}
  if(actor.role==='agent'){const {routingPolicy:_routingPolicy,routingCase:_routingCase,routingBlocker:_routingBlocker,specialPart:_parts,specialPartNotice:_notices,sublet:_sublets,...records}=s.records;return withoutInspections({...s,records:{...records,event:(records.event??[]).filter(x=>!x.kind.startsWith('sublet.')),invoice:(records.invoice??[]).map(withoutSubletCosts)}})}
@@ -233,7 +235,7 @@ function formInput(data:FormData) {
  if(input.command==='handoff.propose')input.keepHelper=data.get('keepHelper')==='yes'
  if(input.command==='chasePolicy.save'){input.linkDays=Number(input.linkDays);input.reminderDays=String(input.reminderDays??'').split(',').map(d=>d.trim()).filter(Boolean).map(Number)}
  if(input.command.startsWith('specialPart.')){if(input.partVersion!==undefined)input.partVersion=Number(input.partVersion);if(input.source){let source:any;try{source=JSON.parse(input.source)}catch{throw new HttpError(400,'invalid_source')};input.estimateId=source.estimateId;input.revision=source.revision;input.lineId=source.lineId}}
- if(input.command==='payRate.set'){input.centsPerHour=Math.round(Number(input.rate)*100);delete input.rate}
+ if(['payRate.set','costRate.set'].includes(input.command)){input.centsPerHour=Math.round(Number(input.rate)*100);delete input.rate}
  reportFormInput(data,input)
  calendarFormInput(data,input);waitlistFormInput(data,input)
  bookingFormInput(data,input)
@@ -422,6 +424,7 @@ async function workshopResponse(request:Request,original:Bindings,execution:Pick
    if(command.startsWith('time.')&&!input.jobId)return redirect('/app/time')
    // The saved rate is shown in the period the owner was reviewing, not silently today's.
    if(command.startsWith('reportFilter.'))return redirect('/app/reports/'+(result.report==='technicians'?'technicians':'turnaround')+'?'+new URLSearchParams({from:result.from,to:result.to}))
+   if(command==='costRate.set')return redirect('/app/settings/profitability#cost-'+encodeURIComponent(input.technicianId))
    if(command==='payRate.set')return redirect('/app/reports/technicians?'+new URLSearchParams({from:String(input.from??''),to:String(input.to??'')})+'#tech-'+encodeURIComponent(input.technicianId))
    if(command==='rateProfile.save')return redirect('/app/jobs#rate-profiles')
    if(command.startsWith('customer.')||command.startsWith('contact.'))return redirect('/app/accounts?manage=all')
@@ -465,6 +468,16 @@ async function workshopResponse(request:Request,original:Bindings,execution:Pick
   if(historyMatch)return csv(assetHistoryCsv(state,historyMatch[1]),'mallet-service-history')
   const counts:Counts={board:waiting(state).total,jobs:rows(state,'job').filter(j=>repair(state,j).column!=='closed').length},frame=(section:Section,more={})=>({section,counts,...more})
   if(path==='/app'){const board=shopBoard(state,actor,(await operators(env.DB)).names,url.searchParams.get('ro'),boardFilter(url.searchParams));return page('Shop Board',taxNotice(state,actor)+board.body.replace('id="board"',`id="board" data-board-version="${state.version}"`).replace('class="empty-board"',`class="empty-board" data-board-version="${state.version}"`),actor,200,frame('board',{subtitle:board.subtitle,aside:board.aside,liveBoard:true}))}
+  if(['/api/mallet/reports/profitability','/app/reports/profitability','/app/settings/profitability'].includes(path)) {
+   if(actor.role!=='owner')throw new HttpError(403,'owner_required')
+   if(request.method!=='GET')throw new HttpError(405,'get_required')
+   const source=await load(env.DB),names=(await operators(env.DB)).names
+   if(path==='/app/settings/profitability')return page('Profitability settings',profitabilitySettings(rows(source,'costRate'),names),actor,200,frame('jobs'))
+   if(url.searchParams.has('format')&&url.searchParams.get('format')!=='json')throw new HttpError(400,'invalid_report_format')
+   const report=profitabilityReport(source,url.searchParams)
+   if(!await env.DB.prepare(`SELECT 1 AS ok WHERE (${auth.authority.sql})`).bind(...auth.authority.params).first())throw new HttpError(403,'owner_required')
+   return path.startsWith('/api/')?json(report):page('Repair profitability',profitabilityPage(report,names),actor,200,frame('jobs'))
+  }
   if(path==='/api/mallet/reports/turnaround'||path==='/app/reports/turnaround') {
    if(actor.role==='agent')throw new HttpError(403,'staff_required')
    const format=reportFormat(url.searchParams),now=new Date().toISOString()
@@ -509,7 +522,7 @@ async function workshopResponse(request:Request,original:Bindings,execution:Pick
   if(['/app/inventory','/app/inventory/count','/api/mallet/inventory'].includes(path)){if(!human(actor))throw new HttpError(403,'manager_required');if(path.startsWith('/api/'))return json(stockReport(state));return page(path.endsWith('/count')?'Blind stock count':'Stock & receiving',path.endsWith('/count')?countPage():inventoryPage(state),actor,200,frame('inventory'))}
   if(path==='/app/time'){if(actor.role==='agent')throw new HttpError(403,'staff_required');return page('Time & attendance',`<div class="narrow">${timePanel(state,actor,(await operators(env.DB)).names)}</div>`,actor,200,frame('jobs'))}
   if(path==='/app/check-ins'){if(!human(actor))throw new HttpError(403,'manager_required');return page('Counter & after-hours check-ins',checkInQueuePage(state,(await operators(env.DB)).list,actor),actor,200,frame('jobs'))}
-  if(path==='/app/jobs'){const names=(await operators(env.DB)).names;return page('Repair orders',(actor.role!=='agent'?waitingForMe(state,actor)+(human(actor)?'<p><a href="/app/bookings">Online appointments</a> · <a href="/app/check-ins">Counter & after-hours check-in queue</a></p>':'')+'<p><a href="/app/time">My time & attendance</a> · <a href="/app/reports/technicians">Technician efficiency</a> · <a href="/app/reports/turnaround">Turnaround and promises</a></p>':'')+(human(actor)?rateProfilePanel(state,''):'')+specialPartNotices(state,actor)+promisePlan(state,actor,names)+repairOrders(state,names),actor,200,frame('jobs',{subtitle:'Open repair orders by start time, then invoiced visits.'}))}
+  if(path==='/app/jobs'){const names=(await operators(env.DB)).names;return page('Repair orders',(actor.role!=='agent'?waitingForMe(state,actor)+(human(actor)?'<p><a href="/app/bookings">Online appointments</a> · <a href="/app/check-ins">Counter & after-hours check-in queue</a></p>':'')+'<p><a href="/app/time">My time & attendance</a> · <a href="/app/reports/technicians">Technician efficiency</a> · <a href="/app/reports/turnaround">Turnaround and promises</a>'+(actor.role==='owner'?' · <a href="/app/reports/profitability">Repair profitability</a>':'')+'</p>':'')+(human(actor)?rateProfilePanel(state,''):'')+specialPartNotices(state,actor)+promisePlan(state,actor,names)+repairOrders(state,names),actor,200,frame('jobs',{subtitle:'Open repair orders by start time, then invoiced visits.'}))}
   if(path==='/app/customers')return page('Customers',customers(state,actor,url.searchParams.get('type')??'vehicle'),actor,200,frame('customers',{subtitle:'Every customer’s asset and its visits.'}))
   if(path==='/app/approvals')return page('Approvals',(human(actor)?chasePage(state):'')+approvals(state),actor,200,frame('approvals',{subtitle:'Every price, dispatch plan and invoice a person approved, at its exact revision.'}))
   if(path==='/app/tax/custody'||path==='/api/mallet/tax/report'){if(actor.role!=='owner')throw new HttpError(403,'owner_required');return path.startsWith('/api/')?json(jurisdictionReport(state)):page('Tax certificates & invoice report',taxCustodyPage(state),actor,200,frame('tax'))}
