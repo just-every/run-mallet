@@ -7,6 +7,15 @@ export async function validateStripe({get,each}){
   insist(invoice.jobId===checkout.jobId&&invoice.revision===checkout.invoiceRevision&&invoice.totals.totalCents===checkout.invoiceTotalCents&&whole(checkout.amountCents,1)&&checkout.amountCents<=invoice.totals.totalCents&&checkout.accountId===account.accountId&&checkout.livemode===account.livemode&&['card','us_bank_account','card_present'].includes(checkout.method)&&['claiming','open','uncertain','processing','paid','expired','failed'].includes(checkout.status)&&actor(checkout.by,['owner']),'stripe_checkout')
   insist(typeof checkout.operationId==='string'&&!operations.has(checkout.operationId),'stripe_operation');operations.add(checkout.operationId)
  }
+ const returnEvents=new Set(),returnSequences=new Set()
+ for await(const observation of each('stripeReturn')){
+  const checkout=await get('stripeCheckout',observation.checkoutId),payment=await get('payment',observation.paymentId),account=await get('stripeConnection',observation.connectionId),key=observation.accountId+':'+observation.eventId
+  insist(checkout.method==='us_bank_account'&&checkout.invoiceId===observation.invoiceId&&checkout.jobId===observation.jobId&&checkout.paymentIntentId===observation.paymentIntentId&&payment.invoiceId===checkout.invoiceId&&payment.receipt?.paymentIntentId===checkout.paymentIntentId&&payment.verified===true&&account.accountId===observation.accountId&&checkout.accountId===observation.accountId&&checkout.livemode===observation.livemode&&observation.currency==='usd'&&whole(observation.sequence,1)&&!returnSequences.has(observation.sequence)&&!returnEvents.has(key)&&whole(observation.disputedCents,1)&&whole(observation.returnedCents)&&actor(observation.by,['owner'])&&Array.isArray(observation.balanceTransactions),'stripe_return')
+  returnSequences.add(observation.sequence);returnEvents.add(key)
+  let principal=0;const transactionIds=new Set()
+  for(const bt of observation.balanceTransactions){insist(typeof bt.id==='string'&&!transactionIds.has(bt.id)&&(bt.source===null||bt.source===observation.disputeId)&&bt.currency==='usd'&&Number.isSafeInteger(bt.amount)&&Number.isSafeInteger(bt.fee)&&Number.isSafeInteger(bt.net)&&bt.amount-bt.fee===bt.net,'stripe_return_movement');transactionIds.add(bt.id);principal+=bt.amount;insist(Number.isSafeInteger(principal),'stripe_return_sum')}
+  insist(observation.returnedCents===Math.min(observation.disputedCents,payment.amountCents,Math.max(0,-principal)),'stripe_return_principal')
+ }
  const readerOperations=new Set()
  for await(const action of each('stripeReaderAction')){
   const checkout=await get('stripeCheckout',action.checkoutId),account=await get('stripeConnection',action.connectionId),key=action.checkoutId+':'+action.kind

@@ -77,7 +77,7 @@ function paymentReceipt(pi:any,checkout:any){
  if(pi.status!=='succeeded')return null
  const charge=pi.latest_charge
  if(!charge||typeof charge!=='object'||charge.paid!==true||charge.captured!==true||charge.disputed!==false||charge.refunded!==false||charge.amount_refunded!==0||charge.currency!=='usd'||charge.amount!==checkout.amountCents||pi.amount_received!==checkout.amountCents)fail('STRIPE_UNSETTLED','Require captured, unrefunded and undisputed USD funds before allocating payment. Returns need owner review.')
- return {provider:'stripe',invoiceRevision:checkout.invoiceRevision,disputed:false,paymentIntentId:providerId(pi.id,'payment intent'),amountCents:pi.amount_received,currency:'USD',status:'succeeded',captured:true,refunded:false,livemode:pi.livemode,observedAt:new Date().toISOString(),label:'Stripe confirmed captured funds at the recorded time; bank payout is not verified.'}
+ return {provider:'stripe',chargeId:providerId(charge.id,'charge'),invoiceRevision:checkout.invoiceRevision,disputed:false,paymentIntentId:providerId(pi.id,'payment intent'),amountCents:pi.amount_received,currency:'USD',status:'succeeded',captured:true,refunded:false,livemode:pi.livemode,observedAt:new Date().toISOString(),label:'Stripe confirmed captured funds at the recorded time; bank payout is not verified.'}
 }
 export async function reconcileSettlement(env:Bindings,actor:Actor,authority:Authority,input:any){
  const {s,account}=await accountScope(env,actor),checkout=find(s,'stripeCheckout',input.checkoutId)

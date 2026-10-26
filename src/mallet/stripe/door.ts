@@ -1,3 +1,4 @@
+import {returnHandlers} from './return-service'
 import {terminalHandlers} from './terminal'
 import type {Bindings} from '../../auth.server'
 import {runtimeBindings} from '../../auth.server'
@@ -35,7 +36,7 @@ export async function stripeResponse(request:Request,original:Bindings):Promise<
   }
   if(request.method!=='POST')throw new HttpError(405,'method_not_allowed')
   const authority=requireStepUp(auth,true),input=await inputBody(request,api),command=api?path.split('/').at(-1):input.command
-  const handlers:Record<string,Function>={...terminalHandlers,connect:connectStripe,checkout:createCheckout,expire:expireCheckout,event:observeEvent,session:reconcileSession,settlement:reconcileSettlement},handler=handlers[String(command)]
+  const handlers:Record<string,Function>={...returnHandlers,...terminalHandlers,connect:connectStripe,checkout:createCheckout,expire:expireCheckout,event:observeEvent,session:reconcileSession,settlement:reconcileSettlement},handler=handlers[String(command)]
   if(!handler)throw new HttpError(404,'not_found')
   const result=await handler(env,actor,authority,input)
   if(api)return Response.json(result,{headers})

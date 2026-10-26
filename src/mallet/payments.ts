@@ -1,11 +1,13 @@
+import {returnedPrincipal} from './stripe/return-ledger'
 import {event,expectVersion,fail,find,integer,put,rows,text,who,choice,type Handler,type State,type Row} from './model'
 export const depositReferenceUsed=(s:State,reference:string)=>rows(s,'deposit').some(d=>d.reference===reference||(d.refunds??[]).some((r:any)=>r.reference===reference))
 export const paymentCommands=['payment.record','payment.verified'] as const
 export const publicInvoiceSnapshot=(invoice:Row)=>{const {billing,...snapshot}=invoice;return structuredClone(snapshot)}
 export const invoiceBalance=(s:State,i:Row)=>{
  const payments=rows(s,'payment').filter(p=>p.invoiceId===i.id),credits=rows(s,'creditNote').filter(n=>n.invoiceId===i.id),refunds=rows(s,'refund').filter(r=>r.invoiceId===i.id)
- const creditedCents=credits.reduce((n,r)=>n+r.totals.totalCents,0),refundedCents=refunds.filter(r=>(r.redirect?.status??r.status)==='refunded').reduce((n,r)=>n+r.amountCents,0),accountCreditCents=credits.filter(n=>n.destination==='account-credit'||refunds.some(r=>r.creditNoteId===n.id&&r.redirect?.destination==='account-credit')).reduce((n,r)=>n+r.totals.totalCents,0),paidCents=payments.reduce((n,p)=>n+p.amountCents,0)-refundedCents-accountCreditCents
- return {totalCents:i.totals.totalCents,creditedCents,refundedCents,adjustedTotalCents:i.totals.totalCents-creditedCents,paidCents,outstandingCents:Math.max(0,i.totals.totalCents-creditedCents-paidCents),payments}
+ const returnedCents=payments.reduce((n,p)=>n+returnedPrincipal(s,p.id),0)
+ const creditedCents=credits.reduce((n,r)=>n+r.totals.totalCents,0),refundedCents=refunds.filter(r=>(r.redirect?.status??r.status)==='refunded').reduce((n,r)=>n+r.amountCents,0),accountCreditCents=credits.filter(n=>n.destination==='account-credit'||refunds.some(r=>r.creditNoteId===n.id&&r.redirect?.destination==='account-credit')).reduce((n,r)=>n+r.totals.totalCents,0),paidCents=payments.reduce((n,p)=>n+p.amountCents,0)-refundedCents-accountCreditCents-returnedCents
+ return {totalCents:i.totals.totalCents,creditedCents,refundedCents,returnedCents,adjustedTotalCents:i.totals.totalCents-creditedCents,paidCents,outstandingCents:Math.max(0,i.totals.totalCents-creditedCents-paidCents),payments}
 }
 /** Only staff tender allocated to this exact immutable price revision opens handover. */
 export function handoverTender(s:State,invoice:Row){

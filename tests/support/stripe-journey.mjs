@@ -3,7 +3,7 @@ import {shopSetup} from './diagnosis-journey.mjs'
 import assert from 'node:assert/strict'
 import {archive,installation,restore} from '../harness.mjs'
 import {readyInvoice} from './return-journey.mjs'
-export function collectionEdge(){
+export function collectionEdge(offset=0){
  const calls=[],objects=new Map();let session,pi,unavailable=false,wrongAccount=false,lostResponse=false,sequence=0
  const account={id:'synthetic-mallet-801',country:'US',default_currency:'usd',charges_enabled:true,payouts_enabled:true}
  const edge=async request=>{
@@ -14,7 +14,7 @@ export function collectionEdge(){
   if(url.pathname==='/v1/checkout/sessions'&&request.method==='POST'){
    const p=new URLSearchParams(await request.text()),metadata=Object.fromEntries(['mallet_invoice_id','mallet_invoice_revision','mallet_checkout_id'].map(k=>[k,p.get('metadata['+k+']')]))
    assert.equal(p.get('mode'),'payment');assert.equal(p.get('payment_intent_data[metadata][mallet_invoice_id]'),metadata.mallet_invoice_id)
-   sequence++;session={id:'synthetic-mallet-'+(802+sequence*10),status:'open',url:'https://checkout.stripe.com/synthetic-mallet-802',livemode:false,client_reference_id:p.get('client_reference_id'),metadata,amount_total:Number(p.get('line_items[0][price_data][unit_amount]')),currency:'usd',expires_at:Math.floor(Date.now()/1000)+1800,payment_intent:'synthetic-mallet-'+(803+sequence*10)}
+   sequence++;session={id:'synthetic-mallet-'+(802+offset+sequence*10),status:'open',url:'https://checkout.stripe.com/synthetic-mallet-802',livemode:false,client_reference_id:p.get('client_reference_id'),metadata,amount_total:Number(p.get('line_items[0][price_data][unit_amount]')),currency:'usd',expires_at:Math.floor(Date.now()/1000)+1800,payment_intent:'synthetic-mallet-'+(803+offset+sequence*10)}
    pi={id:session.payment_intent,status:'processing',metadata,amount:session.amount_total,amount_received:0,currency:'usd',livemode:false,latest_charge:null}
    return lostResponse?Response.json({error:{code:'synthetic-mallet-896'}},{status:503}):Response.json(session)
   }
@@ -27,7 +27,7 @@ export function collectionEdge(){
  const providerEvent=(id,type='payment_intent.succeeded')=>{objects.set(id,{id,type,livemode:false,data:{object:structuredClone(pi)}});return id}
  return {edge,calls,objects,get session(){return session},get pi(){return pi},setLostResponse(v){lostResponse=v},setUnavailable(v){unavailable=v},setWrongAccount(v){wrongAccount=v},providerEvent,paid(){
   pi.status='succeeded';pi.amount_received=pi.amount;session.status='complete';session.payment_status='paid'
-  pi.latest_charge={id:'synthetic-mallet-804',paid:true,captured:true,disputed:false,refunded:false,amount_refunded:0,currency:'usd',amount:pi.amount,balance_transaction:{id:'synthetic-mallet-805',source:'synthetic-mallet-804',type:'charge',currency:'usd',amount:pi.amount,fee:110,net:pi.amount-110,available_on:Math.floor(Date.now()/1000)+86400}}
+  pi.latest_charge={id:'synthetic-mallet-'+(804+offset),paid:true,captured:true,disputed:false,refunded:false,amount_refunded:0,currency:'usd',amount:pi.amount,balance_transaction:{id:'synthetic-mallet-'+(805+offset),source:'synthetic-mallet-'+(804+offset),type:'charge',currency:'usd',amount:pi.amount,fee:110,net:pi.amount-110,available_on:Math.floor(Date.now()/1000)+86400}}
  }}
 }
 export async function stripeJourney(h,edge){

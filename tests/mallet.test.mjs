@@ -1,3 +1,4 @@
+import {stripeReturnsEdge,stripeReturnsJourney} from './support/stripe-returns-journey.mjs'
 import {terminalEdge,terminalJourney,terminalStoppedJourney} from './support/terminal-journey.mjs'
 import {stripeJourney,stripeStoppedJourney,collectionEdge} from './support/stripe-journey.mjs'
 import {stripeBrowser} from './stripe-browser.mjs'
@@ -437,4 +438,9 @@ test('PAY-001: owner reader collection, authenticated payment and exact replay s
 test('PAY-001: uncertain reader initiation and cancellation reconcile without outbound replay',async()=>{
  const edge=terminalEdge()
  await run(h=>terminalStoppedJourney(h,edge),{bindings:{AUTH_LOCAL:'true',STRIPE_SECRET_KEY:'synthetic-mallet-800'},outboundService:edge.edge})
+})
+
+test('PAY-001: authenticated ACH returns and reinstatement preserve captured payments across replay and recovery',async()=>{
+ const edge=stripeReturnsEdge()
+ await run(h=>stripeReturnsJourney(h,edge),{bindings:{AUTH_LOCAL:'true',STRIPE_SECRET_KEY:'synthetic-mallet-800'},outboundService:edge.edge})
 })
