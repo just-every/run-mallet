@@ -6,6 +6,7 @@ import {digest,HttpError} from '../auth'
 import {configuredSaml,type EnterpriseSaml} from './saml-config'
 import {enterpriseSessionAllowed} from './session'
 import {authorizationRequest,consumeAssertion,clearBindingCookie,metadata} from './saml'
+import {page} from '../ui/shell'
 const headers={'cache-control':'no-store','x-content-type-options':'nosniff','referrer-policy':'no-referrer'}
 async function enabled(env:Bindings,p:EnterpriseSaml){
  const hash=await digest(p.certificate)
@@ -43,7 +44,14 @@ export async function samlResponse(request:Request,original:Bindings):Promise<Re
   if(!match||!provider)throw new HttpError(404,'not_found')
   if(match[2]==='metadata'){if(!['GET','HEAD'].includes(request.method))throw new HttpError(405,'method_not_allowed');return new Response(request.method==='HEAD'?null:metadata(provider),{headers:{...headers,'content-type':'application/samlmetadata+xml'}})}
   return match[2]==='start'?await start(env,provider,request):await callback(env,provider,request)
- }catch(error:any){const out=new Headers({...headers,'content-type':'application/json'});if(provider)out.append('set-cookie',clearBindingCookie(provider));return new Response(JSON.stringify({error:error instanceof HttpError?error.code:'saml_sign_in_refused'}),{status:error instanceof HttpError?error.status:400,headers:out})}
+ }catch(error:any){
+  const status=error instanceof HttpError?error.status:400
+  const response=request.headers.get('accept')?.includes('text/html')
+   ?await page('Sign-in not completed','<section class="card"><p>Sign-in could not be completed. No access was granted. Return to sign-in or contact this shop’s owner.</p><p><a href="/signin">Return to sign-in</a></p></section>',undefined,status)
+   :new Response(JSON.stringify({error:error instanceof HttpError?error.code:'saml_sign_in_refused'}),{status,headers:{...headers,'content-type':'application/json'}})
+  if(provider)response.headers.append('set-cookie',clearBindingCookie(provider))
+  return response
+ }
 }
 export async function samlSignInAuth(env:Bindings,auth:Awaited<ReturnType<typeof operatorAuth>>){
  const choices:(ProviderEntry&{authorizationOrigins:string[]})[]=[]
