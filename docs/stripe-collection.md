@@ -48,9 +48,21 @@ funds; a captured payment uses the refund door. No reader action or payment
 creation is automatically retried. Card-present settlement uses the same
 invoice, authenticated event and fee reconciliation rules as hosted checkout.
 
-PAY-001 remains PARTIAL. Physical reader deployment, ACH returns and disputes, signed
-webhook delivery, bank receipt and the sandbox legs named in the contract Gap
-remain unproved. PAY-005 inherits webhook transport; MONEY-001 inherits disputes
+For a captured ACH payment, reconcile the dispute event on the same invoice
+screen. Mallet independently reads the current dispute, charge, payment intent
+and signed balance transactions. A dispute status alone never changes the
+invoice balance. Confirmed withdrawn principal reopens the amount due; confirmed
+reinstatement can clear that returned principal. The original captured payment
+stays unchanged, and return fees remain separate from principal. Every accepted
+observation is retained. Duplicate and old events read current provider evidence
+and cannot restore stale balances. These read only actions never move money.
+
+PAY-001 remains PARTIAL until the sandbox legs and automatic payout membership
+named in the contract Gap are proved. The held US test account reports payouts
+disabled; a manual test payout cannot establish automatic transaction membership.
+An account eligible for a real scheduled automatic payout is required for that
+proof. Stripe balance availability and payout status do not establish bank
+receipt. PAY-005 inherits webhook transport; MONEY-001 inherits general disputes
 and payout close; BILL-001 inherits recurring agreement authority. None may
 reuse this explicit invoice checkout as permission for an automatic charge.
 
