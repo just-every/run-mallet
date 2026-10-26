@@ -9,6 +9,7 @@ import { authGate } from './mallet/strong-auth/base-gate'
 import { confirmFreshSignIn } from './mallet/strong-auth/sign-in-proof'
 import branding from './branding.json'
 import {samlResponse,samlSignInAuth} from './mallet/enterprise/saml-door'
+import {enterpriseSignInResponse} from './mallet/enterprise/sign-in-response'
 import {enterpriseProviders} from './mallet/enterprise/config'
 import {enterpriseHooks,enterpriseSessionAllowed} from './mallet/enterprise/session'
 
@@ -106,5 +107,5 @@ async function handleAuthResponse(request: Request, original: Bindings): Promise
 export async function authResponse(request: Request, original: Bindings): Promise<Response | null> {
  const response = await handleAuthResponse(request, original)
  if(response)await confirmFreshSignIn(request,original,response)
- return response ? rejectedResponse(request, response) : null
+ return response ? rejectedResponse(request, await enterpriseSignInResponse(request,response,async req=>(await operatorAuth(runtimeBindings(original))).getSession(req))) : null
 }
