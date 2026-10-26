@@ -8,17 +8,18 @@ export async function liveOkta(){
  assert.ok(origin&&admin,'Named Okta org and admin credential required')
  const endpoint=new URL(origin);assert.ok(endpoint.protocol==='https:'&&!endpoint.username&&!endpoint.password&&!endpoint.search&&!endpoint.hash)
  let appId,userId,h
+ const hidden=[origin,admin]
  const receipt={provider:'Okta Integrator',at:new Date().toISOString(),signIn:false,scimNative:false,disabledSessions:false,attribution:false,cleanup:false}
  const api=async(path,{method='GET',body,allowed=[200]}={})=>{
   const r=await fetch(origin+path,{method,redirect:'manual',headers:{authorization:'SSWS '+admin,'content-type':'application/json',accept:'application/json'},...(body?{body:JSON.stringify(body)}:{})})
-  if(!allowed.includes(r.status)){await r.body?.cancel();throw Error('Okta management request refused: HTTP '+r.status)}
+  if(!allowed.includes(r.status)){const error=await r.json();let message=[error.errorCode,error.errorSummary,...(error.errorCauses??[]).map(x=>x.errorSummary)].filter(x=>typeof x==='string').join(' ');for(const value of hidden)if(value)message=message.replaceAll(value,'[redacted]');throw Error('Okta management request refused: HTTP '+r.status+' '+message)}
   if(r.status===204)return null
   const text=await r.text();return text?JSON.parse(text):null
  }
  try{
   h=await installation({outboundService:request=>fetch(request)})
-  const suffix=Date.now().toString(36),email='synthetic-mallet-i818-'+suffix+'@example.com',password='Mallet!aA1'+randomBytes(24).toString('base64url')
-  const app=await api('/api/v1/apps?activate=true',{method:'POST',body:{name:'oidc_client',label:'RER Mallet i818 '+suffix,signOnMode:'OPENID_CONNECT',credentials:{oauthClient:{token_endpoint_auth_method:'client_secret_basic',pkce_required:true}},settings:{oauthClient:{application_type:'web',grant_types:['authorization_code'],response_types:['code'],redirect_uris:[h.origin+'/auth/oidc/enterprise-okta/callback'],consent_method:'TRUSTED'}}}});appId=app.id
+  const suffix=Date.now().toString(36),email='synthetic-mallet-i818-'+suffix+'@example.com',password='A1!z'+randomBytes(24).toString('base64url');hidden.push(password,email)
+  const app=await api('/api/v1/apps?activate=true',{method:'POST',body:{name:'oidc_client',label:'RER Mallet i818 '+suffix,signOnMode:'OPENID_CONNECT',credentials:{oauthClient:{token_endpoint_auth_method:'client_secret_basic',pkce_required:true}},settings:{oauthClient:{application_type:'web',grant_types:['authorization_code'],response_types:['code'],redirect_uris:[h.origin+'/auth/oidc/enterprise-okta/callback'],consent_method:'TRUSTED'}}}});appId=app.id;hidden.push(app.credentials.oauthClient.client_secret)
   const user=await api('/api/v1/users?activate=false',{method:'POST',body:{profile:{firstName:'Taylor',lastName:'Mallet i818',email,login:email},credentials:{password:{value:password}}}});userId=user.id
   await api('/api/v1/users/'+userId+'/lifecycle/activate?sendEmail=false',{method:'POST'})
   await api('/api/v1/apps/'+appId+'/users',{method:'POST',body:{id:userId,scope:'USER'}})
