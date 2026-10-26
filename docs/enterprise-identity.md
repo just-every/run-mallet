@@ -27,3 +27,5 @@ Mallet retains local identity associations and employment status to enforce acce
 ## Evidence boundary
 
 The public-door integration journey uses provider-edge fakes for each OIDC preset while exercising real signature verification, PKCE, provisioning, deactivation, old-cookie refusal, immutable attribution and fresh-owner archive recovery. The SAML journey generates a temporary signing key and exercises actual XML verification, tampering and replay refusal, correlation, local factors, employment revocation and recovery. Browser journeys use the native settings, provider forms and technician repair page at 1440 and 390 pixels. The opt-in held-org journey creates and removes its own Okta app and technician. Its explicit native SCIM calls do not claim Okta’s outbound connector delivered them.
+
+The opt-in held-org callback currently stops at an additional upstream policy or enrollment interaction. Its native SCIM call and complete cleanup do not establish a successful live callback or provider-operated outbound delivery.
