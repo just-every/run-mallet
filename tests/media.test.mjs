@@ -13,7 +13,7 @@ const photo=Buffer.concat([pixel.subarray(0,pixel.length-12),length,type,text,cr
 const path='/api/mallet/media'
 const chunk=(bytes,index)=>{const b=bytes.subarray(index*65536,Math.min(bytes.length,(index+1)*65536));return{sha256:hash(b),base64:b.toString('base64')}}
 
-test('DVI-002 / OPS-001: private original/shared custody, interrupted upload, exact replay, assignment/revocation and full archive recovery',()=>run(async h=>{
+test('DVI-002 and OPS-001: private original and shared custody, interrupted upload, exact replay, assignment and revocation and full archive recovery',()=>run(async h=>{
  const tech=await h.person('brake-tech@example.test'),other=await h.person('other-tech@example.test')
  let {job}=await booking(h,{technicianId:tech.id})
  const started=Date.now(),input={jobId:job.id,clientId:randomUUID(),title:'Front brake pad wear',capturedAt:'2026-10-01T09:15:00-04:00'}

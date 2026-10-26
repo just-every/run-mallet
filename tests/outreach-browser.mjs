@@ -37,7 +37,7 @@ export async function outreachBrowser(){
   const inapplicable=p.locator('form').filter({has:p.locator('input[name="command"][value="decline.inapplicable"]')})
   await inapplicable.getByLabel('Current finding review evidence').fill('Owner inspected the vehicle; this finding no longer applies')
   await shot('declined-inapplicable-review');await inapplicable.getByRole('button',{name:'Finding no longer applies'}).click();await p.waitForLoadState('domcontentloaded');await shot('declined-inapplicable-stopped')
-  assert.ok((await h.state()).records.declinedWork[0].inapplicable);assert.equal(await p.getByRole('heading',{name:'Declined-work email follow-up',exact:true}).locator('..').getByRole('button',{name:'Schedule email'}).count(),0)
+  assert.match(await p.locator('main').innerText(),/Finding no longer applies: Owner inspected the vehicle/);assert.ok((await h.state()).records.declinedWork[0].inapplicable);assert.equal(await p.getByRole('heading',{name:'Declined-work email follow-up',exact:true}).locator('..').getByRole('button',{name:'Schedule email'}).count(),0)
   assert.deepEqual(errors,[])
  }finally{await browser?.close();await h.close()}
 }
