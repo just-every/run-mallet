@@ -1,0 +1,23 @@
+# Enterprise identity
+
+GOV-003 currently provides OIDC sign-in and native SCIM user provisioning. SAML and provider-operated outbound SCIM setup are not implemented or proved. This slice stays PARTIAL pending those requirements and ct approval of the conservative policy below.
+
+The current owner enrolls a second factor, confirms it freshly, and opens Enterprise sign-in from Data & access. An explicit connection approval names one provider, the technician role and this installation’s shop. No claim, email domain or provider group can grant owner or administrator rights. Other roles remain under GOV-001; additional locations remain under SHOP-001.
+
+Configure `MALLET_ENTERPRISE_OIDC` as a private deployment binding containing a JSON array of up to three Base provider configurations, using the `google`, `microsoft` and `okta` presets. IDs start with `enterprise-`. Each entry supplies its client ID and private client authentication material. Microsoft requires a specific tenant. Google’s issuer is fixed; Okta requires its exact organization issuer. Register the exact callback at `/auth/oidc/<provider-id>/callback`. Supply an independent random `OIDC_TRANSACTION_SECRET` of at least 32 characters. Never commit these bindings. The pinned operator-auth OIDC documentation describes client authentication and issuer pinning.
+
+An enabled connection issues a dedicated SCIM bearer token once. Store it only in the authorized provider. The base endpoint is `/scim/v2/<provider-id>`, with `Users` and `ServiceProviderConfig` resources. User creation requires `userName` and `externalId`; the latter must be the exact OIDC subject established by your provider. Where a directory’s identifier differs from its OIDC subject, do not enable that mapping until the directory administrator configures the exact subject. Existing native accounts and cross-provider identity collisions are refused. Email and subject cannot be reassigned by SCIM. The supported role is `technician` and the enterprise extension department is `shop`; other mappings are refused.
+
+The user API supports create, exact user reads, paged lists, exact `userName eq` filters, replace, and PATCH updates for active status and supported profile fields. Removal disables the retained identity. Deactivation invalidates all prior native sessions, provider sessions, integration credentials and staff grants. Reactivation requires a new provider sign-in; old cookies remain invalid. Every product write repeats current employment and connection authority in its transaction. Provider sign-in still owes the shop’s local second-factor policy. Email links cannot bypass enterprise identity.
+
+The owner can rotate the SCIM token or revoke the connection after fresh confirmation. Rotation immediately refuses the previous token. Revocation also disables the connection’s technicians. The deployment’s one-time `rer signin` owner recovery door remains available and is outside SCIM control.
+
+## Data-flow declaration, version 1
+
+Mallet sends the configured identity provider an OIDC authorization request, client identification, callback, nonce and PKCE challenge. Its server exchanges the code with its private client authentication and verifier. The provider returns a signed identity token; access and refresh tokens are not retained. SCIM receives directory identity, name and active status and returns only that connection’s provisioned identities. It never returns repairs, customer data, credentials or another provider’s users.
+
+Mallet retains local identity associations and employment status to enforce access. Audit records retain the approving owner, mapping revision, provisioning source, affected historical actor ID and before and after status. Audit and repair attribution remain in product archives. Identity associations, sessions, provisioning tokens and private provider settings are excluded, so restoring a backup never restores enterprise authority. No repair or attribution is deleted automatically. The shop controls directory retention and must apply its own Google Workspace, Microsoft Entra ID or Okta agreements and licensing before enabling the connection. Holding an OIDC client does not establish a SCIM entitlement.
+
+## Evidence boundary
+
+The public-door integration journey uses provider-edge fakes for each OIDC preset while exercising real signature verification, PKCE, provisioning, deactivation, old-cookie refusal, immutable attribution and fresh-owner archive recovery. The browser journey uses the native settings and technician repair page at 1440 and 390 pixels. The opt-in held-org journey creates and removes its own Okta app and technician. Its explicit native SCIM calls do not claim Okta’s outbound connector delivered them.

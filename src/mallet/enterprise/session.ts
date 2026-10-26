@@ -1,4 +1,5 @@
 import type {Bindings} from '../../auth.server'
+import type {Authority} from '../auth'
 import {configuredProviders} from './config'
 // Every read repeats current employment and exact provider provenance; old native cookies never bypass SSO.
 export async function enterpriseSessionAllowed(env:Bindings,session:any):Promise<boolean>{
@@ -15,3 +16,9 @@ export function enterpriseHooks(env:Bindings){return {
  beforeMagicLink:async({email}:any)=>!await env.DB.prepare('SELECT 1 FROM mallet_enterprise_users WHERE email=?').bind(email).first(),
  afterConfirm:async({session,operator}:any)=>{if(!await enterpriseSessionAllowed(env,{...session,operator}))throw new Error('Enterprise provider sign-in required')}
 }}
+
+export async function enterpriseAuthority(env:Bindings,operatorId:string,sessionId:string,base:Authority):Promise<Authority>{
+ const user=await env.DB.prepare('SELECT 1 FROM mallet_enterprise_users WHERE id=?').bind(operatorId).first()
+ if(!user)return base
+ return {sql:`(${base.sql}) AND EXISTS(SELECT 1 FROM mallet_enterprise_users u JOIN mallet_enterprise_connections c ON c.provider=u.provider JOIN oa_operators owner ON owner.id=c.owner_id JOIN oa_provider_session_pins p ON p.provider_id=c.provider JOIN oa_provider_sessions s ON s.session_id=p.session_id WHERE u.id=? AND u.active=1 AND c.enabled=1 AND owner.status='active' AND owner.role='owner' AND owner.version=c.owner_version AND p.session_id=? AND p.issuer=c.issuer AND p.client_id=c.client_id AND s.issuer=c.issuer AND s.subject=u.external_id)`,params:[...base.params,operatorId,sessionId]}
+}

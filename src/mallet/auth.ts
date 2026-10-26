@@ -1,4 +1,5 @@
 import { operatorAuth, runtimeBindings, type Bindings } from '../auth.server'
+import {enterpriseAuthority} from './enterprise/session'
 import {staffGrant,staffRoute,staffAuthority,type StaffGrant} from './staff'
 import {blocked,gateState,proofAuthority,type Gate} from './strong-auth/gate'
 export type Actor = { id: string; name: string; role: 'owner'|'admin'|'member'|'agent';staff?:StaffGrant }
@@ -24,7 +25,7 @@ export async function identity(request: Request, original: Bindings, options:{pe
  if(blocked(gate)&&!options.pending)throw new HttpError(403,'second_factor_required','Confirm with your second factor first.')
  const base:Authority={sql:"EXISTS(SELECT 1 FROM oa_sessions s JOIN oa_operators o ON o.id=s.operator_id WHERE s.id=? AND s.revoked_at IS NULL AND s.expires_at>? AND s.operator_version=o.version AND o.version=? AND o.status='active' AND o.role=?)",params:[session.id,Date.now(),o.version,o.role]}
  const actor:Actor={id:o.id,name:o.displayName,role:o.role,...(o.role==='member'?{staff:await staffGrant(env.DB,o.id)??undefined}:{})};staffRoute(request,actor)
- return {actor,bearer:false,session:{id:session.id,kind:session.kind},gate,authority:staffAuthority(actor,gate.required||gate.enrolled?proofAuthority(base,session.id):base)}
+ return {actor,bearer:false,session:{id:session.id,kind:session.kind},gate,authority:await enterpriseAuthority(env,o.id,session.id,staffAuthority(actor,gate.required||gate.enrolled?proofAuthority(base,session.id):base))}
 }
 export function originGuard(request:Request, env:Bindings, bearer=false) {
  const url=new URL(request.url), origin=runtimeBindings(env).AUTH_ORIGIN

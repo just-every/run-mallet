@@ -1,3 +1,4 @@
+import {enterpriseBrowser} from './enterprise-browser.mjs'
 import {enterpriseJourney} from './support/enterprise-journey.mjs'
 import {randomBytes} from 'node:crypto'
 import {stripeReturnsEdge,stripeReturnsJourney} from './support/stripe-returns-journey.mjs'
@@ -452,3 +453,5 @@ test('AUTO-004: approved refreshed quote, observed mileage, explicit stop and re
 test('AUTO-001 and AUTO-004: owner schedules and stops email through native forms at 1440 and 390',async()=>{const {outreachBrowser}=await import('./outreach-browser.mjs');await outreachBrowser()})
 
 test('GOV-003: explicit provider sign-in, SCIM employment revocation and repair attribution survive recovery',enterpriseJourney)
+
+test('GOV-003: owner provisions and revokes a technician through native settings at 1440 and 390',enterpriseBrowser)
