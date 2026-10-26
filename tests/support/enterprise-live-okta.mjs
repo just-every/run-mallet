@@ -17,7 +17,7 @@ export async function liveOkta(){
   const text=await r.text();return text?JSON.parse(text):null
  }
  try{
-  h=await installation({outboundService:request=>fetch(request)})
+  h=await installation({outboundService:async request=>{const response=await fetch(request.url,{method:request.method,headers:Object.fromEntries(request.headers),redirect:'manual',...(['GET','HEAD'].includes(request.method)?{}:{body:await request.arrayBuffer()})});return new Response(await response.arrayBuffer(),{status:response.status,headers:response.headers})}})
   const suffix=Date.now().toString(36),email='synthetic-mallet-i818-'+suffix+'@example.com',password='A1!z'+randomBytes(24).toString('base64url');hidden.push(password,email)
   const app=await api('/api/v1/apps?activate=true',{method:'POST',body:{name:'oidc_client',label:'RER Mallet i818 '+suffix,signOnMode:'OPENID_CONNECT',credentials:{oauthClient:{token_endpoint_auth_method:'client_secret_basic',pkce_required:true}},settings:{oauthClient:{application_type:'web',grant_types:['authorization_code'],response_types:['code'],redirect_uris:[h.origin+'/auth/oidc/enterprise-okta/callback'],consent_method:'TRUSTED'}}}});appId=app.id;hidden.push(app.credentials.oauthClient.client_secret)
   const user=await api('/api/v1/users?activate=false',{method:'POST',body:{profile:{firstName:'Taylor',lastName:'Mallet i818',email,login:email},credentials:{password:{value:password}}}});userId=user.id
@@ -30,7 +30,7 @@ export async function liveOkta(){
   const {job}=await booking(h,{technicianId:native.id})
   const authn=await fetch(origin+'/api/v1/authn',{method:'POST',redirect:'manual',headers:{'content-type':'application/json'},body:JSON.stringify({username:email,password})});assert.equal(authn.status,200,'Okta test-user authentication succeeded')
   const auth=await authn.json();if(auth.status!=='SUCCESS'||!auth.sessionToken)throw Error('Okta sign-in needs an org policy or enrollment interaction: '+String(auth.status))
-  const start=await h.request('/auth/oidc/enterprise-okta/start',{method:'POST',as:'',body:{returnTo:'/app/jobs'}});assert.equal(start.status,303,'Mallet started real Okta authorization')
+  const start=await h.request('/auth/oidc/enterprise-okta/start',{method:'POST',as:'',body:{returnTo:'/app/jobs'}});assert.equal(start.status,303,'Mallet started real Okta authorization: '+(start.status===303?'':await start.clone().text()))
   const authorize=new URL(start.headers.get('location'));authorize.searchParams.set('sessionToken',auth.sessionToken);authorize.searchParams.set('prompt','none')
   const response=await fetch(authorize,{redirect:'manual'});if(![302,303].includes(response.status))throw Error('Okta hosted authorization requires browser interaction: HTTP '+response.status)
   const callback=new URL(response.headers.get('location'),origin);if(callback.origin!==h.origin||callback.searchParams.has('error'))throw Error('Okta authorization refused the isolated test app')
