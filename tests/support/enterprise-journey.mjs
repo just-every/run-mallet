@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import {installation,booking,archive,restore} from '../harness.mjs'
+import {installation,booking,archive,restore,assetInput} from '../harness.mjs'
 import {enterpriseProviderEdge,enableConnection,scim} from './enterprise-provider.mjs'
 export async function enterpriseJourney(){
  const edge=enterpriseProviderEdge(),h=await installation({bindings:{MALLET_ENTERPRISE_OIDC:JSON.stringify(edge.providers),OIDC_TRANSACTION_SECRET:'synthetic-mallet-independent-transaction-secret'},outboundService:edge.outbound})
@@ -14,7 +14,7 @@ export async function enterpriseJourney(){
    assert.equal(user.roles[0].value,'technician')
    await scim(h,p,token,'',{method:'POST',body:{userName:'owner@example.test',externalId:'synthetic-mallet-collision'},status:409})
    await scim(h,p,token,'',{method:'POST',body:{userName:'synthetic-mallet-denied@example.com',externalId:'synthetic-mallet-denied',roles:[{value:'owner'}]},status:403})
-   const {job}=await booking(h,{technicianId:user.id,startAt:`2026-11-${10+i}T09:00:00Z`,endAt:`2026-11-${10+i}T10:00:00Z`,bayId:'Bay '+i})
+   const {job}=await booking(h,{asset:await h.command('asset.create',assetInput('enterprise-'+i)),technicianId:user.id,startAt:`2026-11-${10+i}T09:00:00Z`,endAt:`2026-11-${10+i}T10:00:00Z`,bayId:'Bay '+i})
    let {cookie}=await edge.signIn(h,p,externalId,email)
    await h.api('/api/mallet/security/policy',{requireAll:true})
    await h.api('/api/mallet/state',undefined,{as:cookie,status:403})
