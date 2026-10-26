@@ -36,6 +36,7 @@ export async function liveOkta(){
   // Use the supported hosted sign-in path in a fresh profile, never an owner's browser.
   try{
    await page.goto(authorize.href)
+   await page.locator('input[name="identifier"],input[name="username"],input[type="password"]').first().waitFor({state:'visible',timeout:15000})
    for(let step=0;step<4&&new URL(page.url()).origin!==h.origin;step++){
     const username=page.locator('input[name="identifier"],input[name="username"]').first(),pass=page.locator('input[type="password"]').first()
     if(await username.isVisible())await username.fill(email)
@@ -54,13 +55,12 @@ export async function liveOkta(){
   await h.api('/api/mallet/state',undefined,{as:cookie,status:401});await h.api('/auth/session',undefined,{as:cookie,status:401});assert.ok([303,401].includes((await h.request('/app/jobs/'+job.id,{as:cookie})).status));receipt.disabledSessions=true
   assert.equal((await h.state()).records.job.find(j=>j.id===job.id).technicianId,native.id);receipt.attribution=true
  }finally{
-  await browser?.close()
-  if(h)await h.close()
+  const closed=await Promise.allSettled([browser?.close(),h?.close()])
   const cleanup=await Promise.allSettled([
    (async()=>{if(!userId)return;const user=await api('/api/v1/users/'+userId);if(user.status!=='DEPROVISIONED')await api('/api/v1/users/'+userId+'/lifecycle/deactivate?sendEmail=false',{method:'POST'});await api('/api/v1/users/'+userId+'?sendEmail=false',{method:'DELETE',allowed:[204]})})(),
    (async()=>{if(!appId)return;await api('/api/v1/apps/'+appId+'/lifecycle/deactivate',{method:'POST',allowed:[200]});await api('/api/v1/apps/'+appId,{method:'DELETE',allowed:[204]})})(),
   ])
-  receipt.cleanup=cleanup.every(r=>r.status==='fulfilled')
+  receipt.cleanup=cleanup.every(r=>r.status==='fulfilled')&&closed.every(r=>r.status==='fulfilled')
   console.log(JSON.stringify(receipt))
   if(!receipt.cleanup)throw Error('Isolated Okta fixture cleanup did not complete')
  }
