@@ -9,7 +9,7 @@ const cookies=(h,cookie)=>cookie.split('; ').map(pair=>({name:pair.slice(0,pair.
 export async function governanceBrowser(){
  const h=await installation({network:true,secureNetwork:true,assets:true});let browser
  try{
-  browser=await chromium.launch({headless:true,args:['--use-mock-keychain','--password-store=basic']})
+  browser=await chromium.launch({headless:true,...(process.env.MALLET_CHROMIUM?{executablePath:process.env.MALLET_CHROMIUM}:{}),args:['--no-sandbox','--use-mock-keychain','--password-store=basic']})
   const context=await browser.newContext({ignoreHTTPSErrors:true}),p=await context.newPage(),dir=process.env.MALLET_GOVERNANCE_PROOF_DIR??'.cache/governance-browser';await mkdir(dir,{recursive:true})
   p.setDefaultTimeout(8000)
   const use=async cookie=>{await context.clearCookies();await context.addCookies(cookies(h,cookie))}

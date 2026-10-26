@@ -32,8 +32,8 @@ export async function runOutreach(original:Bindings,at:number){
   if(r.status!=='claimed')continue
   let status='skipped',provider='none'
   try{
-   const current=await load(env.DB)
-   if(await authorized(env,r.id)&&!outreachStop(current,rows(current,'outreach').find(x=>x.id===r.id)!,now)){
+   const current=await load(env.DB),handoffNow=new Date(Math.max(at,Date.now())).toISOString()
+   if(await authorized(env,r.id)&&!outreachStop(current,rows(current,'outreach').find(x=>x.id===r.id)!,handoffNow)&&outreachDue(current,r,handoffNow)){
     let content=r.instructions
     if(r.kind==='appointment'){
      const a=rows(current,'appointment').find(a=>a.id===r.subjectId)!
@@ -42,10 +42,11 @@ export async function runOutreach(original:Bindings,at:number){
      const secret=btoa(String.fromCharCode(...crypto.getRandomValues(new Uint8Array(32)))).replaceAll('+','-').replaceAll('/','_').replaceAll('=','')
      await env.DB.prepare('INSERT INTO mallet_booking_reminder_tokens(appointment_id,token_hash) VALUES(?,?)').bind(a.id,await digest(secret)).run()
      content=`${a.service.name}\n${a.service.location}\n${shopTime(a.startAt,a.service.timeZone)}\n${r.instructions}\nReschedule or cancel: ${env.AUTH_ORIGIN}/book/${secret}\nNo repair work or payment is authorized.`
-    }else content+=`\nRefreshed quote: USD ${(r.totalCents/100).toFixed(2)}. Contact the shop to review and book. No work or payment is authorized.`
+    }else if(r.kind==='balance')content=r.content
+    else content+=`\nRefreshed quote: USD ${(r.totalCents/100).toFixed(2)}. Contact the shop to review and book. No work or payment is authorized.`
     const mail=operatorMail(env)
     if(mail){
-     const result=await mail.send({deliveryId:r.id,from:String(env.MAIL_FROM??''),to:[r.to],subject:r.kind==='appointment'?'Your appointment reminder':'Your declined-work follow-up',text:content,html:'<p>'+e(content).replaceAll('\n','<br>')+'</p>',headers:{}})
+     const result=await mail.send({deliveryId:r.id,from:String(env.MAIL_FROM??''),to:[r.to],subject:r.kind==='appointment'?'Your appointment reminder':r.kind==='balance'?'Your invoice balance reminder':'Your declined-work follow-up',text:content,html:'<p>'+e(content).replaceAll('\n','<br>')+'</p>',headers:{}})
      status=['rejected','rate_limited','unavailable'].includes(result.status)?'failed':result.status;provider=result.provider??'mail'
     }else{status='failed';provider='unavailable'}
    }

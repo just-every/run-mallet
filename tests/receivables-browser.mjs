@@ -13,7 +13,7 @@ export async function receivablesBrowser(){
   h.person=publicDoor(h.origin,h.owner).person
   const {account,manager,control,i1,i2,invoice:makeInvoice}=await receivablesFixture(h)
   await h.stepUp()
-  browser=await chromium.launch({headless:true,args:['--use-mock-keychain','--password-store=basic']})
+  browser=await chromium.launch({headless:true,...(process.env.MALLET_CHROMIUM?{executablePath:process.env.MALLET_CHROMIUM}:{}),args:['--no-sandbox','--use-mock-keychain','--password-store=basic']})
   const context=await browser.newContext(),p=await context.newPage(),errors=[];p.on('pageerror',error=>errors.push(error.message))
   await context.addCookies(h.owner.split('; ').map(pair=>({name:pair.slice(0,pair.indexOf('=')),value:pair.slice(pair.indexOf('=')+1),url:h.origin})))
   const directory=process.env.MALLET_RECEIVABLES_PROOF_DIR??'.cache/receivables-browser';await mkdir(directory,{recursive:true})
@@ -50,6 +50,10 @@ export async function receivablesBrowser(){
    await p.goto(ledger)
    await submit('ar.remind',{evidence:'Owner reviewed the current balance and billing recipient',consentEvidence:'Billing contact explicitly requested this exact balance reminder by email'},{invoiceId:invoice.id,checks:['consent']})
    await p.goto(ledger);assert.match(await p.locator('#ar-'+invoice.id).innerText(),/Suppressed in development/);await shot('03b-consented-balance-reminder',width)
+   await submit('outreach.schedule',{dueAt:'2026-11-01T14:00:00Z',expiresAt:'2026-11-02T14:00:00Z',timeZone:'America/New_York',allowedStart:9,allowedEnd:18,instructions:'Exact approved account balance',consentEvidence:'Billing contact requested one scheduled balance email'},{invoiceId:invoice.id,checks:['consent']})
+   await p.goto(ledger);assert.match(await p.locator('#ar-'+invoice.id).innerText(),/Scheduled balance reminder/);await shot('03c-scheduled-balance-reminder',width)
+   await submit('outreach.stop',{reason:'Billing contact canceled this scheduled request'},{invoiceId:invoice.id})
+
    await submit('ar.dispute' ,{evidence:'Fleet disputed the recorded work pending review'},{invoiceId:invoice.id})
    await p.goto(ledger);assert.match(await p.locator('#ar-'+invoice.id).innerText(),/Dispute open/);assert.match(await p.locator('#ar-'+invoice.id).innerText(),/Chasing paused/);await shot('04-dispute-pauses-chasing',width)
    await submit('ar.promise',{promisedOn:'2099-01-03',amountUsd:10,evidence:'Fleet promised ten dollars on the selected UTC date'},{invoiceId:invoice.id})

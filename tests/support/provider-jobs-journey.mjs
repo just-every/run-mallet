@@ -70,6 +70,7 @@ export async function providerJobsJourney(){
    await fresh.cron(new Date(Date.now()+6000).toISOString())
    assert.equal(calls.length,before+1);assert.equal((await fresh.state()).records.payment.filter(p=>p.invoiceId===invoice.id).length,1)
   }finally{await fresh.close()}
+  const jobAudit=(await h.api('/api/mallet/audit?q='+encodeURIComponent('job:'+queued.id))).entries;assert.ok(jobAudit.some(e=>e.action==='job.created'&&e.actor.id===queued.payload.requestedBy.id));assert.ok(jobAudit.some(e=>e.action==='job.state'&&e.evidence.includes('state:succeeded')));assert.ok(!JSON.stringify(jobAudit).includes('synthetic-mallet-90'),'Provider credential never enters the private audit')
   return {queued,failed,done,invoice}
  }finally{await h.close()}
 }

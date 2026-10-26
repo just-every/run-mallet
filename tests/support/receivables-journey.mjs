@@ -76,6 +76,7 @@ export async function receivablesJourney(h){
  await h.command('ar.invoice',assign(i1,{authorizerId:driver.id}),{status:409})
  await h.command('ar.invoice',assign(i1,{po:''}),{status:400})
  const a1=await h.command('ar.invoice',assign(i1)),a2=await h.command('ar.invoice',assign(i2))
+ await scheduledBalances(h,{account,manager,i1,i2})
  const document=await h.command('invoice.issue',{invoiceId:i1.id,version:i1.version,reference:'synthetic-mallet-term-invoice',warrantyTerms:'Shop terms reviewed with fleet accounts',confirm:'issue-invoice'})
  assert.equal(document.snapshot.accountTerms.assignmentId,a1.id);assert.ok(document.content.includes(a1.dueOn));assert.ok(document.content.includes(a1.po));assert.ok(document.content.includes('Van repair part'))
  const optedOut=await h.command('contact.save',{contactId:manager.id,version:manager.version,name:manager.name,email:manager.email,phone:'',communication:'none'})
@@ -126,8 +127,14 @@ export async function receivablesJourney(h){
  await h.command('ar.dispute',{invoiceId:i2.id,version:i2.version,status:'open',evidence:'Fleet disputes second invoice pending work review'})
  await h.command('ar.remind',{...reminderInput,invoiceId:i2.id,version:i2.version,reference:'synthetic-mallet-disputed'},{status:409})
  report=await statement(aged);assert.equal(report.outstandingCents,17000);assert.equal(report.ageing['31–60'],17000);assert.deepEqual(report.invoices.filter(i=>i.chaseEligible).map(i=>i.invoiceId),[i1.id]);assert.equal(report.invoices.find(i=>i.invoiceId===i1.id).balance.outstandingCents,6000)
+ const partialFields={kind:'balance',subjectId:i1.id,version:i1.version,to:manager.email,outstandingCents:6000,consent:true,consentEvidence:'Billing contact requested one exact partial balance email',instructions:'Approved balance',timeZone:'America/New_York',allowedStart:9,allowedEnd:18,dueAt:'2026-11-01T15:00:00Z',expiresAt:'2026-11-02T15:00:00Z'}
+ const partial=await h.command('outreach.schedule',partialFields),partialBefore=h.messages.length
+ await h.cron('2026-11-01T15:00:00Z');assert.equal(h.messages.length,partialBefore+1);assert.match(h.messages.at(-1).text,/USD 60.00/)
+ await h.command('outreach.schedule',{...partialFields,subjectId:i2.id,version:i2.version,outstandingCents:11000},{status:409})
+ const promisedPending=await h.command('outreach.schedule',partialFields)
  const promise=await h.command('ar.promise',{invoiceId:i1.id,version:i1.version,promisedOn:'2099-01-01',amountCents:6000,evidence:'Fleet promised the exact remaining balance'})
  await h.command('ar.remind',{...reminderInput,outstandingCents:6000,reference:'synthetic-mallet-promised'},{status:409})
+ await h.cron('2026-11-01T15:15:00Z');assert.equal((await h.state()).records.outreach.find(r=>r.id===promisedPending.id).status,'stopped','An unexpired promise suppresses scheduled email')
  assert.ok((await statement(promise.promisedOn)).invoices.every(i=>!i.chaseEligible));assert.ok((await statement('2099-01-02')).invoices.find(i=>i.invoiceId===i1.id).chaseEligible)
  await h.command('ar.promise',{invoiceId:i1.id,version:i1.version,promisedOn:'2099-01-01',amountCents:6001,evidence},{status:409})
  const low=await h.command('ar.terms',{...termsInput,limitCents:1000}),third=await f.invoice(3)
@@ -151,4 +158,19 @@ export async function receivablesJourney(h){
   const recovered=await installation();try{await restore(recovered,await archive(failed));assert.deepEqual((await recovered.state()).records.arReminder,(await failed.state()).records.arReminder);assert.equal(recovered.messages.filter(m=>m.subject.startsWith('Balance reminder:')).length,0,'Restore sends no historical reminder')}finally{await recovered.close()}
  }finally{await failed.close()}
  return {...f,a1,a2,check}
+}
+
+async function scheduledBalances(h,{account,manager,i1,i2}){
+ const fields=i=>({kind:'balance',subjectId:i.id,version:i.version,to:manager.email,outstandingCents:11000,consent:true,consentEvidence:'Billing contact explicitly requested this one scheduled balance email',instructions:'Exact approved balance',timeZone:'America/New_York',allowedStart:9,allowedEnd:18,dueAt:'2026-11-01T14:00:00Z',expiresAt:'2026-11-02T14:00:00Z'})
+ const first=await h.command('outreach.schedule',fields(i1)),second=await h.command('outreach.schedule',fields(i2)),before=h.messages.length
+ await h.cron('2026-11-01T13:59:00Z');assert.equal(h.messages.length,before)
+ await h.restart();await Promise.all([h.cron('2026-11-01T14:00:00Z'),h.cron('2026-11-01T14:00:00Z')])
+ assert.equal(h.messages.length,before+2);for(const m of h.messages.slice(before)){assert.equal(m.subject,'Your invoice balance reminder');assert.match(m.text,/USD 110.00/);assert.ok(!m.text.includes('overdue'))}
+ await h.cron('2026-11-01T14:15:00Z');assert.equal(h.messages.length,before+2,'Durable claims prevent duplicate balance email')
+ const pending=await h.command('outreach.schedule',fields(i2));await h.command('ar.dispute',{invoiceId:i2.id,version:i2.version,status:'open',evidence:'Billing contact disputes work'})
+ await h.cron('2026-11-01T14:30:00Z');assert.equal((await h.state()).records.outreach.find(r=>r.id===pending.id).status,'stopped');assert.equal(h.messages.length,before+2)
+ await h.command('ar.dispute',{invoiceId:i2.id,version:i2.version,status:'resolved',evidence:'Billing contact resolved dispute'})
+ const inert=await h.command('outreach.schedule',fields(i2)),fresh=await installation()
+ try{await restore(fresh,await archive(h));await fresh.cron('2026-11-01T15:00:00Z');assert.equal(fresh.messages.filter(m=>m.subject==='Your invoice balance reminder').length,0,'Archived schedules cannot send')}finally{await fresh.close()}
+ await h.command('outreach.stop',{id:inert.id,version:inert.version,reason:'Owner canceled the one-email approval'})
 }

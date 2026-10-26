@@ -14,7 +14,7 @@ export async function outreachBrowser(){
   await context.addCookies(h.owner.split('; ').map(pair=>({name:pair.slice(0,pair.indexOf('=')),value:pair.slice(pair.indexOf('=')+1),url:h.origin})))
   const p=await context.newPage(),errors=[];p.on('pageerror',e=>errors.push(e.message))
   const directory=process.env.MALLET_OPS_PROOF_DIR??'.cache/outreach-browser';await mkdir(directory,{recursive:true})
-  const shot=async name=>{for(const width of [1440,390]){await p.setViewportSize({width,height:1000});assert.ok(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));await p.screenshot({path:join(directory,name+'-'+width+'.png'),fullPage:true})}}
+  const shot=async name=>{for(const width of [1440,390]){await p.setViewportSize({width,height:1000});assert.ok(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));assert.equal(await p.locator('button,a').evaluateAll(nodes=>nodes.filter(n=>n.querySelector('svg,img')&&!n.textContent.trim()&&!n.getAttribute('data-tooltip')).length),0,'Icon-only controls have tooltips');await p.screenshot({path:join(directory,name+'-'+width+'.png'),fullPage:true})}}
   for(const [kind,path,heading]of [['appointment','/app/bookings','Appointment email follow-up'],['declined','/app/jobs/'+declined.job.id,'Declined-work email follow-up']]){
    await p.goto(h.origin+path);await shot(kind+'-before')
    const section=p.getByRole('heading',{name:heading,exact:true}).locator('..'),f=section.locator('form').filter({has:p.locator('input[name="command"][value="outreach.schedule"]')})
@@ -33,6 +33,11 @@ export async function outreachBrowser(){
    await stop.getByRole('button',{name:'Stop follow-up',exact:true}).click();await p.waitForLoadState('domcontentloaded');await shot(kind+'-stopped')
    assert.equal((await h.state()).records.outreach.find(r=>r.kind===kind).status,'stopped')
   }
+  await p.goto(h.origin+'/app/jobs/'+declined.job.id)
+  const inapplicable=p.locator('form').filter({has:p.locator('input[name="command"][value="decline.inapplicable"]')})
+  await inapplicable.getByLabel('Current finding review evidence').fill('Owner inspected the vehicle; this finding no longer applies')
+  await shot('declined-inapplicable-review');await inapplicable.getByRole('button',{name:'Finding no longer applies'}).click();await p.waitForLoadState('domcontentloaded');await shot('declined-inapplicable-stopped')
+  assert.ok((await h.state()).records.declinedWork[0].inapplicable);assert.equal(await p.getByRole('heading',{name:'Declined-work email follow-up',exact:true}).locator('..').getByRole('button',{name:'Schedule email'}).count(),0)
   assert.deepEqual(errors,[])
  }finally{await browser?.close();await h.close()}
 }

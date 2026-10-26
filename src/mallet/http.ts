@@ -194,12 +194,12 @@ async function operators(db:D1Database) {
 const bookingFields=['title','bayId','technicianId','startAt','endAt']
 function formInput(data:FormData) {
  const input:any=Object.fromEntries(data)
- if(input.command==='outreach.schedule'){input.consent=data.has('consent');input.availabilityConfirmed=data.has('availabilityConfirmed');for(const key of ['allowedStart','allowedEnd','quoteVersion'])if(input[key]!==undefined)input[key]=Number(input[key])}
+ if(input.command==='outreach.schedule'){input.consent=data.has('consent');input.availabilityConfirmed=data.has('availabilityConfirmed');for(const key of ['allowedStart','allowedEnd','quoteVersion','outstandingCents'])if(input[key]!==undefined)input[key]=Number(input[key])}
  if(input.command==='reportFilter.schedule'){input.active=data.has('active');input.consent=data.has('consent');input.everyDays=Number(input.everyDays);input.nextAt=String(input.nextAt).endsWith('Z')?input.nextAt:String(input.nextAt)+':00Z'}
  if(input.staffJob!==undefined&&input.command==='estimate.prepare'||input.staffInvoice!==undefined&&input.command==='payment.record'){let source:any;try{source=JSON.parse(input.staffJob??input.staffInvoice)}catch{throw new HttpError(400,'invalid_staff_source')};if(input.command==='estimate.prepare')input.jobId=source.jobId;else input.invoiceId=source.invoiceId;input.version=source.version}
  assetNativeInput(input)
  if(['staff.grant','staff.revoke'].includes(input.command)){for(const key of ['discountBps','spendCents','refundCents','version'])input[key]=Number(input[key]??0);if(input.discountPercent!==undefined)input.discountBps=Math.round(Number(input.discountPercent)*100);if(input.spendUsd!==undefined)input.spendCents=Math.round(Number(input.spendUsd)*100);if(input.refundUsd!==undefined)input.refundCents=Math.round(Number(input.refundUsd)*100)}
- if(retentionCommands.includes(input.command)){input.consent=input.consent==='yes';if(['retention.preview','customer.erase','retention.run'].includes(input.command))input.categories=data.getAll('categories');for(const key of ['mediaDays','personalDays'])if(key in input)input[key]=input[key]===''?null:Number(input[key])}
+ if(retentionCommands.includes(input.command)){input.consent=input.consent==='yes';if(['retention.preview','customer.erase','retention.run'].includes(input.command))input.categories=data.getAll('categories');for(const key of ['mediaDays','personalDays','auditMinimumDays'])if(key in input)input[key]=input[key]===''?null:Number(input[key])}
  for(const name of ['accountVersion','flowVersion','version','itemVersion','revision','quantity','value','dueValue'])if(input[name]!==undefined&&input[name]!=='')input[name]=Number(input[name])
  if(data.has('lineIds') || input.command==='estimate.authorise')input.lineIds=data.getAll('lineIds')
  if(['estimate.prepare','estimate.revise'].includes(input.command)) {
@@ -382,7 +382,8 @@ async function workshopResponse(request:Request,original:Bindings,execution:Pick
    if(command.startsWith('calendar.')||command.startsWith('waitlist.'))return redirect('/app/calendar')
    if(command==='promise.timeZone'&&input.calendarReturn)return redirect('/app/calendar')
    if(command==='booking.attendance')return redirect('/app/reports/turnaround?'+new URLSearchParams({from:String(input.from??''),to:String(input.to??'')}))
-   if(command.startsWith('outreach.'))return redirect(input.returnTo==='declined'?'/app/jobs/'+encodeURIComponent(String(input.jobId)):'/app/bookings')
+   if(command==='decline.inapplicable')return redirect('/app/jobs/'+encodeURIComponent(String(input.jobId)))
+   if(command.startsWith('outreach.'))return redirect(input.returnTo==='receivables'?'/app/receivables?accountId='+encodeURIComponent(String(input.accountId)):input.returnTo==='declined'?'/app/jobs/'+encodeURIComponent(String(input.jobId)):'/app/bookings')
    if(command==='booking.publish'||command==='booking.revokeLink')return redirect('/app/bookings')
    if(command.startsWith('connector.'))return redirect('/app/connectors')
    if(command==='checkin.issue')return page('Customer check-in link',`<section class="card"><p>Share this private seven-day, one-request link directly with the customer. No message, booking or payment has been sent. Anyone holding the link can use it.</p><a href="${e(result.url)}">Open customer check-in</a><pre>${e(result.url)}</pre><p><a href="/app/check-ins">Return to check-in queue</a></p></section>`,actor,200,{section:'jobs'})

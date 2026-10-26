@@ -67,10 +67,15 @@ export async function declinedOutreachJourney(){
   await h.command('reading.record',{jobId:job.id,version:current.version,unit:'miles',stage:'intake',value:1300,observedAt:'2026-10-02T09:00:00Z'})
   await h.cron('2026-11-01T14:15:00Z');assert.equal(h.messages.length,before+1);assert.match(h.messages.at(-1).text,/USD 64.50/);assert.equal((await h.state()).records.outreach.find(r=>r.id===first.id).status,'accepted')
   const next=await h.command('outreach.schedule',fields);await h.command('outreach.stop',{id:next.id,version:next.version,reason:'Customer opted out and booked by phone'});await h.cron('2026-11-01T14:30:00Z');assert.equal(h.messages.length,before+1)
+  const booked=await h.command('outreach.schedule',fields)
+  await booking(h,{asset:(await h.state()).records.asset.find(a=>a.id===item.assetId),bayId:'synthetic-mallet-later',startAt:'2026-11-03T09:00:00Z',endAt:'2026-11-03T10:00:00Z'})
+  await h.cron('2026-11-01T14:35:00Z');assert.equal((await h.state()).records.outreach.find(r=>r.id===booked.id).status,'stopped','A later vehicle booking suppresses pending outreach')
   const third=await h.command('outreach.schedule',fields)
   let sent=await h.command('estimate.markSent',{estimateId:quote.id,version:quote.version,revision:1,method:'printed'})
   await h.command('estimate.authorise',{estimateId:sent.id,version:sent.version,revision:1,lineIds:[],customerName:'Cedar Bikes',method:'signed',evidence:'Customer declined the refreshed quote again'})
   await h.cron('2026-11-01T14:45:00Z');assert.equal((await h.state()).records.outreach.find(r=>r.id===third.id).status,'stopped');assert.equal(h.messages.length,before+1)
+  const reviewed=await h.command('decline.inapplicable',{declinedWorkId:item.id,version:item.version,evidence:'Owner inspected the vehicle and the finding no longer applies'});assert.equal(reviewed.inapplicable.evidence,'Owner inspected the vehicle and the finding no longer applies');assert.deepEqual(reviewed.decision,item.decision)
+  await h.command('outreach.schedule',{...fields,version:reviewed.version},{status:409})
   assert.deepEqual((await h.state()).records.declinedWork[0].decision,item.decision,'Original decision remains immutable')
  }finally{await h.close()}
 }

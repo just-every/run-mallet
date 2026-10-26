@@ -24,7 +24,7 @@ export async function retentionCommand(env:Bindings,actor:Actor,authority:Author
  if(command==='retention.policy'){
   const old=rows(snap.state,'retentionPolicy')[0]
   if(old)expectVersion(old,p.version);else if(p.version!==0)fail('VERSION','A new retention policy needs version zero.')
-  const row={id:old?.id??'shop',version:(old?.version??0)+1,mediaDays:policyDays(p.mediaDays,'media retention days'),personalDays:policyDays(p.personalDays,'personal profile retention days'),mode:'manual',financial:'preserve',authorization:'preserve',reason:text(p.reason,'policy reason',2000),at:now,by,history:old?[...(old.history??[]),{...old,history:undefined}]:[]}
+  const row={id:old?.id??'shop',version:(old?.version??0)+1,auditMinimumDays:p.auditMinimumDays===undefined?(old?.auditMinimumDays??null):policyDays(p.auditMinimumDays,'audit minimum retention label days'),mediaDays:policyDays(p.mediaDays,'media retention days'),personalDays:policyDays(p.personalDays,'personal profile retention days'),mode:'manual',financial:'preserve',authorization:'preserve',reason:text(p.reason,'policy reason',2000),at:now,by,history:old?[...(old.history??[]),{...old,history:undefined}]:[]}
   if(p.consent!==true)fail('RETENTION_CONSENT','Explicitly approve this manual retention policy.',null,400)
   await commit(env,grant,[write('retentionPolicy',row)],snap);return row
  }

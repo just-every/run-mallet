@@ -1,4 +1,5 @@
-import {accountStatement,latestLedger} from '../receivables'
+import {outreachPanel} from './outreach'
+import {balanceReminderContent,accountStatement,latestLedger} from '../receivables'
 import {filingTax} from '../filing-tax'
 import {fail} from '../model'
 import {area,box,e,field,form,money,rows,select,when} from './common'
@@ -26,6 +27,7 @@ export function receivablesPage(s:any,accountId:string,asOf:string){
  if(item.promise)content+=`<p>Promised ${money(item.promise.amountCents)} on ${e(item.promise.promisedOn)}</p>`
  const billingContact=rows(s,'contact').find(c=>c.id===account.billingContactId)
  if(item.chaseEligible&&billingContact?.communication==='email'&&billingContact.email)content+=form('ar.remind',`<p>Send this balance to ${e(billingContact.email)}. This requests payment by the recorded due date; it does not claim the balance is overdue. One attempt per reference; no automatic retry.</p>`+evidence()+area('Explicit email consent evidence','consentEvidence','','required maxlength="2000"')+'<label><input name="consent" type="checkbox" value="yes" required> The billing contact consented to this exact balance reminder.</label>','Send consented balance reminder',{...values,outstandingCents:item.balance.outstandingCents,to:billingContact.email,reference:crypto.randomUUID(),confirm:'send-balance-reminder'})
+ if(item.chaseEligible&&billingContact?.communication==='email'&&billingContact.email)content+='<p>Exact scheduled email: '+e(balanceReminderContent(invoice,item))+'</p>'+outreachPanel(s,'balance',invoice,{returnTo:'receivables',accountId:account.id,to:billingContact.email,outstandingCents:item.balance.outstandingCents})
  for(const reminder of rows(s,'arReminder').filter(r=>r.invoiceId===invoice.id))content+=`<p>Balance reminder ${when(reminder.at)} · ${reminder.status==='accepted'?'Handed to the mail provider':reminder.status==='development'?'Suppressed in development':e(reminder.status)} · ${e(reminder.to)} · ${money(reminder.outstandingCents)}. Delivery is not verified; no automatic retry.</p>`
  content+=form('ar.dispute' ,select('Dispute status','status',[['open','Open dispute'],['resolved','Resolved dispute']])+evidence(),'Record dispute review',values)
  if(item.balance.outstandingCents>0)content+=form('ar.promise',field('Promised UTC date','promisedOn','date','','required')+field('Promised amount (USD)','amountUsd','number','','required min="0.01" step="0.01"')+evidence(),'Record payment promise',values)

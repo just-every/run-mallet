@@ -50,6 +50,7 @@ test('DVI-002 / OPS-001: private original/shared custody, interrupted upload, ex
  assert.deepEqual(upload.received,[0])
  for(let i=1;i<Math.ceil(photo.length/65536);i++)await h.api(path+'/uploads/'+upload.id+'/chunks/'+i,chunk(photo,i),{method:'PUT'})
  upload=await h.api(path+'/uploads/'+upload.id+'/complete',{})
+ const mediaAudit=(await h.api('/api/mallet/audit?action=media.write')).entries;assert.ok(mediaAudit.some(e=>e.actor.id===tech.id&&e.evidence.includes('job:'+job.id)),'Private media writes retain the real actor and repair reference');assert.ok(!JSON.stringify(mediaAudit).includes(photo.toString('base64')),'Audit never copies media bytes')
  assert.equal(upload.complete,true);assert.equal(upload.sha256,hash(photo));assert.equal(upload.by.id,tech.id);assert.equal(upload.capturedAt,finding.capturedAt);assert.ok(Date.parse(upload.receivedAt)>=started)
  const duplicate=await h.api(path+'/uploads',{...originalInput,clientId:randomUUID()});assert.equal(duplicate.id,upload.id)
  await h.api(path+'/uploads',{...originalInput,filename:'changed.png'},{status:409})

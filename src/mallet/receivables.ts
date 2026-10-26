@@ -28,19 +28,11 @@ export const receivables:Handler=(c,command,p)=>{
  if(c.actor.role!=='owner')fail('FORBIDDEN','Only the current owner manages commercial terms, disputes and promises.',null,403)
  const evidence=text(p.evidence,'explicit account instruction and owner review evidence',2000)
  if(command==='ar.reminderClaim'){
-  const invoice=find(c.s,'invoice',p.invoiceId);expectVersion(invoice,p.version)
-  const accountId=creditAccount(c.s,invoice.billing?.accountId);if(!accountId)fail('AR_ACCOUNT','Review an explicit commercial payer first.');const account=find(c.s,'customerAccount',accountId),terms=latestLedger(c.s,'arTerms',r=>r.accountId===accountId)
-  if(!terms?.active||terms.by.id!==c.actor.id||terms.accountVersion!==account.version)fail('AR_TERMS','The current owner must review active terms for the unchanged account.')
-  const item=accountStatement(c.s,accountId,c.now.slice(0,10)).invoices.find(i=>i.invoiceId===invoice.id)
-  if(!item?.chaseEligible||!item.terms)fail('AR_SUPPRESSED','No reminder for a paid, disputed or promised balance, or an invoice without terms.')
-  if(p.outstandingCents!==item.balance.outstandingCents)fail('AR_BALANCE','Review the current outstanding balance before sending.')
-  const contact=find(c.s,'contact',account.billingContactId)
-  if(!account.contactIds.includes(contact.id)||contact.communication!=='email'||!contact.email||p.to!==contact.email)fail('AR_RECIPIENT','Review the current billing contact email and its email preference.')
-  if(p.consent!==true||p.confirm!=='send-balance-reminder')fail('AR_CONSENT','Explicitly confirm consent for this exact balance reminder.')
+  const {invoice,accountId,terms,item,contact}=balanceReminderReview(c.s,c.actor,p,c.now)
   const reference=text(p.reference,'unique reminder reference'),consentEvidence=text(p.consentEvidence,'explicit email consent evidence',2000)
   if(rows(c.s,'arReminder').some(r=>r.reference===reference))fail('AR_REMINDER','This reference has already been claimed; inspect its outcome, never resend automatically.')
-  const content='Your repair shop requests payment of the recorded outstanding balance for invoice '+invoice.number+': USD '+(item.balance.outstandingCents/100).toFixed(2)+'. Balance due '+item.terms.dueOn+'. Please contact the shop about payment or a dispute. Recorded tender is not independent bank verification.'
-  const row=put(c.s,'arReminder',{accountId,invoiceId:invoice.id,invoiceRevision:invoice.revision,jobId:invoice.jobId,assignmentId:item.terms.id,termsId:terms.id,contactId:contact.id,contactVersion:contact.version,to:contact.email,outstandingCents:item.balance.outstandingCents,dueOn:item.terms.dueOn,reference,consentEvidence,evidence,content,status:'unconfirmed',by:who(c),at:c.now})
+  const content=balanceReminderContent(invoice,item)
+  const row=put(c.s,'arReminder',{accountId,invoiceId:invoice.id,invoiceRevision:invoice.revision,jobId:invoice.jobId,assignmentId:item.terms!.id,termsId:terms.id,contactId:contact.id,contactVersion:contact.version,to:contact.email,outstandingCents:item.balance.outstandingCents,dueOn:item.terms!.dueOn,reference,consentEvidence,evidence,content,status:'unconfirmed',by:who(c),at:c.now})
   event(c,command,invoice.jobId,row.id,{});return row
  }
  if(command==='ar.terms'){
@@ -82,4 +74,20 @@ export function openTermsRelease(s:State,invoice:Row,ownerId:string,assignmentId
  if(statement.outstandingCents>terms.limitCents)fail('AR_LIMIT','The current account balance exceeds its approved credit limit.')
  if(account.kind==='fleet'&&(assignment.authorizerId!==account.authorizerId||invoice.billing?.authorizer?.id!==account.authorizerId))fail('FLEET_AUTHORIZER','Review the current fleet authorizer before release on account.')
  return {assignment:structuredClone(assignment),currentApproval:structuredClone(terms),accountId:account.id,accountName:account.name,dueOn:assignment.dueOn,outstandingCents:invoiceBalance(s,invoice).outstandingCents,label:'Released on account terms; balance due '+assignment.dueOn}
+}
+
+export function balanceReminderReview(s:State,actor:{id:string},p:any,now:string){
+  const invoice=find(s,'invoice',p.invoiceId);expectVersion(invoice,p.version)
+  const accountId=creditAccount(s,invoice.billing?.accountId);if(!accountId)fail('AR_ACCOUNT','Review an explicit commercial payer first.');const account=find(s,'customerAccount',accountId),terms=latestLedger(s,'arTerms',r=>r.accountId===accountId)
+  if(!terms?.active||terms.by.id!==actor.id||terms.accountVersion!==account.version)fail('AR_TERMS','The current owner must review active terms for the unchanged account.')
+  const item=accountStatement(s,accountId,now.slice(0,10)).invoices.find(i=>i.invoiceId===invoice.id)
+  if(!item?.chaseEligible||!item.terms)fail('AR_SUPPRESSED','No reminder for a paid, disputed or promised balance, or an invoice without terms.')
+  if(p.outstandingCents!==item.balance.outstandingCents)fail('AR_BALANCE','Review the current outstanding balance before sending.')
+  const contact=find(s,'contact',account.billingContactId)
+  if(!account.contactIds.includes(contact.id)||contact.communication!=='email'||!contact.email||p.to!==contact.email)fail('AR_RECIPIENT','Review the current billing contact email and its email preference.')
+  if(p.consent!==true||p.confirm!=='send-balance-reminder')fail('AR_CONSENT','Explicitly confirm consent for this exact balance reminder.')
+  return {invoice,accountId,terms,item,contact}
+}
+export function balanceReminderContent(invoice:Row,item:any){
+ return 'Your repair shop requests payment of the recorded outstanding balance for invoice '+invoice.number+': USD '+(item.balance.outstandingCents/100).toFixed(2)+'. Balance due '+item.terms!.dueOn+'. Please contact the shop about payment or a dispute. Recorded tender is not independent bank verification.'
 }

@@ -20,6 +20,11 @@ export async function auditJourney(h){
  await h.command('agent.revoke',{id:key.id})
  await h.state({as:admin.cookie,status:401});await h.state({...agent,status:401})
  const report=await h.api('/api/mallet/audit'),entries=report.entries
+ assert.ok(entries.some(e=>e.action==='auth.session.created'&&e.actor.id===member.id),'Ordinary email-link login is retained without session credentials')
+ const retention=await h.command('retention.policy',{version:0,mediaDays:null,personalDays:null,auditMinimumDays:365,reason:'Owner minimum audit retention label; preserve all evidence',consent:true})
+ assert.equal(retention.auditMinimumDays,365);assert.equal((await h.api('/api/mallet/audit')).auditMinimumDays,365)
+ await h.command('retention.policy',{version:retention.version,mediaDays:null,personalDays:null,auditMinimumDays:-1,reason:'Invalid label',consent:true},{status:400})
+
  for(const action of ['estimate.prepare','stock.approveCount','dispatch.prepare','credit.issue','refund.record','auth.mallet:agent.revoked'])assert.ok(entries.some(e=>e.action===action),action)
  const overridden=entries.find(e=>e.action==='estimate.prepare'&&e.actor.id===admin.id)
  assert.ok(overridden);assert.ok(overridden.changes.some(c=>c.kind==='estimate'&&c.id===q.id&&c.beforeRevision===null&&c.afterRevision===1))
