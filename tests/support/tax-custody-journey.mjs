@@ -160,5 +160,6 @@ export async function finishTaxInvoice(h,adjusted){
 
 export async function taxAccountFixture(h){
  const {account,contact}=await creditAccountFixture(h)
- return {account:await h.command('customer.save',{...account,customerId:account.id,kind:'fleet',name:'Synthetic fleet',authorizerId:contact.id}),contact}
+ const manager=await h.command('contact.save',{name:'Synthetic fleet authorizer',email:'synthetic-mallet-355@example.test',phone:'',communication:'none'})
+ return {account:await h.command('customer.save',{...account,customerId:account.id,kind:'fleet',name:'Synthetic fleet',contactIds:[...account.contactIds,manager.id],driverId:contact.id,authorizerId:manager.id}),contact}
 }
