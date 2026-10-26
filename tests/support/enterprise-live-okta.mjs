@@ -45,7 +45,7 @@ export async function liveOkta(){
     await submit.click();await page.waitForLoadState('networkidle')
    }
    if(new URL(page.url()).origin!==h.origin)throw Error('The isolated Okta user needs an additional hosted policy or enrollment interaction')
-  }catch(error){let message=String(error?.message??error);for(const value of hidden)if(value)message=message.replaceAll(value,'[redacted]');throw Error('Okta hosted test-user sign-in: '+message.slice(0,300))}
+  }catch(error){let message=String(error?.message??error);for(const value of hidden)if(value)message=message.replaceAll(value,'[redacted]');message=message.replace(/https?:\/\/[^\s]+/g,'[redacted URL]');throw Error('Okta hosted test-user sign-in: '+message.slice(0,300))}
   const cookie=(await context.cookies(h.origin)).map(value=>value.name+'='+value.value).join('; ');assert.equal((await h.api('/auth/session',undefined,{as:cookie})).operator.id,native.id);receipt.signIn=true
   await h.api('/api/mallet/state',undefined,{as:cookie});assert.equal((await h.request('/app/jobs/'+job.id,{as:cookie})).status,200)
   // The native SCIM door is exercised explicitly; this is not an Okta outbound-connector receipt.
