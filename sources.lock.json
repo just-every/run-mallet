@@ -572,7 +572,7 @@
       "executable": false
     },
     "ACCEPTANCE.md": {
-      "sha256": "65c0976e1e077308de59da92348c34707ac01d7e8e49a9cb3700bcc85426f150",
+      "sha256": "1dc59a5bbc82e6ae7ce9b2dafa87461fda0c8fcebb4b07e2a4ff686f8b081469",
       "executable": false
     },
     "AGENTS.md": {
@@ -584,7 +584,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "90f5f17f063a507f315386257e28761d5ca57bf81284e139cdf1f720d3e2c77b",
+      "sha256": "22fecdd4f94fbcfec6a7cec4f6a8a2ed03f7f204260f54c84228a44c55290b21",
       "executable": false
     },
     "deploy-demo.json": {
@@ -673,6 +673,10 @@
     },
     "docs/performance.md": {
       "sha256": "78c9debd08268d2241e4ac24ee83591bd73d7d84b556a2ea03dea0018cda7c45",
+      "executable": false
+    },
+    "docs/profitability.md": {
+      "sha256": "d1f5909a02447e358894ef0a86f5667d3278aa9f3f6c1ed3255324c834e9cc43",
       "executable": false
     },
     "docs/receivables.md": {
@@ -4672,7 +4676,7 @@
       "executable": false
     },
     "tests/profitability-browser.mjs": {
-      "sha256": "c44244128f9c781c9565bb2f9bd751459e5ba5e93a006a04aee1bd004ff7e27f",
+      "sha256": "185aba6817b03a23f707c4a3e99f22cde77ff5cc3545150c578db2cbd4f63be3",
       "executable": false
     },
     "tests/promise-browser.mjs": {
@@ -4720,7 +4724,7 @@
       "executable": false
     },
     "tests/sales-report.test.mjs": {
-      "sha256": "ab03876bb377925a8a54403775825900c20dc821dc29325e05e911a5fc670366",
+      "sha256": "69491192019f3e2cc01a3764ad8b8058b6c8e0e09e21ad6188d2b93956dbabcb",
       "executable": false
     },
     "tests/sales-tax.test.mjs": {
@@ -4936,7 +4940,7 @@
       "executable": false
     },
     "tests/support/profitability-journey.mjs": {
-      "sha256": "13988177497210f23a65c6d72256b218247a4e0155d78c76feaf6fbf650b1355",
+      "sha256": "56b739ebf4c967b0afb4f90f21ff1a7461e2b6f487d34d04df35fa2029f8b187",
       "executable": false
     },
     "tests/support/promise-journey.mjs": {

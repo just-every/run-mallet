@@ -35,7 +35,7 @@ export async function profitabilityFixture(h){
  const use=await h.command('stock.useLot',await refs({actualId:original.actuals[0].id,lotId:lot.id,quantity:1,reference:'synthetic-mallet-profit-11',reason:'Installed marked supplier pad lot'}))
  await qualityReady(h,await job(h,original.id));original=await h.command('job.complete',await refs())
  let invoice=await h.command('invoice.prepare',await refs());invoice=await h.command('invoice.approve',{invoiceId:invoice.id,version:invoice.version})
- const query='?from='+original.createdAt.slice(0,10)+'&to='+original.createdAt.slice(0,10)
+ const query='?from='+new Date(Date.parse(original.createdAt)-86400000).toISOString().slice(0,10)+'&to='+new Date(Date.parse(original.createdAt)+86400000).toISOString().slice(0,10)
  return {owner,advisor,original,q,part,labor,coreLine,lot,use,invoice,query,rate,rateInput,timer,correct,refs}
 }
 export async function profitabilityJourney(h,{recovery=true}={}){
