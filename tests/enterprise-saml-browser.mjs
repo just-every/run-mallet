@@ -42,7 +42,7 @@ export async function samlBrowser(){
   await tech.getByRole('button',{name:'Continue to workshop'}).click();await tech.getByRole('heading',{name:'Sign-in not completed'}).waitFor();await shot('09a-saml-sign-in-refused',tech)
   invalid=false;await tech.getByRole('link',{name:'Return to sign-in'}).click();await tech.getByRole('button',{name:/Okta SAML/}).click();await tech.getByRole('button',{name:'Continue to workshop'}).click()
   await tech.getByRole('link',{name:'Continue to workshop',exact:true}).waitFor();await shot('09d-saml-confirmed',tech);await tech.getByRole('link',{name:'Continue to workshop',exact:true}).click()
-  try{await tech.waitForURL('**/app/jobs',{timeout:5000})}catch{await shot('09c-saml-admission-stopped',tech);throw Error('SAML admission stopped at '+new URL(tech.url()).pathname+'; '+transport.join(', ')+'; '+errors.join('; '))}
+  try{await tech.waitForURL('**/app',{timeout:5000})}catch{await shot('09c-saml-admission-stopped',tech);throw Error('SAML admission stopped at '+new URL(tech.url()).pathname+'; '+transport.join(', ')+'; '+errors.join('; '))}
   const admitted=(await technician.cookies(h.origin)).map(value=>value.name+'='+value.value).join('; ')
   assert.equal((await h.api('/auth/session',undefined,{as:admitted})).operator.id,user.id)
   await tech.goto(h.origin+'/app/jobs/'+job.id);await shot('10-saml-assigned-repair',tech)

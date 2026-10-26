@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict'
 import {generateKeyPairSync,sign,createHash,randomBytes} from 'node:crypto'
+import {providerHttps} from './provider-https.mjs'
 export function enterpriseProviderEdge(){
  let available=true
  const {privateKey,publicKey}=generateKeyPairSync('rsa',{modulusLength:2048}),jwk={...publicKey.export({format:'jwk'}),kid:'synthetic-mallet-1',alg:'RS256',use:'sig'},pending=new Map()
@@ -17,13 +18,22 @@ export function enterpriseProviderEdge(){
   }
   throw Error('Unexpected provider request')
  }
+ function authorize(subject,email,url){
+  const code=randomBytes(24).toString('base64url'),callback=new URL(url.searchParams.get('redirect_uri'))
+  pending.set(code,{subject,email,nonce:url.searchParams.get('nonce'),challenge:url.searchParams.get('code_challenge'),redirect:callback.href})
+  callback.search=new URLSearchParams({code,state:url.searchParams.get('state')});return callback
+ }
  async function signIn(h,p,subject,email,{status=303}={}){
   const started=await h.request('/auth/oidc/'+p.id+'/start',{method:'POST',as:'',body:{returnTo:'/app/jobs'}});assert.equal(started.status,303,await started.clone().text())
-  const url=new URL(started.headers.get('location')),code=randomBytes(24).toString('base64url'),state=url.searchParams.get('state'),cookie=started.headers.getSetCookie().map(x=>x.split(';')[0]).join('; ')
-  pending.set(code,{subject,email,nonce:url.searchParams.get('nonce'),challenge:url.searchParams.get('code_challenge'),redirect:url.searchParams.get('redirect_uri')})
-  const response=await h.request('/auth/oidc/'+p.id+'/callback?'+new URLSearchParams({code,state}),{as:cookie});assert.equal(response.status,status,await response.clone().text());return {response,cookie:response.headers.getSetCookie().map(x=>x.split(';')[0]).join('; ')}
+  const url=new URL(started.headers.get('location')),callback=authorize(subject,email,url),cookie=started.headers.getSetCookie().map(x=>x.split(';')[0]).join('; ')
+  const response=await h.request(callback.pathname+callback.search,{as:cookie});assert.equal(response.status,status,await response.clone().text());return {response,cookie:response.headers.getSetCookie().map(x=>x.split(';')[0]).join('; ')}
  }
- return {providers,outbound,signIn,setAvailable(value){available=value}}
+ const listen=(subject,email)=>providerHttps((url,request)=>{
+  if(request.method!=='GET'||url.pathname!=='/authorize')return null
+  const callback=authorize(subject,email,url),escape=value=>String(value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))
+  return '<!doctype html><html><body><form method="get" action="'+escape(callback.origin+callback.pathname)+'"><input type="hidden" name="code" value="'+escape(callback.searchParams.get('code'))+'"><input type="hidden" name="state" value="'+escape(callback.searchParams.get('state'))+'"><button>Continue to workshop</button></form></body></html>'
+ })
+ return {providers,outbound,signIn,listen,setAvailable(value){available=value}}
 }
 export const enableConnection=(h,p,overrides={})=>h.api('/api/mallet/enterprise/enable',{provider:p.id,role:'technician',location:'shop',reason:'Explicit fixture directory authority',consent:'yes',...overrides})
 export async function scim(h,p,token,path='',{method='GET',body,status=200}={}){
