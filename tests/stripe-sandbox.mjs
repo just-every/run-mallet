@@ -23,7 +23,7 @@ try{
  h=await installation({entry:'tests/dev-worker.ts',network:true,assets:true,bindings:{AUTH_LOCAL:'true',RER_DEV_KEY:randomBytes(32).toString('base64url'),STRIPE_SECRET_KEY:secret},outboundService:liveStripe(result)})
  const api=async(action,input)=>{
   const response=await h.request('/api/mallet/stripe/'+action,{method:'POST',body:input}),value=await response.json()
-  if(!response.ok)throw Object.assign(Error('Native Stripe door refused the operation'),{code:value.error,providerStatus:value.details?.status,providerCode:value.details?.code})
+  if(!response.ok)throw Object.assign(Error('Native Stripe door refused the operation'),{code:value.error,nativeMessage:value.message,providerStatus:value.details?.status,providerCode:value.details?.code})
   return value
  }
  h.person=localPeople(h);await shopSetup(h)
@@ -60,7 +60,7 @@ try{
  }
  assert.ok(settlement,'Stripe must supply the charge balance transaction');assert.equal(settlement.grossCents-settlement.feeCents,settlement.netCents);result.fee={balanceTransactionId:settlement.balanceTransactionId,chargeId:settlement.chargeId,grossCents:settlement.grossCents,feeCents:settlement.feeCents,netCents:settlement.netCents};result.payout='not-proved: account automatic payout receipt unavailable'
  stage='complete'
-}catch(error){result.failure={stage,code:error.code??error.name??'sandbox-failed',providerStatus:error.providerStatus??null,providerCode:error.providerCode??null};process.exitCode=1}
+}catch(error){result.failure={stage,code:error.code??error.name??'sandbox-failed',nativeMessage:error.nativeMessage??null,providerStatus:error.providerStatus??null,providerCode:error.providerCode??null};process.exitCode=1}
 finally{
  const intents=new Set([paymentIntentId,...(result.createdPaymentIntentIds??[])].filter(Boolean))
  for(const sessionId of new Set([cardSession?.sessionId,...(result.createdSessionIds??[])].filter(Boolean))){
