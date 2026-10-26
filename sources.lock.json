@@ -572,7 +572,7 @@
       "executable": false
     },
     "ACCEPTANCE.md": {
-      "sha256": "2d6d85bbf9b834fb7b7fe303d0e020359efbd8d6a83c74336a1983fd436972e3",
+      "sha256": "5d1a5df7d124860b6a9b90d50683f3268999cdfd7eb6660f3a2d349950d1e7f7",
       "executable": false
     },
     "AGENTS.md": {
@@ -584,7 +584,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "e021112fd5835c4279a71d1fe5aba081ab1efc74d3eb90c5bc9cd98469f23af9",
+      "sha256": "1eb3cccdacd771bc4aaa1ccfe366892835695799c1d84fbe9e005ceb7a810487",
       "executable": false
     },
     "deploy-demo.json": {
@@ -708,7 +708,7 @@
       "executable": false
     },
     "docs/stripe-collection.md": {
-      "sha256": "9604f26684a78602cc4e53980dc198dd0b231a7248c09290159c25d977a0aa74",
+      "sha256": "f610524ac57802e9ff0365fc297293727e4c862f8f250b782d0143252dbf19f4",
       "executable": false
     },
     "docs/supplements.md": {
@@ -2144,7 +2144,7 @@
       "executable": false
     },
     "src/mallet/stripe/service.ts": {
-      "sha256": "96564cb83756b923af7d0207c428bbafd264600188dce945394c02fda994660c",
+      "sha256": "17e4244ea02f3d4c1af3084b6cd3aa78df9811e59c55fd211dc5224c01e6c130",
       "executable": false
     },
     "src/mallet/stripe/settlement-ui.ts": {
@@ -4492,7 +4492,7 @@
       "executable": false
     },
     "tests/mallet.test.mjs": {
-      "sha256": "9dcf80dd58ac7b9fac4d14064740712a9c21221d15f287b49905ecb047a34a96",
+      "sha256": "3f7c34c62c561dc570c543273ec068450db6bffc702e240a7cf698c46b806340",
       "executable": false
     },
     "tests/media-browser.mjs": {
@@ -4579,16 +4579,20 @@
       "sha256": "dae32202dc4097d285f52c49823cec566edd3c14178ed815a50eba986ba3f541",
       "executable": false
     },
+    "tests/stripe-ach-sandbox.mjs": {
+      "sha256": "c2fc81cf0a9c27a6d8631cdb59d33d5e4bc13108edfcdd3cf35abaf69e59cbf2",
+      "executable": false
+    },
     "tests/stripe-browser.mjs": {
       "sha256": "4917db66ae5ec2c53664e3e5bd90081f969cc12b3e020604024a83351693d6f9",
       "executable": false
     },
     "tests/stripe-sandbox.mjs": {
-      "sha256": "e14fbd8b48694694cd73a2a9506fc04eb6923dc5f1168f04204d6c0602d5c01a",
+      "sha256": "f91c0a113f17be8b2e5d20bf34a945cd83bf26a9c213b1428f00365cf8b66e7d",
       "executable": false
     },
     "tests/stripe-terminal-sandbox.mjs": {
-      "sha256": "f3d29c65d42cb1d0810d675ecfb246b5443488e29165069246fb115b6870733a",
+      "sha256": "24e0f32752a7649aeb3f29dfd703eb1497e5d7964c44fdba11c39c7b6b7b4854",
       "executable": false
     },
     "tests/sublet-browser.mjs": {
@@ -4605,6 +4609,10 @@
     },
     "tests/supplier-returns-browser.mjs": {
       "sha256": "f5895e2b76bce1d0be243993da7791ec0e83a2ec126ea0702fcfefde44df9a14",
+      "executable": false
+    },
+    "tests/support/ach-browser-steps.mjs": {
+      "sha256": "71bc7930ca555673ed84d45afd6d5da62967b6fd6a9b1fd6894180a3e37e6f3a",
       "executable": false
     },
     "tests/support/approval-journey.mjs": {
@@ -4728,7 +4736,7 @@
       "executable": false
     },
     "tests/support/local-people.mjs": {
-      "sha256": "a5e29a2b7d41abed2a4a5f614ae7200aa850b4d0dccf66bee52bf61f684b55cb",
+      "sha256": "a0631847327adcb032ead78aef5ae9dc1f610d0d1bc8a1d267ef789b8622a285",
       "executable": false
     },
     "tests/support/parts-browser.mjs": {
@@ -4839,6 +4847,10 @@
       "sha256": "6655589c8b71e2ad4da8524764be163f9b644458981e0d89d26c7c569ba632c2",
       "executable": false
     },
+    "tests/support/stripe-live.mjs": {
+      "sha256": "845485e96dc8bdac743edccc3736a70b24b326d5d5d291cc6956b87c5b36d2c1",
+      "executable": false
+    },
     "tests/support/stripe-returns-journey.mjs": {
       "sha256": "4306b8d3a3a64d1855aa26445654c1be6d7f1bf3ba61bd0b3986b0061cb07203",
       "executable": false
@@ -4876,7 +4888,7 @@
       "executable": false
     },
     "tests/support/terminal-journey.mjs": {
-      "sha256": "34ea29c3a63b6d7c56c08386854fb865b9ad83a03b90b9234fc2d465f3139e17",
+      "sha256": "ae80751e4e797fbd6bf799a0168d35122e6d63f24bcf56fe4948524ad6ce9ec4",
       "executable": false
     },
     "tests/support/time-journey.mjs": {
