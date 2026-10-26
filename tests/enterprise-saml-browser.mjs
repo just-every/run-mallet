@@ -23,16 +23,21 @@ export async function samlBrowser(){
   await page.getByLabel('Reason for this change').fill('Approve our workshop SAML directory');await page.getByLabel('I authorize this provider to provision technicians in this shop only.').check();await page.getByRole('button',{name:'Enable provisioning'}).click();const token=await page.getByLabel('New SCIM bearer token').inputValue()
   const subject='synthetic-mallet-browser-saml',user=await scim(h,provider,token,'',{method:'POST',status:201,body:{userName:'synthetic-mallet-saml-browser@example.test',externalId:subject,displayName:'Morgan Reed',active:true}}),{job}=await booking(h,{technicianId:user.id})
   const technician=await browser.newContext({ignoreHTTPSErrors:true}),tech=await technician.newPage()
+  const transport=[],errors=[]
+  tech.on('response',response=>transport.push(new URL(response.url()).pathname+':'+response.status()))
+  tech.on('console',message=>{if(message.type()==='error')errors.push(message.text().replace(/https?:\/\/[^\s"']+/g,'[URL]'))})
   // Only the external IdP is controlled. The browser submits the real signed POST
   // response across origins, including the request cookie and native admission.
   let invalid=true
-  await tech.route(provider.ssoUrl+'?**',async route=>{
+  await tech.route(url=>url.origin===new URL(provider.ssoUrl).origin,async route=>{
    const url=new URL(route.request().url()),xml=inflateRawSync(Buffer.from(url.searchParams.get('SAMLRequest'),'base64')).toString('utf8'),request=new DOMParser().parseFromString(xml,'text/xml').documentElement
    const response=edge.issue(h,provider,{id:request.getAttribute('ID')},subject,invalid?{audience:samlEndpoints(h,provider).audience+'-other-shop'}:{})
    await route.fulfill({contentType:'text/html',body:'<!doctype html><html><body><form method="post" action="'+escape(samlEndpoints(h,provider).acs)+'"><input name="SAMLResponse" type="hidden" value="'+Buffer.from(response).toString('base64')+'"><button>Continue to workshop</button></form></body></html>'})
   })
   await tech.goto(h.origin+'/signin?returnTo='+encodeURIComponent('/app/jobs/'+job.id));await tech.getByRole('button',{name:/Okta SAML/}).waitFor();await shot('09-saml-sign-in',tech)
-  await tech.getByRole('button',{name:/Okta SAML/}).click();await tech.getByRole('button',{name:'Continue to workshop'}).click();await tech.getByRole('heading',{name:'Sign-in not completed'}).waitFor();await shot('09a-saml-sign-in-refused',tech)
+  await tech.getByRole('button',{name:/Okta SAML/}).click()
+  try{await tech.getByRole('button',{name:'Continue to workshop'}).waitFor({timeout:5000})}catch{await shot('09b-saml-start-stopped',tech);throw Error('SAML redirect stopped at '+new URL(tech.url()).pathname+'; '+transport.join(', ')+'; '+errors.join('; '))}
+  await tech.getByRole('button',{name:'Continue to workshop'}).click();await tech.getByRole('heading',{name:'Sign-in not completed'}).waitFor();await shot('09a-saml-sign-in-refused',tech)
   invalid=false;await tech.getByRole('link',{name:'Return to sign-in'}).click();await tech.getByRole('button',{name:/Okta SAML/}).click();await tech.getByRole('button',{name:'Continue to workshop'}).click();await tech.waitForURL('**/app');await tech.goto(h.origin+'/app/jobs/'+job.id);await shot('10-saml-assigned-repair',tech)
   await scim(h,provider,token,'/'+user.id,{method:'PATCH',body:{Operations:[{op:'replace',path:'active',value:false}]}})
   await tech.reload();assert.ok(tech.url().includes('/signin'));await shot('11-saml-old-session-refused',tech)
