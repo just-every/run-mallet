@@ -19,7 +19,7 @@ export async function enterpriseJourney(){
    assert.equal((await h.api('/auth/session',undefined,{as:cookie})).operator.id,user.id)
    assert.ok((await h.api('/api/mallet/state',undefined,{as:cookie})).records.job.some(j=>j.id===job.id))
    assert.equal((await h.request('/app/jobs/'+job.id,{as:cookie})).status,200)
-   const wrong=await edge.signIn(h,p,'synthetic-mallet-unmapped',email,{status:403});assert.equal(wrong.cookie,'')
+   const wrong=await edge.signIn(h,p,'synthetic-mallet-unmapped',email,{status:403});await h.api('/auth/session',undefined,{as:wrong.cookie,status:401})
    const forged=await h.signInAs(email);await h.api('/auth/session',undefined,{as:forged,status:401});await h.api('/auth/operators',undefined,{as:forged,status:401});await h.api('/api/mallet/state',undefined,{as:forged,status:401})
    const mail=h.messages.length;await h.api('/auth/magic-link',{email},{as:'',status:202});assert.equal(h.messages.length,mail)
    const filtered=await scim(h,p,token,'?filter='+encodeURIComponent('userName eq '+JSON.stringify(email)));assert.equal(filtered.totalResults,1);assert.equal(filtered.Resources[0].id,user.id)
