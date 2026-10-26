@@ -4,6 +4,7 @@ import {area,box,e,field,form,money,rows,select,when} from './common'
 import {flowRecord} from '../flow'
 import {handoverTender,invoiceBalance} from '../payments'
 import {readings} from '../mileage'
+import {reviewPanel} from './reviews'
 export function returnFormInput(data:FormData,input:any){
  if(input.command==='return.delegate')input.consent=data.get('consent')==='yes'
  if(input.invoiceRevision!==undefined)input.invoiceRevision=Number(input.invoiceRevision)
@@ -15,7 +16,7 @@ export function handoverReceipt(r:any){
 export function returnPage(s:any,job:any,actor:any){
  const invoice=rows(s,'invoice').find(i=>i.jobId===job.id),collection=flowRecord(s,job.id)?.collection,receipt=rows(s,'handover').find(r=>r.jobId===job.id)
  let body=`<p><a href="/app/jobs/${e(job.id)}">Back to repair</a> · <a href="/app/jobs/${e(job.id)}/intake">Condition & custody checklists</a></p><p>Complete current quality clearance, ${requiresReturnReading(job.asset)?assetType(job.asset)==='equipment'?'record hours-out, and ': 'record mileage-out, and ':''}have the actual collector acknowledge every custody item. Customer-authorized delegates require retained evidence. Staff-recorded cash, check or other tender can permit release for the exact invoice revision; Mallet does not verify those funds. Stripe evidence is rechecked at handover.</p>`
- if(receipt)return `<div class="narrow">${body}<p><a href="/app/handovers/${e(receipt.id)}/print">Print or save handover receipt</a></p>${handoverReceipt(receipt)}</div>`
+ if(receipt)return `<div class="narrow">${body}<p><a href="/app/handovers/${e(receipt.id)}/print">Print or save handover receipt</a></p>${handoverReceipt(receipt)}${reviewPanel(s,job,actor)}</div>`
  if(collection)return `<div class="narrow">${body}${box('Historical staff collection','<p>This earlier collection was recorded before documented handover shipped. No payment, key or identity verification is inferred from it.</p>')}</div>`
  if(!invoice||!['approved','exported'].includes(invoice.status))return `<div class="narrow">${body}${box('Invoice approval needed','<p>Complete the quality-cleared repair and approve its invoice before handover.</p>')}</div>`
  const balance=invoiceBalance(s,invoice),tender=handoverTender(s,invoice),delegates=rows(s,'returnDelegate').filter(d=>d.jobId===job.id&&!d.revoked),comparisons=rows(s,'intakeComparison').filter(r=>r.jobId===job.id).filter(r=>!rows(s,'intakeComparison').some(other=>other.intakeId===r.intakeId&&(other.n??0)>(r.n??0))),out=readings(s,job.assetId).filter(r=>r.jobId===job.id&&r.stage==='out'),overrides=rows(s,'returnOverride').filter(r=>r.jobId===job.id&&r.expiresAt>new Date().toISOString())

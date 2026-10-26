@@ -459,3 +459,7 @@ test('GOV-003: owner provisions and revokes a technician through native settings
 test('GOV-003: signed SAML admission, employment revocation and repair attribution survive recovery',async()=>{const {samlJourney}=await import('./support/saml-journey.mjs');await samlJourney()})
 
 test('GOV-003: signed SAML browser admission and old-session refusal at 1440 and 390',async()=>{const {samlBrowser}=await import('./enterprise-saml-browser.mjs');await samlBrowser()})
+
+test('AUTO-005: paid collection permits one consented review handoff with private and inert recovery',async()=>{const {reviewDeliveryJourney}=await import('./support/reviews-journey.mjs');await reviewDeliveryJourney()})
+test('AUTO-005: poor private feedback keeps the public invitation and creates an owner task with erasure and recovery',async()=>{const {reviewFeedbackJourney}=await import('./support/reviews-journey.mjs');await reviewFeedbackJourney()})
+test('AUTO-005: owner request, customer feedback and completed-repair task through native forms at 1440 and 390',async()=>{const {reviewsBrowser}=await import('./reviews-browser.mjs');await reviewsBrowser()})

@@ -4,7 +4,7 @@ import type {Bindings} from '../../auth.server'
 import {runtimeBindings} from '../../auth.server'
 import {digest} from '../auth'
 const WINDOW=15*60*1000,LIMIT=20
-const family=(path:string)=>path.match(/^\/(approve|inspection|intake|check-in|book)\/[^/]+/)?.[1]??(/^\/portal\/confirm\//.test(path)?'portal':null)
+const family=(path:string)=>path.match(/^\/(approve|inspection|intake|check-in|book|review)\/[^/]+/)?.[1]??(/^\/portal\/confirm\//.test(path)?'portal':null)
 /** Run the customer-link doors for a link path; count misses per client and door, and refuse a client past its allowance. */
 export async function guardLinks(request:Request,original:Bindings,doors:()=>Promise<Response|null>):Promise<Response|null>{
  const kind=family(new URL(request.url).pathname)

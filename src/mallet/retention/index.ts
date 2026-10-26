@@ -1,3 +1,4 @@
+import {revokeReviewAccess} from './reviews'
 import type {Bindings} from '../../auth.server'
 import type {Actor,Authority} from '../auth'
 import {choice,expectVersion,fail,find,integer,object,rows,text,type Row} from '../model'
@@ -48,7 +49,7 @@ export async function retentionCommand(env:Bindings,actor:Actor,authority:Author
  if(p.fingerprint!==reviewed.value.fingerprint)fail('RETENTION_PREVIEW','Preview and approve the exact current retention candidates before deletion.')
  const reason=text(p.reason,'erasure reason',2000),consentEvidence=text(p.consentEvidence,'explicit request or retention approval evidence',2000),id=crypto.randomUUID()
  let receipt:Row={id,version:1,action:command,customerId:reviewed.scope.customerId,at:now,by,reason,consentEvidence,consent:true,fingerprint:reviewed.value.fingerprint,planned:reviewed.value.counts,held:reviewed.value.held,retained:reviewed.value.retained,phase:'started',counts:{unlockKeys:0,importProfiles:0}}
- await commit(env,grant,[write('retentionReceipt',receipt)],snap)
+ await commit(env,grant,[...revokeReviewAccess(reviewed.scope),write('retentionReceipt',receipt)],snap)
  let unlockKeys=0
  try{
  // A request is durably audited before destroying external keys. The key purge
