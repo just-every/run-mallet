@@ -572,7 +572,7 @@
       "executable": false
     },
     "ACCEPTANCE.md": {
-      "sha256": "3eb2856b51a9e7a1096f8a64920c855b99bb4fa2b3ce8a574e89465baa7e4759",
+      "sha256": "15dac29f583f2da45242d4e0e07bc3b94ad0736b5e218036466e0907e945cda9",
       "executable": false
     },
     "AGENTS.md": {
@@ -584,7 +584,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "43f042ee74047a9400b853ca126c1059341d47edebda683c6d6c720067b6bbb7",
+      "sha256": "8458b3f3bf5f456437e6292c9138ff9c1934b6c4ef621961d40ce0b267ad3a55",
       "executable": false
     },
     "deploy-demo.json": {
@@ -632,7 +632,7 @@
       "executable": false
     },
     "docs/enterprise-identity.md": {
-      "sha256": "0aa44cc06a89fd1080210b49e7c017af7f3d15e1a899a623e091a10b258b104c",
+      "sha256": "663470f319da14fdc00ef0d0066f99d2e09a9f0048610fab081317b75c572809",
       "executable": false
     },
     "docs/getting-started.md": {
@@ -1688,7 +1688,7 @@
       "executable": false
     },
     "src/mallet/enterprise/saml/transactions.ts": {
-      "sha256": "ea946196d986fa10a58fcd9626e0b0eae568c42a414b5a640bd6fdcd22d8f4e9",
+      "sha256": "97b0976b39e14c7965b60b8c55b2a5eb9f30406e5ef5315080d60ce555bdbeac",
       "executable": false
     },
     "src/mallet/enterprise/saml/types.ts": {
