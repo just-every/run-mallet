@@ -15,9 +15,10 @@ async function feedbackForm(request:Request):Promise<URLSearchParams|null>{
   return new URLSearchParams(new TextDecoder('utf-8',{fatal:true}).decode(bytes))
  }catch{return null}finally{await reader.cancel();reader.releaseLock()}
 }
+// Match the native customer forms: preserve a same-origin POST Origin without leaking the link to Google.
 async function response(row:Row,path:string,withdrawnAt?:string){
  const result=await page('How was your repair visit?',customerReview({...row,withdrawnAt},path,!!row.response))
- result.headers.set('referrer-policy','no-referrer');result.headers.set('x-robots-tag','noindex, nofollow')
+ result.headers.set('referrer-policy','same-origin');result.headers.set('x-robots-tag','noindex, nofollow')
  return result
 }
 export async function reviewResponse(request:Request,original:Bindings):Promise<Response|null>{

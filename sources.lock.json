@@ -1744,7 +1744,7 @@
       "executable": false
     },
     "src/mallet/http.ts": {
-      "sha256": "4ffa506791d900b1e9ed7c96d2ab5a6f41e8377f1d92811a72b7cd5a04a5bbc1",
+      "sha256": "016922d4cbede9f9fc8b1b522f837ba06be1495c129a2f79935dadc0a1b4465e",
       "executable": false
     },
     "src/mallet/imports/context.ts": {
@@ -2180,7 +2180,7 @@
       "executable": false
     },
     "src/mallet/review-customer-door.ts": {
-      "sha256": "3f753f4d685563424a811fdf78dfbb8623f3f5461f80b01ef76b7022890f8e42",
+      "sha256": "9dfbe833449aafd679fcbc3043b692f7a550d13343a7bcac2e16c160d071661f",
       "executable": false
     },
     "src/mallet/review-door.ts": {
@@ -4684,7 +4684,7 @@
       "executable": false
     },
     "tests/reviews-browser.mjs": {
-      "sha256": "dada875c486dcae2d7c45968e69c749f242e4b79b3785e13564423c6f2270801",
+      "sha256": "11bebc9f9cdeb0c15fabd4582d1c61bf180a728f48979e223515050e9afeb9ad",
       "executable": false
     },
     "tests/runtime.mjs": {
@@ -4976,7 +4976,7 @@
       "executable": false
     },
     "tests/support/reviews-journey.mjs": {
-      "sha256": "4e4e0210899f3db771ffa2e7abe16c33fd366b04bcf6b104bb444c0f68d76a2f",
+      "sha256": "b75225351ba1af2db77635fdf649748146a83ba1e1bf596795fef6ce5d0864ad",
       "executable": false
     },
     "tests/support/routing-journey.mjs": {

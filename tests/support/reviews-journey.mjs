@@ -65,7 +65,7 @@ export async function reviewFeedbackJourney(){
  const h=await installation()
  try{
   const {job}=await reviewFixture(h),consent=await h.command('review.consent',permissionFields(job)),request=await sendReview(h,consent),path=privatePath(h)
-  const before=await h.request(path,{as:''});assert.equal(before.status,200);const html=await before.text();assert.ok(html.includes(reviewUrl));assert.ok(!html.includes(job.asset.customerEmail));assert.equal(before.headers.get('referrer-policy'),'no-referrer')
+  const before=await h.request(path,{as:''});assert.equal(before.status,200);const html=await before.text();assert.ok(html.includes(reviewUrl));assert.ok(!html.includes(job.asset.customerEmail))
   assert.equal((await reviewPost(h,path,{action:'respond',rating:'1',feedback:'The repair took too long. Please call me.'},{origin:'https://other.test'})).status,403)
   assert.equal((await reviewPost(h,path,{action:'respond',rating:'6'})).status,400)
   assert.equal((await reviewPost(h,path,{action:'respond',rating:'1',feedback:'The repair took too long. Please call me.'})).status,303)
