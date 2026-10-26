@@ -584,7 +584,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "af677cce5cca674e7de5c00943e56840b583a6f7400aa2365cb0b8612a72bda7",
+      "sha256": "90f5f17f063a507f315386257e28761d5ca57bf81284e139cdf1f720d3e2c77b",
       "executable": false
     },
     "deploy-demo.json": {
@@ -2180,7 +2180,7 @@
       "executable": false
     },
     "src/mallet/review-customer-door.ts": {
-      "sha256": "7c96131971a1e613140ab98b67240e8e492ec3a37bd9ed8224830eb0fdc63fde",
+      "sha256": "3f753f4d685563424a811fdf78dfbb8623f3f5461f80b01ef76b7022890f8e42",
       "executable": false
     },
     "src/mallet/review-door.ts": {
@@ -4976,7 +4976,7 @@
       "executable": false
     },
     "tests/support/reviews-journey.mjs": {
-      "sha256": "e11cae86ad4025d4f7ce097ca2e384a24447ef1926d98afcd7d476e41e096e7a",
+      "sha256": "4e4e0210899f3db771ffa2e7abe16c33fd366b04bcf6b104bb444c0f68d76a2f",
       "executable": false
     },
     "tests/support/routing-journey.mjs": {
