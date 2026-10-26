@@ -1,3 +1,5 @@
+import {stripeReturnsEdge} from './support/stripe-returns-journey.mjs'
+import {achBrowserSteps} from './support/ach-browser-steps.mjs'
 import {terminalEdge} from './support/terminal-journey.mjs'
 import {terminalBrowserSteps} from './support/terminal-browser-steps.mjs'
 import {shopSetup} from './support/diagnosis-journey.mjs'
@@ -10,8 +12,8 @@ import {installation} from './harness.mjs'
 import {readyInvoice} from './support/return-journey.mjs'
 import {collectionEdge} from './support/stripe-journey.mjs'
 export async function stripeBrowser(){
- const edge=collectionEdge(),readerEdge=terminalEdge();let readerMode=false
- const h=await installation({entry:'tests/dev-worker.ts',network:true,assets:true,bindings:{AUTH_LOCAL:'true',RER_DEV_KEY:randomBytes(32).toString('base64url'),STRIPE_SECRET_KEY:'synthetic-mallet-800'},outboundService:request=>readerMode?readerEdge.edge(request):edge.edge(request)});let browser
+ const edge=collectionEdge(),readerEdge=terminalEdge(),achEdge=stripeReturnsEdge();let readerMode=false,achMode=false
+ const h=await installation({entry:'tests/dev-worker.ts',network:true,assets:true,bindings:{AUTH_LOCAL:'true',RER_DEV_KEY:randomBytes(32).toString('base64url'),STRIPE_SECRET_KEY:'synthetic-mallet-800'},outboundService:request=>achMode?achEdge.edge(request):readerMode?readerEdge.edge(request):edge.edge(request)});let browser
  try{
   await shopSetup(h)
   const reviewer=await publicDoor(h.origin,h.owner).person('synthetic-mallet-821@example.test','admin'),{invoice}=await readyInvoice(h,{reviewer});await h.stepUp()
@@ -24,6 +26,6 @@ export async function stripeBrowser(){
   await page.getByRole('link',{name:'Manage private Stripe key'}).click();await shot('02b-credentials');await page.getByRole('link',{name:'Stripe merchant connection'}).click()
   await page.goto(h.origin+'/app/invoices/'+invoice.id);await shot('02c-issued-invoice');await page.getByRole('link',{name:'Collect payment with Stripe'}).click();await page.locator('form:has(input[name="command"][value="checkout"])').getByRole('checkbox').check();await page.getByRole('button',{name:'Create hosted checkout'}).click();await page.waitForLoadState('domcontentloaded');assert.equal(await page.getByRole('link',{name:'Open Stripe checkout'}).count(),1);await shot('03-open-checkout')
   edge.paid();const eventId=edge.providerEvent('synthetic-mallet-820');await page.getByLabel('Stripe payment event ID').fill(eventId);await page.getByRole('button',{name:'Reconcile provider event'}).click();await page.waitForLoadState('domcontentloaded');assert.match(await page.locator('main').innerText(),/Outstanding \$0.00/);await shot('04-paid')
-  await page.getByRole('button',{name:'Reconcile fee and payout'}).click();await page.waitForLoadState('domcontentloaded');assert.match(await page.locator('main').innerText(),/Fee \$1.10/);await shot('05-fee');readerMode=true;await terminalBrowserSteps({h,page,edge:readerEdge,reviewer,shot});assert.deepEqual(errors,[])
+  await page.getByRole('button',{name:'Reconcile fee and payout'}).click();await page.waitForLoadState('domcontentloaded');assert.match(await page.locator('main').innerText(),/Fee \$1.10/);await shot('05-fee');readerMode=true;await terminalBrowserSteps({h,page,edge:readerEdge,reviewer,shot});achMode=true;await achBrowserSteps({h,page,edge:achEdge,reviewer,shot});assert.deepEqual(errors,[])
  }finally{await browser?.close();await h.close()}
 }

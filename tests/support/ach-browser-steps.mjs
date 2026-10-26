@@ -1,0 +1,13 @@
+import assert from 'node:assert/strict'
+import {readyInvoice} from './return-journey.mjs'
+export async function achBrowserSteps({h,page,edge,reviewer,shot}){
+ const form=command=>page.locator('form:has(input[name="command"][value="'+command+'"])')
+ const asset=await h.command('asset.create',{customerName:'Cedar Bikes',label:'ACH repair and observed bank return',identifier:'synthetic-mallet-1190'}),{invoice}=await readyInvoice(h,{asset,reviewer})
+ await page.goto(h.origin+'/app/invoices/'+invoice.id+'/payment');await form('checkout').getByLabel('Hosted payment method').selectOption('us_bank_account');await form('checkout').getByRole('checkbox').check();await form('checkout').getByRole('button',{name:'Create hosted checkout'}).click();await page.waitForLoadState('domcontentloaded')
+ await form('event').getByLabel('Stripe payment event ID').fill(edge.providerEvent('synthetic-mallet-1191','payment_intent.processing'));await form('event').getByRole('button',{name:'Reconcile provider event'}).click();await page.waitForLoadState('domcontentloaded');assert.match(await page.locator('main').innerText(),/processing/);await shot('13-ach-pending');assert.equal((await h.state()).records.payment.filter(p=>p.invoiceId===invoice.id).length,0)
+ edge.paid();await form('event').getByLabel('Stripe payment event ID').fill(edge.providerEvent('synthetic-mallet-1192'));await form('event').getByRole('button',{name:'Reconcile provider event'}).click();await page.waitForLoadState('domcontentloaded');assert.match(await page.locator('main').innerText(),/Outstanding \$0.00/);await shot('14-ach-captured')
+ const payment=(await h.state()).records.payment.find(p=>p.invoiceId===invoice.id)
+ edge.beginReturn(payment.amountCents);edge.withdraw(payment.amountCents)
+ await form('return').getByLabel('Stripe ACH dispute event ID').fill(edge.disputeEvent('synthetic-mallet-1193','charge.dispute.funds_withdrawn'));await form('return').getByRole('button',{name:'Reconcile ACH return'}).click();await page.waitForLoadState('domcontentloaded');const total=new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).format(invoice.totals.totalCents/100);assert.ok((await page.locator('main').innerText()).includes('Outstanding '+total));await shot('15-ach-returned');assert.deepEqual((await h.state()).records.payment.find(p=>p.id===payment.id),payment)
+ edge.reinstate(payment.amountCents);await form('return').getByLabel('Stripe ACH dispute event ID').fill(edge.disputeEvent('synthetic-mallet-1194','charge.dispute.funds_reinstated'));await form('return').getByRole('button',{name:'Reconcile ACH return'}).click();await page.waitForLoadState('domcontentloaded');assert.match(await page.locator('main').innerText(),/Outstanding \$0.00/);await shot('16-ach-reinstated')
+}
