@@ -10,7 +10,7 @@ import {resource,writeUser,patched,listUsers} from './scim'
 const headers={'cache-control':'no-store','x-content-type-options':'nosniff','referrer-policy':'no-referrer'}
 const json=(value:any,status=200,scim=false)=>new Response(status===204?null:JSON.stringify(value),{status,headers:{...headers,'content-type':scim?'application/scim+json':'application/json'}})
 async function body(request:Request){const raw=await request.text();if(raw.length>16384)throw new HttpError(413,'body_too_large');try{const v=JSON.parse(raw);if(v&&typeof v==='object'&&!Array.isArray(v))return v}catch{}throw new HttpError(400,'invalid_json')}
-async function view(env:Bindings){return {providers:configuredProviders(env).map(({id,label,preset,issuer})=>({id,label,preset,issuer})),connections:(await env.DB.prepare('SELECT provider,enabled,revision FROM mallet_enterprise_connections').all<any>()).results,users:(await env.DB.prepare('SELECT * FROM mallet_enterprise_users ORDER BY display_name').all<any>()).results}}
+async function view(env:Bindings){return {providers:configuredProviders(env).map(({id,label,preset,issuer,protocol})=>({id,label,preset,issuer,protocol})),connections:(await env.DB.prepare('SELECT provider,enabled,revision FROM mallet_enterprise_connections').all<any>()).results,users:(await env.DB.prepare('SELECT * FROM mallet_enterprise_users ORDER BY display_name').all<any>()).results}}
 export async function enterpriseResponse(request:Request,original:Bindings):Promise<Response|null>{
  const url=new URL(request.url),scim=url.pathname.startsWith('/scim/'),ui=url.pathname==='/app/enterprise'||url.pathname.startsWith('/app/enterprise/'),api=url.pathname==='/api/mallet/enterprise'||url.pathname.startsWith('/api/mallet/enterprise/')
  if(!scim&&!ui&&!api)return null

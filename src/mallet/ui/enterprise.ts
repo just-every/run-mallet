@@ -1,6 +1,6 @@
 import {box,e,field,hidden} from './common'
 
-type Provider={id:string;label:string;preset:string;issuer:string}
+type Provider={id:string;label:string;preset:string;issuer:string;protocol?:'oidc'|'saml'}
 type Connection={provider:string;enabled:number;revision:number}
 type ProvisionedUser={id:string;provider:string;external_id:string;email:string;display_name:string;active:number;role:string;location:string}
 type View={providers:Provider[];connections:Connection[];users:ProvisionedUser[];notice?:string}
@@ -20,7 +20,7 @@ function action(provider:string,kind:'enable'|'rotate'|'revoke'){
 function providerCard(provider:Provider,connection:Connection|undefined){
  const enabled=connection?.enabled===1
  const state=enabled?'Provisioning enabled':connection?'Provisioning revoked':'Provisioning not enabled'
- const setup=`<details><summary>Provider setup reference</summary><dl><dt>Provider ID</dt><dd>${e(provider.id)}</dd><dt>Configuration preset</dt><dd>${e(provider.preset)}</dd><dt>OIDC issuer</dt><dd>${e(provider.issuer)}</dd><dt>SCIM base endpoint</dt><dd><code>${e('/scim/v2/'+encodeURIComponent(provider.id))}</code></dd></dl><p>Use this shop’s origin with the endpoint above. Sign-in uses the configured OIDC provider; SCIM manages provisioned users. Mallet exchanges only sign-in identity and provisioned employee details. Repairs stay private. Identity authority is excluded from backups; historical attribution is retained. Review your provider’s terms and the declaration before approving.</p><p><a href="https://github.com/just-every/run-mallet/blob/main/docs/enterprise-identity.md">Read the enterprise identity declaration</a></p></details>`
+ const setup=`<details><summary>Provider setup reference</summary><dl><dt>Provider ID</dt><dd>${e(provider.id)}</dd><dt>Configuration preset</dt><dd>${e(provider.preset)}</dd><dt>${provider.protocol==='saml'?'SAML issuer':'OIDC issuer'}</dt><dd>${e(provider.issuer)}</dd><dt>SCIM base endpoint</dt><dd><code>${e('/scim/v2/'+encodeURIComponent(provider.id))}</code></dd>${provider.protocol==='saml'?`<dt>SP metadata</dt><dd><a href="/auth/saml/${e(provider.id)}/metadata">Download SP metadata</a></dd>`:''}</dl><p>Use this shop’s origin with the endpoint above. Sign-in uses the configured identity provider; SCIM manages provisioned users. Mallet exchanges only sign-in identity and provisioned employee details. Repairs stay private. Identity authority is excluded from backups; historical attribution is retained. Review your provider’s terms and the declaration before approving.</p><p><a href="https://github.com/just-every/run-mallet/blob/main/docs/enterprise-identity.md">Read the enterprise identity declaration</a></p></details>`
  const controls=enabled
   ?`<details><summary>Manage provisioning</summary><h3>Replace the token</h3><p>Update the provider with the new token after rotating. The previous token stops working immediately.</p>${action(provider.id,'rotate')}<h3>Revoke provisioning</h3><p>The provider’s token stops working and all its provisioned technicians lose access. Existing repair attribution is retained.</p>${action(provider.id,'revoke')}</details>`
   :action(provider.id,'enable')

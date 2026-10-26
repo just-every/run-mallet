@@ -1,7 +1,8 @@
 import type {Bindings} from '../../auth.server'
+import {configuredSaml} from './saml-config'
 import type {IdentityProviderConfig} from '../../modules/operator-auth/index.mjs'
-export type EnterpriseProvider=IdentityProviderConfig&{id:string;preset:'google'|'microsoft'|'okta';issuer:string;label:string}
-export function configuredProviders(env:Bindings):EnterpriseProvider[]{
+export type EnterpriseProvider=IdentityProviderConfig&{protocol:'oidc';id:string;preset:'google'|'microsoft'|'okta';issuer:string;label:string}
+export function configuredOidcProviders(env:Bindings):EnterpriseProvider[]{
  if(!env.MALLET_ENTERPRISE_OIDC)return []
  let values:any
  try{values=JSON.parse(env.MALLET_ENTERPRISE_OIDC)}catch{throw new Error('Invalid enterprise provider configuration')}
@@ -11,13 +12,18 @@ export function configuredProviders(env:Bindings):EnterpriseProvider[]{
   const issuer=p.preset==='google'?'https://accounts.google.com':p.preset==='microsoft'?`https://login.microsoftonline.com/${p.tenant}/v2.0`:p.issuer
   const url=new URL(issuer)
   if(url.protocol!=='https:'||url.username||url.password||url.search||url.hash)throw new Error('Invalid enterprise issuer')
-  return {...p,issuer,label:p.label??({google:'Google Workspace',microsoft:'Microsoft Entra ID',okta:'Okta'} as any)[p.preset]}
+  return {...p,protocol:'oidc',issuer,label:p.label??({google:'Google Workspace',microsoft:'Microsoft Entra ID',okta:'Okta'} as any)[p.preset]}
  })
+}
+export function configuredProviders(env:Bindings){
+ const providers=[...configuredOidcProviders(env),...configuredSaml(env)]
+ if(new Set(providers.map(p=>p.id)).size!==providers.length)throw Error('Enterprise provider IDs must be unique')
+ return providers
 }
 export async function enterpriseProviders(env:Bindings){
  const connections=(await env.DB.prepare('SELECT provider,issuer,client_id FROM mallet_enterprise_connections WHERE enabled=1').all<any>()).results
  if(!connections.length)return []
- const configured=configuredProviders(env)
+ const configured=configuredOidcProviders(env)
  const users=(await env.DB.prepare('SELECT provider,external_id,email FROM mallet_enterprise_users WHERE active=1').all<any>()).results
  return configured.filter(p=>connections.some(c=>c.provider===p.id&&c.issuer===p.issuer&&c.client_id===p.clientId)).map(p=>({...p,subjectEmails:Object.fromEntries(users.filter(u=>u.provider===p.id).map(u=>[u.external_id,u.email]))}))
 }

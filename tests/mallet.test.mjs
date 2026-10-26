@@ -455,3 +455,7 @@ test('AUTO-001 and AUTO-004: owner schedules and stops email through native form
 test('GOV-003: explicit provider sign-in, SCIM employment revocation and repair attribution survive recovery',enterpriseJourney)
 
 test('GOV-003: owner provisions and revokes a technician through native settings at 1440 and 390',enterpriseBrowser)
+
+test('GOV-003: signed SAML admission, employment revocation and repair attribution survive recovery',async()=>{const {samlJourney}=await import('./support/saml-journey.mjs');await samlJourney()})
+
+test('GOV-003: signed SAML browser admission and old-session refusal at 1440 and 390',async()=>{const {samlBrowser}=await import('./enterprise-saml-browser.mjs');await samlBrowser()})
