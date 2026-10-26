@@ -7,7 +7,7 @@ import {installation} from './harness.mjs'
 import {localPeople} from './support/local-people.mjs'
 import {shopSetup} from './support/diagnosis-journey.mjs'
 import {readyInvoice} from './support/return-journey.mjs'
-import {liveStripe} from './support/stripe-live.mjs'
+import {liveStripe,archiveCheckoutCatalog} from './support/stripe-live.mjs'
 const secret=process.env.STRIPE_SECRET_KEY
 if(!secret)throw Error('Injector must supply the test key')
 const result={mode:'test',ach:'not-run',collectionAndReturn:'not-proved',cleanup:[]}
@@ -32,6 +32,6 @@ try{
  }
 }catch(error){result.failure={stage,code:error.code??error.name};process.exitCode=1}
 finally{
- for(const id of new Set(result.createdSessionIds??[]))try{const session=await stripe('/checkout/sessions/'+encodeURIComponent(id));if(session.status==='open'){await stripe('/checkout/sessions/'+encodeURIComponent(id)+'/expire',{});result.cleanup.push('open ACH session expired')}}catch{result.cleanup.push('ACH session cleanup requires inspection');process.exitCode=1}
+ for(const id of new Set(result.createdSessionIds??[]))try{const session=await stripe('/checkout/sessions/'+encodeURIComponent(id));if(session.status==='open'){await stripe('/checkout/sessions/'+encodeURIComponent(id)+'/expire',{});result.cleanup.push('open ACH session expired')}await archiveCheckoutCatalog(stripe,id,result)}catch{result.cleanup.push('ACH session cleanup requires inspection');process.exitCode=1}
  await browser?.close();await h?.close();console.log(JSON.stringify(result))
 }

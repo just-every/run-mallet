@@ -1,4 +1,4 @@
-import {liveStripe} from './support/stripe-live.mjs'
+import {liveStripe,archiveCheckoutCatalog} from './support/stripe-live.mjs'
 import {randomBytes} from 'node:crypto'
 import {localPeople} from './support/local-people.mjs'
 import {shopSetup} from './support/diagnosis-journey.mjs'
@@ -68,6 +68,7 @@ finally{
    const session=await stripe('/checkout/sessions/'+encodeURIComponent(sessionId))
    if(session.status==='open'){await stripe('/checkout/sessions/'+encodeURIComponent(sessionId)+'/expire',{});result.cleanup.push('open session expired')}
    if(session.payment_intent)intents.add(session.payment_intent)
+   await archiveCheckoutCatalog(stripe,sessionId,result)
   }catch{result.cleanup.push('session cleanup requires inspection');process.exitCode=1}
  }
  for(const paymentIntentId of intents){

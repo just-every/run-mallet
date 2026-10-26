@@ -13,3 +13,14 @@ export const liveStripe=results=>async request=>{
  const headers=new Headers(response.headers);headers.delete('content-encoding');headers.delete('content-length')
  return new Response(response.body,{status:response.status,headers})
 }
+export async function archiveCheckoutCatalog(stripe,sessionId,results){
+ const items=await stripe('/checkout/sessions/'+encodeURIComponent(sessionId)+'/line_items?limit=100')
+ if(items.has_more)throw Error('Unexpected multi-page invoice checkout')
+ for(const item of items.data){
+  const price=item.price,product=typeof price?.product==='string'?price.product:price?.product?.id
+  if(!price?.id||!product||price.livemode!==false)throw Error('Only this test checkout catalogue may be archived')
+  if(price.active)await stripe('/prices/'+encodeURIComponent(price.id),{active:'false'})
+  await stripe('/products/'+encodeURIComponent(product),{active:'false'})
+ }
+ results.cleanup.push('inline test checkout catalogue archived')
+}
