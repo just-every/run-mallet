@@ -479,3 +479,10 @@ test('API-002: signed business outbox, bounded delivery, rotation, replay and in
 test('API-002: pinned public Crank workflow receives signed events and applies replay once',async()=>{
  const {crankWebhookJourney}=await import('./support/webhook-journey.mjs');await crankWebhookJourney()
 })
+const assistantProof=await import('./support/assistant-journey.mjs')
+test('ADV-008: separate scoped authority refuses unsafe roles, channels, spending, expiry and preparation-key expansion',()=>run(assistantProof.assistantAuthorityJourney))
+test('ADV-008: disclosed receptionist captures requested intake, reserves actual capacity and escalates to a person',()=>run(assistantProof.assistantIntakeJourney))
+test('ADV-008: every note proposal preserves raw technician evidence and measured facts without publication',()=>run(assistantProof.assistantNotesJourney))
+test('ADV-008: exact human email review, queued revocation, single handoff and inert archive recovery',()=>run(assistantProof.assistantSendJourney))
+test('ADV-008: owner scopes, reviews and revokes assistant work with human handoff at 1440 and 390',async()=>{const {assistantsBrowser}=await import('./assistants-browser.mjs');await assistantsBrowser()})
+test('ADV-008: failed or uncertain appointment email survives restart without an automatic retry and reaches human recovery',assistantProof.assistantFailureJourney)
