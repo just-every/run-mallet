@@ -572,7 +572,7 @@
       "executable": false
     },
     "ACCEPTANCE.md": {
-      "sha256": "c34ee09821b210fad56eb84569eb82721795d82d35cc88d59dc49241b4bc9d38",
+      "sha256": "4dbf8123df3ecfea325981aebe27b26d8264f60f290d5de5fb9f1fb2a5a772f8",
       "executable": false
     },
     "AGENTS.md": {
@@ -584,7 +584,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "51395567dfdda9e6e67cc45f63aeb9c8c0f072f62552e67e2c87ec10392f6611",
+      "sha256": "c23d95f42e61bc938da8240046b0aa0708b334e662603234af875685700092d2",
       "executable": false
     },
     "deploy-demo.json": {
@@ -5196,7 +5196,7 @@
       "executable": false
     },
     "tests/support/warranty-pattern-journey.mjs": {
-      "sha256": "3843afefc0a0d26bc2bff588a859ef95646e0b24f96abd6abc66adae1840f967",
+      "sha256": "6befa6f7af4cd315580e8a413224df0cfe6e3d9251862e177adf626c54c10805",
       "executable": false
     },
     "tests/support/worker-bundle.mjs": {
