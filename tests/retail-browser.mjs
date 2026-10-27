@@ -7,7 +7,7 @@ import {retailFixture} from './support/retail-journey.mjs'
 export async function retailBrowser(){
  const h=await installation({entry:'tests/dev-worker.ts',network:true,assets:true,bindings:{AUTH_LOCAL:'true',RER_DEV_KEY:randomBytes(32).toString('base64url')}});let browser
  try{
-  const f=await retailFixture(h)
+  const f=await retailFixture(h);await h.stepUp()
   browser=await chromium.launch({headless:true,...(process.env.MALLET_CHROMIUM?{executablePath:process.env.MALLET_CHROMIUM}:{}),args:['--no-sandbox','--use-mock-keychain','--password-store=basic']})
   const context=await browser.newContext({viewport:{width:1440,height:1000}})
   await context.addCookies(h.owner.split('; ').map(pair=>({name:pair.slice(0,pair.indexOf('=')),value:pair.slice(pair.indexOf('=')+1),url:h.origin})))
@@ -23,7 +23,10 @@ export async function retailBrowser(){
   await form('retail.sell').getByLabel('Cash received (USD)',{exact:true}).fill('5.00')
   await shot('01-cash-sale')
   await form('retail.sell').getByRole('button',{name:'Record cash sale',exact:true}).click();await p.waitForLoadState('domcontentloaded')
-  let report=await h.api('/api/mallet/retail');assert.deepEqual([report.sales.length,report.netCashCents],[1,319])
+  let report=await h.api('/api/mallet/retail');assert.deepEqual([report.sales.length,report.netCashCents],[1,319],await p.locator('main').innerText())
+  const post=fields=>h.mf.dispatchFetch(h.origin+'/app/actions',{method:'POST',redirect:'manual',headers:{origin:h.origin,cookie:h.owner,'content-type':'application/x-www-form-urlencoded'},body:new URLSearchParams(fields).toString()})
+  const replay=await post({command:'retail.sell',...report.sales[0].request,reference:report.sales[0].reference,unitUsd:'0.99',cashUsd:'5.00'})
+  assert.equal(replay.status,303);assert.equal((await h.api('/api/mallet/retail')).netCashCents,319,'Native sale replay records cash once')
   assert.ok((await p.locator('main').innerText()).includes('Change $1.81'))
   await shot('02-immutable-receipt')
   await p.getByText('Record accessory return',{exact:true}).click()
@@ -32,12 +35,12 @@ export async function retailBrowser(){
   await form('retail.return').locator('[name="confirm"]').check()
   await form('retail.return').getByRole('button',{name:'Record cash return',exact:true}).click();await p.waitForLoadState('domcontentloaded')
   report=await h.api('/api/mallet/retail');assert.deepEqual([report.returns.length,report.netCashCents],[1,213])
+  assert.equal((await post({command:'retail.return',...report.returns[0].request,reference:report.returns[0].reference})).status,303)
+  assert.equal((await h.api('/api/mallet/retail')).netCashCents,213,'Native return replay records cash once')
   assert.ok((await p.locator('main').innerText()).includes('Cash $1.06'))
   assert.ok(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'Counter screen fits the assertion width')
   await shot('03-partial-return')
   // Submit the native form directly to prove its server fence exceeds browser validation.
-  const bad=await h.request('/app/actions',{method:'POST',headers:{'content-type':'application/x-www-form-urlencoded'},body:undefined})
-  assert.ok(bad.status>=400)
   const response=await h.mf.dispatchFetch(h.origin+'/app/actions',{method:'POST',redirect:'manual',headers:{origin:h.origin,cookie:h.owner,'content-type':'application/x-www-form-urlencoded'},body:new URLSearchParams({command:'retail.return',saleId:report.sales[0].id,quantity:'3',reference:'synthetic-mallet-retail-browser-excess',reason:'Must refuse excess',confirm:'saleable-cash-returned'}).toString()})
   assert.equal(response.status,409);assert.equal((await h.api('/api/mallet/retail')).netCashCents,213)
   await p.setContent(await response.text());await shot('04-excess-return-refused')

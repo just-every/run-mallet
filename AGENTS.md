@@ -1,5 +1,16 @@
 # Agent instructions
 
+## Lander-Regenerate
+
+For a changed clause in this edition's legacy contract layout, run
+`node scripts/contract-docs.mjs write --clause POS-001`, followed by
+`node scripts/contract-docs.mjs check --clause POS-001` (replace the clause ID
+for another clause). This compatibility generator retains other clauses'
+historical acceptance entries, projects the selected entry and claim mapping
+from CONTRACT.md, and updates the Status summary counts. Regenerate the edition
+source lock last with `node scripts/edition-authoring/cli.mjs lock` and verify
+it with `node scripts/edition-authoring/cli.mjs check`.
+
 ## Launch for review
 
 When asked to launch, run or review this app, run this from the checkout root
