@@ -10,7 +10,7 @@ export async function securityBrowser(){
  // A real hostname: browsers refuse an IP address as a passkey's relying party.
  const h=await installation({network:true,secureNetwork:true,assets:true,localhost:true});let browser
  try{
-  browser=await chromium.launch({headless:true,args:['--use-mock-keychain','--password-store=basic']})
+  browser=await chromium.launch({headless:true,...(process.env.MALLET_CHROMIUM?{executablePath:process.env.MALLET_CHROMIUM}:{}),args:['--no-sandbox','--use-mock-keychain','--password-store=basic']})
   const admin=await h.person('synthetic-mallet-27-admin@example.test','admin');const db=await h.mf.getD1Database('DB'),dir=process.env.MALLET_SECURITY_PROOF_DIR??'.cache/security-browser';await mkdir(dir,{recursive:true})
   const context=await browser.newContext({ignoreHTTPSErrors:true});await context.addCookies(cookies(h,h.owner));const p=await context.newPage()
   const shot=async name=>{for(const width of [1440,390]){await p.setViewportSize({width,height:1000});assert.ok(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),name+' fits '+width);await p.screenshot({path:join(dir,name+'-'+width+'.png'),fullPage:true})}}
@@ -39,7 +39,9 @@ export async function securityBrowser(){
   await p.goto(h.origin+'/app/security');await p.getByLabel('Second factor at sign-in').selectOption('yes');await p.getByRole('button',{name:'Save policy'}).click();assert.match(await p.locator('main').innerText(),/Shop policy saved/);await shot('security-07-policy')
  // GOV-005: declarations are public; the owner saves a sealed payment credential after reading them and never sees it again.
   await p.goto(h.origin+'/connectors');assert.match(await p.locator('main').innerText(),/What Mallet sends/);await shot('connectors-01-published')
-  await p.goto(h.origin+'/app/connectors');await p.getByLabel('New credential').first().fill('synthetic-mallet-gov5-ui-key');await p.getByLabel(/I have read the Stripe declaration/).check();await p.getByRole('button',{name:'Save credential'}).first().click();await p.waitForLoadState('domcontentloaded')
+  await p.goto(h.origin+'/app/connectors')
+  const stripeForm=p.locator('form').filter({has:p.locator('input[name="command"][value="connector.save"]')}).filter({has:p.locator('input[name="connector"][value="stripe"]')})
+  await stripeForm.getByLabel('New credential').fill('synthetic-mallet-gov5-ui-key');await stripeForm.getByLabel(/I have read the Stripe declaration/).check();await stripeForm.getByRole('button',{name:'Save credential'}).click();await p.waitForLoadState('domcontentloaded')
 assert.match(await p.locator('main').innerText(),/Saved version 1, fingerprint/);assert.ok(!(await p.content()).includes('synthetic-mallet-gov5-ui-key'));await shot('connectors-02-saved')
  }finally{await browser?.close();await h.close()}
 }
