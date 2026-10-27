@@ -119,7 +119,27 @@ export async function shopApiRetryJourney(h){
 }
 
 export async function shopApiAuthorityJourney(h){
- const {asset,job}=await booking(h),client=await mint(h,['assets:read']),prep=await mint(h,['dispatch:prepare'])
+ const {asset,job}=await booking(h),db=await h.mf.getD1Database('DB'),owner=(await h.state()).actor.id
+ const grant={label:'synthetic-mallet-17',scopes:['assets:read']}
+ assert.equal((await h.command('apiClient.create',grant,{status:403,refuseStepUp:true})).error,'step_up_required','Issuance needs fresh native confirmation')
+ const client=await mint(h,['assets:read']),prep=await mint(h,['dispatch:prepare'])
+ for(const [hours,fields] of [[24,{}],[1,{expiresInHours:1}],[720,{expiresInHours:720}]]){
+  const issued=await h.command('apiClient.create',{...grant,...fields})
+  const saved=await db.prepare('SELECT created_at,expires_at FROM mallet_api_clients WHERE id=?').bind(issued.id).first()
+  assert.equal(issued.expiresAt-saved.created_at,hours*3600000,'Grant lifetime is exact elapsed hours')
+  assert.equal(issued.expiresAt,saved.expires_at,'Returned expiry is the enforced expiry')
+  await h.command('apiClient.revoke',{id:issued.id})
+  await read(h,issued,'assets',401)
+ }
+ for(const expiresInHours of [0,721,-1,1.5,'24',null,true]){
+  const denied=await h.command('apiClient.create',{...grant,expiresInHours},{status:400})
+  assert.equal(denied.error,'invalid_api_expiry','Only bounded integer expiry is accepted')
+ }
+ await db.prepare('UPDATE mallet_session_proofs SET step_up_until=0').run()
+ assert.equal((await h.command('apiClient.create',grant,{status:403,refuseStepUp:true})).error,'step_up_required','Stale confirmation cannot issue a client')
+ assert.equal((await h.command('apiClient.revoke',{id:client.id},{status:403,refuseStepUp:true})).error,'step_up_required','Stale confirmation cannot revoke a client')
+ assert.equal((await read(h,client,'assets/'+asset.id)).id,asset.id,'Refused revocation leaves authority intact')
+ await h.stepUp()
  assert.equal((await read(h,client,'assets/'+asset.id)).id,asset.id)
  for(const resource of ['customers','bookings','repairs','parts','orders'])await read(h,client,resource,403)
  await prepare(h,client,'dispatch.prepare',{jobId:job.id,version:job.version},'synthetic-mallet-16',403)
@@ -136,11 +156,20 @@ export async function shopApiAuthorityJourney(h){
  await h.command('estimate.approve',{}, {...access(prep),status:403})
  await h.command('dispatch.prepare',{jobId:job.id,version:job.version},{...access(client),status:403})
  assert.deepEqual((await h.state()).records,original,'Refused alternate transports write no product data')
- for(const scope of ['finance:read','decisions:write','*'])await h.command('apiClient.create',{label:'synthetic-mallet-17',scopes:[scope]},{status:400})
- await h.command('apiClient.create',{label:'synthetic-mallet-17',scopes:[]},{status:400})
+ for(const scope of ['finance:read','decisions:write','*','unknown:read'])await h.command('apiClient.create',{label:'synthetic-mallet-17',scopes:[scope]},{status:400})
+ for(const scopes of [[],['assets:read','assets:read'],['assets:read','finance:read'],'assets:read',null]){
+  await h.command('apiClient.create',{...grant,scopes},{status:400})
+ }
+ await h.command('apiClient.create',{label:'synthetic-mallet-17'},{status:400})
  const member=await h.person('synthetic-mallet-api-member@example.test'),admin=await h.person('synthetic-mallet-api-admin@example.test','admin')
- for(const as of ['',member.cookie,admin.cookie])await h.command('apiClient.create',{label:'synthetic-mallet-17',scopes:['assets:read']},{as,status:as?403:401})
- const db=await h.mf.getD1Database('DB')
+ const legacy=await h.command('agent.create',{label:'synthetic-mallet-legacy'})
+ for(const options of [{as:''},{as:member.cookie},{as:admin.cookie},access(client),access(legacy)]){
+  for(const [command,input] of [['apiClient.create',grant],['apiClient.revoke',{id:client.id}]]){
+   await h.command(command,input,{...options,status:options.as||options.headers?403:401})
+  }
+ }
+ assert.equal((await read(h,client,'assets/'+asset.id)).id,asset.id,'Other actors cannot revoke owner grants')
+ await read(h,legacy,'assets',403)
  const input={jobId:job.id,version:job.version,bayId:job.bayId,technicianId:job.technicianId,startAt:job.startAt,endAt:job.endAt,reason:'synthetic-mallet-18'}
  await prepare(h,prep,'dispatch.prepare',input,'',400)
  const first=await prepare(h,prep,'dispatch.prepare',input,'synthetic-mallet-18');assert.ok(first.id)
@@ -154,7 +183,34 @@ export async function shopApiAuthorityJourney(h){
  const expiredPrep=await mint(h,['dispatch:prepare'])
  await db.prepare('UPDATE mallet_api_clients SET expires_at=0 WHERE id=?').bind(expiredPrep.id).run()
  await prepare(h,expiredPrep,'dispatch.prepare',input,'synthetic-mallet-expired',401)
- const creator=await mint(h,['assets:read']),owner=(await h.state()).actor.id
- await db.prepare('UPDATE oa_operators SET version=version+1 WHERE id=?').bind(owner).run()
- await read(h,creator,'assets',401)
+ // Preserve the last-owner invariant while changing the issuing owner fixture.
+ await db.prepare("UPDATE oa_operators SET role='owner',version=version+1 WHERE id=?").bind(admin.id).run()
+ const issuer=(await db.prepare('SELECT role,status,version FROM oa_operators WHERE id=?').bind(owner).first())
+ const continuing=await mint(h,['assets:read','dispatch:prepare'])
+ const retained=await prepare(h,continuing,'dispatch.prepare',input,'synthetic-mallet-current')
+ const originalRecords=(await h.state()).records
+ for(const [reason,sql] of [
+  ['expired','UPDATE mallet_api_clients SET expires_at=0 WHERE id=?'],
+  ['revoked','UPDATE mallet_api_clients SET revoked_at=1 WHERE id=?'],
+  ['owner version changed','UPDATE oa_operators SET version=version+1 WHERE id=?'],
+  ['owner deactivated',"UPDATE oa_operators SET status='inactive' WHERE id=?"],
+  ['owner role changed',"UPDATE oa_operators SET role='admin' WHERE id=?"]
+ ]){
+  await db.prepare(sql).bind(reason==='expired'||reason==='revoked'?continuing.id:owner).run()
+  // Isolate each live-owner predicate from the separate version-change fence.
+  if(reason==='owner deactivated'||reason==='owner role changed')await db.prepare('UPDATE oa_operators SET version=? WHERE id=?').bind(issuer.version,owner).run()
+  await read(h,continuing,'assets',401)
+  for(const key of ['synthetic-mallet-current','synthetic-mallet-new']){
+   await prepare(h,continuing,'dispatch.prepare',input,key,401)
+   await prepare(h,continuing,'dispatch.prepare',input,key,401,'/api/mallet/commands')
+  }
+  await db.prepare('UPDATE oa_operators SET role=?,status=?,version=? WHERE id=?').bind(issuer.role,issuer.status,issuer.version,owner).run()
+  // Role and status restoration fires the native version trigger; reset this fixture separately.
+  await db.prepare('UPDATE oa_operators SET version=? WHERE id=?').bind(issuer.version,owner).run()
+  await db.prepare('UPDATE mallet_api_clients SET expires_at=?,revoked_at=NULL WHERE id=?').bind(continuing.expiresAt,continuing.id).run()
+  assert.deepEqual((await h.state()).records,originalRecords,reason+' refuses new writes and cached retries without changing product history')
+ }
+ assert.deepEqual(await prepare(h,continuing,'dispatch.prepare',input,'synthetic-mallet-current'),retained,'Current explicit authority permits the retained retry')
+ await h.command('apiClient.revoke',{id:continuing.id})
+ await read(h,continuing,'assets',401)
 }

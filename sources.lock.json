@@ -712,7 +712,7 @@
       "executable": false
     },
     "docs/shop-api.md": {
-      "sha256": "e0188375ceee85b6c5fc653384b205353073f8841548915f8b30e7d4167b838c",
+      "sha256": "fc7d4ae00811b1d77c1324f7ce43c6cc60c66cc725564d211073984cbbcdcfbf",
       "executable": false
     },
     "docs/site.json": {
@@ -1580,7 +1580,7 @@
       "executable": false
     },
     "src/mallet/api/clients.ts": {
-      "sha256": "6f376f4276d685a97a233dc48300ebbe33cc72edda25e46453e2007c8a303dea",
+      "sha256": "da995b677a6e0931ae046667ada7da9f964073487ce125f07f1275a7cb7bc87b",
       "executable": false
     },
     "src/mallet/api/commands.ts": {
@@ -4896,7 +4896,7 @@
       "executable": false
     },
     "tests/support/assistant-journey.mjs": {
-      "sha256": "040d80c1b941f8f329d27a782d046bea2954fe4107010e6b6d5e7e969dd89e29",
+      "sha256": "c10a2a1b30286c25596a80a47b8046fe5f839f1342bb447ae98eb7350b513c46",
       "executable": false
     },
     "tests/support/board-live-journey.mjs": {
@@ -5148,7 +5148,7 @@
       "executable": false
     },
     "tests/support/shop-api-journey.mjs": {
-      "sha256": "6bdfe0aed5a9d689e5856c74d378f19cb7d2ddb364546aee32869379758561e1",
+      "sha256": "8a47e33304bac5dfb7cfd52dd41b160249e6a7ec058ad67cd60ca46516a23bca",
       "executable": false
     },
     "tests/support/special-part-journey.mjs": {

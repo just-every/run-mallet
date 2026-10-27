@@ -30,6 +30,9 @@ export async function assistantAuthorityJourney(h){
  for(const as of [member.cookie,admin.cookie])await h.command('assistant.grant',grantInput('receptionist',f.service.id),{as,status:403})
  for(const input of [{...grantInput('receptionist',f.service.id),spendCents:1},{...grantInput('receptionist',f.service.id),channel:'sms'}])await h.command('assistant.grant',input,{status:input.spendCents?400:403})
  await h.api('/api/mallet/state',undefined,{...f.auth,status:403});await h.request('/app/settings/assistants',{...f.auth}).then(r=>assert.equal(r.status,403))
+ // Assistant credentials retain their original door when the shop API is installed.
+ for(const path of ['/api/mallet/v1/customers','/api/mallet/v1/repairs'])assert.equal((await h.api(path,undefined,{...f.auth,status:403})).error,'assistant_scope_required')
+ assert.equal((await h.api('/api/mallet/v1/preparations',{command:'estimate.prepare',input:{}},{...f.auth,status:403})).error,'assistant_scope_required')
  for(const command of ['purchase.prepare','estimate.approve','invoice.export','agent.create','asset.create'])await h.command(command,{}, {...f.auth,status:403})
  const preparation=await h.command('agent.create',{label:'Original preparation key'})
  await h.command('assistant.intake',f.input,{...asKey(preparation.token),status:403})
