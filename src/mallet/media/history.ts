@@ -2,7 +2,7 @@ import { fail, object, text } from '../model'
 import type { Actor, Authority, FindingRow, Observation } from './types'
 import { findingView } from './types'
 import { identifier } from './validation'
-import { assertion, findingScope, guarded, jobScope, readRows, scopeAssertion } from './storage'
+import { assertion, findingScope, guarded, mediaReceipt, jobScope, readRows, scopeAssertion } from './storage'
 import { createFinding, listFindings } from './service'
 
 type Job = { id: string; assetId: string; startAt: string; title: string; technicianId: string }
@@ -55,8 +55,10 @@ export async function resolveFinding(db: D1Database, actor: Actor, authority: Au
  const request = JSON.stringify({ reason, by: actor }), now = new Date().toISOString()
  const result = await guarded(db, scope, [
   { sql: 'INSERT OR IGNORE INTO mallet_media_resolutions(finding_id,job_id,reason,actor_json,resolved_at,request_json) VALUES(?,?,?,?,?,?)', params: [id, scope.jobId, reason, JSON.stringify(actor), now, request] },
+  { sql: 'UPDATE mallet_media_findings SET revision=revision+1 WHERE id=? AND revision=? AND changes()=1', params: [id, row.revision] },
+  mediaReceipt(scope, 'media.finding.resolved', [{ kind: 'mediaFinding', id, beforeRevision: row.revision, afterRevision: row.revision + 1 }, { kind: 'mediaResolution', id, beforeRevision: null, afterRevision: 1 }], ['finding:' + id, 'resolution:' + id]),
   assertion('EXISTS(SELECT 1 FROM mallet_media_resolutions WHERE finding_id=? AND request_json=?)', [id, request]),
   { sql: 'SELECT * FROM mallet_media_resolutions WHERE finding_id=?', params: [id] }
  ])
- return result[2].results[0]
+ return result.at(-1)!.results[0]
 }

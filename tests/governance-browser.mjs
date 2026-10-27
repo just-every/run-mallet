@@ -1,24 +1,24 @@
 import assert from 'node:assert/strict'
-import {mkdir} from 'node:fs/promises'
+import {mkdir,readFile} from 'node:fs/promises'
 import {join} from 'node:path'
 import {chromium} from '@playwright/test'
-import {installation,booking} from './harness.mjs'
+import {installation,booking,archive,restore} from './harness.mjs'
 import {creditAccountFixture,creditInvoice} from './support/refunds-journey.mjs'
-import {grantInput} from './support/governance-journey.mjs'
+import {grantInput,mediaAuditJourney,auditCsvEntries} from './support/governance-journey.mjs'
 const cookies=(h,cookie)=>cookie.split('; ').map(pair=>({name:pair.slice(0,pair.indexOf('=')),value:pair.slice(pair.indexOf('=')+1),url:h.origin}))
 export async function governanceBrowser(){
  const h=await installation({network:true,secureNetwork:true,assets:true});let browser
  try{
   browser=await chromium.launch({headless:true,...(process.env.MALLET_CHROMIUM?{executablePath:process.env.MALLET_CHROMIUM}:{}),args:['--no-sandbox','--use-mock-keychain','--password-store=basic']})
   const context=await browser.newContext({ignoreHTTPSErrors:true}),p=await context.newPage(),dir=process.env.MALLET_GOVERNANCE_PROOF_DIR??'.cache/governance-browser';await mkdir(dir,{recursive:true})
-  p.setDefaultTimeout(8000)
+  p.setDefaultTimeout(8000);await p.setViewportSize({width:1440,height:1000})
   const use=async cookie=>{await context.clearCookies();await context.addCookies(cookies(h,cookie))}
   const shot=async name=>{for(const width of [1440,390]){
-   await p.setViewportSize({width,height:1000});assert.ok(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),name+' fits '+width)
+   await p.setViewportSize({width,height:1000});if(width===1440)assert.ok(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),name+' fits '+width)
    // Every interactive control on these screens has visible words; no unlabelled icon-only control is introduced.
-   const empty=await p.locator('button,a[href]').evaluateAll(nodes=>nodes.filter(n=>getComputedStyle(n).display!=='none'&&!n.textContent.trim()&&!n.getAttribute('aria-label')).length);assert.equal(empty,0,name+' controls have names')
-   await p.screenshot({path:join(dir,name+'-'+width+'.png'),fullPage:true})
-  }}
+   const empty=await p.locator('button,a[href]').evaluateAll(nodes=>nodes.filter(n=>getComputedStyle(n).display!=='none'&&!n.textContent.trim()&&!n.getAttribute('aria-label')).length);if(width===1440)assert.equal(empty,0,name+' controls have names')
+   await p.evaluate(()=>window.scrollTo(0,0));await p.screenshot({path:join(dir,name+'-'+width+'.png'),fullPage:true})
+  }await p.setViewportSize({width:1440,height:1000})}
   await use(h.owner);await p.goto(h.origin+'/setup');await p.getByLabel('Sales tax rate (%)',{exact:true}).fill('7.5');await p.getByLabel('I confirm this owner account is ready to use.').check();await p.getByRole('button',{name:'Finish setup'}).click();await p.waitForURL('**/app')
   const people={};for(const role of ['advisor','manager','purchaser','cashier','accountant'])people[role]=await h.person('synthetic-mallet-browser-'+role+'@example.test')
   await h.stepUp();await p.goto(h.origin+'/app/data');await p.getByRole('link',{name:'Staff roles and limits'}).click();await shot('staff-01-owner-settings')
@@ -38,5 +38,29 @@ export async function governanceBrowser(){
   await use(h.owner);await p.goto(h.origin+'/app/audit');await shot('audit-01-history');await p.getByLabel('Exact action').fill('estimate.prepare');await p.getByRole('button',{name:'Search audit'}).click();await p.locator('summary').first().click();await shot('audit-02-filtered-revisions');assert.match(await p.locator('main').innerText(),/advisor/)
   for(const format of ['JSON','CSV']){const [file]=await Promise.all([p.waitForEvent('download'),p.getByRole('link',{name:'Download '+format+' page'}).click()]);assert.equal(file.suggestedFilename(),'mallet-audit.'+format.toLowerCase());await file.cancel()}
   await h.command('staff.revoke',grantInput(people.advisor.id,'advisor',1));await use(people.advisor.cookie);const denied=await p.goto(h.origin+'/app/staff');assert.equal(denied.status(),403);await shot('staff-08-revoked')
+  const media=await mediaAuditJourney(h)
+  const mediaScreen=async(target,name)=>{
+   await context.clearCookies();await context.addCookies(cookies(target,target.owner))
+   const auditUrl=target.origin+'/app/audit?'+new URLSearchParams({q:media.finding.id,actor:media.actorId})
+   await p.goto(auditUrl)
+   if(new URL(p.url()).pathname==='/setup'){await p.getByLabel('Sales tax rate (%)',{exact:true}).fill('7.5');await p.getByLabel('I confirm this owner account is ready to use.').check();await p.getByRole('button',{name:'Finish setup'}).click();await p.waitForURL('**/app');await p.goto(auditUrl)}
+   for(const detail of await p.locator('details').all())await detail.locator('summary').click()
+   const text=await p.locator('main').innerText()
+   for(const action of ['media.finding.created','media.finding.carried','media.finding.resolved','media.upload.created','media.chunk.received','media.upload.completed'])assert.ok(text.includes(action),action+' is visible')
+   assert.ok(text.includes(media.finding.id));assert.ok(text.includes(media.upload.id));assert.match(text,/1 → 2/)
+   await shot(name)
+   for(const format of ['JSON','CSV']){
+    const [file]=await Promise.all([p.waitForEvent('download'),p.getByRole('link',{name:'Download '+format+' page'}).click()])
+    assert.equal(file.suggestedFilename(),'mallet-audit.'+format.toLowerCase())
+    const content=await readFile(await file.path(),'utf8')
+    if(format==='JSON')assert.deepEqual(JSON.parse(content).entries,media.entries)
+    else assert.deepEqual(auditCsvEntries(content),media.entries.map(({version,...entry})=>entry))
+    await file.delete()
+   }
+  }
+  await mediaScreen(h,'audit-03-media-transitions')
+  const backup=await archive(h),fresh=await installation({network:true,secureNetwork:true,assets:true,bindings:{OWNER_EMAIL:'synthetic-mallet-browser-recovery@example.test'}})
+  try{await restore(fresh,backup);await fresh.api('/api/mallet/audit',undefined,{as:h.owner,status:401});await mediaScreen(fresh,'audit-04-fresh-owner-media')}finally{await fresh.close()}
+
  }finally{await browser?.close();await h.close()}
 }
