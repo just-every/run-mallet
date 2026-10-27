@@ -20,6 +20,9 @@ export async function patternFixture(h,f,w,{lot=f.lot,index=0}={}){
 export async function patternJourney(h,f,w){
  const url='/api/mallet/warranty-patterns/'+w.id,initial=await h.api(url)
  assert.equal(initial.repeat,false,'Repeated cases on one original repair do not prove a repeat cluster')
+ const noCluster=(await h.state()).records
+ await h.command('warranty.patternAction',{warrantyId:w.id,version:w.version,sourceKey:initial.sourceKey,kind:'correctiveAction',reference:'synthetic-mallet-no-cluster',reason:'There is only one original repair'},{status:409})
+ assert.deepEqual((await h.state()).records,noCluster,'A pattern action requires a detected cluster')
  const {second,unrelated,diagnosis}=await patternFixture(h,f,w)
  const excluded=[]
  for(const [index,changes]of [{itemBarcode:f.fixture.replacement.barcode},{supplier:'Other supplier'},{supplierLot:'synthetic-mallet-other-lot'}].entries()){
@@ -111,6 +114,7 @@ export async function patternJourney(h,f,w){
   reviewed=await h.command('warranty.patternAction',input,{as:admin.cookie})
   const action=reviewed.patternActions.at(-1)
   assert.ok(action,'The explicitly approved action is retained')
+  assert.equal(action.reference,input.reference);assert.ok(Number.isFinite(Date.parse(action.at)),'Approval retains a recorded instant')
   assert.equal(action.kind,kind);assert.equal(action.status,'approved');assert.equal(action.by.id,admin.id);assert.equal(action.reason,input.reason)
   assert.deepEqual(new Set(action.members),new Set([w.id,second.id]));citationSchema(action.sources)
   assert.equal(h.messages.length,messageCount,'Approval causes no outbound mail')
