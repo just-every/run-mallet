@@ -1,0 +1,32 @@
+/** Blocker history is product data. Archived actors remain attribution, never destination authority. */
+export async function validateBlockers({table,rejectIf}){
+ const records=table('mallet_records');if(!records)return
+ const j=(path,alias='r')=>`json_extract(${alias}.value,'$.${path}')`,t=path=>`json_type(r.value,'$.${path}')`
+ const check=(kind,code,sql)=>rejectIf('blocker_'+code,`SELECT 1 FROM ${records} r WHERE r.kind='${kind}' AND (${sql})`)
+ const exists=(kind,id,extra='')=>`EXISTS(SELECT 1 FROM ${records} target WHERE target.kind='${kind}' AND target.id=${id} ${extra})`
+ const actor=value=>`json_type(${value},'$.id') IS NOT 'text' OR length(trim(json_extract(${value},'$.id')))=0 OR json_type(${value},'$.name') IS NOT 'text' OR json_type(${value},'$.role') IS NOT 'text' OR json_extract(${value},'$.role') NOT IN ('owner','admin')`
+ const cite=value=>`json_type(${value}) IS NOT 'object' OR json_type(${value},'$.kind') IS NOT 'text' OR json_type(${value},'$.id') IS NOT 'text' OR json_type(${value},'$.version') IS NOT 'integer' OR json_extract(${value},'$.version')<1 OR json_type(${value},'$.label') IS NOT 'text' OR json_type(${value},'$.href') IS NOT 'text' OR json_extract(${value},'$.href') NOT LIKE '/app/%' OR
+ NOT EXISTS(SELECT 1 FROM ${records} target WHERE target.kind=json_extract(${value},'$.kind') AND target.id=json_extract(${value},'$.id') AND target.revision>=json_extract(${value},'$.version') AND (
+  (target.kind='job' AND target.id=${j('jobId')}) OR
+  (target.kind IN ('intake','intakeComparison','intakeForm','diagnosis','inspection','estimate','approvalLink','specialPart','flow','timeEntry','subtask','handoff','jobNote','proposal','routingCase','routingBlocker','promise','promisePlan','promiseRevision','promiseNotice') AND json_extract(target.value,'$.jobId')=${j('jobId')}) OR
+  (target.kind='purchaseOrder' AND EXISTS(SELECT 1 FROM json_each(target.value,'$.lines') l WHERE json_extract(l.value,'$.jobId')=${j('jobId')})) OR
+  (target.kind='purchaseReceipt' AND EXISTS(SELECT 1 FROM ${records} po,json_each(po.value,'$.lines') l WHERE po.kind='purchaseOrder' AND po.id=json_extract(target.value,'$.purchaseId') AND json_extract(l.value,'$.id')=json_extract(target.value,'$.lineId') AND json_extract(l.value,'$.jobId')=${j('jobId')}))
+ ))`
+ for(const kind of ['repairBlockerPacket','repairBlockerTask'])await check(kind,'job_reference',`${t('jobId')} IS NOT 'text' OR NOT ${exists('job',j('jobId'))}`)
+ await rejectIf('blocker_packet_unique',`SELECT 1 FROM ${records} WHERE kind='repairBlockerPacket' GROUP BY json_extract(value,'$.jobId') HAVING count(*)>1`)
+ await check('repairBlockerPacket','packet_shape',`${t('revisions')} IS NOT 'array' OR json_array_length(r.value,'$.revisions')<1 OR EXISTS(SELECT 1 FROM json_each(r.value,'$.revisions') v WHERE
+  json_type(v.value,'$.n') IS NOT 'integer' OR json_extract(v.value,'$.n')<>CAST(v.key AS INTEGER)+1 OR
+  json_type(v.value,'$.basis') IS NOT 'text' OR length(json_extract(v.value,'$.basis'))<>64 OR json_extract(v.value,'$.basis') GLOB '*[^0-9a-f]*' OR
+  julianday(json_extract(v.value,'$.at')) IS NULL OR ${actor("json_extract(v.value,'$.by')")} OR
+  json_type(v.value,'$.sources') IS NOT 'object' OR (SELECT count(*) FROM json_each(v.value,'$.sources'))<>6 OR
+  EXISTS(SELECT 1 FROM json_each(v.value,'$.sources') g WHERE g.key NOT IN ('intake','diagnostics','authorization','parts','progress','promises') OR g.type<>'array') OR
+  json_type(v.value,'$.blockers') IS NOT 'array' OR json_type(v.value,'$.proposals') IS NOT 'array' OR json_type(v.value,'$.progress') IS NOT 'object'
+ )`)
+ await check('repairBlockerPacket','packet_citations',`EXISTS(SELECT 1 FROM json_each(r.value,'$.revisions') v,json_each(v.value,'$.sources') g,json_each(g.value) c WHERE ${cite('c.value')})`)
+ await check('repairBlockerPacket','packet_blockers',`EXISTS(SELECT 1 FROM json_each(r.value,'$.revisions') v,json_each(v.value,'$.blockers') b WHERE json_extract(b.value,'$.kind') NOT IN ('evidence','consent','backorder') OR json_type(b.value,'$.key') IS NOT 'text' OR ${cite("json_extract(b.value,'$.source')")} OR json_extract(b.value,'$.action.href') NOT LIKE '/app/%')`)
+ await check('repairBlockerPacket','packet_proposals',`EXISTS(SELECT 1 FROM json_each(r.value,'$.revisions') v,json_each(v.value,'$.proposals') p WHERE json_extract(p.value,'$.kind') NOT IN ('estimate','dispatch') OR json_extract(p.value,'$.href') NOT LIKE '/app/%' OR NOT EXISTS(SELECT 1 FROM ${records} target WHERE target.kind=CASE json_extract(p.value,'$.kind') WHEN 'dispatch' THEN 'proposal' ELSE 'estimate' END AND target.id=json_extract(p.value,'$.id') AND json_extract(target.value,'$.jobId')=${j('jobId')} AND target.revision>=json_extract(p.value,'$.version')))`)
+ await check('repairBlockerTask','task_shape',`${t('packetId')} IS NOT 'text' OR NOT ${exists('repairBlockerPacket',j('packetId'),`AND json_extract(target.value,'$.jobId')=${j('jobId')}`)} OR ${t('key')} IS NOT 'text' OR ${j('kind')} NOT IN ('evidence','consent','backorder') OR ${cite(j('source'))} OR ${actor(j('handler'))} OR julianday(${j('openedAt')}) IS NULL OR ${t('assignments')} IS NOT 'array' OR json_array_length(r.value,'$.assignments')<1 OR ${t('acknowledgments')} IS NOT 'array'`)
+ await check('repairBlockerTask','task_history',`EXISTS(SELECT 1 FROM json_each(r.value,'$.assignments') a WHERE ${actor("json_extract(a.value,'$.handler')")} OR ${actor("json_extract(a.value,'$.by')")} OR julianday(json_extract(a.value,'$.at')) IS NULL) OR EXISTS(SELECT 1 FROM json_each(r.value,'$.acknowledgments') a WHERE ${actor("json_extract(a.value,'$.by')")} OR julianday(json_extract(a.value,'$.at')) IS NULL OR json_type(a.value,'$.note') IS NOT 'text' OR length(trim(json_extract(a.value,'$.note')))=0 OR length(json_extract(a.value,'$.note'))>2000 OR NOT EXISTS(SELECT 1 FROM ${records} p,json_each(p.value,'$.revisions') v WHERE p.kind='repairBlockerPacket' AND p.id=${j('packetId')} AND json_extract(v.value,'$.basis')=json_extract(a.value,'$.basis')))`)
+ await check('repairBlockerTask','acknowledgment',`${t('acknowledgment')} IS NOT 'null' AND (${t('acknowledgment')} IS NOT 'object' OR NOT EXISTS(SELECT 1 FROM json_each(r.value,'$.acknowledgments') a WHERE json(a.value)=json(${j('acknowledgment')})))`)
+ await check('repairBlockerTask','resolution',`${t('resolution')} IS NOT 'null' AND (${t('resolution')} IS NOT 'object' OR julianday(${j('resolution.at')}) IS NULL OR ${actor(j('resolution.by'))} OR ${t('resolution.reason')} IS NOT 'text' OR ${cite(j('resolution.source'))})`)
+}
