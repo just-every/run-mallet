@@ -4636,7 +4636,7 @@
       "executable": false
     },
     "tests/governance-browser.mjs": {
-      "sha256": "ae85e78cfa8b63ffb450e9201568516fc931e7c15351424dd88257325779b6ff",
+      "sha256": "a903b2ec8c21ee553f21c3d0e4b93143f7b6d8f2a75e0384485c5864bffa92f7",
       "executable": false
     },
     "tests/harness.mjs": {
@@ -4900,7 +4900,7 @@
       "executable": false
     },
     "tests/support/governance-journey.mjs": {
-      "sha256": "66f13395f0423102bcfc4fc96abe14c9f5293014ad86aac278e19c9c11319699",
+      "sha256": "8b5d1276e2a08149db1bc0e74a98e81525d28b263b5ee1e0f71830b069711a0c",
       "executable": false
     },
     "tests/support/handover-input.mjs": {

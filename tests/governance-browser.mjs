@@ -14,11 +14,11 @@ export async function governanceBrowser(){
   p.setDefaultTimeout(8000);await p.setViewportSize({width:1440,height:1000})
   const use=async cookie=>{await context.clearCookies();await context.addCookies(cookies(h,cookie))}
   const shot=async name=>{for(const width of [1440,390]){
-   await p.setViewportSize({width,height:1000});if(width===1440)assert.ok(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),name+' fits '+width)
+   await p.setViewportSize({width,height:1000});assert.ok(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),name+' fits '+width)
    // Every interactive control on these screens has visible words; no unlabelled icon-only control is introduced.
-   const empty=await p.locator('button,a[href]').evaluateAll(nodes=>nodes.filter(n=>getComputedStyle(n).display!=='none'&&!n.textContent.trim()&&!n.getAttribute('aria-label')).length);if(width===1440)assert.equal(empty,0,name+' controls have names')
+   const empty=await p.locator('button,a[href]').evaluateAll(nodes=>nodes.filter(n=>getComputedStyle(n).display!=='none'&&!n.textContent.trim()&&!n.getAttribute('aria-label')).length);assert.equal(empty,0,name+' controls have names')
    await p.evaluate(()=>window.scrollTo(0,0));await p.screenshot({path:join(dir,name+'-'+width+'.png'),fullPage:true})
-  }await p.setViewportSize({width:1440,height:1000})}
+  }}
   await use(h.owner);await p.goto(h.origin+'/setup');await p.getByLabel('Sales tax rate (%)',{exact:true}).fill('7.5');await p.getByLabel('I confirm this owner account is ready to use.').check();await p.getByRole('button',{name:'Finish setup'}).click();await p.waitForURL('**/app')
   const people={};for(const role of ['advisor','manager','purchaser','cashier','accountant'])people[role]=await h.person('synthetic-mallet-browser-'+role+'@example.test')
   await h.stepUp();await p.goto(h.origin+'/app/data');await p.getByRole('link',{name:'Staff roles and limits'}).click();await shot('staff-01-owner-settings')
@@ -44,18 +44,23 @@ export async function governanceBrowser(){
    const auditUrl=target.origin+'/app/audit?'+new URLSearchParams({q:media.finding.id,actor:media.actorId})
    await p.goto(auditUrl)
    if(new URL(p.url()).pathname==='/setup'){await p.getByLabel('Sales tax rate (%)',{exact:true}).fill('7.5');await p.getByLabel('I confirm this owner account is ready to use.').check();await p.getByRole('button',{name:'Finish setup'}).click();await p.waitForURL('**/app');await p.goto(auditUrl)}
-   for(const detail of await p.locator('details').all())await detail.locator('summary').click()
-   const text=await p.locator('main').innerText()
-   for(const action of ['media.finding.created','media.finding.carried','media.finding.resolved','media.upload.created','media.chunk.received','media.upload.completed'])assert.ok(text.includes(action),action+' is visible')
-   assert.ok(text.includes(media.finding.id));assert.ok(text.includes(media.upload.id));assert.match(text,/1 → 2/)
-   await shot(name)
-   for(const format of ['JSON','CSV']){
-    const [file]=await Promise.all([p.waitForEvent('download'),p.getByRole('link',{name:'Download '+format+' page'}).click()])
-    assert.equal(file.suggestedFilename(),'mallet-audit.'+format.toLowerCase())
-    const content=await readFile(await file.path(),'utf8')
-    if(format==='JSON')assert.deepEqual(JSON.parse(content).entries,media.entries)
-    else assert.deepEqual(auditCsvEntries(content),media.entries.map(({version,...entry})=>entry))
-    await file.delete()
+   for(const width of [1440,390]){
+    await p.setViewportSize({width,height:1000})
+    for(const detail of await p.locator('details').all())if(!await detail.evaluate(node=>node.open))await detail.locator('summary').click()
+    const text=await p.locator('main').innerText()
+    for(const action of ['media.finding.created','media.finding.carried','media.finding.resolved','media.upload.created','media.chunk.received','media.upload.completed'])assert.ok(text.includes(action),action+' is visible at '+width)
+    assert.ok(text.includes(media.finding.id));assert.ok(text.includes(media.upload.id));assert.match(text,/1 → 2/)
+    assert.ok(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),name+' fits '+width)
+    const empty=await p.locator('button,a[href]').evaluateAll(nodes=>nodes.filter(n=>getComputedStyle(n).display!=='none'&&!n.textContent.trim()&&!n.getAttribute('aria-label')).length);assert.equal(empty,0,name+' controls have names at '+width)
+    await p.evaluate(()=>window.scrollTo(0,0));await p.screenshot({path:join(dir,name+'-'+width+'.png'),fullPage:true})
+    for(const format of ['JSON','CSV']){
+     const [file]=await Promise.all([p.waitForEvent('download'),p.getByRole('link',{name:'Download '+format+' page'}).click()])
+     assert.equal(file.suggestedFilename(),'mallet-audit.'+format.toLowerCase())
+     const content=await readFile(await file.path(),'utf8')
+     if(format==='JSON')assert.deepEqual(JSON.parse(content).entries,media.entries)
+     else assert.deepEqual(auditCsvEntries(content),media.entries.map(({version,...entry})=>entry))
+     await file.delete()
+    }
    }
   }
   await mediaScreen(h,'audit-03-media-transitions')
