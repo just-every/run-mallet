@@ -1,6 +1,7 @@
 import {clientCommand} from './api/clients'
 import {resourceRead} from './api/resources'
 import {preparation} from './api/commands'
+import {webhookResponse} from './webhook-door'
 import {statusNoticeCommand,statusNoticeState} from './status-notice-door'
 import {internalStatusCommands} from './status-notices'
 import {statusNoticePage} from './ui/status-notices'
@@ -176,6 +177,7 @@ function withoutFleetApproval(value:any):any {
  return value
 }
 function visible(s:State,actor:Actor):State {
+ if(actor.role!=='owner')s={...s,records:Object.fromEntries(Object.entries(s.records).filter(([kind])=>!kind.startsWith('webhook')))}
  s={...s,records:{...s.records,reportDelivery:rows(s,'reportDelivery').filter(r=>r.ownerId===actor.id),reportFilter:rows(s,'reportFilter').filter(r=>r.ownerId===actor.id)}}
  if(actor.role!=='owner'){s={...s,records:{...Object.fromEntries(Object.entries(s.records).filter(([kind])=>!kind.startsWith('stripe'))),event:rows(s,'event').filter(r=>!r.kind.startsWith('stripe.'))}};s=withoutFleetApproval(s)}
  if(actor.role==='owner')s={...s,records:{...s.records,deposit:rows(s,'deposit').map(d=>({...d,balance:depositBalance(s,d)}))}}
@@ -286,6 +288,7 @@ async function workshopResponse(request:Request,original:Bindings,execution:Pick
   const customer=await customerLinkResponse(request,original);if(customer)return customer
   return approvalResponse(request,original)
  });if(customerDoor)return customerDoor
+ const webhook=await webhookResponse(request,original);if(webhook)return webhook
  const jobs=await jobsResponse(request,original);if(jobs)return jobs
  const security=await securityResponse(request,original);if(security)return security
  const connectors=await connectorsResponse(request,original);if(connectors)return connectors
@@ -348,6 +351,7 @@ async function workshopResponse(request:Request,original:Bindings,execution:Pick
   }
   if((path==='/api/mallet/commands'||path==='/app/actions') && request.method==='POST') {
    const data=path==='/app/actions'?formInput(await nativeForm(request)):await body(request),command=String(data.command),input=data.input??data
+   if(command.startsWith('webhook.'))throw new HttpError(403,'webhook_door_required')
    submitted={command,input}
    let result:any
    if(['connector.save','connector.revoke'].includes(command)&&actor.role==='owner'&&!auth.gate?.enrolled)throw new HttpError(403,'step_up_required','Enrol your own second factor before opening the credential door.')

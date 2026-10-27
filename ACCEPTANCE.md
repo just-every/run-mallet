@@ -454,9 +454,9 @@ Evidence: No implementation evidence yet.
 
 Evidence: `src/mallet/api/resources.ts`; `src/mallet/api/commands.ts`; `src/mallet/api/clients.ts`; `tests/support/shop-api-journey.mjs`; `tests/mallet.test.mjs`; `docs/shop-api.md`.
 
-**API-002 — Webhooks and visible integration recovery.** Status: **missing**. [Target, acceptance and remaining work](./CONTRACT.md#connected-tools-and-mobility).
+**API-002 — Webhooks and visible integration recovery.** Status: **partial**. [Target, acceptance and remaining work](./CONTRACT.md#connected-tools-and-mobility).
 
-Evidence: No implementation evidence yet.
+Evidence: `tests/mallet.test.mjs`; `tests/support/webhook-journey.mjs`; `tests/support/real-crank.mjs`; `docs/webhooks.md`.
 
 **MOBILE-001 — Responsive staff and customer work.** Status: **partial**. [Target, acceptance and remaining work](./CONTRACT.md#connected-tools-and-mobility).
 

@@ -560,7 +560,7 @@
       "executable": false
     },
     ".github/workflows/verify.yml": {
-      "sha256": "a3f2b63686dea865174bc0c1eaec471c391bc2df96b598433bd7fe8aaf32b720",
+      "sha256": "1d8730ad042132a50348f42520d6b0bfd4741a45c315d4f55604e90f5fe19798",
       "executable": false
     },
     ".gitignore": {
@@ -572,7 +572,7 @@
       "executable": false
     },
     "ACCEPTANCE.md": {
-      "sha256": "c2741c7d1655432c6357e03952c38b3c22358ed59b14b2579e8a37e1087261f3",
+      "sha256": "f0f243e421ccfeff154a45b5f8dff489ff49b0b9a6a560380e906f16f30f6639",
       "executable": false
     },
     "AGENTS.md": {
@@ -584,7 +584,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "50a9638fc87c9d0ee50b3d9d164a8e00dfb9ae1e0ff65e47336e0c540ab4b9bf",
+      "sha256": "9a5872b62a15d3443370822a74ffcb0304d2e5929719e5bc20430ae327320a25",
       "executable": false
     },
     "deploy-demo.json": {
@@ -741,6 +741,10 @@
     },
     "docs/turnaround.md": {
       "sha256": "04a3d080f9adfda848f56f7baeceb5e81d9cf3d309136ae024f558e51df91782",
+      "executable": false
+    },
+    "docs/webhooks.md": {
+      "sha256": "664538e03aeaba272e7d138f8f8f275f62df51dd674783e80c559991dc6d80e9",
       "executable": false
     },
     "edition.json": {
@@ -945,6 +949,10 @@
     },
     "migrations/core/0118_mallet_shop_api.sql": {
       "sha256": "14371801ffc73128ab59c2597ac4c239d3ee631786f21d279de4cd882072b69b",
+      "executable": false
+    },
+    "migrations/core/0118_mallet_webhooks.sql": {
+      "sha256": "c492b2e580ac03c3144f6fdafbaf4592a9bdec1fb17121fb5c7900a2bbd538b8",
       "executable": false
     },
     "ONBOARDING.md": {
@@ -1592,7 +1600,7 @@
       "executable": false
     },
     "src/mallet/archive-policy.mjs": {
-      "sha256": "361ffce404e805e9235c09ad283a04fa6753515eb5ee60c79509b49154dc9f6d",
+      "sha256": "3466b4a2a5a5e800c9016b1aeb938c081d9bab8c0662bd92e849f340d7771911",
       "executable": false
     },
     "src/mallet/asset-types.ts": {
@@ -1784,7 +1792,7 @@
       "executable": false
     },
     "src/mallet/http.ts": {
-      "sha256": "21bb4cb5c0e9da8bb44eed30f3017034f6817e8ddfcb515e6610def4f63e3fd7",
+      "sha256": "c5dc12d34451a3b4792a1bb04491b9899248e616371207772002337b521289ec",
       "executable": false
     },
     "src/mallet/imports/context.ts": {
@@ -1976,7 +1984,7 @@
       "executable": false
     },
     "src/mallet/model.ts": {
-      "sha256": "a0bf2259c3ea6bcd9b38fe53b831b988a31dfd564d2dc5a8635eaeb362c51613",
+      "sha256": "60bc242854bc471a3e19ef2c91db30a38cbde4568fa1c6af39b05086d1158795",
       "executable": false
     },
     "src/mallet/money.ts": {
@@ -2176,7 +2184,7 @@
       "executable": false
     },
     "src/mallet/restore/validate-records.mjs": {
-      "sha256": "1bd66bec9306bb2841b440a1543b93f51a80b885ef1f3a50f474a2ccf3b9441f",
+      "sha256": "7ba5cb08c7038ddef40c64d5e0a6ca51bf18d3f562b4854fd3f6fc00b16b3304",
       "executable": false
     },
     "src/mallet/restore/validate-reviews.mjs": {
@@ -2717,6 +2725,14 @@
     },
     "src/mallet/warranty.ts": {
       "sha256": "6ab2f991cbe57afef25bc8d175366709bf29842094725958be7cf9fcc47b37a4",
+      "executable": false
+    },
+    "src/mallet/webhook-door.ts": {
+      "sha256": "c72a014905b74c0b28f24d192a4d7cfa2778a4e167447d54c3c72c9a07e3e2f4",
+      "executable": false
+    },
+    "src/mallet/webhooks.ts": {
+      "sha256": "292438a50c1a705600728f3353a661f8d2303f2e1a95395d89c6a89e11d6864b",
       "executable": false
     },
     "src/mallet/workshop.ts": {
@@ -4400,7 +4416,7 @@
       "executable": false
     },
     "src/server.ts": {
-      "sha256": "d36ae04ee780718db4d55d5007bba58ced853a9e6286453259e6086673685bd1",
+      "sha256": "af4b0635be1fb0ea236310147ef4780d5bac1d1b2e34825ccac1e17aadba3e35",
       "executable": false
     },
     "src/site/docs/build/manifest.ts": {
@@ -4708,7 +4724,7 @@
       "executable": false
     },
     "tests/mallet.test.mjs": {
-      "sha256": "299390d8d6062fd3242b716837d81f0e894d5148455a6312e046f60c13e89fe2",
+      "sha256": "3a21c77d84079b0a03341423cbb4fd98054a57608d8e902cb7af08356e9e10b5",
       "executable": false
     },
     "tests/media-browser.mjs": {
@@ -5031,6 +5047,10 @@
       "sha256": "93e1f77a08665d13f6e4512eee6d34c294bbb9d7970274729763075d65d0c07e",
       "executable": false
     },
+    "tests/support/real-crank.mjs": {
+      "sha256": "affcfbb458c9122d296632eeaa1d95f9c30dea9ea8da538b69eb3bedac9711d0",
+      "executable": false
+    },
     "tests/support/real-pier.mjs": {
       "sha256": "f9e00c82e6728ad2211260121306f55a0ead3d70eb56098bc2d542d5307bf51d",
       "executable": false
@@ -5187,6 +5207,10 @@
       "sha256": "6befa6f7af4cd315580e8a413224df0cfe6e3d9251862e177adf626c54c10805",
       "executable": false
     },
+    "tests/support/webhook-journey.mjs": {
+      "sha256": "ab9916335492b85c81dc134ead29dbb5d4cf19e084ffec944fd69bfb9a3e17b0",
+      "executable": false
+    },
     "tests/support/worker-bundle.mjs": {
       "sha256": "f6abf74c8e4d5113e2c3c01bfa81cfc70edbb33557ddfef620437e736562bc06",
       "executable": false
@@ -5204,7 +5228,7 @@
       "executable": false
     },
     "tests/worker.ts": {
-      "sha256": "b17b554828f250e392e3103b1141ccd70219114b10bdd58e5cac946aa8bb4ccd",
+      "sha256": "91a2281f9852d34a47a546d0dd20ca75a8ddd99dfef27d9d5bbefc862c7b70f1",
       "executable": false
     },
     "tsconfig.json": {
