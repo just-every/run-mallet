@@ -572,7 +572,7 @@
       "executable": false
     },
     "ACCEPTANCE.md": {
-      "sha256": "5d07bbd2ab4f1c36e946c64300572b546248727445bc7fb712d51a391dd3bc05",
+      "sha256": "ecd489dd2bf736828055c2d7ded724a6964f7459ff4457ab10a8bbd4fc005ffd",
       "executable": false
     },
     "AGENTS.md": {
@@ -584,7 +584,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "fe5cddeb6ac474863e96096d03ad10de70d0d1b1fef7b699b861e652339cf5a3",
+      "sha256": "25e280d87f52b8fd997ed9c45832c779cee4770314c5087af4619594ca5b39c1",
       "executable": false
     },
     "deploy-demo.json": {
@@ -4768,7 +4768,7 @@
       "executable": false
     },
     "tests/status-notices-browser.mjs": {
-      "sha256": "b82abd10e1f0a82e48b15b67214f95c92be208e3e06f0b75b80371b35f5bafe1",
+      "sha256": "006c0bd25baa5951c0cc0e8ac91d12e9c581561dcbb88e48c85e0f12bb8b99fc",
       "executable": false
     },
     "tests/stock-trace-browser.mjs": {
@@ -5068,7 +5068,7 @@
       "executable": false
     },
     "tests/support/status-notices-journey.mjs": {
-      "sha256": "8eaad22ce1ea09de32e3380927bfd3aba3238b8bbccb4418d1726481373f89d1",
+      "sha256": "8df0d7d253d0d5c7b28652014616870856190c2f88bdc34f77f0584d0bc1eecb",
       "executable": false
     },
     "tests/support/stock-consumption-journey.mjs": {

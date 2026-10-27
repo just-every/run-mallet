@@ -50,7 +50,7 @@ export async function statusNoticesBrowser(){
   await failed.getByLabel('Staff resolution').fill('Owner called and left a personal callback request.');await failed.getByRole('button',{name:'Record contact resolution'}).click();await p.waitForLoadState('domcontentloaded')
   await h.cron(noticeAt(f.base,4));await p.reload();assert.match(await p.locator('main').innerText(),/Uncollected repair: owner follow-up required/);await shot('06-uncollected-followup')
   await p.goto(h.origin+'/app/jobs');assert.equal(await p.getByRole('link',{name:'Open status and pickup follow-up',exact:true}).count(),1);await shot('06a-repair-list-queue');await p.getByRole('link',{name:'Open status and pickup follow-up',exact:true}).click()
-  await p.goto(h.origin+'/app/jobs/'+f.job.id);await shot('06b-repair-task');await p.getByRole('link',{name:'Open status and pickup follow-up',exact:true}).click()
+  await p.goto(h.origin+'/app/jobs/'+f.job.id);await shot('06b-repair-task');await p.locator('#crew li').filter({has:p.getByText('Contact customer about uncollected repair',{exact:true})}).getByRole('link',{name:'Open status and pickup follow-up',exact:true}).click()
   const resolution=p.locator('form').filter({has:p.locator('input[name="command"][value="statusNotice.resolve"]')})
   await resolution.getByLabel('Staff resolution').fill('Reached customer; pickup agreed for tomorrow.');await resolution.getByRole('button',{name:'Record contact resolution'}).click();await p.waitForLoadState('domcontentloaded')
   assert.match(await p.locator('main').innerText(),/Uncollected repair: owner follow-up resolved/);await shot('07-resolved-followup')

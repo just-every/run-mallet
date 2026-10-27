@@ -41,7 +41,9 @@ export async function statusDeliveryJourney(){
   await h.command('statusNotice.claim',{id:'synthetic-mallet-944',version:1},{status:404})
   await h.command('statusNotice.consent',{...f.consentInput,consent:false},{status:422})
   await h.command('statusNotice.consent',{...f.consentInput,channel:'sms'},{status:422})
-  await f.diagnosis();const diagnosis=await f.approve('diagnosis'),before=h.messages.length
+  await f.diagnosis()
+  for(const change of [{confirm:false},{sourceId:'synthetic-mallet-wrong-source'},{templateVersion:'synthetic-mallet-wrong-template'}])await h.command('statusNotice.approve',await f.approval('diagnosis',change),{status:409})
+  const diagnosis=await f.approve('diagnosis'),before=h.messages.length
   await h.cron(noticeAt(f.base,0));assert.equal(h.messages.length,before+1);assert.equal(h.messages.at(-1).subject,'Your repair: diagnosis')
   assert.match(h.messages.at(-1).text,/Please contact Cedar repair shop/);assert.doesNotMatch(h.messages.at(-1).text,/Cylinder|P0301/,'Private diagnosis is never copied into a status template')
   const q=await f.prepare();await h.command('statusNotice.approve',await f.approval('approval'),{status:409})
@@ -59,6 +61,7 @@ export async function statusDeliveryJourney(){
   let s=await h.state(),tasks=s.records.subtask.filter(t=>t.kind==='pickup-followup')
   assert.equal(tasks.length,1);assert.equal(tasks[0].jobId,f.job.id);assert.match(tasks[0].policy,/no fee, disposal or title action/)
   assert.match(await (await h.request('/app/jobs/'+f.job.id+'/notifications')).text(),/Uncollected repair: owner follow-up required/)
+  assert.match(await (await h.request('/app/jobs')).text(),/Open status and pickup follow-up/)
   const open=s.records.statusNotice.find(n=>n.uncollectedTaskId)
   await h.command('statusNotice.resolve',{id:open.id,version:open.version,reason:'Owner reached customer; pickup agreed for tomorrow'})
   s=await h.state();assert.ok(s.records.subtask.find(t=>t.id===tasks[0].id).completedAt);assert.equal(s.records.statusNotice.find(n=>n.id===open.id).resolution.by.id,f.owner.id)
@@ -95,4 +98,17 @@ export async function statusStopsJourney(){
   await collected.command('flow.collect',await handoverInput(collected,f.job.id,'Elena Torres'))
   await collected.cron(noticeAt(f.base,4));assert.equal(((await collected.state()).records.subtask??[]).filter(t=>t.kind==='pickup-followup').length,0);assert.equal(collected.messages.filter(m=>m.subject==='Your repair: ready').length,0)
  }finally{await collected.close()}
+ const erased=await installation();try{
+  const f=await statusFixture(erased),contact=await erased.command('contact.save',{name:'Cedar Bikes',email:f.asset.customerEmail,phone:'',communication:'none',notes:''}),account=await erased.command('customer.save',{name:'Cedar Bikes',kind:'person',contactIds:[contact.id],payerId:contact.id,billingContactId:contact.id,taxStatus:'unknown',notes:''})
+  await erased.command('customer.linkAsset',{assetId:f.asset.id,version:f.asset.version,customerId:account.id,customerVersion:account.version,reason:'Owner checked exact customer identity'})
+  await f.diagnosis();const n=await f.approve('diagnosis'),backup=await archive(erased)
+  await erased.command('retention.hold',{customerId:account.id,scope:'all',jobId:'',reason:'Preserve customer authorization history',reference:'synthetic-mallet-951'})
+  const categories=['personal','import'],preview=await erased.command('retention.preview',{customerId:account.id,categories})
+  await erased.command('customer.erase',{customerId:account.id,categories,fingerprint:preview.fingerprint,consent:true,confirm:'ERASE',reason:'Customer requested erasure; honor active hold',consentEvidence:'synthetic-mallet-952'})
+  const before=erased.messages.length;await erased.cron(noticeAt(f.base,.1));assert.equal(erased.messages.length,before,'Erasure revokes pending send authority even under a hold')
+  assert.deepEqual((await erased.state()).records.statusConsent,[f.consent],'Held authorization evidence remains exact')
+  assert.equal((await erased.state()).records.statusNotice.find(r=>r.id===n.id).status,'skipped')
+  const current=await archive(erased),destination=await installation()
+  try{await restore(destination,backup,{laterJournal:{sourceIdentity:current[0].sourceIdentity,epoch:current[0].epoch,journal:current[0].journal},status:400})}finally{await destination.close()}
+ }finally{await erased.close()}
 }
