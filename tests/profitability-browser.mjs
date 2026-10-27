@@ -4,7 +4,7 @@ import {mkdir} from 'node:fs/promises'
 import {chromium} from '@playwright/test'
 import {installation} from './harness.mjs'
 import {publicDoor} from './support/portable-repair.mjs'
-import {profitabilityJourney,profitPath} from './support/profitability-journey.mjs'
+import {profitabilityJourney,profitabilityAllocationJourney,profitPath} from './support/profitability-journey.mjs'
 export async function profitabilityBrowser(){
  const h=await installation({entry:'tests/dev-worker.ts',network:true,assets:true,bindings:{AUTH_LOCAL:'true',RER_DEV_KEY:randomBytes(32).toString('base64url')}});let browser
  try{
@@ -44,6 +44,19 @@ export async function profitabilityBrowser(){
   await page.goto(h.origin+'/app/reports/profitability?from=2000-01-01&to=2000-01-01');assert.match(await page.locator('main').innerText(),/No repairs booked/);await shot('10-empty-period')
   const denied=await browser.newContext({viewport:{width:1440,height:1000}});await denied.addCookies(f.advisor.cookie.split('; ').map(pair=>({name:pair.slice(0,pair.indexOf('=')),value:pair.slice(pair.indexOf('=')+1),url:h.origin})));const advisor=await denied.newPage()
   for(const width of [1440,390]){await advisor.setViewportSize({width,height:1000});assert.equal((await advisor.goto(h.origin+'/app/reports/profitability'+f.query)).status(),403);await advisor.screenshot({path:'.cache/profitability-browser/11-advisor-refused-'+width+'.png'})}
+  const allocation=await installation({network:true,secureNetwork:true,assets:true})
+  try{
+   const a=await profitabilityAllocationJourney({installation:allocation,recovery:false})
+   const c=await browser.newContext({ignoreHTTPSErrors:true,viewport:{width:1440,height:1000}})
+   await c.addCookies(allocation.owner.split('; ').map(pair=>({name:pair.slice(0,pair.indexOf('=')),value:pair.slice(pair.indexOf('=')+1),url:allocation.origin})))
+   const p=await c.newPage();await p.goto(allocation.origin+'/app/reports/profitability'+a.query)
+   const repair=p.locator('#profit-'+a.jobId);await repair.getByText('Source cost events',{exact:true}).click()
+   assert.match(await repair.innerText(),/purchase-freight/);assert.match(await repair.innerText(),/purchase-supplier-tax/);assert.match(await repair.innerText(),/synthetic-mallet-historical-package/)
+   for(const width of [1440,390]){await p.setViewportSize({width,height:1000});await repair.scrollIntoViewIfNeeded();await p.screenshot({path:'.cache/profitability-browser/12-purchase-allocation-'+width+'.png',fullPage:true})}
+   await p.getByText('By supplier',{exact:true}).click()
+   assert.match(await p.locator('main').innerText(),/synthetic-mallet-supplier-a/);assert.match(await p.locator('main').innerText(),/synthetic-mallet-supplier-b/)
+   for(const width of [1440,390]){await p.setViewportSize({width,height:1000});await p.getByText('By supplier',{exact:true}).scrollIntoViewIfNeeded();await p.screenshot({path:'.cache/profitability-browser/13-mixed-suppliers-'+width+'.png',fullPage:true})}
+  }finally{await allocation.close()}
   assert.deepEqual(errors,[])
  }finally{await browser?.close();await h.close()}
 }

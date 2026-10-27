@@ -97,8 +97,8 @@ export async function profitabilityJourney(h,{recovery=true}={}){
 }
 
 // This extends the registered native journey without changing its browser fixture totals.
-async function profitabilityAllocationJourney(){
- const h=await installation()
+export async function profitabilityAllocationJourney({installation:provided,recovery=true}={}){
+ const h=provided??await installation()
  try{
   const f=await profitabilityFixture(h),read=()=>h.api(profitPath+f.query),original=async()=>(await read()).repairs.find(r=>r.jobId===f.original.id)
   const retained=await h.state(),declarations=[
@@ -123,6 +123,8 @@ async function profitabilityAllocationJourney(){
   assert.equal(history[0].before,null);assert.deepEqual(history.map(r=>r.after),rate.revisions)
   const afterRates=await h.state()
   for(const kind of ['invoice','estimate','timeEntry','timeCorrection','payment'])assert.deepEqual(afterRates.records[kind],retained.records[kind],'Loaded cost declarations preserve retained '+kind)
+  const shift=(await h.state()).records.timeEntry.find(e=>e.kind==='attendance'&&e.ownerId===f.owner.id)
+  await f.correct(shift.id,'2026-10-18T00:00:00Z',shift.revisions.at(-1).endAt,'Paper shift covers earlier effective-date contrast')
   await f.correct(f.timer.id,'2026-10-18T09:00:00Z','2026-10-18T10:30:00Z','Earlier effective date contrast')
   assert.equal((await original()).costEvents.find(e=>e.kind==='labor-timer').amountCents,4500)
   await f.correct(f.timer.id,'2026-10-20T09:00:00Z','2026-10-20T10:30:00Z','Later effective date contrast')
@@ -192,7 +194,8 @@ async function profitabilityAllocationJourney(){
    assert.equal(dimension.reduce((n,g)=>n+g.realized.revenueCents,0),report.realized.revenueCents)
    assert.equal(dimension.reduce((n,g)=>n+g.realized.costCents,0),report.realized.costCents)
   }
-  const fresh=await installation()
-  try{await restore(fresh,await archive(h));assert.deepEqual(await fresh.api(profitPath+f.query),report)}finally{await fresh.close()}
- }finally{await h.close()}
+  if(recovery){const fresh=await installation()
+  try{await restore(fresh,await archive(h));assert.deepEqual(await fresh.api(profitPath+f.query),report)}finally{await fresh.close()}}
+  return {jobId:repair.id,query:f.query,report,result}
+ }finally{if(!provided)await h.close()}
 }

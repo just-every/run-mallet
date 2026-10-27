@@ -90,8 +90,7 @@ export const statusNotices:Handler=(c,command,p)=>{
  if(command==='statusNotice.resolve'){
   if(row.resolution||!['failed','uncertain','claimed'].includes(row.status)&&!row.uncollectedTaskId)fail('NOTICE_STATE','No unresolved contact or pickup issue remains.')
   const resolution={by:who(c),at:c.now,reason:text(p.reason,'staff resolution',2000)}
-  const task=rows(c.s,'subtask').find(t=>t.id===row.uncollectedTaskId)
-  if(task&&!task.completedAt)bump(c.s,'subtask',task,{completedAt:c.now,completedBy:who(c)})
+  for(const task of rows(c.s,'subtask').filter(t=>[row.uncollectedTaskId,row.contactTaskId].includes(t.id)))if(!task.completedAt)bump(c.s,'subtask',task,{completedAt:c.now,completedBy:who(c)})
   const next=bump(c.s,'statusNotice',row,{resolution,pickupClosed:true});event(c,command,row.jobId,row.id,{});return next
  }
  if(command==='statusNotice.claim'){
@@ -100,6 +99,8 @@ export const statusNotices:Handler=(c,command,p)=>{
  }
  if(row.status!=='claimed')fail('NOTICE_STATE','The handoff outcome was already recorded.')
  const status=choice(p.status,['accepted','development','failed','uncertain','skipped'] as const,'handoff outcome')
- const next=bump(c.s,'statusNotice',row,{status,provider:text(p.provider,'provider',100),providerReference:text(p.providerReference,'provider reference',1024,true),outcomeAt:c.now})
+ let contactTaskId=row.contactTaskId
+ if(['failed','uncertain'].includes(status)&&['ready','pickup'].includes(row.kind)&&!contactTaskId){const task=put(c.s,'subtask',{kind:'pickup-followup',jobId:row.jobId,noticeId:row.id,title:'Resolve failed pickup contact',assigneeId:'current-owner',dependsOn:[],createdBy:who(c),createdAt:c.now,completedAt:null,completedBy:null});contactTaskId=task.id}
+ const next=bump(c.s,'statusNotice',row,{...(contactTaskId?{contactTaskId}:{}),status,provider:text(p.provider,'provider',100),providerReference:text(p.providerReference,'provider reference',1024,true),outcomeAt:c.now})
  event(c,command,row.jobId,row.id,{status});return next
 }
