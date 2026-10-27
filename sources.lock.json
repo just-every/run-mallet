@@ -664,7 +664,7 @@
       "executable": false
     },
     "docs/operations.md": {
-      "sha256": "0876aec7d3d01317e06611c61fcea6738a2aa03bd79363f2e227e60c57351646",
+      "sha256": "df7278e90cc83232989dea3fac01909f97fea5eec6e9c4089dca32b5844c2d46",
       "executable": false
     },
     "docs/people-and-agents.md": {
@@ -4680,7 +4680,7 @@
       "executable": false
     },
     "tests/mallet.test.mjs": {
-      "sha256": "73db88f560c8c79882366152a9a6db335aa5a3d5c70e90293c4bab0399b0ea7a",
+      "sha256": "9f91f1a3d56225341cc9939b25608544d48d36d1c9f457d8de585a8a1fb104ac",
       "executable": false
     },
     "tests/media-browser.mjs": {
@@ -5152,7 +5152,7 @@
       "executable": false
     },
     "tests/support/warranty-pattern-journey.mjs": {
-      "sha256": "08246a19d49eb7a72674a29c55f789c873cb72210578c06027d80572d3063786",
+      "sha256": "d2a8bcfbdc852545551b7311629f415f9cf849e861f9f9729091116ea4b4f0f9",
       "executable": false
     },
     "tests/support/worker-bundle.mjs": {

@@ -37,6 +37,7 @@ export async function patternJourney(h,f,w){
  const anchor=packet.evidence.find(c=>c.id===w.id)
  assert.equal(anchor.claims[0].status,'credited')
  assert.deepEqual(anchor.labor.map(j=>j.actuals.map(a=>a.quantity)),[[1,1],[1,1]],'Exact original and rework quantities are cited')
+ assert.ok(anchor.decision,'Packet includes its cited warranty decision')
  assert.deepEqual([anchor.decision.outcome,anchor.decision.responsibility,anchor.decision.noChargeLabor],['covered','supplier',true],'Exact human coverage decision is cited')
  assert.deepEqual(anchor.decision,w.decision)
  const citationSchema=sources=>{assert.ok(sources.length>0);for(const source of sources){assert.deepEqual(Object.keys(source).sort(),['id','kind','version']);assert.equal(typeof source.id,'string');assert.ok(Number.isInteger(source.version)&&source.version>0)}}
@@ -101,6 +102,7 @@ export async function patternJourney(h,f,w){
   assert.deepEqual((await h.state()).records,beforeAction)
   reviewed=await h.command('warranty.patternAction',input,{as:admin.cookie})
   const action=reviewed.patternActions.at(-1)
+  assert.ok(action,'The explicitly approved action is retained')
   assert.equal(action.kind,kind);assert.equal(action.status,'approved');assert.equal(action.by.id,admin.id);assert.equal(action.reason,input.reason)
   assert.deepEqual(new Set(action.members),new Set([w.id,second.id]));citationSchema(action.sources)
   assert.equal(h.messages.length,messageCount,'Approval causes no outbound mail')
