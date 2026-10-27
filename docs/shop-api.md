@@ -33,8 +33,13 @@ also invalidates the client. Each read, write and retry rechecks current authori
 Conservative interim policy: only a fresh-confirmed current owner may issue or
 revoke these installation-local clients. Administrators, delegated operators,
 legacy preparation keys and clients cannot manage them. No financial-read or
-decision capability exists in this slice. This adopted API authority policy
-awaits ct approval; API-001 remains PARTIAL.
+decision capability exists in this slice. The ct ruling of 27 October 2026 approves this interim floor with riders;
+API-001 remains PARTIAL. Owner-only management is not the permanent target.
+Audited revocable staff delegation, bounded renewal or rotation, usable order
+and stock quantities, and separately scoped receiving, allocation and fulfilment
+writes remain required. Future money reads and decisions need separate explicit
+capabilities, current revisions, exact consent and provider authority. See
+`RULINGS.md` for the recorded policy.
 
 ## Read resources
 
@@ -124,10 +129,12 @@ Client tokens, hashes, grants and retry receipts are installation-local and
 excluded from archives. A restored installation has its own native owner and
 must issue fresh clients; archived actor IDs remain attribution only. Product
 data and external IDs survive restoration, but archived credentials cannot read
-or replay a write. Retry receipts remain until local reset; this slice adds no
+or replay a write. A destination integration must reconcile the restored product
+state before resubmitting work with fresh authority. Cross-restoration retry
+deduplication is not claimed. Retry receipts remain until local reset; this slice adds no
 automatic retention or deletion schedule.
 
 Native integration settings and recovery screens, delegated operator rights,
-complete sentence-level DONE evidence and ct approval remain held under
-API-002. This document makes no provider-delivery or full API parity claim.
+and complete sentence-level DONE evidence remain gaps under API-002.
+The API-001 ruling does not approve a separate API-002 authority policy. This document makes no provider-delivery or full API parity claim.
 

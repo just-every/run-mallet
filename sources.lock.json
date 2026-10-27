@@ -584,7 +584,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "da0a88a57e0e378998fad5f0cc4c95a36fd18ad0dd3c617182912b2e61963f44",
+      "sha256": "343cc489314f7ac71f84d43e486f930e78105336bb698aa380abee1fff026fdc",
       "executable": false
     },
     "deploy-demo.json": {
@@ -712,7 +712,7 @@
       "executable": false
     },
     "docs/shop-api.md": {
-      "sha256": "61c17f977c5cdfe75462688b233f111c090dd5a072137c8396890bc6e5fcbbab",
+      "sha256": "8506464efd14767ca8c8293c8b12f36dd8bf3b808ecb25db596fe889b4c99eed",
       "executable": false
     },
     "docs/site.json": {
