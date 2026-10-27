@@ -20,3 +20,10 @@ export function costRateOn(s:State,technicianId:string,date:string){
  for(const [n,r]of (row?.revisions??[]).entries())if(r.effectiveFrom<=date&&(!selected||r.effectiveFrom>=selected.effectiveFrom)){selected=r;index=n}
  return selected?{id:row!.id,revision:index+1,...selected}:null
 }
+/** Resolve immutable declarations against the native audit revision references. */
+export function costRateHistory(s:State){
+ return rows(s,'costRate').flatMap(row=>row.revisions.map((after:any,index:number)=>({
+  id:row.id,technicianId:row.technicianId,revision:index+1,before:row.revisions[index-1]??null,after,
+  audit:rows(s,'audit').find(a=>a.action==='costRate.set'&&a.changes.some((c:any)=>c.kind==='costRate'&&c.id===row.id&&c.afterRevision===index+1))??null
+ })))
+}

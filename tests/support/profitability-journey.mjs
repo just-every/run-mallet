@@ -91,6 +91,108 @@ export async function profitabilityJourney(h,{recovery=true}={}){
  assert.deepEqual(r.groups.supplier.filter(g=>g.key==='Cedar Machine Shop').map(g=>g.realized.costCents),[9000])
  for(const repair of r.repairs)assert.equal((await h.request(repair.jobUrl)).status,200)
  const before=await h.state();await read();assert.deepEqual(await h.state(),before,'Report reads create no product writes')
+ if(recovery)await profitabilityAllocationJourney()
  if(recovery){const fresh=await installation();try{await restore(fresh,await archive(h));assert.deepEqual(await fresh.api(profitPath+f.query),r);await fresh.api(profitPath+f.query,undefined,{as:h.owner,status:401});assert.ok((await fresh.state()).records.audit.some(a=>a.action==='costRate.set'))}finally{await fresh.close()}}
  return {...f,comeback,w,report:r,pending}
+}
+
+// This extends the registered native journey without changing its browser fixture totals.
+async function profitabilityAllocationJourney(){
+ const h=await installation()
+ try{
+  const f=await profitabilityFixture(h),read=()=>h.api(profitPath+f.query),original=async()=>(await read()).repairs.find(r=>r.jobId===f.original.id)
+  const retained=await h.state(),declarations=[
+   {centsPerHour:8000,effectiveFrom:'2026-10-20',reason:'Next day loaded burden'},
+   {centsPerHour:4500,effectiveFrom:'2026-10-19',reason:'Start date loaded burden correction'},
+   {centsPerHour:3000,effectiveFrom:'2026-10-18',reason:'Earlier date must not displace later effective revision'},
+   {centsPerHour:5000,effectiveFrom:'2026-10-19',reason:'Latest declaration for the same effective date'}
+  ]
+  let rate=f.rate
+  for(const [i,entry]of declarations.entries()){
+   rate=await h.command('costRate.set',{...f.rateInput,...entry,version:rate.version})
+   assert.equal((await original()).costEvents.find(e=>e.kind==='labor-timer').amountCents,[6000,6750,6750,7500][i])
+   const history=(await read()).rateHistory,revision=history.find(r=>r.id===rate.id&&r.revision===rate.version)
+   assert.deepEqual(revision.before,rate.revisions.at(-2));assert.deepEqual(revision.after,rate.revisions.at(-1))
+   assert.equal(revision.after.centsPerHour,entry.centsPerHour);assert.equal(revision.after.effectiveFrom,entry.effectiveFrom);assert.equal(revision.after.reason,entry.reason)
+   assert.equal(revision.after.by.id,f.owner.id);assert.ok(Number.isFinite(Date.parse(revision.after.at)))
+   const audit=(await h.api('/api/mallet/audit?action=costRate.set')).entries.find(a=>a.id===revision.audit.id)
+   assert.equal(audit.actor.id,f.owner.id);assert.equal(audit.at,revision.after.at)
+   assert.deepEqual(audit.changes,[{kind:'costRate',id:rate.id,beforeRevision:rate.version-1,afterRevision:rate.version}])
+  }
+  const history=(await read()).rateHistory.filter(r=>r.id===rate.id)
+  assert.equal(history[0].before,null);assert.deepEqual(history.map(r=>r.after),rate.revisions)
+  const afterRates=await h.state()
+  for(const kind of ['invoice','estimate','timeEntry','timeCorrection','payment'])assert.deepEqual(afterRates.records[kind],retained.records[kind],'Loaded cost declarations preserve retained '+kind)
+  await f.correct(f.timer.id,'2026-10-18T09:00:00Z','2026-10-18T10:30:00Z','Earlier effective date contrast')
+  assert.equal((await original()).costEvents.find(e=>e.kind==='labor-timer').amountCents,4500)
+  await f.correct(f.timer.id,'2026-10-20T09:00:00Z','2026-10-20T10:30:00Z','Later effective date contrast')
+  assert.equal((await original()).costEvents.find(e=>e.kind==='labor-timer').amountCents,12000)
+
+  const asset=(await h.state()).records.asset.find(a=>a.id===f.original.assetId)
+  let repair=await h.command('job.book',{assetId:asset.id,version:asset.version,title:'synthetic-mallet-allocation',technicianId:f.owner.id,bayId:'synthetic-mallet-allocation-bay',startAt:'2026-11-05T09:00:00Z',endAt:'2026-11-05T11:00:00Z'})
+  const matrix=await h.command('pricing.save',{version:0,name:'synthetic-mallet-allocation-matrix',kind:'part',minimumCents:0,roundingCents:1,reason:'Retained package unit costs',bands:[{fromCents:0,toCents:null,markupBps:0}]})
+  const recipeInput={version:0,name:'synthetic-mallet-historical-package',reason:'Original service package',lines:[{kind:'part',description:'synthetic-mallet-mixed-part',quantity:3,unitCents:0,costCents:1000,matrixId:matrix.id},{kind:'part',description:'synthetic-mallet-second-part',quantity:1,unitCents:0,costCents:1000,matrixId:matrix.id}]}
+  let recipe=await h.command('inspectionJob.save',recipeInput)
+  const quote=await authorise(h,await h.command('recipe.prepare',{jobId:repair.id,version:repair.version,recipeId:recipe.id,recipeVersion:recipe.version,overrides:[{lineIndex:0,unitCents:3333,reason:'Exact reviewed package charge'}]}))
+  const refs=async extra=>({jobId:repair.id,version:(await job(h,repair.id)).version,...extra})
+  const bin=await h.command('stock.bin',{code:'synthetic-mallet-allocation-bin',barcode:'synthetic-mallet-allocation-bin'})
+  const items=[]
+  for(const n of [0,1])items.push(await h.command('stock.item',{sku:'synthetic-mallet-allocation-item-'+n,barcode:'synthetic-mallet-allocation-item-'+n,name:'synthetic-mallet-allocation-item-'+n,unit:'each'}))
+  const purchase=async(supplier,lines,taxCents,freightCents)=>{
+   let po=await h.command('purchase.create',{reference:'synthetic-mallet-allocation-'+supplier,supplier,shipTo:'synthetic-mallet-workshop',expectedAt:'2026-11-01T00:00:00Z',lines,taxCents,freightCents})
+   po=await h.command('purchase.approve',{purchaseId:po.id,version:po.version,reason:'Exact retained purchase costs'})
+   return po
+  }
+  let a=await purchase('synthetic-mallet-supplier-a',[{itemId:items[0].id,quantity:2,unitCents:1001},{itemId:items[1].id,quantity:1,unitCents:999}],55,101)
+  let b=await purchase('synthetic-mallet-supplier-b',[{itemId:items[0].id,quantity:2,unitCents:2000}],7,11)
+  const receipts=[]
+  const receive=async(po,index,quantity,suffix)=>{
+   const item=items[index],current=(await h.state()).records.purchaseOrder.find(p=>p.id===po.id)
+   const receipt=await h.command('purchase.receive',{purchaseId:po.id,version:current.version,lineId:po.lines.find(l=>l.itemId===item.id).id,itemBarcode:item.barcode,binBarcode:bin.barcode,quantity,reference:'synthetic-mallet-receipt-'+suffix})
+   receipts.push(receipt);return receipt
+  }
+  const first=await receive(a,0,1,'a-first');await receive(a,0,1,'a-unused');const second=await receive(a,1,1,'a-second'),third=await receive(b,0,2,'b')
+  const lots=[]
+  for(const [po,receipt,index,quantity,unitCostCents,suffix]of [[a,first,0,1,1001,'a-first'],[a,second,1,1,999,'a-second'],[b,third,0,2,2000,'b']])lots.push(await h.command('stock.lot',{itemBarcode:items[index].barcode,binBarcode:bin.barcode,quantity,supplier:po.supplier,supplierLot:'synthetic-mallet-lot-'+suffix,reference:'synthetic-mallet-trace-'+suffix,serial:'',unitCostCents,purchaseReceiptId:receipt.id,evidence:'Retained received purchase provenance'}))
+  for(const line of quote.revisions[0].lines)repair=await h.command('work.record',await refs({estimateId:quote.id,revision:1,lineId:line.id,quantity:line.quantity}))
+  const uses=[]
+  for(const [lot,index,quantity]of [[lots[0],0,1],[lots[1],1,1],[lots[2],0,2]])uses.push(await h.command('stock.useLot',await refs({actualId:repair.actuals[index].id,lotId:lot.id,quantity,reference:'synthetic-mallet-use-'+lot.id,reason:'Identified installed purchase lot'})))
+  const costed=async()=>(await read()).repairs.find(r=>r.jobId===repair.id)
+  assert.equal((await costed()).realized.costCents,null,'Purchase receipts cannot invent reconciled tax or freight')
+  const bill=async(po,change={})=>{
+   const current=(await h.state()).records.purchaseOrder.find(p=>p.id===po.id)
+   return h.command('purchase.bill',{purchaseId:po.id,version:current.version,invoiceNumber:'synthetic-mallet-bill-'+po.id,lines:po.lines.map(l=>({lineId:l.id,quantity:l.quantityMilli/1000,unitCents:l.unitCents})),taxCents:po.taxCents,freightCents:po.freightCents,evidence:'Complete supplier invoice with retained charges',...change})
+  }
+  await bill(a,{taxCents:56});await bill(b)
+  assert.equal((await costed()).realized.costCents,null,'An exception bill cannot establish realized purchase costs')
+  const matched=await bill(a)
+  await qualityReady(h,await job(h,repair.id));repair=await h.command('job.complete',await refs())
+  let invoice=await h.command('invoice.prepare',await refs());invoice=await h.command('invoice.approve',{invoiceId:invoice.id,version:invoice.version})
+  recipe=await h.command('inspectionJob.save',{...recipeInput,id:recipe.id,version:recipe.version,name:'synthetic-mallet-renamed-package',reason:'Later package revision must not relabel retained repairs'})
+  let report=await read(),result=await costed()
+  assert.equal(result.realized.revenueCents,10999);assert.equal(result.realized.costCents,6123)
+  assert.deepEqual(result.costEvents.filter(e=>e.sourceId===matched.id).map(e=>[e.kind,e.amountCents]).sort(),[['purchase-freight',34],['purchase-freight',34],['purchase-supplier-tax',18],['purchase-supplier-tax',19]])
+  const allocated=result.lines[0].supplierShares
+  assert.deepEqual(allocated.map(s=>[s.supplier,s.estimatedWeight,s.realizedWeight]),[['synthetic-mallet-supplier-a',1000,1000],['synthetic-mallet-supplier-b',2000,2000]])
+  for(const [supplier,revenue,cost]of [['synthetic-mallet-supplier-a',4333,2105],['synthetic-mallet-supplier-b',6666,4018]]){
+   const g=report.groups.supplier.find(g=>g.key===supplier);assert.equal(g.realized.revenueCents,revenue);assert.equal(g.realized.costCents,cost)
+  }
+  for(const line of result.lines){assert.deepEqual(line.servicePackage,quote.revisions[0].inspectionSource.pricedRecipe);assert.equal(line.servicePackage.revision,1)}
+  assert.ok(result.costEvents.every(e=>e.servicePackage.id===recipe.id&&e.servicePackage.revision===1))
+  const service=report.groups.service.find(g=>g.key===result.lines[0].service);assert.equal(service.realized.revenueCents,10999);assert.equal(service.realized.costCents,6123)
+  await h.command('stock.returnUse',{stockUseId:uses[0].id,version:uses[0].version,quantity:.333,reference:'synthetic-mallet-allocation-return',reason:'Unused saleable fraction inspected',confirm:'return-to-stock'})
+  const payment=await h.command('payment.record',{invoiceId:invoice.id,version:invoice.version,method:'cash',amountCents:invoice.totals.totalCents,reference:'synthetic-mallet-allocation-payment',evidence:'Cash counted'})
+  const credit={invoiceId:invoice.id,version:invoice.version,lines:[{lineId:quote.revisions[0].lines[0].id,sourceEstimateId:quote.id,sourceRevision:1,quantity:.333}],destination:'original-tender',paymentId:payment.id,reference:'synthetic-mallet-allocation-credit',reason:'Returned unused fractional quantity',consentEvidence:'Customer requests original cash refund'}
+  const review=await h.command('credit.preview',credit);await h.command('credit.issue',{...credit,review,confirm:'issue-credit'})
+  report=await read();result=await costed()
+  assert.equal(result.realized.costCents,5773);assert.equal(result.realized.revenueCents,9889)
+  assert.deepEqual(result.costEvents.filter(e=>e.detail.stockUseId===uses[0].id&&e.kind.startsWith('purchase-')).map(e=>e.amountCents),[23,13])
+  assert.equal(report.groups.supplier.find(g=>g.key==='synthetic-mallet-supplier-a').realized.revenueCents,3223)
+  for(const dimension of Object.values(report.groups)){
+   assert.equal(dimension.reduce((n,g)=>n+g.realized.revenueCents,0),report.realized.revenueCents)
+   assert.equal(dimension.reduce((n,g)=>n+g.realized.costCents,0),report.realized.costCents)
+  }
+  const fresh=await installation()
+  try{await restore(fresh,await archive(h));assert.deepEqual(await fresh.api(profitPath+f.query),report)}finally{await fresh.close()}
+ }finally{await h.close()}
 }

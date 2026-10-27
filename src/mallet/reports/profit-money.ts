@@ -13,5 +13,7 @@ export function allocate(cents:number,weights:number[]){
  return weights.map(w=>{used+=w;const next=round(cents*used,total),value=next-prior;prior=next;return value})
 }
 export const margin=(sales:number,cost:number|null)=>({revenueCents:sales,costCents:cost,grossProfitCents:cost===null?null:sales-cost,marginBps:cost===null||sales<=0?null:round((sales-cost)*10000,sales)})
-export type CostEvent={kind:string;sourceId:string;at:string;amountCents:number;category:string;service:string;supplier:string;technicianId:string;detail:any}
-export type ProfitLine={key:string;estimateId:string;revision:number;lineId:string;description:string;category:string;supplier:string;quantityMilli:number;estimatedRevenueCents:number;estimatedCostCents:number|null;realizedRevenueCents:number}
+export type ServicePackage={id:string;revision:number;snapshot:any}
+export type SupplierShare={supplier:string;estimatedWeight:number;realizedWeight:number;stockUseIds:string[]}
+export type CostEvent={kind:string;sourceId:string;at:string;amountCents:number;category:string;service:string;servicePackage:ServicePackage|null;supplier:string;technicianId:string;detail:any}
+export type ProfitLine={key:string;estimateId:string;revision:number;lineId:string;description:string;service:string;servicePackage:ServicePackage|null;category:string;supplier:string;supplierShares:SupplierShare[];quantityMilli:number;estimatedRevenueCents:number;estimatedCostCents:number|null;realizedRevenueCents:number}

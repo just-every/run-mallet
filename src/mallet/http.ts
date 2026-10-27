@@ -1,3 +1,6 @@
+import {statusNoticeCommand} from './status-notice-door'
+import {internalStatusCommands} from './status-notices'
+import {statusNoticePage} from './ui/status-notices'
 import {profitabilityReport} from './reports/profitability'
 import {profitabilityPage,profitabilitySettings} from './ui/profitability'
 import {reviewCommand,reviewState} from './review-door'
@@ -180,6 +183,7 @@ function visible(s:State,actor:Actor):State {
  s=scopedCollaboration(scopedPromises(s,actor),actor)
  s=scopedTime(s,actor)
  if(actor.role!=='owner'){const {reviewConsent:_reviewConsent,reviewRequest:_reviewRequest,...privateReviewRecords}=s.records;s={...s,records:{...privateReviewRecords,...(s.records.subtask?{subtask:s.records.subtask.filter(t=>t.kind!=='review-feedback')}:{}),event:rows(s,'event').filter(x=>!x.kind.startsWith('review.'))}}}
+ if(actor.role!=='owner'){const {statusConsent:_statusConsent,statusNotice:_statusNotice,...statusRecords}=s.records;s={...s,records:{...statusRecords,...(s.records.subtask?{subtask:s.records.subtask.filter(t=>t.kind!=='pickup-followup')}:{}),event:rows(s,'event').filter(x=>!x.kind.startsWith('statusNotice.'))}}}
  if(actor.role!=='owner'){const {outreach:_outreach,...privateRecords}=s.records;s={...s,records:{...privateRecords,event:rows(s,'event').filter(x=>!x.kind.startsWith('outreach.'))}}}
  if(actor.role!=='owner'){const {taxCertificate:_certificates,taxFeeRule:_feeRules,taxDiscountRule:_discountRules,taxJurisdiction:_jurisdiction,invoiceDocument:_docs,invoiceDelivery:_delivery,...records}=s.records;s={...s,records:{...records,event:rows(s,'event').filter(x=>!x.kind.startsWith('invoice.delivery')&&x.kind!=='invoice.issue'&&!x.kind.startsWith('tax.certificate')&&!x.kind.startsWith('tax.assignJurisdiction'))}}}
  if(!human(actor)){s={...s,records:Object.fromEntries(Object.entries(s.records).filter(([k])=>!['contact','customerAccount','customerMerge','customerBilling'].includes(k)))};s={...s,records:{...s.records,event:rows(s,'event').filter(x=>!x.kind.startsWith('contact.')&&!x.kind.startsWith('customer.')),invoice:rows(s,'invoice').map(i=>{const {billing,...rest}=i;return rest})}}}
@@ -201,6 +205,8 @@ async function operators(db:D1Database) {
 const bookingFields=['title','bayId','technicianId','startAt','endAt']
 function formInput(data:FormData) {
  const input:any=Object.fromEntries(data)
+ if(input.command==='statusNotice.consent')input.consent=data.has('consent')
+ if(input.command==='statusNotice.approve'){input.confirm=data.has('confirm');for(const key of ['allowedStart','allowedEnd','jobVersion'])input[key]=Number(input[key])}
  if(input.command==='review.consent')input.consent=data.has('consent')
  if(input.command==='review.send')input.confirm=data.has('confirm')
  if(input.command==='outreach.schedule'){input.consent=data.has('consent');input.availabilityConfirmed=data.has('availabilityConfirmed');for(const key of ['allowedStart','allowedEnd','quoteVersion','outstandingCents'])if(input[key]!==undefined)input[key]=Number(input[key])}
@@ -333,6 +339,7 @@ async function workshopResponse(request:Request,original:Bindings,execution:Pick
    let result:any
    if(['connector.save','connector.revoke'].includes(command)&&actor.role==='owner'&&!auth.gate?.enrolled)throw new HttpError(403,'step_up_required','Enrol your own second factor before opening the credential door.')
    if(needsStepUp(command,actor.role))auth.authority=requireStepUp(auth,command.startsWith('deposit.'))
+   if(internalStatusCommands.includes(command))throw new HttpError(404,'unknown_command')
    if(internalReviewCommands.includes(command))throw new HttpError(404,'unknown_command')
    if(internalOutreachCommands.includes(command))throw new HttpError(404,'unknown_command')
    if(command.startsWith('stripe.'))throw new HttpError(404,'unknown_command')
@@ -359,6 +366,7 @@ async function workshopResponse(request:Request,original:Bindings,execution:Pick
    else if(command==='payment.verifyStripe')result=await verifyStripePayment(env,actor,auth.authority,input)
    else if(command==='flow.collect'){if(input.termsAssignmentId)auth.authority=requireStepUp(auth);const checked=await collectionInput(env,actor,input,auth.authority);result=await execute(env.DB,actor as any,command,checked.input,checked.authority);await purgeIntakeSecrets(env,'job_id=?',[input.jobId])}
    else if(['intake.secretStore','intake.secretReveal','intake.secretEnd','intake.secretEraseCustomer'].includes(command))result=await intakeSecret(env,actor,auth.authority,command,input)
+   else if(command.startsWith('statusNotice.'))result=await statusNoticeCommand(env,actor,auth.authority,command,input)
    else if(command.startsWith('review.'))result=await reviewCommand(env,actor,auth.authority,command,input)
    else if(command.startsWith('outreach.'))result=await outreachCommand(env,actor,auth.authority,command,input)
    else if(command.startsWith('routing.'))result=await routingCommand(env.DB,actor as any,auth.authority,command,input)
@@ -395,6 +403,7 @@ async function workshopResponse(request:Request,original:Bindings,execution:Pick
    if(command==='promise.timeZone'&&input.calendarReturn)return redirect('/app/calendar')
    if(command==='booking.attendance')return redirect('/app/reports/turnaround?'+new URLSearchParams({from:String(input.from??''),to:String(input.to??'')}))
    if(command==='decline.inapplicable')return redirect('/app/jobs/'+encodeURIComponent(String(input.jobId)))
+   if(command.startsWith('statusNotice.'))return redirect('/app/jobs/'+encodeURIComponent(String(result.jobId??input.jobId))+'/notifications')
    if(command.startsWith('review.'))return redirect('/app/jobs/'+encodeURIComponent(String(result.jobId??input.jobId))+'/reviews')
    if(command.startsWith('outreach.'))return redirect(input.returnTo==='receivables'?'/app/receivables?accountId='+encodeURIComponent(String(input.accountId)):input.returnTo==='declined'?'/app/jobs/'+encodeURIComponent(String(input.jobId)):'/app/bookings')
    if(command==='booking.publish'||command==='booking.revokeLink')return redirect('/app/bookings')
@@ -535,6 +544,8 @@ async function workshopResponse(request:Request,original:Bindings,execution:Pick
   if(signedFormMatch){if(!human(actor))throw new HttpError(403,'manager_required');const doc=rows(state,'intakeForm').find(f=>f.id===signedFormMatch[1]);if(!doc?.receipt)throw new HttpError(404,'not_found');return page('Original signed intake',`<div class="narrow">${signedIntakeReceipt(doc.receipt,doc.copy)}</div>`,actor,200,frame('jobs'))}
   const handoverMatch=path.match(/^\/app\/handovers\/([^/]+)\/print$/)
   if(handoverMatch){if(!human(actor))throw new HttpError(403,'manager_required');const receipt=rows(state,'handover').find(r=>r.id===handoverMatch[1]);if(!receipt)throw new HttpError(404,'not_found');return page('Handover receipt',`<div class="narrow">${handoverReceipt(receipt)}</div>`,actor,200,frame('jobs'))}
+  const noticesMatch=path.match(/^\/app\/jobs\/([^/]+)\/notifications$/)
+  if(noticesMatch){if(actor.role!=='owner')throw new HttpError(403,'owner_required');const job=rows(state,'job').find(j=>j.id===noticesMatch[1]);if(!job)throw new HttpError(404,'not_found');return page('Status & pickup',statusNoticePage(state,job),actor,200,frame('jobs'))}
   const reviewMatch=path.match(/^\/app\/jobs\/([^/]+)\/reviews$/)
   if(reviewMatch){if(actor.role!=='owner')throw new HttpError(403,'owner_required');const job=rows(state,'job').find(j=>j.id===reviewMatch[1]);if(!job)throw new HttpError(404,'not_found');return page('Review & satisfaction',`<div class="narrow"><p><a href="/app/jobs/${e(job.id)}/return">Back to documented handover</a></p>${reviewPanel(await reviewState(env,state,actor),job,actor)}</div>`,actor,200,frame('jobs'))}
   const returnMatch=path.match(/^\/app\/jobs\/([^/]+)\/return$/)

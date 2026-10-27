@@ -1,3 +1,4 @@
+import {runStatusNotices} from '../status-notice-door'
 import {runOutreach} from '../outreach-door'
 import {runtimeBindings,type Bindings} from '../../auth.server'
 import {operatorMail} from '../../mail.server.mjs'
@@ -64,5 +65,6 @@ export async function runReminderJobs(original:Bindings,at:number){
  }
  await projectOutcomes(env,now)
  await runOutreach(env,at)
+ await runStatusNotices(env,at)
  return handled
 }

@@ -6,6 +6,7 @@ import type {Sql} from '../media/types'
 export function revokeReviewAccess(scope:CustomerScope):Sql[]{
  const ids=JSON.stringify([...scope.jobIds])
  return [
+  {sql:"DELETE FROM mallet_status_authority WHERE consent_id IN (SELECT id FROM mallet_records WHERE kind='statusConsent' AND json_extract(value,'$.jobId') IN (SELECT value FROM json_each(?)))",params:[ids]},
   {sql:'DELETE FROM mallet_review_tokens WHERE job_id IN (SELECT value FROM json_each(?))',params:[ids]},
   {sql:"DELETE FROM mallet_review_authority WHERE consent_id IN (SELECT id FROM mallet_records WHERE kind='reviewConsent' AND json_extract(value,'$.jobId') IN (SELECT value FROM json_each(?)))",params:[ids]}
  ]
