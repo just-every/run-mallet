@@ -14,7 +14,20 @@ export function auditCsvEntries(text){
   return {id,action,at,actor:JSON.parse(actor),policy,changes:JSON.parse(changes),evidence:JSON.parse(evidence)}
  })
 }
+async function auditSnapshot(h){
+ const entries=[];let offset=0
+ do{
+  const page=await h.api('/api/mallet/audit?'+new URLSearchParams({offset:String(offset)}))
+  entries.push(...page.entries);offset=page.nextOffset
+ }while(offset!==null)
+ return entries
+}
 export async function mediaAuditJourney(h){
+ const denied=async(path,input,options)=>{
+  const before=await auditSnapshot(h)
+  await h.api(path,input,options)
+  assert.deepEqual(await auditSnapshot(h),before,'Denied write leaves the entire audit unchanged: '+path)
+ }
  const tech=await h.person('synthetic-mallet-media-audit@example.test'),other=await h.person('synthetic-mallet-media-denied@example.test')
  const assetInput=await h.command('asset.create',{customerName:'Synthetic media audit',label:'Audit vehicle',identifier:'synthetic-mallet-media-audit'})
  const {asset,job}=await booking(h,{asset:assetInput,technicianId:tech.id,startAt:'2026-09-01T09:00:00Z',endAt:'2026-09-01T10:00:00Z'})
@@ -24,18 +37,18 @@ export async function mediaAuditJourney(h){
  const bytes=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=','base64'),sha256=createHash('sha256').update(bytes).digest('hex')
  const uploadInput={findingId:finding.id,clientId:randomUUID(),variant:'original',filename:'private-evidence.png',mime:'image/png',size:bytes.length,sha256,capturedAt:finding.capturedAt}
  let upload=await h.api(path+'/uploads',uploadInput,as)
- await h.api(path+'/uploads/'+upload.id+'/complete',{}, {...as,status:409})
+ await denied(path+'/uploads/'+upload.id+'/complete',{}, {...as,status:409})
  await h.api(path+'/uploads/'+upload.id+'/chunks/0',{sha256,base64:bytes.toString('base64')},{...as,method:'PUT'})
  upload=await h.api(path+'/uploads/'+upload.id+'/complete',{},as)
  const carryInput={jobId:next.id,findingId:finding.id},carried=await h.api(path+'/carry',carryInput,as)
  const query=new URLSearchParams({q:finding.id,actor:tech.id}),url='/api/mallet/audit?'+query
- const beforeReplay=(await h.api(url)).entries
+ const beforeReplay=await auditSnapshot(h)
  assert.deepEqual(await h.api(path+'/findings',input,as),finding)
  assert.equal((await h.api(path+'/uploads',uploadInput,as)).id,upload.id)
  assert.deepEqual(await h.api(path+'/uploads/'+upload.id+'/complete',{},as),upload)
  await h.api(path+'/uploads/'+upload.id+'/chunks/0',{sha256,base64:bytes.toString('base64')},{...as,method:'PUT'})
  assert.deepEqual(await h.api(path+'/carry',carryInput,as),carried)
- assert.deepEqual((await h.api(url)).entries,beforeReplay,'Exact replays create no transition receipts')
+ assert.deepEqual(await auditSnapshot(h),beforeReplay,'Exact replays create no transition receipts anywhere in the audit')
  const reason={reason:'Private resolution payload'},resolution=await h.api(path+'/findings/'+finding.id+'/resolve',reason,as)
  const entries=(await h.api(url)).entries
  const expected=[
@@ -50,16 +63,24 @@ export async function mediaAuditJourney(h){
  for(const [action,changes] of expected){const entry=entries.find(e=>e.action===action);assert.deepEqual(entry.changes,changes,action+' exact revisions');assert.equal(entry.actor.id,tech.id);assert.ok(entry.evidence.includes('finding:'+finding.id)||entry.evidence.includes('source-finding:'+finding.id));assert.ok(Number.isFinite(Date.parse(entry.at)))}
  assert.equal(upload.revision,2);assert.equal((await h.api(path+'/findings?jobId='+job.id)).findings[0].revision,2)
  const carryEntry=entries.find(e=>e.action==='media.finding.carried');assert.ok(carryEntry.evidence.includes('source-job:'+job.id));assert.ok(carryEntry.evidence.includes('job:'+next.id))
+ const beforeResolutionReplay=await auditSnapshot(h)
  assert.deepEqual(await h.api(path+'/findings/'+finding.id+'/resolve',reason,as),resolution)
- await h.api(path+'/findings/'+finding.id+'/resolve',{reason:'Changed replay'}, {...as,status:409})
- await h.api(path+'/findings',{...input,title:'Changed replay'}, {...as,status:409})
- await h.api(path+'/findings',{...input,clientId:randomUUID()},{as:other.cookie,status:404})
- await h.api(path+'/findings',{...input,clientId:randomUUID()},{headers:{origin:'https://elsewhere.test'},status:403})
+ assert.deepEqual(await auditSnapshot(h),beforeResolutionReplay,'Resolution replay creates no audit receipt')
+ await denied(path+'/findings/'+finding.id+'/resolve',{reason:'Changed replay'}, {...as,status:409})
+ await denied(path+'/findings',{...input,title:'Changed replay'}, {...as,status:409})
+ await denied(path+'/findings',{...input,clientId:randomUUID()},{as:other.cookie,status:404})
+ for(const [door,body,method] of [
+  ['/uploads',uploadInput,'POST'],
+  ['/uploads/'+upload.id+'/chunks/0',{sha256,base64:bytes.toString('base64')},'PUT'],
+  ['/uploads/'+upload.id+'/complete',{},'POST'],
+  ['/carry',carryInput,'POST'],
+  ['/findings/'+finding.id+'/resolve',reason,'POST']
+ ])await denied(path+door,body,{as:other.cookie,method,status:404})
+ await denied(path+'/findings',{...input,clientId:randomUUID()},{headers:{origin:'https://elsewhere.test'},status:403})
  await h.api('/auth/operator/status',{operatorId:tech.id,status:'inactive'})
- await h.api(path+'/findings',{...input,clientId:randomUUID()},{...as,status:401})
- await h.api(path+'/uploads/'+upload.id+'/complete',{}, {...as,status:401})
- await h.api(path+'/findings/'+finding.id+'/resolve',reason,{...as,status:401})
- assert.deepEqual((await h.api(url)).entries,entries,'Denied writes and revoked actors do not change retained transitions')
+ await denied(path+'/findings',{...input,clientId:randomUUID()},{...as,status:401})
+ await denied(path+'/uploads/'+upload.id+'/complete',{}, {...as,status:401})
+ await denied(path+'/findings/'+finding.id+'/resolve',reason,{...as,status:401})
  const exported=await h.api(url+'&format=json');assert.deepEqual(exported.entries,entries)
  assert.deepEqual(auditCsvEntries(await (await h.request(url+'&format=csv')).text()),entries.map(({version,...entry})=>entry),'CSV and JSON retain identical revision and evidence references')
  const serialized=JSON.stringify(entries)
