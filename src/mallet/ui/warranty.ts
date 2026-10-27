@@ -1,3 +1,4 @@
+import {warrantyClaimable} from '../warranty'
 import {area,box,e,field,form,money,rows,select,when} from './common'
 import {invoiceBalance} from '../payments'
 export function warrantyFormInput(input:any){
@@ -7,7 +8,7 @@ export function warrantyFormInput(input:any){
  if(input.creditUsd!==undefined)input.creditCents=Math.round(Number(input.creditUsd)*100)
 }
 const note=()=>area('Evidence','evidence','','required maxlength="2000"')
-export function warrantyPage(s:any,job:any,people:any[]){
+export function warrantyPage(s:any,job:any,people:any[],canClaim=false){
  const invoice=rows(s,'invoice').find(i=>i.jobId===job.id),cases=rows(s,'warranty').filter(w=>w.jobId===job.id||w.originalJobId===job.id),asset=rows(s,'asset').find(a=>a.id===job.assetId)
  let body=`<p><a href="/app/jobs/${e(job.id)}">Back to repair</a> · ${e(job.asset.label)} · ${e(job.asset.identifier)}</p><p>Coverage and responsibility are shop decisions against saved terms. Supplier and OEM warranties are not provider-verified. Rework needs its own customer-authorized estimate; a claim record does not submit a claim, post a ledger entry or change the original repair.</p>`
  if(invoice&&['approved','exported'].includes(invoice.status)){
@@ -29,8 +30,8 @@ export function warrantyPage(s:any,job:any,people:any[]){
    const available=rework.actuals.filter((a:any)=>{const line=sourceLine(a);return line&&line.unitCents-(line.unitDiscountCents??0)===0&&!w.costs.some((x:any)=>x.actualId===a.id)})
    if(available.length)content+=form('warranty.cost',select('Authorized no-charge actual','actualId',available.map((a:any)=>[a.id,`${sourceLine(a).description} · ${a.quantity} · ${sourceLine(a).kind}`] as [string,string]))+field('Actual rework cost (USD)','amountUsd','number',0,'required min="0" step="0.01"')+note(),'Record rework cost',{jobId:job.id,warrantyId:w.id,version:w.version})
    content+=`<ul>${w.costs.map((x:any)=>`<li>${e(x.kind)} · ${money(x.amountCents)} · ${e(x.evidence)}</li>`).join('')}</ul>`
-   const remainingClaimCents=cost-w.claims.reduce((n:number,c:any)=>n+c.amountCents,0)
-   if(w.decision.responsibility!=='shop'&&remainingClaimCents>0)content+=form('warranty.claim',field('Supplier or OEM','claimant','text','','required')+field('Unique claim reference','reference','text','','required')+field('Claim amount (USD)','amountUsd','number',remainingClaimCents/100,'required min="0.01" step="0.01"')+note(),'Approve claim record',{jobId:job.id,warrantyId:w.id,version:w.version})
+   const remainingClaimCents=warrantyClaimable(s,w)
+   if(canClaim&&w.decision.responsibility!=='shop'&&remainingClaimCents>0)content+=form('warranty.claim',field('Supplier or OEM','claimant','text','','required')+field('Unique claim reference','reference','text','','required')+field('Claim amount (USD)','amountUsd','number',remainingClaimCents/100,'required min="0.01" step="0.01"')+note(),'Approve claim record',{jobId:job.id,warrantyId:w.id,version:w.version})
   }
   for(const c of w.claims)content+=`<h3>${e(c.claimant)} · ${e(c.reference)} · ${money(c.amountCents)} · ${e(c.status)}</h3><p>${e(c.label)}</p><ul>${c.history.map((x:any)=>`<li>${e(x.status)} · ${e(x.evidence)}${x.creditCents?' · '+money(x.creditCents):''} · ${when(x.at)}</li>`).join('')}</ul>${!['credited','rejected'].includes(c.status)?form('warranty.claimOutcome',select('Recorded external outcome','status',[['submitted','Submitted outside Mallet'],['accepted','Accepted by supplier/OEM'],['rejected','Rejected'],['credited','Credit received']])+field('Supplier credit (USD; only for credit received)','creditUsd','number',0,'min="0" step="0.01"')+note(),'Record external claim evidence',{jobId:job.id,warrantyId:w.id,version:w.version,claimId:c.id}):''}`
   body+=box('Warranty comeback',content)

@@ -10,6 +10,7 @@ export function staffRoute(request:Request,actor:Actor) {
  if(!actor.staff)return
  const path=new URL(request.url).pathname
  if(!actor.staff.discount_bps&&!actor.staff.spend_cents&&!actor.staff.refund_cents&&path!=='/app/security'&&!path.startsWith('/api/mallet/security/')&&!path.startsWith('/auth/'))throw new HttpError(403,'staff_limits_required')
+ if(actor.staff.role==='manager'&&actor.staff.cost_right&&['/app/inventory/quality-patterns','/api/mallet/quality-patterns'].includes(path)&&['GET','HEAD'].includes(request.method))return
  if(path==='/app'&&['GET','HEAD'].includes(request.method))return
  if(['/app/staff','/api/mallet/staff/state'].includes(path)&&['GET','HEAD'].includes(request.method))return
  if(['/app/actions','/api/mallet/commands'].includes(path)&&request.method==='POST')return
@@ -23,9 +24,9 @@ export function staffAuthority(actor:Actor,authority:Authority):Authority {
 }
 const advisor=['asset.create','job.book','estimate.prepare','estimate.revise','estimate.approve','estimate.markSent','estimate.authorise'],purchaser=['stock.item','stock.bin','stock.receive','stock.count','stock.approveCount','purchase.create','purchase.approve','purchase.receive','purchase.bill','purchase.shortClose','purchase.close'],finance=['payment.record','credit.preview','credit.issue','refund.record']
 export async function staffCommand(db:D1Database,actor:Actor,authority:Authority,command:string,input:any) {
- const grant=actor.staff!;if(!grant.discount_bps&&!grant.spend_cents&&!grant.refund_cents)throw new HttpError(403,'staff_limits_required');const allowed=grant.role==='manager'?[...advisor,...purchaser,...finance]:grant.role==='advisor'?[...advisor,'credit.preview','credit.issue','refund.record']:grant.role==='purchaser'?purchaser:grant.role==='cashier'?finance:[]
+ const grant=actor.staff!;if(!grant.discount_bps&&!grant.spend_cents&&!grant.refund_cents)throw new HttpError(403,'staff_limits_required');const allowed=grant.role==='manager'?[...advisor,...purchaser,...finance,'pattern.prepare','pattern.review','pattern.approve']:grant.role==='advisor'?[...advisor,'credit.preview','credit.issue','refund.record']:grant.role==='purchaser'?purchaser:grant.role==='cashier'?finance:[]
  if(!allowed.includes(command))throw new HttpError(403,'staff_command_denied')
- if(command.startsWith('purchase.')&&!grant.cost_right)throw new HttpError(403,'staff_cost_right_required')
+ if((command.startsWith('purchase.')||command.startsWith('pattern.'))&&!grant.cost_right)throw new HttpError(403,'staff_cost_right_required')
  if(input.location!==undefined&&input.location!=='shop'||input.locationId!==undefined&&input.locationId!=='shop')throw new HttpError(403,'staff_location_denied')
  if(command.startsWith('estimate.'))for(const line of input.lines??[]){
   if(line.matrixId||line.override||line.costCents!==undefined||input.overrides)throw new HttpError(403,'staff_price_override_denied')
@@ -69,7 +70,7 @@ export function staffState(state:State,actor:Actor){
  return {actor:{id:actor.id,name:actor.name,role:g.role},location:'shop',limits:{discountBps:g.discount_bps,spendCents:g.spend_cents,refundCents:g.refund_cents,costRight:!!g.cost_right},records,balances:['accountant','cashier','manager'].includes(g.role)?rows(state,'invoice').filter(i=>i.status!=='draft').map(i=>({invoiceId:i.id,number:i.number,...redact(invoiceBalance(state,i))})):[]}
 }
 export function staffPage(view:ReturnType<typeof staffState>) {
- const download='<p><a href="/api/mallet/staff/state?download=1">Download permitted records</a></p>',g=view.limits
+ const download=(view.actor.role==='manager'&&view.limits.costRight?'<p><a href="/app/inventory/quality-patterns">Supplier quality patterns</a></p>':'')+'<p><a href="/api/mallet/staff/state?download=1">Download permitted records</a></p>',g=view.limits
  const names:Record<string,string>={asset:'Customer asset',job:'Repair order',estimate:'Estimate',stockItem:'Stock part',stockBin:'Stock bin',stockCount:'Stock count',stockMovement:'Stock movement',purchaseOrder:'Purchase order',purchaseReceipt:'Goods receipt',invoice:'Invoice',payment:'Tender',creditNote:'Credit note',refund:'Refund'}
  const jobName=(id:string)=>(view.records.job??[]).find(j=>j.id===id)?.title??'Repair'
  const countName=(c:any)=>((view.records.stockItem??[]).find(i=>i.id===c.itemId)?.name??'Part')+' · '+((view.records.stockBin??[]).find(b=>b.id===c.binId)?.code??'Bin')+' · counted '+c.countedMilli/1000

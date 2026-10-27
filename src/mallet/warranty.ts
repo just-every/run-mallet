@@ -1,6 +1,10 @@
-import {bump,choice,event,expectVersion,fail,find,integer,put,rows,text,who,type Handler} from './model'
+import {bump,choice,event,expectVersion,fail,find,integer,put,rows,text,who,type Handler,type State,type Row} from './model'
 import {instant,workshop} from './workshop'
 import {invoiceBalance,publicInvoiceSnapshot} from './payments'
+export function warrantyClaimable(s:State,w:Row){
+ const rmas=new Set(rows(s,'stockRma').filter(r=>r.warrantyId===w.id).map(r=>r.id)),credits=rows(s,'stockSupplierCredit').filter(r=>r.sourceKind==='stockRma'&&rmas.has(r.sourceId)).reduce((n,r)=>n+r.amountCents,0)
+ return w.costs.reduce((n:number,x:any)=>n+x.amountCents,0)-w.claims.reduce((n:number,x:any)=>n+x.amountCents,0)-credits
+}
 export const warrantyCommands=['warranty.terms','warranty.open','warranty.decide','warranty.cost','warranty.claim','warranty.claimOutcome'] as const
 export const warranty:Handler=(c,command,p)=>{
  if(!(warrantyCommands as readonly string[]).includes(command))return
@@ -47,8 +51,9 @@ export const warranty:Handler=(c,command,p)=>{
   return save({costs:[...row.costs,cost]},cost)
  }
  if(command==='warranty.claim'){
+  if(c.actor.role!=='owner'&&c.actor.staffRole!=='manager')fail('FORBIDDEN','Only the current owner or delegated manager approves supplier claims.',null,403)
   const reference=text(p.reference,'unique claim reference',200),claimant=text(p.claimant,'supplier or OEM',200),amountCents=integer(p.amountCents,'claim amount in USD cents',1),costCents=row.costs.reduce((n:number,x:any)=>n+x.amountCents,0)
-  if(row.decision.responsibility==='shop'||amountCents>costCents-row.claims.reduce((n:number,x:any)=>n+x.amountCents,0))fail('WARRANTY_CLAIM','Supplier/OEM claims must fit recorded uncovered rework costs and approved responsibility.')
+  if(row.decision.responsibility==='shop'||amountCents>warrantyClaimable(c.s,row))fail('WARRANTY_CLAIM','Supplier and OEM claims must fit recorded uncovered rework costs and approved responsibility.')
   if(rows(c.s,'warranty').some(w=>w.claims.some((x:any)=>x.reference===reference&&x.claimant===claimant)))fail('WARRANTY_CLAIM','That supplier claim reference already exists.')
   const claim={id:crypto.randomUUID(),reference,claimant,amountCents,evidence:text(p.evidence,'claim evidence',2000),status:'prepared',history:[],by:who(c),at:c.now,label:'Approved claim record only; not submitted by Mallet.'}
   return save({claims:[...row.claims,claim]},claim)

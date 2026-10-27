@@ -1,3 +1,5 @@
+import {patternReport} from './quality-patterns'
+import {qualityPatternsPage} from './ui/quality-patterns'
 import {statusNoticeCommand,statusNoticeState} from './status-notice-door'
 import {internalStatusCommands} from './status-notices'
 import {statusNoticePage} from './ui/status-notices'
@@ -179,6 +181,7 @@ function visible(s:State,actor:Actor):State {
  if(actor.role!=='owner'){const {audit:_audit,...records}=s.records;s={...s,records}}
  if(actor.role!=='owner')s={...s,records:Object.fromEntries(Object.entries(s.records).filter(([kind])=>!['taxCreditBasis','tenderClearance','arTerms','arInvoice','arDispute','arPromise','arReminder','deposit','retentionPolicy','retentionHold','retentionReceipt','diagnosticResult'].includes(kind)))}
  if(actor.role!=='owner')s={...s,records:{...s.records,event:rows(s,'event').filter(row=>!row.kind.startsWith('tax.creditBasis')&&!row.kind.startsWith('tender.')&&!row.kind.startsWith('ar.')&&!row.kind.startsWith('deposit.')&&!row.kind.startsWith('diagnosticResult.'))}}
+ if(!human(actor))s={...s,records:{...s.records,qualityPattern:[],event:rows(s,'event').filter(x=>!x.kind.startsWith('pattern.'))}}
  if(!human(actor))s={...s,records:Object.fromEntries(Object.entries(s.records).map(([k,v])=>[k,(k.startsWith('calendar')||k==='bookingWaitlist'||k==='waitlistOffer'||k==='appointment'||k==='bookingService'||k==='counterIntake'||k.startsWith('intake')||['warranty','warrantyTerms','payment','handover','returnDelegate','returnOverride'].includes(k))?[]:k==='event'?v.filter(x=>!x.kind.startsWith('calendar.')&&!x.kind.startsWith('waitlist.')&&!x.kind.startsWith('booking.')&&!x.kind.startsWith('checkin.')&&!x.kind.startsWith('intake.')&&!x.kind.startsWith('warranty.')&&!x.kind.startsWith('payment.')&&!x.kind.startsWith('return.')):v]))}
  s=scopedCollaboration(scopedPromises(s,actor),actor)
  s=scopedTime(s,actor)
@@ -205,6 +208,7 @@ async function operators(db:D1Database) {
 const bookingFields=['title','bayId','technicianId','startAt','endAt']
 function formInput(data:FormData) {
  const input:any=Object.fromEntries(data)
+ if(input.command==='pattern.approve'){input.amountCents=Number(input.amountCents);input.confirm=data.has('confirm')}
  if(input.command==='statusNotice.consent')input.consent=data.has('consent')
  if(input.command==='statusNotice.approve'){input.confirm=data.has('confirm');for(const key of ['allowedStart','allowedEnd','jobVersion'])input[key]=Number(input[key])}
  if(input.command==='review.consent')input.consent=data.has('consent')
@@ -338,6 +342,7 @@ async function workshopResponse(request:Request,original:Bindings,execution:Pick
    submitted={command,input}
    let result:any
    if(['connector.save','connector.revoke'].includes(command)&&actor.role==='owner'&&!auth.gate?.enrolled)throw new HttpError(403,'step_up_required','Enrol your own second factor before opening the credential door.')
+   if(command==='pattern.approve'&&(actor.role==='owner'||actor.staff?.role==='manager'))auth.authority=requireStepUp(auth)
    if(needsStepUp(command,actor.role))auth.authority=requireStepUp(auth,command.startsWith('deposit.'))
    if(internalStatusCommands.includes(command))throw new HttpError(404,'unknown_command')
    if(internalReviewCommands.includes(command))throw new HttpError(404,'unknown_command')
@@ -389,7 +394,8 @@ async function workshopResponse(request:Request,original:Bindings,execution:Pick
    else if(command==='inspection.record'&&actor.role!=='agent'){const checked=await inspectionRecordInput(env.DB,actor,auth.authority,input);result=await execute(env.DB,actor as any,command,checked.input,checked.authority)}
    else result=await execute(env.DB,actor as any,command,input,auth.authority)
    if(actor.role!=='owner')result=withoutFleetApproval(result)
-   if(actor.staff){if(isApi)return json(result);return redirect('/app/staff')}
+   if(actor.staff){if(isApi)return json(result);return redirect(command.startsWith('pattern.')?'/app/inventory/quality-patterns':'/app/staff')}
+   if(command.startsWith('pattern.')){if(isApi)return json(result);return redirect('/app/inventory/quality-patterns')}
    if(command.startsWith('staff.')){if(isApi)return json(result);return redirect('/app/staff-access')}
    if(isApi){if(!human(actor)&&result&&typeof result==='object'&&'billing' in result){const {billing,...rest}=result;result=rest}return json(actor.role==='agent'?withoutSubletCosts(withoutInspectionSource(result)):result)}
    if(retentionCommands.includes(command)){if(command==='customer.export')return new Response(JSON.stringify(result,null,2),{headers:{...headers,'content-type':'application/json','content-disposition':'attachment; filename="customer-data.json"'}});return page('Retention & erasure',retentionPage(await load(env.DB),input.customerId??'',command==='retention.preview'?result:undefined,input,['customer.erase','retention.run'].includes(command)?result:undefined),actor,200,{section:'data'})}
@@ -463,6 +469,7 @@ async function workshopResponse(request:Request,original:Bindings,execution:Pick
   if(path==='/api/mallet/catalogue'){if(actor.role==='member')throw new HttpError(403,'manager_required');return json(await catalogue(env,await connectorSecret(env,'pier','PIER_SESSION')))}
   if(path==='/app/calendar'){if(!human(actor))throw new HttpError(403,'manager_required');return page('Resource calendar',calendarPage(state,(await operators(env.DB)).names,url.searchParams),actor,200,{section:'jobs'})}
   if(path==='/app/bookings'){if(!human(actor))throw new HttpError(403,'manager_required');return page('Online appointments',bookingStaff(state,(await operators(env.DB)).names,actor.role==='owner'),actor,200,{section:'jobs'})}
+  if(['/app/inventory/quality-patterns','/api/mallet/quality-patterns'].includes(path)){if(!human(actor)&&!(actor.staff?.role==='manager'&&actor.staff.cost_right))throw new HttpError(403,'manager_required');const source=actor.staff?withoutFleetApproval(await load(env.DB)):state;return path.startsWith('/api/')?json(patternReport(source)):page('Supplier quality patterns',qualityPatternsPage(source,actor.role==='owner'||actor.staff?.role==='manager'),actor,200,{section:'inventory'})}
   if(path==='/api/mallet/state')return json({actor,...state})
   if(path==='/api/mallet/board')return json(repairBoard(state,new Date().toISOString(),boardFilter(url.searchParams)))
   const invoicePage=path.match(/^\/app\/invoices\/([^/]+)$/)
@@ -551,7 +558,7 @@ async function workshopResponse(request:Request,original:Bindings,execution:Pick
   const returnMatch=path.match(/^\/app\/jobs\/([^/]+)\/return$/)
   if(returnMatch){if(!human(actor))throw new HttpError(403,'manager_required');const job=rows(state,'job').find(j=>j.id===returnMatch[1]);if(!job)throw new HttpError(404,'not_found');return page('Documented handover',returnPage(await reviewState(env,state,actor),job,actor),actor,200,frame('jobs'))}
   const warrantyMatch=path.match(/^\/app\/jobs\/([^/]+)\/warranty$/)
-  if(warrantyMatch){if(!human(actor))throw new HttpError(403,'manager_required');const job=rows(state,'job').find(j=>j.id===warrantyMatch[1]);if(!job)throw new HttpError(404,'not_found');return page('Warranty & comeback work',warrantyPage(state,job,(await operators(env.DB)).list),actor,200,frame('jobs'))}
+  if(warrantyMatch){if(!human(actor))throw new HttpError(403,'manager_required');const job=rows(state,'job').find(j=>j.id===warrantyMatch[1]);if(!job)throw new HttpError(404,'not_found');return page('Warranty & comeback work',warrantyPage(state,job,(await operators(env.DB)).list,actor.role==='owner'),actor,200,frame('jobs'))}
   const intakeMatch=path.match(/^\/app\/jobs\/([^/]+)\/intake$/)
   if(intakeMatch){if(!human(actor))throw new HttpError(403,'manager_required');const job=rows(state,'job').find(j=>j.id===intakeMatch[1]);if(!job)throw new HttpError(404,'not_found');await expireIntakeSecrets(env);const secrets=actor.role==='owner'?(await env.DB.prepare('SELECT id,purpose,expires_at FROM mallet_intake_secrets WHERE job_id=? ORDER BY expires_at').bind(job.id).all()).results:[];return page('Condition & custody',intakePage(state,job,actor,await diagnosisMedia(env.DB,actor,auth.authority,job.id),secrets),actor,200,frame('jobs'))}
   const previewMatch=path.match(/^\/app\/jobs\/([^/]+)\/media\/view\/([^/]+)$/)
