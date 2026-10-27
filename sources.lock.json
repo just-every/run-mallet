@@ -572,7 +572,7 @@
       "executable": false
     },
     "ACCEPTANCE.md": {
-      "sha256": "89408baf040e22e99aa310d2f9b3dd46be7c822308deff5bae51ab77dd56e071",
+      "sha256": "2a6f56a9baf16a1b2c1f227e24459b6a7ce8a8c5756eaf36be2ce1d4b427c25c",
       "executable": false
     },
     "AGENTS.md": {
@@ -584,7 +584,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "25e280d87f52b8fd997ed9c45832c779cee4770314c5087af4619594ca5b39c1",
+      "sha256": "42bb8accb6f3af346ec9220a15c2fd6a023e5430bdd6ea914b476daede526c0a",
       "executable": false
     },
     "deploy-demo.json": {
@@ -1756,7 +1756,7 @@
       "executable": false
     },
     "src/mallet/http.ts": {
-      "sha256": "e6826f51900f9eed43e9a6664572257bbc477099f0981cd9137c01798c1c2240",
+      "sha256": "5e7bb8fe6c6f08d8b42cc02f0f0a8e69b054b453b2d8ce0516a31fe45b6f6975",
       "executable": false
     },
     "src/mallet/imports/context.ts": {
@@ -1948,7 +1948,7 @@
       "executable": false
     },
     "src/mallet/model.ts": {
-      "sha256": "639f716fdf1ecbfc703142d0369abd372032ca99e6233c04d6e255cd7ba98ddb",
+      "sha256": "1e4794f28d7582f6cb741c608eacd570c0c3b71f0aed171cac9b77deaaf52771",
       "executable": false
     },
     "src/mallet/money.ts": {
@@ -2148,7 +2148,7 @@
       "executable": false
     },
     "src/mallet/restore/validate-records.mjs": {
-      "sha256": "1bd66bec9306bb2841b440a1543b93f51a80b885ef1f3a50f474a2ccf3b9441f",
+      "sha256": "2e7fbf054924227e25b6a62b5e40c8b0c37ddea191a40937544edc266a9d9e5d",
       "executable": false
     },
     "src/mallet/restore/validate-reviews.mjs": {
@@ -2212,7 +2212,7 @@
       "executable": false
     },
     "src/mallet/returns.ts": {
-      "sha256": "8d7ee2cd15a475ba2565bdb0058b21e82f4058dd128570ff2fe2ee3e4ad4e1b8",
+      "sha256": "71fc214985ac0fdb4174f3cb4cefe30d119d2d22a8a8b64c90ce016637f3f090",
       "executable": false
     },
     "src/mallet/review-customer-door.ts": {
@@ -2269,6 +2269,10 @@
     },
     "src/mallet/stock-transfers.ts": {
       "sha256": "cb723da1dd9464bc3b66b4f5f2178025d0aa7810d45fbd8c67f2e1e5fe00aa28",
+      "executable": false
+    },
+    "src/mallet/storage.ts": {
+      "sha256": "367b3d760db8a38486238bdb1233b588b4c1b4c2e06914b710ac6b5ccb66d8a3",
       "executable": false
     },
     "src/mallet/stripe/balance-guard.ts": {
@@ -2328,7 +2332,7 @@
       "executable": false
     },
     "src/mallet/strong-auth/gate.ts": {
-      "sha256": "1dd985a6acb3283afd0cb466b8c63e02bfc95026f7d58eff4467cd5562d6e7a7",
+      "sha256": "1ed42e70dde2b48d47ccb80dc77c0eef44bd3968723201e6f8a65698cc481511",
       "executable": false
     },
     "src/mallet/strong-auth/link-guard.ts": {
@@ -2600,7 +2604,7 @@
       "executable": false
     },
     "src/mallet/ui/returns.ts": {
-      "sha256": "b55d1363dcce5a4baadced97daef5f0d5b0aec66367a0398d3d1cf61dff7a0ad",
+      "sha256": "2c1e4466d9839fe38c9e74a51b18e1faf36fd43344f6789731d09862a44d5e92",
       "executable": false
     },
     "src/mallet/ui/reviews.ts": {
@@ -2633,6 +2637,10 @@
     },
     "src/mallet/ui/stock-transfers.ts": {
       "sha256": "3d2cc2f5425996db3869027e5ecbd764c5163e9e8f37c37386772cc8c7a7759a",
+      "executable": false
+    },
+    "src/mallet/ui/storage.ts": {
+      "sha256": "9961e49a783b832b5f3dc8915f32d93e480d76b7f8720e8ce31c3f621f713097",
       "executable": false
     },
     "src/mallet/ui/sublet.ts": {
@@ -4672,7 +4680,7 @@
       "executable": false
     },
     "tests/mallet.test.mjs": {
-      "sha256": "73db88f560c8c79882366152a9a6db335aa5a3d5c70e90293c4bab0399b0ea7a",
+      "sha256": "dfd6c8ec8835b58faca257ba1970fdfe469a50f14ccb8855ff380e8fc2998615",
       "executable": false
     },
     "tests/media-browser.mjs": {
@@ -4736,7 +4744,7 @@
       "executable": false
     },
     "tests/return-browser.mjs": {
-      "sha256": "e76a9ad0a720d14400959648a7439924983f2ef7a285d67aa7ddf334d43e2852",
+      "sha256": "ee8d3d160cae1b5ecc1118ad7c465d0e1e7f1e8fd37b2fc4038a20a1cac5d0d3",
       "executable": false
     },
     "tests/reviews-browser.mjs": {
@@ -4773,6 +4781,10 @@
     },
     "tests/stock-trace-browser.mjs": {
       "sha256": "dae32202dc4097d285f52c49823cec566edd3c14178ed815a50eba986ba3f541",
+      "executable": false
+    },
+    "tests/storage-browser.mjs": {
+      "sha256": "e9efcc8f9e138769c3136b6ab268105a58210c968036c251e2090d45e9d304ae",
       "executable": false
     },
     "tests/stripe-ach-sandbox.mjs": {
@@ -5077,6 +5089,10 @@
     },
     "tests/support/stock-trace-journey.mjs": {
       "sha256": "10c48c703b49ba8ea78ef083cc5d527139fd315136ab88b59418da7d4c96dde6",
+      "executable": false
+    },
+    "tests/support/storage-journey.mjs": {
+      "sha256": "70d94dba2702df9d7a1cbb89eadd44ed6edb227838f1f6ea5a81769eb248bfaa",
       "executable": false
     },
     "tests/support/stripe-journey.mjs": {
