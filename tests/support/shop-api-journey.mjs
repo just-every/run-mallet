@@ -45,9 +45,15 @@ export async function shopApiReadJourney(h){
  const events=(await h.state()).records.event.filter(e=>e.jobId===job.id)
  assert.deepEqual(history.map(r=>r.id).sort(),events.map(e=>e.id).sort());assert.ok(history.some(e=>e.kind==='job.book'));assert.ok(history.some(e=>e.kind==='flow.close'));noMoney(history)
  for(const suffix of ['?limit=0','?limit=101','?limit=1.5','?cursor=broken','?limit=1&limit=2'])await read(h,client,'assets'+suffix,400)
+ await read(h,client,'repairs/synthetic-mallet-missing/history',404)
+ const other=(await booking(h,{asset:assets[1],bayId:'synthetic-mallet-other-bay',startAt:'2026-12-02T12:00:00Z',endAt:'2026-12-02T13:00:00Z'})).job
+ const repairPage=await read(h,client,'repairs/'+job.id+'/history?limit=1')
+ assert.ok(repairPage.nextCursor)
+ await read(h,client,'repairs/'+other.id+'/history?cursor='+repairPage.nextCursor,400)
+ before.repairs=await pages(h,client,'repairs')
  const first=await read(h,client,'assets?limit=1')
  await read(h,client,'parts?cursor='+first.nextCursor,400)
- await h.command('asset.update',{...assets[1],assetId:assets[1].id,label:'synthetic-mallet-updated'})
+ await h.command('asset.update',{...assets[1],version:(await read(h,client,'assets/'+assets[1].id)).version,assetId:assets[1].id,label:'synthetic-mallet-updated'})
  await read(h,client,'assets?cursor='+first.nextCursor,409)
  before.assets=await pages(h,client,'assets')
  const backup=await archive(h)
@@ -71,15 +77,19 @@ export async function shopApiRetryJourney(h){
  const [a,b]=await Promise.all([prepare(h,client,'estimate.prepare',input,'synthetic-mallet-11'),prepare(h,client,'estimate.prepare',input,'synthetic-mallet-11')])
  assert.deepEqual(a,b);noMoney(a)
  const state=await h.state()
+ await h.restart()
  assert.equal(state.records.estimate.length,1);assert.equal(state.records.audit.filter(a=>a.action==='estimate.prepare').length,1)
  assert.deepEqual(await prepare(h,client,'estimate.prepare',{lines:input.lines,version:input.version,jobId:input.jobId},'synthetic-mallet-11',200,'/api/mallet/commands'),a)
  assert.deepEqual(await h.state(),state,'A retry changes no product history')
- assert.equal((await prepare(h,client,'estimate.prepare',{...input,lines:[{...input.lines[0],unitCents:13000}]},'synthetic-mallet-11',409)).error,'IDEMPOTENCY_CONFLICT')
+ const conflict=await prepare(h,client,'estimate.prepare',{...input,lines:[{...input.lines[0],unitCents:13000}]},'synthetic-mallet-11',409)
+ assert.equal(conflict.error,'IDEMPOTENCY_CONFLICT');assert.ok(!('details' in conflict))
+ const invalid={...input,version:0}
+ await prepare(h,client,'estimate.prepare',invalid,'synthetic-mallet-not-consumed',400)
  await prepare(h,client,'dispatch.prepare',input,'synthetic-mallet-11',409)
  let q=(await h.state()).records.estimate[0]
  const revision={estimateId:q.id,version:q.version,revision:1,lines:[{...input.lines[0],unitCents:14000}]}
  assert.equal(a.revision,1)
- const revised=await prepare(h,client,'estimate.revise',revision,'synthetic-mallet-12');assert.deepEqual(await prepare(h,client,'estimate.revise',revision,'synthetic-mallet-12'),revised)
+ const revised=await prepare(h,client,'estimate.revise',revision,'synthetic-mallet-not-consumed');assert.deepEqual(await prepare(h,client,'estimate.revise',revision,'synthetic-mallet-not-consumed'),revised)
  q=(await h.state()).records.estimate[0];assert.equal(q.revisions.length,2);assert.equal(revised.revision,2)
  let current=(await h.state()).records.job.find(j=>j.id===job.id)
  const dispatch={jobId:current.id,version:current.version,bayId:current.bayId,technicianId:current.technicianId,startAt:current.startAt,endAt:current.endAt,reason:'synthetic-mallet-13'}
@@ -114,7 +124,7 @@ export async function shopApiAuthorityJourney(h){
  for(const resource of ['customers','bookings','repairs','parts','orders'])await read(h,client,resource,403)
  await prepare(h,client,'dispatch.prepare',{jobId:job.id,version:job.version},'synthetic-mallet-16',403)
  await read(h,prep,'assets',403)
- const denied=['/api/mallet/state','/api/mallet/state?download=1','/api/mallet/repairs/'+job.id,'/api/mallet/accounts','/api/mallet/board','/api/mallet/inventory','/api/mallet/purchasing','/api/mallet/reports/sales?format=csv','/api/mallet/reports/profitability','/api/mallet/exports/synthetic-mallet-1','/api/portability/exports','/app','/app/data','/app/assets/'+asset.id,'/api/mallet/security/state','/api/mallet/connectors','/api/mallet/jobs']
+ const denied=['/api/mallet/state','/api/mallet/state?download=1','/api/mallet/assets/'+asset.id+'/history.csv','/api/mallet/media/synthetic-mallet-1','/api/mallet/accounts/synthetic-mallet-1/billing','/api/mallet/repairs/'+job.id,'/api/mallet/accounts','/api/mallet/board','/api/mallet/inventory','/api/mallet/purchasing','/api/mallet/reports/sales?format=csv','/api/mallet/reports/profitability','/api/mallet/exports/synthetic-mallet-1','/api/portability/exports','/app','/app/data','/app/assets/'+asset.id,'/api/mallet/security/state','/api/mallet/connectors','/api/mallet/jobs']
  const original=(await h.state()).records
  for(const path of denied){const response=await h.request(path,access(client));assert.equal(response.status,403,path)}
  await h.command('estimate.approve',{}, {...access(prep),status:403})
@@ -135,6 +145,9 @@ export async function shopApiAuthorityJourney(h){
  const expired=await mint(h,['assets:read'])
  await db.prepare('UPDATE mallet_api_clients SET expires_at=0 WHERE id=?').bind(expired.id).run()
  await read(h,expired,'assets',401)
+ const expiredPrep=await mint(h,['dispatch:prepare'])
+ await db.prepare('UPDATE mallet_api_clients SET expires_at=0 WHERE id=?').bind(expiredPrep.id).run()
+ await prepare(h,expiredPrep,'dispatch.prepare',input,'synthetic-mallet-expired',401)
  const creator=await mint(h,['assets:read']),owner=(await h.state()).actor.id
  await db.prepare('UPDATE oa_operators SET version=version+1 WHERE id=?').bind(owner).run()
  await read(h,creator,'assets',401)
