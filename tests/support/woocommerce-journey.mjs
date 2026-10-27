@@ -69,6 +69,11 @@ export async function woocommerceJourney(){
   assert.equal((await f.event({id:f.order.id,status:'pending',line_items:[]})).status,200,'Old event payload re-reads current provider facts')
   if(f.live)assert.equal((await h.mf.dispatchFetch(h.origin+'/api/mallet/woocommerce/events',{method:'POST',...deliveries[0]})).status,200,'A late original provider delivery cannot roll the refund back')
   let view=await h.api('/api/mallet/woocommerce');assert.equal(view.refunds.length,1);assert.equal(view.refunds[0].providerId,refund.id);assert.equal(view.refunds[0].orderId,f.order.id);assert.equal(view.refunds[0].receipt.amountCents,2500);assert.equal(view.refunds[0].receipt.lines[0].lineId,f.order.line_items[0].id);assert.equal(view.refunds[0].receipt.lines[0].quantity,1);assert.equal(view.refunds[0].receipt.lines[0].totalCents,2500);assert.equal(view.balances[0].onHandMilli,8000,'Refund alone never proves returned goods')
+  for(const as of [member.cookie,admin.cookie]){
+   await h.command('woocommerce.reconcile',{orderId:f.order.id,restockRefundIds:String(refund.id)},{as,status:403})
+   await h.command('woocommerce.disable',{}, {as,status:403})
+  }
+  assert.equal((await h.api('/api/mallet/woocommerce')).balances[0].onHandMilli,8000,'Non-owner approval cannot restore returned goods')
   await h.command('woocommerce.reconcile',{orderId:f.order.id,restockRefundIds:String(refund.id)});await h.command('woocommerce.reconcile',{orderId:f.order.id,restockRefundIds:String(refund.id)})
   view=await h.api('/api/mallet/woocommerce');assert.equal(view.orders.length,1);assert.equal(view.refunds.length,1);assert.equal(view.balances[0].onHandMilli,9000);assert.equal(view.orders[0].transactionId,'synthetic-mallet-payment-61');assert.deepEqual((await h.state()).records.payment??[],[])
   await h.command('woocommerce.reconcile',{orderId:f.order.id,restockRefundIds:'99999999'},{status:409})
@@ -78,6 +83,8 @@ export async function woocommerceJourney(){
   const target=await installation();try{await restore(target,saved);const recovered=await target.api('/api/mallet/woocommerce');assert.deepEqual(recovered.orders,view.orders);assert.deepEqual(recovered.refunds,view.refunds);assert.deepEqual(recovered.mappings,view.mappings);assert.deepEqual(recovered.balances,view.balances);assert.equal(recovered.connection,null);assert.deepEqual((await target.api('/api/mallet/connectors')).secrets,[]);await target.command('woocommerce.reconcile',{orderId:f.order.id},{status:409})}finally{await target.close()}
   await h.command('woocommerce.disable');await h.command('woocommerce.enable',{origin:f.origin,authority:'mallet',acknowledge:1});assert.equal((await f.event()).status,200);assert.equal((await h.api('/api/mallet/woocommerce')).balances[0].onHandMilli,9000,'Re-enabling the same provider never repeats stock')
   await h.command('connector.revoke',{connector:'woocommerce',name:'WOO_API_AUTH'});const calls=f.calls.length;assert.equal((await f.event()).status,503);await h.command('woocommerce.reconcile',{orderId:f.order.id},{status:503});assert.equal(f.calls.length,calls)
+  await h.command('connector.save',{connector:'woocommerce',name:'WOO_API_AUTH',credential:reader,acknowledge:1})
+  await h.command('connector.revoke',{connector:'woocommerce',name:'WOO_WEBHOOK_SECRET'});assert.equal((await f.event()).status,503);await h.command('woocommerce.reconcile',{orderId:f.order.id},{status:503});assert.equal(f.calls.length,calls,'Revoking either credential stops every provider read')
   await h.command('woocommerce.disable');assert.equal((await f.event()).status,409)
   console.log('WooCommerce receipt: '+JSON.stringify({mode:f.live?'actual disposable installation':'network edge',order:f.order.id,refund:refund.id,orders:1,refunds:1,stockMilli:9000,signedProviderDeliveries:received,counterPayments:0}))
  }finally{

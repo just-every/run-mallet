@@ -572,7 +572,7 @@
       "executable": false
     },
     "ACCEPTANCE.md": {
-      "sha256": "50911c2612dc3a01c0c05b91925e040334b6e4f69fd6ff474818de124c733916",
+      "sha256": "62403030d6b15ace10b15133b8a65957573e76a59303f85bfb4f58669bad0098",
       "executable": false
     },
     "AGENTS.md": {
@@ -584,7 +584,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "018a07ff674621622d6e8d909d79f92b6fdaea662d328a79951888fe2e555d6e",
+      "sha256": "554ea5ab3e0b994ee63df79a98f689b3b6e261da73f7c083a923eb386327b870",
       "executable": false
     },
     "deploy-demo.json": {
@@ -5176,7 +5176,7 @@
       "executable": false
     },
     "tests/support/woocommerce-journey.mjs": {
-      "sha256": "83d0a3e47eac3af9c3f21311aaaa02810ee66c1e2a3cfafa7b36331e844ce404",
+      "sha256": "9ba6453a4be81d994160af431b6e9a8cdd513b350814cebbb72259dedf4cf041",
       "executable": false
     },
     "tests/support/woocommerce-local.mjs": {
