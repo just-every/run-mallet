@@ -73,6 +73,7 @@ import {intakeTemplatesPage,intakeTemplateInput,signedIntakeReceipt} from './ui/
 import {sendBalanceReminder} from './receivables-mail'
 import {returnPage,returnFormInput,handoverReceipt} from './ui/returns'
 import {collectionInput,verifyStripePayment} from './payment-door'
+import {warrantyPacket} from './warranty-patterns'
 import {warrantyPage,warrantyFormInput} from './ui/warranty'
 import {intakePage,intakeFormInput} from './ui/intake'
 import {intakeSecret,expireIntakeSecrets,purgeIntakeSecrets} from './intake-secrets'
@@ -463,6 +464,8 @@ async function workshopResponse(request:Request,original:Bindings,execution:Pick
   if(path==='/api/mallet/catalogue'){if(actor.role==='member')throw new HttpError(403,'manager_required');return json(await catalogue(env,await connectorSecret(env,'pier','PIER_SESSION')))}
   if(path==='/app/calendar'){if(!human(actor))throw new HttpError(403,'manager_required');return page('Resource calendar',calendarPage(state,(await operators(env.DB)).names,url.searchParams),actor,200,{section:'jobs'})}
   if(path==='/app/bookings'){if(!human(actor))throw new HttpError(403,'manager_required');return page('Online appointments',bookingStaff(state,(await operators(env.DB)).names,actor.role==='owner'),actor,200,{section:'jobs'})}
+  const patternMatch=path.match(/^\/api\/mallet\/warranty-patterns\/([^/]+)$/)
+  if(patternMatch){if(!human(actor))throw new HttpError(403,'manager_required');return json(warrantyPacket(state,patternMatch[1]))}
   if(path==='/api/mallet/state')return json({actor,...state})
   if(path==='/api/mallet/board')return json(repairBoard(state,new Date().toISOString(),boardFilter(url.searchParams)))
   const invoicePage=path.match(/^\/app\/invoices\/([^/]+)$/)

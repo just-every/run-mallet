@@ -49,6 +49,7 @@ export async function rmaJourney(h){
  const faulty=await h.command('stock.rmaOpen',{...f.input,lotId:f.secondLot.id,stockUseId:null,warrantyId:null,kind:'faulty',reference:'synthetic-mallet-115',reason:'Shelf damage',evidence:'Damaged remaining package'})
  await h.command('stock.rmaDispose',{rmaId:faulty.id,version:faulty.version,outcome:'destroyed',reason:'Supplier declined return',evidence:'Witnessed destruction'})
  assert.equal((await h.api('/api/mallet/inventory')).balances[0].onHandMilli,0)
+ const packet=await h.api('/api/mallet/warranty-patterns/'+f.warranty.id),cited=packet.evidence.find(c=>c.id===f.warranty.id);assert.deepEqual(cited.rmas,[rma]);assert.equal(cited.credits.reduce((n,c)=>n+c.amountCents,0),1000);assert.equal(cited.lot.serial,f.lot.serial)
  const before=(await h.state()).records,fresh=await installation({bindings:{OWNER_EMAIL:'rma-recovery@example.test'}})
  try{await restore(fresh,await archive(h));assert.deepEqual((await fresh.state()).records,before);assert.deepEqual(await fresh.api('/api/mallet/supplier-returns'),await h.api('/api/mallet/supplier-returns'));await fresh.command('stock.rmaShip',{...refs(),carrier:'Carrier',tracking:'synthetic-mallet-112',evidence:'Restored shipment stays final'},{status:409})}finally{await fresh.close()}
  await h.api('/api/mallet/supplier-returns',undefined,{as:member.cookie,status:403});assert.equal((await h.state({as:member.cookie})).records.stockRma,undefined)
