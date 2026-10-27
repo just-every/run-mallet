@@ -584,7 +584,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "343cc489314f7ac71f84d43e486f930e78105336bb698aa380abee1fff026fdc",
+      "sha256": "70f33ed67c1bb0c9638d7cc0509c75d7756dcca7fb6d1d9c4d95fb2a01521ac1",
       "executable": false
     },
     "deploy-demo.json": {
@@ -712,7 +712,7 @@
       "executable": false
     },
     "docs/shop-api.md": {
-      "sha256": "8506464efd14767ca8c8293c8b12f36dd8bf3b808ecb25db596fe889b4c99eed",
+      "sha256": "ff1fdccc99718cc6f2281830f6c4147686d55ad702d03226e177a3baad318815",
       "executable": false
     },
     "docs/site.json": {
@@ -1215,6 +1215,10 @@
       "sha256": "78fe71aeeb388f03db6f61e962fb8a863bdae473fd7f2e815f6b52db9540992a",
       "executable": false
     },
+    "RULINGS.md": {
+      "sha256": "009dda8de3b605d0ebee01647c61dd0208ba67873651edfcc82844cbe6c810b1",
+      "executable": false
+    },
     "RUN-LOCALLY.md": {
       "sha256": "a127337b8d87dbe9d250aea784c8839f0e884425fd338a72133ce5fc0c8484c5",
       "executable": false
@@ -1564,7 +1568,7 @@
       "executable": false
     },
     "src/mallet/api/clients.ts": {
-      "sha256": "6f376f4276d685a97a233dc48300ebbe33cc72edda25e46453e2007c8a303dea",
+      "sha256": "da995b677a6e0931ae046667ada7da9f964073487ce125f07f1275a7cb7bc87b",
       "executable": false
     },
     "src/mallet/api/commands.ts": {
@@ -5092,7 +5096,7 @@
       "executable": false
     },
     "tests/support/shop-api-journey.mjs": {
-      "sha256": "6bdfe0aed5a9d689e5856c74d378f19cb7d2ddb364546aee32869379758561e1",
+      "sha256": "99d8bba82e35026fea19b12d6e53862f1c6aa374859c6625937f3f36d48aaa56",
       "executable": false
     },
     "tests/support/special-part-journey.mjs": {

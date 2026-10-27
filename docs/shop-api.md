@@ -25,7 +25,8 @@ Keep the token in the client's private credential store. Send it in the
 configured origin. Cross-site requests and mismatched hosts are refused.
 There are no default scopes. Unknown scopes, wildcard scopes and empty grants
 are refused. Expiry defaults to 24 hours and may be explicitly set to an integer
-from 1 through 720 hours. The owner can invalidate it immediately with
+from 1 through 720 hours. An explicit null, string, fraction or out-of-bounds
+expiry is refused; omit the field to use the default. The owner can invalidate it immediately with
 `apiClient.revoke` and `{"id":"<client ID>"}` through the same confirmed native
 door. Deactivating the issuing owner or changing that owner's authority version
 also invalidates the client. Each read, write and retry rechecks current authority.
