@@ -134,3 +134,7 @@ their maintenance.
 
 Pinned reference: https://github.com/runeditrun/base/blob/913926d5425ad95321fb22f95ee8f4c4cd7b552f/TANSTACK-START-MIGRATION.md
 Native-session/runtime evidence: https://github.com/runeditrun/base/tree/913926d5425ad95321fb22f95ee8f4c4cd7b552f/default-seed
+
+## Lander-Regenerate
+
+For the STORE-002 projection, run `node scripts/contract-docs.mjs write STORE-002`, then `node scripts/contract-docs.mjs check STORE-002`. CONTRACT.md owns the wording, status and Gap. This incremental command retains unrelated legacy acceptance entries and regenerates the status summary and the claims register. Run `node scripts/edition-authoring/cli.mjs lock` last, then its `check` command.

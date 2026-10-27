@@ -1,3 +1,5 @@
+import {wooWebhook} from './woocommerce/webhook'
+import {wooCommand,wooView} from './woocommerce/service'
 import {statusNoticeCommand,statusNoticeState} from './status-notice-door'
 import {internalStatusCommands} from './status-notices'
 import {statusNoticePage} from './ui/status-notices'
@@ -176,6 +178,7 @@ function visible(s:State,actor:Actor):State {
  if(actor.role!=='owner'){s={...s,records:{...Object.fromEntries(Object.entries(s.records).filter(([kind])=>!kind.startsWith('stripe'))),event:rows(s,'event').filter(r=>!r.kind.startsWith('stripe.'))}};s=withoutFleetApproval(s)}
  if(actor.role==='owner')s={...s,records:{...s.records,deposit:rows(s,'deposit').map(d=>({...d,balance:depositBalance(s,d)}))}}
  if(actor.role!=='owner')s={...s,records:{...s.records,handover:rows(s,'handover').map(r=>{const {accountTerms,...settlement}=r.settlement;return {...r,settlement}})}}
+ if(actor.role!=='owner')s={...s,records:{...Object.fromEntries(Object.entries(s.records).filter(([kind])=>!kind.startsWith('woo'))),event:rows(s,'event').filter(x=>!x.kind.startsWith('woo.'))}}
  if(actor.role!=='owner'){const {audit:_audit,...records}=s.records;s={...s,records}}
  if(actor.role!=='owner')s={...s,records:Object.fromEntries(Object.entries(s.records).filter(([kind])=>!['taxCreditBasis','tenderClearance','arTerms','arInvoice','arDispute','arPromise','arReminder','deposit','retentionPolicy','retentionHold','retentionReceipt','diagnosticResult'].includes(kind)))}
  if(actor.role!=='owner')s={...s,records:{...s.records,event:rows(s,'event').filter(row=>!row.kind.startsWith('tax.creditBasis')&&!row.kind.startsWith('tender.')&&!row.kind.startsWith('ar.')&&!row.kind.startsWith('deposit.')&&!row.kind.startsWith('diagnosticResult.'))}}
@@ -270,6 +273,7 @@ export async function malletResponse(request:Request,original:Bindings,execution
 }
 async function workshopResponse(request:Request,original:Bindings,execution:Pick<ExecutionContext,'waitUntil'>):Promise<Response|null> {
  const url=new URL(request.url),path=url.pathname
+ const woo=await wooWebhook(request,original);if(woo)return woo
  const enterprise=await enterpriseResponse(request,original);if(enterprise)return enterprise
  const stripe=await stripeResponse(request,original);if(stripe)return stripe
  const deliveryEvent=await inspectionReportEventResponse(request,original);if(deliveryEvent)return deliveryEvent
@@ -293,6 +297,7 @@ async function workshopResponse(request:Request,original:Bindings,execution:Pick
   if(path==='/app'&&actor.staff)return redirect('/app/staff')
   if(['/app/staff','/api/mallet/staff/state'].includes(path)){if(!actor.staff)throw new HttpError(403,'staff_grant_required');const view=staffState(await load(env.DB),actor);if(!await env.DB.prepare(`SELECT 1 AS ok WHERE (${auth.authority.sql})`).bind(...auth.authority.params).first())throw new HttpError(403,'staff_grant_required');return path==='/app/staff'?page('Staff workspace',staffPage(view),actor,200,{section:'data'}):url.searchParams.has('download')?new Response(JSON.stringify(view,null,2),{headers:{...headers,'content-type':'application/json','content-disposition':'attachment; filename="mallet-staff.json"'}}):json(view)}
   if(path==='/app/staff-access'){if(actor.role!=='owner')throw new HttpError(403,'owner_required');return page('Staff roles & limits',await staffSettings(env.DB),actor,200,{section:'data'})}
+  if(path==='/api/mallet/woocommerce'){if(actor.role!=='owner')throw new HttpError(403,'owner_required');if(request.method!=='GET')throw new HttpError(405,'method_not_allowed');return json(await wooView(env))}
   if(['/app/audit','/api/mallet/audit'].includes(path)){
    if(!['GET','HEAD'].includes(request.method))throw new HttpError(405,'method_not_allowed')
    const report=await auditReport(env.DB,actor,auth.authority,url.searchParams),format=url.searchParams.get('format')
@@ -339,6 +344,8 @@ async function workshopResponse(request:Request,original:Bindings,execution:Pick
    let result:any
    if(['connector.save','connector.revoke'].includes(command)&&actor.role==='owner'&&!auth.gate?.enrolled)throw new HttpError(403,'step_up_required','Enrol your own second factor before opening the credential door.')
    if(needsStepUp(command,actor.role))auth.authority=requireStepUp(auth,command.startsWith('deposit.'))
+   if(command.startsWith('woo.'))throw new HttpError(404,'unknown_command')
+   if(command.startsWith('woocommerce.'))auth.authority=requireStepUp(auth,true)
    if(internalStatusCommands.includes(command))throw new HttpError(404,'unknown_command')
    if(internalReviewCommands.includes(command))throw new HttpError(404,'unknown_command')
    if(internalOutreachCommands.includes(command))throw new HttpError(404,'unknown_command')
@@ -356,6 +363,7 @@ async function workshopResponse(request:Request,original:Bindings,execution:Pick
    else if(command==='inspectionReport.review'){const checked=await inspectionReportInput(env.DB,actor,auth.authority,input);result=await execute(env.DB,actor as any,command,checked.input,checked.authority)}
    else if(command==='inspectionReport.send')result=await sendInspectionReport(env,actor,auth.authority,input)
    else if(command==='booking.publish'){if(!human(actor))throw new HttpError(403,'manager_required');const active=(await operators(env.DB)).list.filter(x=>x.status==='active');if(!Array.isArray(input.windows)||input.windows.some((w:any)=>!active.some(x=>x.id===w.technicianId)))throw new HttpError(400,'active_staff_required');const technicians=[...new Set(input.windows.map((w:any)=>String(w.technicianId)))];const guard={sql:'('+auth.authority.sql+') AND '+technicians.map(()=>"EXISTS(SELECT 1 FROM oa_operators WHERE id=? AND status='active')").join(' AND '),params:[...auth.authority.params,...technicians]};result=await execute(env.DB,actor as any,command,input,guard)}
+   else if(command.startsWith('woocommerce.'))result=await wooCommand(env,actor,auth.authority,command,input)
    else if(command==='connector.save')result=await saveSecret(env,actor,auth.authority,input)
    else if(command==='connector.revoke')result=await revokeSecret(env,actor,auth.authority,input)
    else if(command==='booking.revokeLink')result=await revokeBookingLink(env,actor,auth.authority,input)
@@ -390,6 +398,7 @@ async function workshopResponse(request:Request,original:Bindings,execution:Pick
    else result=await execute(env.DB,actor as any,command,input,auth.authority)
    if(actor.role!=='owner')result=withoutFleetApproval(result)
    if(actor.staff){if(isApi)return json(result);return redirect('/app/staff')}
+   if(command.startsWith('woocommerce.')){if(isApi)return json(result);return redirect('/app/connectors')}
    if(command.startsWith('staff.')){if(isApi)return json(result);return redirect('/app/staff-access')}
    if(isApi){if(!human(actor)&&result&&typeof result==='object'&&'billing' in result){const {billing,...rest}=result;result=rest}return json(actor.role==='agent'?withoutSubletCosts(withoutInspectionSource(result)):result)}
    if(retentionCommands.includes(command)){if(command==='customer.export')return new Response(JSON.stringify(result,null,2),{headers:{...headers,'content-type':'application/json','content-disposition':'attachment; filename="customer-data.json"'}});return page('Retention & erasure',retentionPage(await load(env.DB),input.customerId??'',command==='retention.preview'?result:undefined,input,['customer.erase','retention.run'].includes(command)?result:undefined),actor,200,{section:'data'})}

@@ -467,3 +467,6 @@ test('AUTO-005: owner request, customer feedback and completed-repair task throu
 test('AUTO-002: approved stage email sends once, uncollected pickup reaches the owner and recovery is inert',async()=>{const {statusDeliveryJourney}=await import('./support/status-notices-journey.mjs');await statusDeliveryJourney()})
 test('AUTO-002: quiet hours, changed repairs, failed contact, withdrawal and collection stop unsafe notices',async()=>{const {statusStopsJourney}=await import('./support/status-notices-journey.mjs');await statusStopsJourney()})
 test('AUTO-002: owner reviews status email, failed contact and pickup follow-up through native forms at 1440 and 390',async()=>{const {statusNoticesBrowser}=await import('./status-notices-browser.mjs');await statusNoticesBrowser()})
+
+test('STORE-002: authenticated WooCommerce orders, signed replay, line refunds and inert recovery',async()=>{const {woocommerceJourney}=await import('./support/woocommerce-journey.mjs');await woocommerceJourney()})
+test('STORE-002: owner maps products and reconciles returned goods at 1440 and 390',async()=>{const {woocommerceBrowser}=await import('./woocommerce-browser.mjs');await woocommerceBrowser()})
