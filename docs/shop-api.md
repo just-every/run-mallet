@@ -138,4 +138,3 @@ or deletion schedule.
 Native integration settings and recovery screens, delegated operator rights,
 complete sentence-level DONE evidence and ct approval remain held under
 API-002. This document makes no provider-delivery or full API parity claim.
-
