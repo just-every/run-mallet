@@ -1,3 +1,5 @@
+import {assistantsPage} from './ui/assistants'
+import {assistantCommand,scopedAssistantView} from './assistant-door'
 import {statusNoticeCommand,statusNoticeState} from './status-notice-door'
 import {internalStatusCommands} from './status-notices'
 import {statusNoticePage} from './ui/status-notices'
@@ -172,6 +174,8 @@ function withoutFleetApproval(value:any):any {
  return value
 }
 function visible(s:State,actor:Actor):State {
+ if(actor.role!=='owner')s={...s,records:Object.fromEntries(Object.entries(s.records).filter(([kind])=>!kind.startsWith('assistant')).map(([kind,values])=>[kind,kind==='event'?values.filter(x=>!x.kind.startsWith('assistant.')):values]))}
+
  s={...s,records:{...s.records,reportDelivery:rows(s,'reportDelivery').filter(r=>r.ownerId===actor.id),reportFilter:rows(s,'reportFilter').filter(r=>r.ownerId===actor.id)}}
  if(actor.role!=='owner'){s={...s,records:{...Object.fromEntries(Object.entries(s.records).filter(([kind])=>!kind.startsWith('stripe'))),event:rows(s,'event').filter(r=>!r.kind.startsWith('stripe.'))}};s=withoutFleetApproval(s)}
  if(actor.role==='owner')s={...s,records:{...s.records,deposit:rows(s,'deposit').map(d=>({...d,balance:depositBalance(s,d)}))}}
@@ -205,6 +209,8 @@ async function operators(db:D1Database) {
 const bookingFields=['title','bayId','technicianId','startAt','endAt']
 function formInput(data:FormData) {
  const input:any=Object.fromEntries(data)
+ if(input.command?.startsWith('assistant.')){input.confirm=data.has('confirm');if(input.version!==undefined)input.version=Number(input.version);if(input.assistantSubject){const subject=JSON.parse(input.assistantSubject);input.kind=subject.kind;input.subjectId=subject.subjectId;input.channel=subject.kind==='send'?'email':'none';input.spendCents=0}}
+
  if(input.command==='statusNotice.consent')input.consent=data.has('consent')
  if(input.command==='statusNotice.approve'){input.confirm=data.has('confirm');for(const key of ['allowedStart','allowedEnd','jobVersion'])input[key]=Number(input[key])}
  if(input.command==='review.consent')input.consent=data.has('consent')
@@ -290,8 +296,13 @@ async function workshopResponse(request:Request,original:Bindings,execution:Pick
  let actor:Actor|undefined,submitted:any
  try {
   const auth=await identity(request,env);actor=auth.actor;originGuard(request,env,auth.bearer)
+  if(actor.assistantGrantId){
+   if(path==='/api/mallet/assistant'&&['GET','HEAD'].includes(request.method))return json(await scopedAssistantView(env,auth))
+   if(path!=='/api/mallet/commands'||request.method!=='POST')throw new HttpError(403,'assistant_scope_required')
+  }
   if(path==='/app'&&actor.staff)return redirect('/app/staff')
   if(['/app/staff','/api/mallet/staff/state'].includes(path)){if(!actor.staff)throw new HttpError(403,'staff_grant_required');const view=staffState(await load(env.DB),actor);if(!await env.DB.prepare(`SELECT 1 AS ok WHERE (${auth.authority.sql})`).bind(...auth.authority.params).first())throw new HttpError(403,'staff_grant_required');return path==='/app/staff'?page('Staff workspace',staffPage(view),actor,200,{section:'data'}):url.searchParams.has('download')?new Response(JSON.stringify(view,null,2),{headers:{...headers,'content-type':'application/json','content-disposition':'attachment; filename="mallet-staff.json"'}}):json(view)}
+  if(path==='/app/settings/assistants'){if(actor.role!=='owner')throw new HttpError(403,'owner_required');return page('Assistant settings',assistantsPage(await load(env.DB),new Set((await env.DB.prepare('SELECT grant_id FROM mallet_assistant_keys').all<{grant_id:string}>()).results.map(k=>k.grant_id))),actor,200,{section:'data'})}
   if(path==='/app/staff-access'){if(actor.role!=='owner')throw new HttpError(403,'owner_required');return page('Staff roles & limits',await staffSettings(env.DB),actor,200,{section:'data'})}
   if(['/app/audit','/api/mallet/audit'].includes(path)){
    if(!['GET','HEAD'].includes(request.method))throw new HttpError(405,'method_not_allowed')
@@ -336,6 +347,7 @@ async function workshopResponse(request:Request,original:Bindings,execution:Pick
   if((path==='/api/mallet/commands'||path==='/app/actions') && request.method==='POST') {
    const data=path==='/app/actions'?formInput(await nativeForm(request)):await body(request),command=String(data.command),input=data.input??data
    submitted={command,input}
+   if(actor.assistantGrantId&&!command.startsWith('assistant.'))throw new HttpError(403,'assistant_scope_required')
    let result:any
    if(['connector.save','connector.revoke'].includes(command)&&actor.role==='owner'&&!auth.gate?.enrolled)throw new HttpError(403,'step_up_required','Enrol your own second factor before opening the credential door.')
    if(needsStepUp(command,actor.role))auth.authority=requireStepUp(auth,command.startsWith('deposit.'))
@@ -345,7 +357,8 @@ async function workshopResponse(request:Request,original:Bindings,execution:Pick
    if(command.startsWith('stripe.'))throw new HttpError(404,'unknown_command')
    if(command.startsWith('reportDelivery.'))throw new HttpError(404,'unknown_command')
    if(['ar.reminderClaim','ar.reminderOutcome'].includes(command)||internalSupplierCommands.includes(command)||internalDocumentCommands.includes(command)||internalWaitlistCommands.includes(command)||internalReportCommands.includes(command)||internalBookingCommands.includes(command)||internalCheckInCommands.includes(command)||internalRefundCommands.includes(command)||internalIntakeFormCommands.includes(command)||command==='payment.verified'||command==='routing.sweep'||internalPromiseCommands.includes(command)||internalApprovalCommands.includes(command)||internalChaseCommands.includes(command))throw new HttpError(404,'unknown_command')
-   if(actor.staff){if(command==='job.book')auth.authority=await calendarAuthority(env,command,input,auth.authority);if(['payment.record','credit.issue','refund.record'].includes(command))auth.authority=requireStepUp(auth);result=await staffCommand(env.DB,actor,auth.authority,command,input)}
+   if(command.startsWith('assistant.')){if(['assistant.grant','assistant.revoke','assistant.review'].includes(command)&&actor.role==='owner')auth.authority=requireStepUp(auth);result=await assistantCommand(env,auth,command,input)}
+   else if(actor.staff){if(command==='job.book')auth.authority=await calendarAuthority(env,command,input,auth.authority);if(['payment.record','credit.issue','refund.record'].includes(command))auth.authority=requireStepUp(auth);result=await staffCommand(env.DB,actor,auth.authority,command,input)}
    else if(['staff.grant','staff.revoke'].includes(command)){auth.authority=requireStepUp(auth);result=await grantStaff(env.DB,actor,auth.authority,command,input)}
    else if(command==='reportFilter.schedule')result=await configureReportSchedule(env,actor,auth.authority,input)
    else if(command==='ar.remind')result=await sendBalanceReminder(env,actor,auth.authority,input)
@@ -418,6 +431,8 @@ async function workshopResponse(request:Request,original:Bindings,execution:Pick
    if(command.startsWith('return.')||command==='payment.verifyStripe'||command==='flow.collect')return redirect(`/app/jobs/${e(input.jobId)}/return`)
    if(command==='payment.record'&&input.returnTo==='return')return redirect(`/app/jobs/${e(input.jobId)}/return`)
    if(command.startsWith('warranty.')||command==='payment.record')return redirect(`/app/jobs/${e(command==='warranty.open'?result.jobId:input.jobId)}/warranty`)
+   if(command==='assistant.grant')return page('Scoped assistant key',`<section class="card"><p>Copy this separate key once into the assistant’s private environment.</p><pre>${e(result.token)}</pre><p>Allowed action: ${e(result.kind)}. Zero spend. Expires ${when(result.expiresAt)}.</p><a href="/app/settings/assistants">Return to assistant settings</a></section>`,actor,200,{section:'data'})
+   if(command.startsWith('assistant.'))return redirect('/app/settings/assistants')
    if(command==='agent.create'||command==='agent.rotate')return page('Agent key created',`<section class="card"><p>Copy this key once into your agent’s private environment. It will not be shown again.</p><pre>${e(result.token)}</pre><p>Expires ${when(new Date(result.expiresAt).toISOString(),undefined,'date-year')}</p><p class="card-foot"><a href="/app/data">Return to access</a></p></section>`,actor,200,{section:'data'})
    if(command==='asset.erase')return redirect('/app/customers')
    if(command==='approvalLink.create')return page('Approval link sent',`<section class="card"><p>${e(result.delivery?.status==='accepted'?'Handed to the mail provider for '+result.to+'; delivery is not confirmed.':result.delivery?.status==='development'?'Written to the development mail outbox for '+result.to+'; not sent.':'The mail provider did not accept the message for '+result.to+'.')}</p><p>If the customer cannot find the email, share this link yourself. It will not be shown again.</p><pre>${e(result.url)}</pre><p class="card-foot"><a href="/app/jobs/${e(result.jobId)}#approval-links">Return to the repair</a></p></section>`,actor,200,{section:'jobs'})

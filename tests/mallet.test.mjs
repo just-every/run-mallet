@@ -467,3 +467,11 @@ test('AUTO-005: owner request, customer feedback and completed-repair task throu
 test('AUTO-002: approved stage email sends once, uncollected pickup reaches the owner and recovery is inert',async()=>{const {statusDeliveryJourney}=await import('./support/status-notices-journey.mjs');await statusDeliveryJourney()})
 test('AUTO-002: quiet hours, changed repairs, failed contact, withdrawal and collection stop unsafe notices',async()=>{const {statusStopsJourney}=await import('./support/status-notices-journey.mjs');await statusStopsJourney()})
 test('AUTO-002: owner reviews status email, failed contact and pickup follow-up through native forms at 1440 and 390',async()=>{const {statusNoticesBrowser}=await import('./status-notices-browser.mjs');await statusNoticesBrowser()})
+
+const assistantProof=await import('./support/assistant-journey.mjs')
+test('ADV-008: separate scoped authority refuses unsafe roles, channels, spending, expiry and preparation-key expansion',()=>run(assistantProof.assistantAuthorityJourney))
+test('ADV-008: disclosed receptionist captures requested intake, reserves actual capacity and escalates to a person',()=>run(assistantProof.assistantIntakeJourney))
+test('ADV-008: every note proposal preserves raw technician evidence and measured facts without publication',()=>run(assistantProof.assistantNotesJourney))
+test('ADV-008: exact human email review, queued revocation, single handoff and inert archive recovery',()=>run(assistantProof.assistantSendJourney))
+test('ADV-008: owner scopes, reviews and revokes assistant work with human handoff at 1440 and 390',async()=>{const {assistantsBrowser}=await import('./assistants-browser.mjs');await assistantsBrowser()})
+test('ADV-008: failed or uncertain appointment email survives restart without an automatic retry and reaches human recovery',assistantProof.assistantFailureJourney)

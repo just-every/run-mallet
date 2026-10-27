@@ -122,3 +122,23 @@ Mallet mounts the full Base handler with its [archive policy](https://github.com
 | `POST /api/portability/exports/<id>/abort` or `POST /api/portability/imports/<id>/abort` | Abort a transfer. |
 
 Use the pinned Base transfer client/CLI for manifest and part construction; arbitrary workshop JSON is not a portability archive. A backup made after an erasure is the one to restore: an older archive, even with that later backup as `--journal`, is refused so erased information is not revived. Erasure is restricted to unused assets in this release; visit-bearing assets remain retained.
+
+
+## Separate scoped assistant tools
+
+AGENT-001 preparation keys keep the four commands above. They cannot invoke the following tools. A separate owner-issued key reads only `GET /api/mallet/assistant`; general workshop state, pages, downloads and unrelated commands refuse it. Tool requests use the existing command endpoint with the scoped bearer key. The owner manages grants and exact decisions in Assistant settings.
+
+| Command | Inputs and boundary |
+| --- | --- |
+| `assistant.grant` | Fresh-confirmed owner only: `kind` is `receptionist`, `polish` or `send`; `subjectId` names one booking service, repair or tentative appointment respectively. Include `label`, timezone-bearing `notBefore` and `expiresAt`, `spendCents:0`, `channel` of `none` or, for send only, `email`, `confirm:true` and `reason`. Returns a one-time token. |
+| `assistant.intake` | Receptionist key only: `serviceId`, a currently offered `slotId`, customer `name` and `email`, `request`, `consentEvidence`, `consent:true` and `aiDisclosed:true`. Returns the recorded intake and tentative reservation, including its expiry. No booking-confirmation token or repair authority is issued. |
+| `assistant.polish` | Note key only: `diagnosisId` and current diagnosis `version`; optional `proposed` narrative fields are `complaint`, `cause`, `correction`, `staffNote`, `customerExplanation` and `testMethod`. Omitted fields normalize whitespace. Numeric observations, units and trouble codes must remain exact. Measurements, codes, attachments and attribution come only from the saved source. Every proposal is retained separately. |
+| `assistant.reviewEdit` | Current owner only: `editId`, exact proposal `version`, `decision` of `approved` or `rejected`, `confirm:true`, and `reason`. Refuses a changed source or revoked grant. Records a decision; never overwrites technician evidence. |
+| `assistant.queue` | Send key only, no recipient or content inputs. Generates one proposed confirmation per requested tentative appointment, addressed to the recorded requesting customer. |
+| `assistant.review` | Fresh-confirmed owner only: `sendId`, exact `version`, exact `to` and `content`, and `confirm:true`. Changed or expired appointments refuse review. |
+| `assistant.send` | Same send key: `sendId` and current `version`. Requires exact owner review, current grant and appointment eligibility. Claims durably before one mail handoff. Provider acceptance is separate from delivery and development suppression. No automatic retry follows failure, uncertainty or an interrupted claim. A new grant cannot bypass the one-attempt boundary for this appointment. |
+| `assistant.escalate` | Any scoped key: `reason`. Creates a private owner task for its allowed subject. |
+| `assistant.resolve` | Current owner only: `escalationId`, `version`, and resolution `reason`. Preserves the original request. Resolution grants no resend authority. |
+| `assistant.revoke` | Fresh-confirmed owner only: `grantId`, current `version`, and `reason`. Revokes the key and stops queued or reviewed messages. Prior evidence remains. |
+
+A grant permits no spending, supplier order, repair approval or customer authorization. Missing scope or limits grant nothing. Every write rechecks live owner and grant authority in its transaction; a final current-authority read precedes mail handoff. Expired or revoked keys cannot read scoped data. Historical grants and proposals survive backup, but local keys never do. The conservative expanded authority default remains pending ct approval as described in ADV-008.
