@@ -5120,7 +5120,7 @@
       "executable": false
     },
     "tests/support/shop-api-journey.mjs": {
-      "sha256": "a37ff7d04383b87090d70142555608afab72a2e3533275e059af34bd84c9f301",
+      "sha256": "6bdfe0aed5a9d689e5856c74d378f19cb7d2ddb364546aee32869379758561e1",
       "executable": false
     },
     "tests/support/special-part-journey.mjs": {
