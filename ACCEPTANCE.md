@@ -304,9 +304,9 @@ Evidence: No implementation evidence yet.
 
 Evidence: `tests/sales-tax.test.mjs`; `tests/support/filing-tax-journey.mjs`; `tests/mallet.test.mjs`; `tests/receivables-browser.mjs`.
 
-**POS-001 — Retail counter and cash drawer.** Status: **missing**. [Target, acceptance and remaining work](./CONTRACT.md#us-invoicing-payments-and-accounting).
+**POS-001 — Retail counter and cash drawer.** Status: **partial**. [Target, acceptance and remaining work](./CONTRACT.md#us-invoicing-payments-and-accounting).
 
-Evidence: No implementation evidence yet.
+Evidence: `tests/mallet.test.mjs`; `tests/support/retail-journey.mjs`; `tests/retail-browser.mjs`.
 
 **AR-001 — Terms statements and payment follow-up.** Status: **partial**. [Target, acceptance and remaining work](./CONTRACT.md#us-invoicing-payments-and-accounting).
 
