@@ -5148,7 +5148,7 @@
       "executable": false
     },
     "tests/support/warranty-journey.mjs": {
-      "sha256": "1737c482b532da1305f2a4832233a54407da60caa420f3c513b9c3a146db68b4",
+      "sha256": "44c4e4d7d93f12eaaa1939c441b965ac19504ce3b1930b8e7d3aafa7f9a929e8",
       "executable": false
     },
     "tests/support/warranty-pattern-journey.mjs": {
