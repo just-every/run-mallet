@@ -1,5 +1,5 @@
 import {digest,HttpError,type Identity} from '../auth'
-import {execute} from '../model'
+import {execute,MalletError} from '../model'
 import {preparationScopes,scopedAuthority} from './clients'
 
 // Canonical object ordering permits equivalent JSON requests; array order remains meaningful.
@@ -14,5 +14,5 @@ export async function preparation(db:D1Database,auth:Identity,request:Request,da
  const authority=scopedAuthority(auth,scope),key=request.headers.get('idempotency-key')??''
  if(!/^[A-Za-z0-9._:-]{1,128}$/.test(key))throw new HttpError(400,'idempotency_key_required')
  const input=data.input??{},hash=await digest(canonical({command,input}))
- return execute(db,auth.actor,command,input,authority,undefined,undefined,{clientId:auth.apiClient.id,key,hash,response:(row:any)=>({id:row.id,externalId:row.id,version:row.version,jobId:row.jobId,status:row.status,...(row.revisions?.length?{revision:row.revisions.at(-1).n}:{})})})
+ try{return await execute(db,auth.actor,command,input,authority,undefined,undefined,{clientId:auth.apiClient.id,key,hash,response:(row:any)=>({id:row.id,externalId:row.id,version:row.version,jobId:row.jobId,status:row.status,...(row.revisions?.length?{revision:row.revisions.at(-1).n}:{})})})}catch(error){if(error instanceof MalletError)throw new HttpError(error.status,error.code,'The preparation was refused.');throw error}
 }
