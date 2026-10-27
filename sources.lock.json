@@ -5020,7 +5020,7 @@
       "executable": false
     },
     "tests/support/real-crank.mjs": {
-      "sha256": "d08ae1fd25ca926f62c87b93bffef3efe835da3e2741dbf18b5eccffe9ce77d5",
+      "sha256": "affcfbb458c9122d296632eeaa1d95f9c30dea9ea8da538b69eb3bedac9711d0",
       "executable": false
     },
     "tests/support/real-pier.mjs": {

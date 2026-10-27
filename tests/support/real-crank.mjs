@@ -2,7 +2,7 @@ import {Miniflare,convertV4MiniflareOptions} from 'miniflare'
 import {unstable_splitSqlQuery} from 'wrangler'
 import {build} from 'esbuild'
 import {execFileSync} from 'node:child_process'
-import {mkdtemp,mkdir,readFile,readdir,rm,access} from 'node:fs/promises'
+import {mkdtemp,mkdir,readFile,readdir,rm,access,open,rename} from 'node:fs/promises'
 import {resolve,join} from 'node:path'
 import {randomBytes,randomUUID} from 'node:crypto'
 import assert from 'node:assert/strict'
@@ -10,7 +10,16 @@ export const crankRevision='7203b25315b47b962f1db06d2837dcb5e88468ef'
 /** An immutable public-source read through GitHub's API; no neighbouring checkout or branch is mutated. */
 export async function realCrank(){
  await mkdir('.cache',{recursive:true});const cache=resolve('.cache/crank-'+crankRevision+'.tgz')
- try{await access(cache)}catch{const data=execFileSync('gh',['api','repos/just-every/run-crank/tarball/'+crankRevision],{maxBuffer:32*1024*1024,stdio:['ignore','pipe','pipe']});const {writeFile}=await import('node:fs/promises');await writeFile(cache,data)}
+ try{await access(cache)}catch{
+  // Stream the pinned archive to disk; only bounded diagnostics enter memory.
+  // Publish a complete download atomically so an interrupted fetch cannot poison the cache.
+  const partial=cache+'.'+randomUUID()+'.partial',output=await open(partial,'wx',0o600)
+  try{
+   try{execFileSync('gh',['api','repos/just-every/run-crank/tarball/'+crankRevision],{timeout:120000,maxBuffer:64*1024,stdio:['ignore',output.fd,'pipe']})}
+   finally{await output.close()}
+   await rename(partial,cache)
+  }finally{await rm(partial,{force:true})}
+ }
  const root=await mkdtemp(resolve('.cache/crank-proof-'));let mf
  try{
   execFileSync('tar',['-xzf',cache,'-C',root,'--strip-components=1'])
