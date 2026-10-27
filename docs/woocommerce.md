@@ -14,6 +14,8 @@ Booking links, stock publication, broader conflict resolution and complete provi
 
 ## Disposable installation journey
 
+With Docker available, run `node tests/support/woocommerce-local.mjs` from the checkout root under a 20-minute process timeout. It provisions isolated WordPress 6.8.3 and WooCommerce 10.3.0 with MariaDB, runs both existing STORE-002 tests against the actual provider, and removes its containers, network, volume and temporary files on completion. It publishes only a loopback store port. On Linux, set `MALLET_CHROMIUM` to the installed Chromium executable when Playwright's bundled browser is unavailable. This installer journey is opt-in; push Verify retains the controlled network edge and does not install a provider.
+
 `tests/support/woocommerce-journey.mjs` supports a real local WordPress installation with WooCommerce active and USD configured. The disposable fixture uses synthetic credentials only: one read-only key for the adapter and one separate write-capable key for creating the provider test order and manual refund. It creates a simple stocked product, a paid test order and an actual manual line-refund record with `api_refund: false`. This performs no payment-gateway refund. Its temporary HTTP receiver forwards the exact signed WooCommerce delivery to Mallet.
 
 Run with `MALLET_WOO_ORIGIN` naming the loopback store origin, and `MALLET_WOO_GATEWAY` naming the container gateway that can reach the temporary receiver:

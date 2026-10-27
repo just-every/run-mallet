@@ -740,7 +740,7 @@
       "executable": false
     },
     "docs/woocommerce.md": {
-      "sha256": "7c11525a583d6473f781e065a6ea37a42c6d8cf19bad26b5a669ef02ba815a66",
+      "sha256": "cf2731a1a4eda95a09035b612b6772612231d1cac37094e5e1e4363f67498338",
       "executable": false
     },
     "edition.json": {
@@ -5176,7 +5176,11 @@
       "executable": false
     },
     "tests/support/woocommerce-journey.mjs": {
-      "sha256": "940d5e14bb29074bc817815a547d0f79ef10f64b1108ba5c8d506fabd5315b0b",
+      "sha256": "83d0a3e47eac3af9c3f21311aaaa02810ee66c1e2a3cfafa7b36331e844ce404",
+      "executable": false
+    },
+    "tests/support/woocommerce-local.mjs": {
+      "sha256": "2ad81de0f62fdc41eab24235768431f1f4b048cf1ed6617ac2f9eae7dfafccc8",
       "executable": false
     },
     "tests/support/worker-bundle.mjs": {
