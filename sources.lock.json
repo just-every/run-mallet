@@ -572,7 +572,7 @@
       "executable": false
     },
     "ACCEPTANCE.md": {
-      "sha256": "a4bdf4e1059162f723d17db346256623d1ab0e6e0bcc9e9465647466dc174f44",
+      "sha256": "e0f862a1441b89f2f6eeae97cce14133c5c4c80fe7a13fddc5ebf16957439831",
       "executable": false
     },
     "AGENTS.md": {
@@ -584,7 +584,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "c5cc6ce2f372e475e01491d5474bb54b1bceb8bdf3ee0c1d5d8b87c57560586d",
+      "sha256": "a670ec8cfb6ccb272252189db7d0da7a80564f8617c32d83278caac7f8144527",
       "executable": false
     },
     "deploy-demo.json": {
@@ -668,7 +668,7 @@
       "executable": false
     },
     "docs/operations.md": {
-      "sha256": "0876aec7d3d01317e06611c61fcea6738a2aa03bd79363f2e227e60c57351646",
+      "sha256": "df7278e90cc83232989dea3fac01909f97fea5eec6e9c4089dca32b5844c2d46",
       "executable": false
     },
     "docs/people-and-agents.md": {
@@ -1764,7 +1764,7 @@
       "executable": false
     },
     "src/mallet/http.ts": {
-      "sha256": "fbb954168e5df9681b7c3976e315b8cd2992631ad72f3b4a5891869af8d4b2aa",
+      "sha256": "59f21394a90cd1d5061e6ef958f709ce1817bcee944990d1bb4ab063db82a7a8",
       "executable": false
     },
     "src/mallet/imports/context.ts": {
@@ -2695,8 +2695,12 @@
       "sha256": "9c3498425b2165fe32fc845b9ae815f2ee0047bff86efbd28f71e2b6f182e2cf",
       "executable": false
     },
+    "src/mallet/ui/warranty-patterns.ts": {
+      "sha256": "6d5b6b36051613f660e85dfbebd6e3db0cda21d22b09373ef11903f5f30f498f",
+      "executable": false
+    },
     "src/mallet/ui/warranty.ts": {
-      "sha256": "84b28d566b8b163029da156b764da944cd9e97377d3db6c1be93bb8a8af608dd",
+      "sha256": "2fc8a7caedd61857acc2d5751776d773a020f083e841d8fa1fb7f30204e34d10",
       "executable": false
     },
     "src/mallet/ui/workshop.ts": {
@@ -2707,8 +2711,12 @@
       "sha256": "c54db2655fc395e2c8e86b14dca6ed9f7da46a28a57f04b05dca8af79e3b2e85",
       "executable": false
     },
+    "src/mallet/warranty-patterns.ts": {
+      "sha256": "84549412c8ce50ae785effc94e52de573ad9fe37746ae2a794c93fa2a9815173",
+      "executable": false
+    },
     "src/mallet/warranty.ts": {
-      "sha256": "4276865ee2eac1296d12f1a79afbdd45e24e4e9d88e1898d5f2028a7e7573702",
+      "sha256": "6ab2f991cbe57afef25bc8d175366709bf29842094725958be7cf9fcc47b37a4",
       "executable": false
     },
     "src/mallet/workshop.ts": {
@@ -4704,7 +4712,7 @@
       "executable": false
     },
     "tests/mallet.test.mjs": {
-      "sha256": "cd18d7615ed70fbcba23ebc9dfd6aeb68310312ab3a70837bcda4b38428ec937",
+      "sha256": "bea58f975aad04d1ad4eb2575bef32d175cee0bc0a06f7eeb32e012b91cfb7b6",
       "executable": false
     },
     "tests/media-browser.mjs": {
@@ -5156,7 +5164,7 @@
       "executable": false
     },
     "tests/support/supplier-returns-journey.mjs": {
-      "sha256": "66a181999049bc348cc42c52695fd4ebab1f856f7c7f5c740e3d79ac21b83f33",
+      "sha256": "3a573738e04ebe2ac9cedd593d65525dd63e7c6c7c6f29155c20a07833ffcfb8",
       "executable": false
     },
     "tests/support/tax-custody-journey.mjs": {
@@ -5184,7 +5192,11 @@
       "executable": false
     },
     "tests/support/warranty-journey.mjs": {
-      "sha256": "0d45fe08d6a780d3ff84c94758adcecca55d4b08b6eda0f7b5c3ff7ca688f38a",
+      "sha256": "44c4e4d7d93f12eaaa1939c441b965ac19504ce3b1930b8e7d3aafa7f9a929e8",
+      "executable": false
+    },
+    "tests/support/warranty-pattern-journey.mjs": {
+      "sha256": "3843afefc0a0d26bc2bff588a859ef95646e0b24f96abd6abc66adae1840f967",
       "executable": false
     },
     "tests/support/worker-bundle.mjs": {
@@ -5200,7 +5212,7 @@
       "executable": false
     },
     "tests/warranty-browser.mjs": {
-      "sha256": "34c2544edafcea28610d0aefbb5cd11416f17b848cee84ae05165b8acdcdc604",
+      "sha256": "7a99bbcad069f7445d756235c27a07aa47d01a0d858c40c4d79bdae9b39382a0",
       "executable": false
     },
     "tests/worker.ts": {

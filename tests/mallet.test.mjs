@@ -318,7 +318,11 @@ test('CUS-001: admin intake, merge preview and payer-only account billing throug
 test('PART-001 / OPS-001: declared catalog, two supplier lots, serial identity, exact installed costs, affected repairs, count reconciliation and recovery',async()=>{const {traceJourney}=await import('./support/stock-trace-journey.mjs');await run(traceJourney)})
 test('PART-001: maintain catalog, receive two lots, identify installation and find only affected vehicles at 1440/390',async()=>{const {traceBrowser}=await import('./stock-trace-browser.mjs');await traceBrowser()})
 
-test('WARRANTY-001 / OPS-001: paid original, linked lot and no-charge comeback, coverage decision, supplier claim and preserved invoice recovery',()=>run(async h=>{const {warrantyJourney}=await import('./support/warranty-journey.mjs');await warrantyJourney(h)}))
+test('WARRANTY-001 / OPS-001: paid original, linked lot and no-charge comeback, coverage decision, supplier claim and preserved invoice recovery',async()=>{
+ let outboundCalls=0
+ await run(async h=>{const {warrantyJourney}=await import('./support/warranty-journey.mjs');await warrantyJourney(h)},{outboundService:()=>{outboundCalls++;return new Response('No external action is authorized',{status:503})}})
+ assert.equal(outboundCalls,0,'Detection, review and human approvals never submit to an external provider')
+})
 
 test('WARRANTY-001: original invoice, linked rework, no-charge costs and supplier claim at 1440/390',async()=>{const {warrantyBrowser}=await import('./warranty-browser.mjs');await warrantyBrowser()})
 
