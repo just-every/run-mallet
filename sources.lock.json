@@ -572,7 +572,7 @@
       "executable": false
     },
     "ACCEPTANCE.md": {
-      "sha256": "e7c4e97a21d3e64ed8e5f536d590c3f8c140deb2b8b002d3cb1019893286ccf9",
+      "sha256": "5d07bbd2ab4f1c36e946c64300572b546248727445bc7fb712d51a391dd3bc05",
       "executable": false
     },
     "AGENTS.md": {
@@ -584,7 +584,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "e07b78a204bb881fdabb6d1884f50af5e154b58f8e58a2ff45bd62fdb4927d3d",
+      "sha256": "fe5cddeb6ac474863e96096d03ad10de70d0d1b1fef7b699b861e652339cf5a3",
       "executable": false
     },
     "deploy-demo.json": {
@@ -713,6 +713,10 @@
     },
     "docs/SOURCES.md": {
       "sha256": "8d6f91f9bfc7390f6866b8213fb8b785d5ad26dbd6816aecf1d289ce1e346b0e",
+      "executable": false
+    },
+    "docs/status-notices.md": {
+      "sha256": "e0602bae1b022aa2a8ee7734c0b8ebfde0d52dd3629221be692544acf650c270",
       "executable": false
     },
     "docs/stripe-collection.md": {
@@ -4764,7 +4768,7 @@
       "executable": false
     },
     "tests/status-notices-browser.mjs": {
-      "sha256": "f9b69bbf6811f521cdf4f5541e82de2a7d9bb076b9f4b36758929b1eaa6d6ebd",
+      "sha256": "b82abd10e1f0a82e48b15b67214f95c92be208e3e06f0b75b80371b35f5bafe1",
       "executable": false
     },
     "tests/stock-trace-browser.mjs": {
