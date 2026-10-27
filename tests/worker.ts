@@ -1,3 +1,4 @@
+import {runWebhooks} from '../src/mallet/webhook-door'
 import {runReportSchedules} from '../src/mallet/reports/schedules'
 import {expireIntakeSecrets} from '../src/mallet/intake-secrets'
 import {salesReportResponse} from '../src/mallet/sales-report-door'
@@ -9,4 +10,4 @@ import { rejectedResponse } from '../src/base/rejected-response'
 import { authResponse } from '../src/auth.server'
 import { malletResponse } from '../src/mallet/http'
 import { runApprovalChase } from '../src/mallet/approval-door'
-export default {async fetch(request:Request,env:any,execution:ExecutionContext){const response=await staticAssetResponse(request,env)??await authResponse(request,env)??await salesReportResponse(request,env)??await malletResponse(request,env,execution)??new Response('Not found',{status:404});return rejectedResponse(request,response)},async scheduled(controller:ScheduledController,env:any){await runReportSchedules(env,controller.scheduledTime);await runApprovalChase(env,controller.scheduledTime);await runRouting(env,controller.scheduledTime);await expireIntakeSecrets(env,new Date(controller.scheduledTime).toISOString())}}
+export default {async fetch(request:Request,env:any,execution:ExecutionContext){const response=await staticAssetResponse(request,env)??await authResponse(request,env)??await salesReportResponse(request,env)??await malletResponse(request,env,execution)??new Response('Not found',{status:404});return rejectedResponse(request,response)},async scheduled(controller:ScheduledController,env:any){await runWebhooks(env,controller.scheduledTime);await runReportSchedules(env,controller.scheduledTime);await runApprovalChase(env,controller.scheduledTime);await runRouting(env,controller.scheduledTime);await expireIntakeSecrets(env,new Date(controller.scheduledTime).toISOString())}}

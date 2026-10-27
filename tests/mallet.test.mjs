@@ -471,3 +471,11 @@ test('AUTO-005: owner request, customer feedback and completed-repair task throu
 test('AUTO-002: approved stage email sends once, uncollected pickup reaches the owner and recovery is inert',async()=>{const {statusDeliveryJourney}=await import('./support/status-notices-journey.mjs');await statusDeliveryJourney()})
 test('AUTO-002: quiet hours, changed repairs, failed contact, withdrawal and collection stop unsafe notices',async()=>{const {statusStopsJourney}=await import('./support/status-notices-journey.mjs');await statusStopsJourney()})
 test('AUTO-002: owner reviews status email, failed contact and pickup follow-up through native forms at 1440 and 390',async()=>{const {statusNoticesBrowser}=await import('./status-notices-browser.mjs');await statusNoticesBrowser()})
+
+test('API-002: signed business outbox, bounded delivery, rotation, replay and inert recovery',async()=>{
+ const {webhookJourney}=await import('./support/webhook-journey.mjs');await webhookJourney()
+})
+
+test('API-002: pinned public Crank workflow receives signed events and applies replay once',async()=>{
+ const {crankWebhookJourney}=await import('./support/webhook-journey.mjs');await crankWebhookJourney()
+})
