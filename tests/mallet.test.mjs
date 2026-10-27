@@ -479,3 +479,6 @@ test('API-002: signed business outbox, bounded delivery, rotation, replay and in
 test('API-002: pinned public Crank workflow receives signed events and applies replay once',async()=>{
  const {crankWebhookJourney}=await import('./support/webhook-journey.mjs');await crankWebhookJourney()
 })
+test('API-001: versioned resource pages, retained repair history and stable identities recover without credentials',()=>run(async h=>{const {shopApiReadJourney}=await import('./support/shop-api-journey.mjs');await shopApiReadJourney(h)}))
+test('API-001: scoped preparation retries are atomic across transports and preserve each existing person decision',()=>run(async h=>{const {shopApiRetryJourney}=await import('./support/shop-api-journey.mjs');await shopApiRetryJourney(h)}))
+test('API-001: missing scopes, alternate transports and expired or revoked authority fail closed',()=>run(async h=>{const {shopApiAuthorityJourney}=await import('./support/shop-api-journey.mjs');await shopApiAuthorityJourney(h)}))
