@@ -2,7 +2,7 @@ import {bump,event,expectVersion,fail,find,integer,put,rows,text,who,type Handle
 import {amount,moveStock,receiptExists,scan,stockBalance} from './inventory'
 import {openJob} from './workshop'
 export const traceCommands=['stock.catalog','stock.lot','stock.useLot','stock.returnUse']
-export const lotRemaining=(s:State,lot:Row)=>lot.quantityMilli+rows(s,'stockLotAdjustment').filter(a=>a.lotId===lot.id).reduce((n,a)=>n+a.deltaMilli,0)-rows(s,'stockUse').filter(u=>u.lotId===lot.id).reduce((n,u)=>n+u.quantityMilli-(u.returns??[]).reduce((m:number,r:any)=>m+r.quantityMilli,0),0)
+export const lotRemaining=(s:State,lot:Row)=>lot.quantityMilli-rows(s,'retailSale').filter(r=>r.lotId===lot.id).reduce((n,r)=>n+r.quantityMilli,0)+rows(s,'retailReturn').filter(r=>r.lotId===lot.id).reduce((n,r)=>n+r.quantityMilli,0)+rows(s,'stockLotAdjustment').filter(a=>a.lotId===lot.id).reduce((n,a)=>n+a.deltaMilli,0)-rows(s,'stockUse').filter(u=>u.lotId===lot.id).reduce((n,u)=>n+u.quantityMilli-(u.returns??[]).reduce((m:number,r:any)=>m+r.quantityMilli,0),0)
 export function traceReport(s:State,query:string):{lots:Row[],uses:Row[]}{
  const q=text(query,'trace search',200,true).toLowerCase(),lots=rows(s,'stockLot').filter(l=>!q||[l.supplier,l.supplierLot,l.serial,l.reference,l.catalog.sku,...l.catalog.crossReferences?.split('\n')??[]].some(v=>String(v??'').toLowerCase().includes(q)))
  const ids=new Set(lots.map(l=>l.id)),uses=rows(s,'stockUse').filter(u=>ids.has(u.lotId)).map(u=>{const job=find(s,'job',u.jobId);return {...u,vehicle:job.asset.label,identifier:job.asset.identifier,customer:job.asset.customerName,repair:job.title}})
