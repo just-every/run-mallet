@@ -5176,7 +5176,7 @@
       "executable": false
     },
     "tests/support/woocommerce-journey.mjs": {
-      "sha256": "e38a5423dc1d43f12acaa11a5defce0ed94cb7f9bcb349f45b9a700fc99bcb3f",
+      "sha256": "940d5e14bb29074bc817815a547d0f79ef10f64b1108ba5c8d506fabd5315b0b",
       "executable": false
     },
     "tests/support/worker-bundle.mjs": {
