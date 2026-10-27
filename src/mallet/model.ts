@@ -1,3 +1,4 @@
+import {locations,locationCommands,recordLocation} from './locations'
 import {statusNotices,statusNoticeCommands,internalStatusCommands} from './status-notices'
 import {costRates,costRateCommands} from './reports/cost-rates'
 import {reviews,reviewCommands} from './reviews'
@@ -118,7 +119,7 @@ export function approval(c: Context, kind: string, row: Row, revision: number, p
 }
 const agentCommands = new Set(['estimate.prepare', 'estimate.revise', 'invoice.prepare', 'dispatch.prepare'])
 const customerCommands = ['review.respond','review.customerWithdraw','booking.hold','booking.confirm','booking.cancel','booking.reschedule','booking.outcome','checkin.submit','estimate.customerDecide', 'chaseOptOut.customer','intakeForm.customerSave','intakeForm.copyClaim','intakeForm.copyOutcome','intakeForm.copyAccess'], systemCommands = [...internalStatusCommands,'review.outcome','outreach.claim','outreach.outcome','reportDelivery.claim','reportDelivery.outcome','ar.reminderOutcome','routing.sweep', 'approvalChase.sweep', 'approvalChase.outcome']
-const commands = new Set([...statusNoticeCommands,...costRateCommands,...reviewCommands,...outreachCommands,...returnRecordCommands,...terminalRecordCommands,...stripeCommands,...filterCommands,...taxBasisCommands,...clearanceCommands,...receivableCommands,...depositCommands,...taxCommands,...documentCommands,...diagnosticResultCommands,...supplierOrderCommands,...transferCommands,...rmaCommands,...coreCommands,...replenishmentCommands,...waitlistCommands,...calendarCommands,...reportCommands,...bookingCommands,...checkInCommands,...creditCommands,...intakeFormCommands,...returnCommands,...warrantyCommands,...paymentCommands,...intakeCommands,...traceCommands,...accountCommands,...purchasingCommands,...inventoryCommands,...subletCommands,...rateProfileCommands,...routingCommands,...specialPartCommands,...flowCommands,...promiseCommands,...approvalLinkCommands,...chaseCommands,...internalChaseCommands,...collaborationCommands,...timeCommands,...payRateCommands,...diagnosisCommands,...pricingCommands,...inspectionCommands,...qualityCommands,'decline.record', 'decline.reprice', 'decline.inapplicable', 'reading.record', 'serviceInterval.save', 'tax.configure', 'asset.create', 'asset.update', 'job.book', 'job.complete', 'work.record', 'estimate.prepare', 'estimate.revise', 'estimate.approve', 'estimate.markSent', 'estimate.authorise', 'invoice.prepare', 'invoice.approve', 'invoice.export', 'dispatch.prepare', 'dispatch.approve'])
+const commands = new Set([...locationCommands,...statusNoticeCommands,...costRateCommands,...reviewCommands,...outreachCommands,...returnRecordCommands,...terminalRecordCommands,...stripeCommands,...filterCommands,...taxBasisCommands,...clearanceCommands,...receivableCommands,...depositCommands,...taxCommands,...documentCommands,...diagnosticResultCommands,...supplierOrderCommands,...transferCommands,...rmaCommands,...coreCommands,...replenishmentCommands,...waitlistCommands,...calendarCommands,...reportCommands,...bookingCommands,...checkInCommands,...creditCommands,...intakeFormCommands,...returnCommands,...warrantyCommands,...paymentCommands,...intakeCommands,...traceCommands,...accountCommands,...purchasingCommands,...inventoryCommands,...subletCommands,...rateProfileCommands,...routingCommands,...specialPartCommands,...flowCommands,...promiseCommands,...approvalLinkCommands,...chaseCommands,...internalChaseCommands,...collaborationCommands,...timeCommands,...payRateCommands,...diagnosisCommands,...pricingCommands,...inspectionCommands,...qualityCommands,'decline.record', 'decline.reprice', 'decline.inapplicable', 'reading.record', 'serviceInterval.save', 'tax.configure', 'asset.create', 'asset.update', 'job.book', 'job.complete', 'work.record', 'estimate.prepare', 'estimate.revise', 'estimate.approve', 'estimate.markSent', 'estimate.authorise', 'invoice.prepare', 'invoice.approve', 'invoice.export', 'dispatch.prepare', 'dispatch.approve'])
 export function reduce(s: State, actor: Actor, command: string, payload: any, now = new Date().toISOString()): any {
   object(actor, 'actor'); text(actor.id, 'actor.id'); text(actor.name, 'actor.name'); choice(actor.role, ['owner', 'admin', 'member', 'agent', 'customer', 'system'], 'role')
   // A customer link actor exists only to record its own decision or opt-out; the scheduler only runs reminders.
@@ -128,7 +129,7 @@ export function reduce(s: State, actor: Actor, command: string, payload: any, no
   migrateSalesTax(s)
   const c = { s, actor, now }, p = object(payload), eventCount = rows(s,'event').length
   guardCheckoutBalance(s,command,p)
-  for (const handler of [statusNotices,costRates,reviews,outreach,returnRecords,terminalRecords,stripeRecords,reportFilters,taxCreditBasis,tenderClearance,receivables,deposits,invoiceDocuments,diagnosticResults,supplierOrders,transfers,supplierReturns,cores,replenishment,bookingWaitlist,calendarCapacity,inspectionReports,bookings,checkIns,credits,intakeForms,returns,warranty,payments,intake,stockTrace,customers,purchasing,inventory,sublets,rateProfiles,routing,specialParts,flow, promises, approvalLinks, approvalChasing, collaboration, time, payRates, diagnostics, pricing, tax, workshop, mileage, estimates, declinedWork, invoices, quality, inspections]) {
+  for (const handler of [locations,statusNotices,costRates,reviews,outreach,returnRecords,terminalRecords,stripeRecords,reportFilters,taxCreditBasis,tenderClearance,receivables,deposits,invoiceDocuments,diagnosticResults,supplierOrders,transfers,supplierReturns,cores,replenishment,bookingWaitlist,calendarCapacity,inspectionReports,bookings,checkIns,credits,intakeForms,returns,warranty,payments,intake,stockTrace,customers,purchasing,inventory,sublets,rateProfiles,routing,specialParts,flow, promises, approvalLinks, approvalChasing, collaboration, time, payRates, diagnostics, pricing, tax, workshop, mileage, estimates, declinedWork, invoices, quality, inspections]) {
     const result = handler(c, command, p)
     if (result !== undefined) { retainStageChanges(c,rows(s,'event').slice(eventCount)); return result }
   }
@@ -143,18 +144,21 @@ export async function load(db: Database, normalize = true): Promise<State> {
   if (normalize) migrateSalesTax(s)
   return s
 }
-export async function execute(db: Database, actor: Actor, command: string, payload: any, authority?: { sql: string; params: any[] }, now?: string, limits?:{spendCents:number;refundCents:number;discountBps:number}): Promise<any> {
+export async function execute(db: Database, actor: Actor, command: string, payload: any, authority?: { sql: string; params: any[] }, now?: string, limits?:{spendCents:number;refundCents:number;discountBps:number;location?:string}): Promise<any> {
   const s = await load(db, false), before = new Map<string, string>()
   for (const [kind, values] of Object.entries(s.records)) for (const row of values) before.set(`${kind}:${row.id}`, JSON.stringify(row))
   const at=now??new Date().toISOString()
   if(limits){
-    for(const [kind,field] of [['job','jobId'],['estimate','estimateId'],['invoice','invoiceId'],['purchaseOrder','purchaseId'],['stockBin','binId'],['stockCount','countId'],['refund','refundId']]){
-      if(!payload[field])continue;const row=find(s,kind,payload[field]);if((row.location??row.locationId??'shop')!=='shop')fail('LOCATION_SCOPE','This record belongs to another location.',null,403)
+    for(const [kind,field] of [['asset','assetId'],['job','jobId'],['estimate','estimateId'],['invoice','invoiceId'],['purchaseOrder','purchaseId'],['stockBin','binId'],['stockCount','countId'],['refund','refundId']]){
+      if(!payload[field])continue;const row=find(s,kind,payload[field]);if(recordLocation(s,kind,row)!==(limits.location??'shop'))fail('LOCATION_SCOPE','This record belongs to another location.',null,403)
     }
-    if(payload.binBarcode){const bin=rows(s,'stockBin').find(b=>b.barcode===payload.binBarcode);if(bin?.location&&bin.location!=='shop')fail('LOCATION_SCOPE','This bin belongs to another location.',null,403)}
+    if(payload.binBarcode){const bin=rows(s,'stockBin').find(b=>b.barcode.toLowerCase()===String(payload.binBarcode).toLowerCase());if(bin&&recordLocation(s,'stockBin',bin)!==(limits.location??'shop'))fail('LOCATION_SCOPE','This bin belongs to another location.',null,403)}
   }
+  if(limits&&Array.isArray(payload.lines))for(const line of payload.lines)if(line.jobId&&recordLocation(s,'job',find(s,'job',line.jobId))!==(limits.location??'shop'))fail('LOCATION_SCOPE','A purchase line belongs to another location.',null,403)
   if(limits&&command.startsWith('purchase.')&&payload.purchaseId){const purchase=find(s,'purchaseOrder',payload.purchaseId);if(purchase.totalCents>limits.spendCents)fail('SPEND_LIMIT','This purchase exceeds your delegated spend limit.',null,403)}
-  const result = reduce(s, actor, command, payload, at)
+  const input=limits?{...payload,locationId:limits.location??'shop'}:payload
+  const result = reduce(s, actor, command, input, at)
+  if(limits)for(const kind of ['asset','job','stockBin','purchaseOrder'])for(const row of rows(s,kind))if(!before.has(`${kind}:${row.id}`))row.locationId=limits.location??'shop'
   if(limits){
     if(command.startsWith('purchase.')&&Number(result.totalCents??0)>limits.spendCents)fail('SPEND_LIMIT','This purchase exceeds your delegated spend limit.',null,403)
     if((command.startsWith('credit.')||command.startsWith('refund.'))&&Number(result.totals?.totalCents??result.amountCents??0)>limits.refundCents)fail('REFUND_LIMIT','This refund exceeds your delegated refund limit.',null,403)

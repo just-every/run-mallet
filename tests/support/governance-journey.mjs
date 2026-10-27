@@ -88,7 +88,7 @@ export async function staffJourney(h){
  const read=await h.api('/api/mallet/staff/state',undefined,{as:people.accountant.cookie});assert.ok(read.balances.some(x=>x.invoiceId===invoice.id));assert.ok(!JSON.stringify(read).includes('consentEvidence'));await h.command('payment.record',{}, {as:people.accountant.cookie,status:403})
  assert.ok((await h.api('/api/mallet/staff/state',undefined,{as:people.purchaser.cookie})).records.purchaseOrder.length)
  const current=(await h.state()).records,backup=await archive(h),fresh=await installation()
- try{await restore(fresh,backup);assert.equal(await (await fresh.mf.getD1Database('DB')).prepare('SELECT count(*) AS n FROM mallet_staff_grants').first('n'),0);assert.ok((await fresh.api('/api/mallet/audit?action=staff.grant')).entries.length>=5)}finally{await fresh.close()}
+ try{await restore(fresh,backup);assert.equal(await (await fresh.mf.getD1Database('DB')).prepare('SELECT count(*) AS n FROM mallet_location_staff_grants').first('n'),0);assert.ok((await fresh.api('/api/mallet/audit?action=staff.grant')).entries.length>=5)}finally{await fresh.close()}
  await h.command('staff.revoke',grantInput(people.advisor.id,'advisor',grant.version))
  assert.equal((await h.request('/app/staff',{as:people.advisor.cookie})).status,403)
  await h.command('estimate.prepare',{jobId:job.id,version:job.version,lines},{as:people.advisor.cookie,status:403})
