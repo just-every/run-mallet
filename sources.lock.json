@@ -2112,7 +2112,7 @@
       "executable": false
     },
     "src/mallet/repair-blocker-door.ts": {
-      "sha256": "2aa06b9d8223c3d297d3efc7548ba5240e3f0a6116d52217e1b4ef9f7daddf55",
+      "sha256": "9efbfae02afc5a976624101fee9adde353554e072df380f1d4e588c55cc21e74",
       "executable": false
     },
     "src/mallet/repair-blocker-sources.ts": {
@@ -2652,7 +2652,7 @@
       "executable": false
     },
     "src/mallet/ui/repair-blockers.ts": {
-      "sha256": "a1196cd940c6496439994087ab684478410bad1c2cd5740f8ac3bbe87f9030f3",
+      "sha256": "ebaad5c8a4218b255bff0cd492722e8bb6f2cfb100dddb5f13ea7226eb6bacff",
       "executable": false
     },
     "src/mallet/ui/repair.ts": {
@@ -4928,7 +4928,7 @@
       "executable": false
     },
     "tests/support/blocker-archive.mjs": {
-      "sha256": "80cd83381d6d172717d2bd1d39e970018cee92f9aad3b71e75b6858470050188",
+      "sha256": "a0c8a488503a775d53d3540c8668e2c069b137c10433207ac224e21faa79c751",
       "executable": false
     },
     "tests/support/blocker-journey.mjs": {
