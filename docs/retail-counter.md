@@ -16,6 +16,9 @@ A unique sale reference identifies one instruction. Repeating that reference
 with the same inputs retrieves its receipt without moving stock or recording
 cash again. Reusing it with different inputs is refused. A new reference records
 a new physical transaction, so retain the original reference when retrying.
+Barcode matching ignores case. Sale instructions and receipts save barcodes in
+lowercase, so a retry with different letter case still retrieves the same
+receipt, including after restoring a workshop backup.
 
 On a receipt, open **Record accessory return**. Inspect the returned accessory
 as saleable, return it to the original bin and record the cash handed back with
