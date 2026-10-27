@@ -1,3 +1,4 @@
+import {clientIdentity} from './api/clients'
 import { operatorAuth, runtimeBindings, type Bindings } from '../auth.server'
 import {enterpriseAuthority} from './enterprise/session'
 import {staffGrant,staffRoute,staffAuthority,type StaffGrant} from './staff'
@@ -7,7 +8,7 @@ export type Authority = { sql: string; params: any[] }
 export class HttpError extends Error { constructor(public status: number, public code: string, message = code) { super(message) } }
 export const digest = async (value: string) => Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(value))), x => x.toString(16).padStart(2,'0')).join('')
 export const human = (actor: Actor) => ['owner','admin'].includes(actor.role)
-export type Identity={actor:Actor;authority:Authority;bearer:boolean;session?:{id:string;kind?:string};gate?:Gate}
+export type Identity={actor:Actor;authority:Authority;bearer:boolean;apiClient?:{id:string;scopes:string[]};session?:{id:string;kind?:string};gate?:Gate}
 // pending: the second-factor door itself, which must work before this session has shown its factor.
 export async function identity(request: Request, original: Bindings, options:{pending?:boolean}={}): Promise<Identity> {
  const env=runtimeBindings(original), bearer=request.headers.get('authorization')
@@ -16,7 +17,7 @@ export async function identity(request: Request, original: Bindings, options:{pe
   const hash=await digest(bearer.slice(7)), now=Date.now()
   const sql="EXISTS(SELECT 1 FROM mallet_agent_keys k JOIN oa_operators o ON o.id=k.created_by WHERE k.token_hash=? AND k.revoked_at IS NULL AND k.expires_at>? AND o.status='active' AND o.version=k.creator_version AND o.role IN ('owner','admin'))"
   const key=await env.DB.prepare(`SELECT k.id,k.label FROM mallet_agent_keys k WHERE k.token_hash=? AND (${sql})`).bind(hash,hash,now).first<{id:string;label:string}>()
-  if(!key) throw new HttpError(401,'invalid_agent_key')
+  if(!key){const client=await clientIdentity(env.DB,hash);if(client)return client;throw new HttpError(401,'invalid_agent_key')}
   return {actor:{id:key.id,name:key.label,role:'agent'},authority:{sql,params:[hash,now]},bearer:true}
  }
  const session=await (await operatorAuth(env)).getSession(request)
