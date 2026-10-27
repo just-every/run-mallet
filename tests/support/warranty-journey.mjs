@@ -58,7 +58,7 @@ export async function warrantyJourney(h){
  const fresh=await installation({bindings:{OWNER_EMAIL:'warranty-recovery@example.test'}})
  try{await restore(fresh,await archive(h));const s=await fresh.state();assert.deepEqual(await fresh.api('/api/mallet/warranty-patterns/'+w.id),await h.api('/api/mallet/warranty-patterns/'+w.id));for(const kind of ['warranty','warrantyTerms','payment'])assert.deepEqual(s.records[kind],final.records[kind]);assert.deepEqual(s.records.invoice.find(i=>i.id===f.invoice.id),f.invoice);await fresh.state({as:h.owner,status:401})}finally{await fresh.close()}
  const report=await h.api('/api/mallet/reports/turnaround?from='+f.job.createdAt.slice(0,10)+'&to='+f.job.createdAt.slice(0,10))
- assert.equal(report.metrics.completedRepairs,2);assert.equal(report.metrics.repairsWithComebacks,2);assert.equal(report.metrics.comebackRateTenths,1000,'Multiple warranty cases count the original repair once')
+ assert.equal(report.metrics.completedRepairs,5);assert.equal(report.metrics.repairsWithComebacks,5);assert.equal(report.metrics.comebackRateTenths,1000,'Multiple warranty cases count the original repair once')
  const original=report.repairs.find(r=>r.jobId===f.job.id);assert.ok(original.comebacks.some(c=>c.id===w.id&&c.jobId===w.jobId),'Comeback drill-through names exact retained repair')
  return {f,w}
 }

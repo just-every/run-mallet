@@ -2,7 +2,7 @@ import {bump,choice,event,expectVersion,fail,find,integer,put,rows,text,who,type
 import {warrantyPacket} from './warranty-patterns'
 import {instant,workshop} from './workshop'
 import {invoiceBalance,publicInvoiceSnapshot} from './payments'
-export const warrantyCommands=['warranty.terms','warranty.open','warranty.decide','warranty.cost','warranty.claim','warranty.claimOutcome','warranty.patternReview'] as const
+export const warrantyCommands=['warranty.terms','warranty.open','warranty.decide','warranty.cost','warranty.claim','warranty.claimOutcome','warranty.patternReview','warranty.patternAction'] as const
 export const warranty:Handler=(c,command,p)=>{
  if(!(warrantyCommands as readonly string[]).includes(command))return
  if(!['owner','admin'].includes(c.actor.role))fail('FORBIDDEN','Only an owner or service advisor manages warranty work.',null,403)
@@ -36,6 +36,13 @@ export const warranty:Handler=(c,command,p)=>{
   if(outcome==='covered'&&!row.withinTerms)fail('WARRANTY_COVERAGE','This failure is outside the saved time or mileage terms; do not infer coverage.')
   const decision={outcome,responsibility,reason,noChargeLabor:outcome==='covered',by:who(c),at:c.now}
   return save({decision},decision)
+ }
+ if(command==='warranty.patternAction'){
+  const packet=warrantyPacket(c.s,row.id)
+  if(!packet.repeat)fail('WARRANTY_PATTERN','A detected cluster is required for a pattern action approval.')
+  if(p.sourceKey!==packet.sourceKey)fail('VERSION','The cited evidence changed; review the current packet.')
+  const action={id:crypto.randomUUID(),kind:choice(p.kind,['customerClaim','correctiveAction'],'action kind'),reference:text(p.reference,'action reference',200),reason:text(p.reason,'approval evidence',2000),sources:packet.evidence.flatMap(w=>w.sources),members:packet.members,status:'approved',label:'Human approval record only; no execution, submission or posting by Mallet.',by:who(c),at:c.now}
+  return save({patternActions:[...(row.patternActions??[]),action]},action)
  }
  if(command==='warranty.patternReview'){
   const packet=warrantyPacket(c.s,row.id),candidate=packet.evidence.find(w=>w.id===p.candidateId&&w.id!==row.id)
