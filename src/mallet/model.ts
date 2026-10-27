@@ -65,7 +65,7 @@ export type Actor = { id: string; name: string; role: 'owner' | 'admin' | 'membe
 export type State = { version: number; records: Record<string, Row[]> }
 export type Context = { s: State; actor: Actor; now: string }
 export type Handler = (c: Context, command: string, p: any) => any
-type Statement = { bind(...values: any[]): Statement; all(): Promise<any> }
+type Statement = { bind(...values: any[]): Statement; all(): Promise<any>; first(): Promise<any> }
 export type Database = { prepare(sql: string): Statement; batch(statements: Statement[]): Promise<any[]> }
 export class MalletError extends Error {
   constructor(public code: string, message: string, public status = 409, public details: any = null) { super(message); this.name = 'MalletError' }
@@ -145,7 +145,16 @@ export async function load(db: Database, normalize = true): Promise<State> {
   if (normalize) migrateSalesTax(s)
   return s
 }
-export async function execute(db: Database, actor: Actor, command: string, payload: any, authority?: { sql: string; params: any[] }, now?: string, limits?:{spendCents:number;refundCents:number;discountBps:number}): Promise<any> {
+export async function execute(db: Database, actor: Actor, command: string, payload: any, authority?: { sql: string; params: any[] }, now?: string, limits?:{spendCents:number;refundCents:number;discountBps:number},retry?:{clientId:string;key:string;hash:string;response:(result:any)=>any}): Promise<any> {
+  const replay=async()=>{
+    if(!retry)return null
+    const row=await db.prepare('SELECT request_hash,response FROM mallet_api_requests WHERE client_id=? AND request_key=?').bind(retry.clientId,retry.key).first()
+    if(!row)return null
+    if(!authority||!await db.prepare('SELECT 1 AS ok WHERE ('+authority.sql+')').bind(...authority.params).first())fail('FORBIDDEN','Current API authority is required for a replay.',null,403)
+    if(row.request_hash!==retry.hash)fail('IDEMPOTENCY_CONFLICT','This retry key belongs to a different command or payload.')
+    return {value:JSON.parse(row.response)}
+  }
+  const prior=await replay();if(prior)return prior.value
   const s = await load(db, false), before = new Map<string, string>()
   for (const [kind, values] of Object.entries(s.records)) for (const row of values) before.set(`${kind}:${row.id}`, JSON.stringify(row))
   const at=now??new Date().toISOString()
@@ -156,7 +165,8 @@ export async function execute(db: Database, actor: Actor, command: string, paylo
     if(payload.binBarcode){const bin=rows(s,'stockBin').find(b=>b.barcode===payload.binBarcode);if(bin?.location&&bin.location!=='shop')fail('LOCATION_SCOPE','This bin belongs to another location.',null,403)}
   }
   if(limits&&command.startsWith('purchase.')&&payload.purchaseId){const purchase=find(s,'purchaseOrder',payload.purchaseId);if(purchase.totalCents>limits.spendCents)fail('SPEND_LIMIT','This purchase exceeds your delegated spend limit.',null,403)}
-  const result = reduce(s, actor, command, payload, at)
+  let result:any
+  try{result=reduce(s,actor,command,payload,at)}catch(error){const saved=await replay();if(saved)return saved.value;throw error}
   if(limits){
     if(command.startsWith('purchase.')&&Number(result.totalCents??0)>limits.spendCents)fail('SPEND_LIMIT','This purchase exceeds your delegated spend limit.',null,403)
     if((command.startsWith('credit.')||command.startsWith('refund.'))&&Number(result.totals?.totalCents??result.amountCents??0)>limits.refundCents)fail('REFUND_LIMIT','This refund exceeds your delegated refund limit.',null,403)
@@ -170,10 +180,13 @@ export async function execute(db: Database, actor: Actor, command: string, paylo
     const value = JSON.stringify(row)
     if (before.get(`${kind}:${row.id}`) !== value) statements.push(db.prepare('INSERT INTO mallet_records(kind,id,revision,value) VALUES(?,?,?,?) ON CONFLICT(kind,id) DO UPDATE SET revision=excluded.revision,value=excluded.value').bind(kind, row.id, row.version, value))
   }
+  const response=retry?retry.response(result):result
+  if(retry)statements.push(db.prepare('INSERT INTO mallet_api_requests(client_id,request_key,request_hash,response,created_at) VALUES(?,?,?,?,?)').bind(retry.clientId,retry.key,retry.hash,JSON.stringify(response),Date.now()))
   statements.push(db.prepare('DELETE FROM mallet_assert'))
   try { await db.batch(statements) } catch (error) {
+    const saved=await replay();if(saved)return saved.value
     if (/CHECK constraint failed.*(?:mallet_assert|ok)/i.test(String(error))) fail('CONCURRENT_CHANGE', 'Data or session authority changed. Refresh before continuing.')
     throw error
   }
-  return result
+  return response
 }

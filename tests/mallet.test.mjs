@@ -486,3 +486,6 @@ test('ADV-008: every note proposal preserves raw technician evidence and measure
 test('ADV-008: exact human email review, queued revocation, single handoff and inert archive recovery',()=>run(assistantProof.assistantSendJourney))
 test('ADV-008: owner scopes, reviews and revokes assistant work with human handoff at 1440 and 390',async()=>{const {assistantsBrowser}=await import('./assistants-browser.mjs');await assistantsBrowser()})
 test('ADV-008: failed or uncertain appointment email survives restart without an automatic retry and reaches human recovery',assistantProof.assistantFailureJourney)
+test('API-001: versioned resource pages, retained repair history and stable identities recover without credentials',()=>run(async h=>{const {shopApiReadJourney}=await import('./support/shop-api-journey.mjs');await shopApiReadJourney(h)}))
+test('API-001: scoped preparation retries are atomic across transports and preserve each existing person decision',()=>run(async h=>{const {shopApiRetryJourney}=await import('./support/shop-api-journey.mjs');await shopApiRetryJourney(h)}))
+test('API-001: missing scopes, alternate transports and expired or revoked authority fail closed',()=>run(async h=>{const {shopApiAuthorityJourney}=await import('./support/shop-api-journey.mjs');await shopApiAuthorityJourney(h)}))

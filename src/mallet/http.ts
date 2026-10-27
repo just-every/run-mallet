@@ -1,6 +1,9 @@
 import {webhookResponse} from './webhook-door'
 import {assistantsPage} from './ui/assistants'
 import {assistantCommand,scopedAssistantView} from './assistant-door'
+import {clientCommand} from './api/clients'
+import {resourceRead} from './api/resources'
+import {preparation} from './api/commands'
 import {statusNoticeCommand,statusNoticeState} from './status-notice-door'
 import {internalStatusCommands} from './status-notices'
 import {statusNoticePage} from './ui/status-notices'
@@ -302,6 +305,15 @@ async function workshopResponse(request:Request,original:Bindings,execution:Pick
    if(path==='/api/mallet/assistant'&&['GET','HEAD'].includes(request.method))return json(await scopedAssistantView(env,auth))
    if(path!=='/api/mallet/commands'||request.method!=='POST')throw new HttpError(403,'assistant_scope_required')
   }
+  if(path.startsWith('/api/mallet/v1/')){
+   if(path==='/api/mallet/v1/preparations'&&request.method==='POST')return json(await preparation(env.DB,auth,request,await body(request)))
+   if(!['GET','HEAD'].includes(request.method))throw new HttpError(405,'method_not_allowed')
+   return json(await resourceRead(env.DB,auth,url))
+  }
+  if(auth.apiClient){
+   if(path==='/api/mallet/commands'&&request.method==='POST')return json(await preparation(env.DB,auth,request,await body(request)))
+   throw new HttpError(403,'api_transport_scope')
+  }
   if(path==='/app'&&actor.staff)return redirect('/app/staff')
   if(['/app/staff','/api/mallet/staff/state'].includes(path)){if(!actor.staff)throw new HttpError(403,'staff_grant_required');const view=staffState(await load(env.DB),actor);if(!await env.DB.prepare(`SELECT 1 AS ok WHERE (${auth.authority.sql})`).bind(...auth.authority.params).first())throw new HttpError(403,'staff_grant_required');return path==='/app/staff'?page('Staff workspace',staffPage(view),actor,200,{section:'data'}):url.searchParams.has('download')?new Response(JSON.stringify(view,null,2),{headers:{...headers,'content-type':'application/json','content-disposition':'attachment; filename="mallet-staff.json"'}}):json(view)}
   if(path==='/app/settings/assistants'){if(actor.role!=='owner')throw new HttpError(403,'owner_required');return page('Assistant settings',assistantsPage(await load(env.DB),new Set((await env.DB.prepare('SELECT grant_id FROM mallet_assistant_keys').all<{grant_id:string}>()).results.map(k=>k.grant_id))),actor,200,{section:'data'})}
@@ -353,6 +365,7 @@ async function workshopResponse(request:Request,original:Bindings,execution:Pick
    if(actor.assistantGrantId&&!command.startsWith('assistant.'))throw new HttpError(403,'assistant_scope_required')
    let result:any
    if(['connector.save','connector.revoke'].includes(command)&&actor.role==='owner'&&!auth.gate?.enrolled)throw new HttpError(403,'step_up_required','Enrol your own second factor before opening the credential door.')
+   if(command.startsWith('apiClient.')&&actor.role==='owner')auth.authority=requireStepUp(auth)
    if(needsStepUp(command,actor.role))auth.authority=requireStepUp(auth,command.startsWith('deposit.'))
    if(internalStatusCommands.includes(command))throw new HttpError(404,'unknown_command')
    if(internalReviewCommands.includes(command))throw new HttpError(404,'unknown_command')
@@ -388,6 +401,7 @@ async function workshopResponse(request:Request,original:Bindings,execution:Pick
    else if(command.startsWith('routing.'))result=await routingCommand(env.DB,actor as any,auth.authority,command,input)
    else if(command==='promise.approveAndNotify')result=await sendPromiseNotice(env,actor,auth.authority,input)
    else if(command==='approvalLink.create'){if(!human(actor))throw new HttpError(403,'manager_required');result=await sendApprovalLink(env,actor,auth.authority,input)}
+   else if(command.startsWith('apiClient.'))result=await clientCommand(env.DB,actor,auth.authority,command,input)
    else if(command.startsWith('agent.')) result=await agentKey(env.DB,actor,auth.authority,command,input)
    else if(command==='asset.erase') {
     if(actor.role!=='owner')throw new HttpError(403,'owner_required')
