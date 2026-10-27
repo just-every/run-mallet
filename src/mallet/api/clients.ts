@@ -29,7 +29,7 @@ export async function clientCommand(db:D1Database,actor:Actor,authority:Authorit
  if(command!=='apiClient.create')throw new HttpError(404,'unknown_command')
  const label=String(input.label??'').trim(),requested=input.scopes
  if(!label||label.length>100||!Array.isArray(requested)||!requested.length||requested.length>scopes.size||requested.some((s:any)=>typeof s!=='string'||!scopes.has(s))||new Set(requested).size!==requested.length)throw new HttpError(400,'invalid_api_client')
- const hours=input.expiresInHours??24
+ const hours=input.expiresInHours===undefined?24:input.expiresInHours
  if(!Number.isSafeInteger(hours)||hours<1||hours>720)throw new HttpError(400,'invalid_api_expiry')
  const token=btoa(String.fromCharCode(...crypto.getRandomValues(new Uint8Array(32)))).replaceAll('+','-').replaceAll('/','_').replaceAll('=','')
  const id=crypto.randomUUID(),expiresAt=now+hours*3600000
