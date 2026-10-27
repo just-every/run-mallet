@@ -17,7 +17,7 @@ const key=(kind:string,id:string,item='')=>[kind,id,item].filter(Boolean).join('
 
 /** Requirements come from issued forms and assigned checklists, never inferred diagnostic quality. */
 export function blockerProjection(s:State,job:Row){
- const groups:Record<string,string[]>={intake:['intake','intakeComparison','intakeForm'],diagnostics:['diagnosis','inspection'],authorization:['estimate','approvalLink'],parts:['specialPart','purchaseOrder','purchaseReceipt'],progress:['job','flow','timeEntry','subtask','handoff','jobNote','proposal','routingCase','routingBlocker'],promises:['promise','promisePlan','promiseRevision','promiseNotice']}
+ const groups:Record<string,string[]>={intake:['intake','intakeComparison','intakeForm'],diagnostics:['diagnosis','inspection'],authorization:['estimate','approvalLink'],parts:['specialPart','purchaseOrder','purchaseReceipt'],progress:['job','flow','quality','timeEntry','subtask','handoff','jobNote','proposal','routingCase','routingBlocker'],promises:['promise','promisePlan','promiseRevision','promiseNotice']}
  const purchases=rows(s,'purchaseOrder').filter(po=>po.lines.some((l:any)=>l.jobId===job.id)).sort((a,b)=>a.id.localeCompare(b.id)),purchaseIds=new Set(purchases.map(po=>po.id))
  const sourceRows=(kind:string)=>kind==='job'?[job]:kind==='purchaseOrder'?purchases:kind==='purchaseReceipt'?rows(s,kind).filter(r=>purchaseIds.has(r.purchaseId)&&purchases.some(po=>po.id===r.purchaseId&&po.lines.some((line:any)=>line.id===r.lineId&&line.jobId===job.id))).sort((a,b)=>a.id.localeCompare(b.id)):related(s,kind,job.id)
  const sources=Object.fromEntries(Object.entries(groups).map(([group,kinds])=>[group,kinds.flatMap(kind=>sourceRows(kind).map(row=>citation(kind,row,job.id)))]))

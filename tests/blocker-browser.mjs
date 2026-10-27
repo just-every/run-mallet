@@ -121,6 +121,18 @@ export async function blockerBrowser(){
   // The separate repair with actual labor remains held by physical receiving.
   let backorder=await refresh(f.backorder.job)
   await shot('08-physical-part-outstanding')
+  assert.equal(backorder.packet.version,1);assert.equal(backorder.packet.revisions.at(-1).progress.stage,'parts')
+  const quality=f.backorder.quality
+  const repair=(await h.state()).records.job.find(j=>j.id===f.backorder.job.id)
+  await h.command('quality.record',{jobId:repair.id,version:repair.version,qualityVersion:quality.version,itemId:quality.revisions.at(-1).items.find(item=>item.stage==='post').id,outcome:'fail',note:'Post-work bearing check failed while replacement part remains outstanding'})
+  await open(f.backorder.job)
+  assert.equal((await f.view(f.backorder.job)).stale,true)
+  await shot('08a-quality-source-changed')
+  backorder=await refresh(f.backorder.job)
+  assert.equal(backorder.packet.version,2);assert.equal(backorder.packet.revisions.at(-1).progress.stage,'quality')
+  assert.ok(backorder.packet.revisions.at(-1).sources.progress.some(s=>s.kind==='quality'&&s.id===quality.id&&s.version===quality.version+1))
+  assert.equal(await p.locator('dt').filter({hasText:/^Stage$/}).first().locator('xpath=following-sibling::dd[1]').innerText(),'quality')
+  await shot('08b-quality-source-refreshed')
   for(const category of ['parts','authorization','progress','promises']){
    const ref=backorder.current.sources[category][0];assert.ok(ref)
    await clickSource(f.backorder.job,ref)
