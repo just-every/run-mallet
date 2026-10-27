@@ -18,8 +18,15 @@ export async function patternFixture(h,f,w,{lot=f.lot,index=0}={}){
  return {second,unrelated,diagnosis}
 }
 export async function patternJourney(h,f,w){
- const url='/api/mallet/warranty-patterns/'+w.id,initial=await h.api(url)
- assert.equal(initial.repeat,false,'Repeated cases on one original repair do not prove a repeat cluster')
+ const url='/api/mallet/warranty-patterns/'+w.id
+ const duplicateInput=await openInput(h,f,w.terms)
+ const sameOriginal=await h.command('warranty.open',{...duplicateInput,failure:w.failure,startAt:new Date(Date.now()+30*3600000).toISOString(),endAt:new Date(Date.now()+31*3600000).toISOString()})
+ assert.equal(sameOriginal.originalJobId,w.originalJobId,'The second matching case uses the same original repair')
+ const initial=await h.api(url)
+ assert.deepEqual(new Set(initial.members),new Set([w.id,sameOriginal.id]),'Both matching cases are present in the negative fixture')
+ assert.deepEqual(new Set(initial.evidence.filter(c=>c.matches).map(c=>c.originalJobId)),new Set([f.job.id]),'Both matching cases cite exactly one original repair')
+ assert.equal(initial.repeat,false,'Two matching cases on one original repair do not prove a repeat cluster')
+ assert.equal((await h.api('/api/mallet/warranty-patterns/'+sameOriginal.id)).repeat,false,'Neither matching case can anchor a cluster from only one original repair')
  const noCluster=(await h.state()).records
  await h.command('warranty.patternAction',{warrantyId:w.id,version:w.version,sourceKey:initial.sourceKey,kind:'correctiveAction',reference:'synthetic-mallet-no-cluster',reason:'There is only one original repair'},{status:409})
  assert.deepEqual((await h.state()).records,noCluster,'A pattern action requires a detected cluster')
@@ -32,7 +39,7 @@ export async function patternJourney(h,f,w){
  const packet=await h.api(url)
  assert.ok(excluded.every(id=>!packet.evidence.some(c=>c.id===id)),'Other catalog items, suppliers and marked lots are excluded independently')
  assert.equal(packet.repeat,true)
- assert.deepEqual(new Set(packet.members),new Set([w.id,second.id]))
+ assert.deepEqual(new Set(packet.members),new Set([w.id,sameOriginal.id,second.id]))
  const other=packet.evidence.find(c=>c.id===second.id)
  assert.deepEqual(other.diagnoses[0].revision.measurements,[{name:'Pad thickness',value:3.2,unit:'mm'}])
  assert.equal(other.diagnoses[0].id,diagnosis.id);assert.equal(other.installed.lotId,f.lot.id);assert.equal(other.lot.supplierLot,f.lot.supplierLot)
@@ -60,7 +67,7 @@ export async function patternJourney(h,f,w){
  let reviewed=await h.command('warranty.patternReview',review,{as:admin.cookie})
  const result=await h.api(url)
  assert.equal(result.evidence.find(c=>c.id===unrelated.id).rejected,true);assert.equal(result.reviews.length,1);assert.equal(result.reviews[0].reason,review.reason);assert.deepEqual(result.reviews[0].sources,packet.evidence.flatMap(c=>c.sources))
- assert.deepEqual(new Set(result.members),new Set([w.id,second.id]))
+ assert.deepEqual(new Set(result.members),new Set([w.id,sameOriginal.id,second.id]))
  assert.deepEqual((await h.state()).records.quality,before.records.quality,'Pattern review never clears a repair')
  assert.deepEqual((await h.state()).records.diagnosis,before.records.diagnosis,'Pattern review never diagnoses a repair')
  assert.deepEqual(reviewed.claims,w.claims,'Pattern review never prepares or submits a claim')
@@ -103,7 +110,7 @@ export async function patternJourney(h,f,w){
  const claimAudit=(await h.api('/api/mallet/audit?action=warranty.claim')).entries
  assert.ok(claimAudit.some(e=>e.actor.id===admin.id&&e.changes.some(c=>c.kind==='warranty'&&c.id===payable.id&&c.beforeRevision===beforeStaleClaim.warranty.find(w=>w.id===payable.id).version&&c.afterRevision===payable.version)),'Detected-cluster claim approval is audited with exact revisions')
  assert.equal(payable.claims[0].status,'prepared');assert.deepEqual(payable.claims[0].history,[]);citationSchema(payable.claims[0].patternSources)
- assert.deepEqual(new Set(payable.claims[0].patternMembers),new Set([w.id,second.id]))
+ assert.deepEqual(new Set(payable.claims[0].patternMembers),new Set([w.id,sameOriginal.id,second.id]))
  assert.match(payable.claims[0].label,/not submitted/)
  for(const kind of ['customerClaim','correctiveAction']){
   const current=await h.api(url),input={warrantyId:w.id,version:reviewed.version,sourceKey:current.sourceKey,kind,reference:'synthetic-mallet-'+kind,reason:'Manager reviewed the cited cluster and approved this action'}
@@ -116,7 +123,7 @@ export async function patternJourney(h,f,w){
   assert.ok(action,'The explicitly approved action is retained')
   assert.equal(action.reference,input.reference);assert.ok(Number.isFinite(Date.parse(action.at)),'Approval retains a recorded instant')
   assert.equal(action.kind,kind);assert.equal(action.status,'approved');assert.equal(action.by.id,admin.id);assert.equal(action.reason,input.reason)
-  assert.deepEqual(new Set(action.members),new Set([w.id,second.id]));citationSchema(action.sources)
+  assert.deepEqual(new Set(action.members),new Set([w.id,sameOriginal.id,second.id]));citationSchema(action.sources)
   assert.equal(h.messages.length,messageCount,'Approval causes no outbound mail')
   const afterAction=(await h.state()).records
   for(const recordKind of ['diagnosis','quality','invoice','export','payment','stockSupplierCredit'])assert.deepEqual(afterAction[recordKind],beforeAction[recordKind],'Approval does not execute or post: '+recordKind)
