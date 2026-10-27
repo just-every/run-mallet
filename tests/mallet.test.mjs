@@ -463,3 +463,6 @@ test('GOV-003: signed SAML browser admission and old-session refusal at 1440 and
 test('AUTO-005: paid collection permits one consented review handoff with private and inert recovery',async()=>{const {reviewDeliveryJourney}=await import('./support/reviews-journey.mjs');await reviewDeliveryJourney()})
 test('AUTO-005: poor private feedback keeps the public invitation and creates an owner task with erasure and recovery',async()=>{const {reviewFeedbackJourney}=await import('./support/reviews-journey.mjs');await reviewFeedbackJourney()})
 test('AUTO-005: owner request, customer feedback and completed-repair task through native forms at 1440 and 390',async()=>{const {reviewsBrowser}=await import('./reviews-browser.mjs');await reviewsBrowser()})
+
+test('RETURN-002: reviewed CA and TX storage versions, notice clocks, disposal refusal, payment release and private recovery',()=>run(async h=>{const {storageJourney}=await import('./support/storage-journey.mjs');await storageJourney(h)}))
+test('RETURN-002: native storage rules, notices, legal refusal and released ledger at 1440 and 390',async()=>{const {storageBrowser}=await import('./storage-browser.mjs');await storageBrowser()})

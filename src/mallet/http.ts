@@ -1,3 +1,4 @@
+import {storagePage,storageRulesPage,storageFormInput} from './ui/storage'
 import {profitabilityReport} from './reports/profitability'
 import {profitabilityPage,profitabilitySettings} from './ui/profitability'
 import {reviewCommand,reviewState} from './review-door'
@@ -172,7 +173,7 @@ function visible(s:State,actor:Actor):State {
  s={...s,records:{...s.records,reportDelivery:rows(s,'reportDelivery').filter(r=>r.ownerId===actor.id),reportFilter:rows(s,'reportFilter').filter(r=>r.ownerId===actor.id)}}
  if(actor.role!=='owner'){s={...s,records:{...Object.fromEntries(Object.entries(s.records).filter(([kind])=>!kind.startsWith('stripe'))),event:rows(s,'event').filter(r=>!r.kind.startsWith('stripe.'))}};s=withoutFleetApproval(s)}
  if(actor.role==='owner')s={...s,records:{...s.records,deposit:rows(s,'deposit').map(d=>({...d,balance:depositBalance(s,d)}))}}
- if(actor.role!=='owner')s={...s,records:{...s.records,handover:rows(s,'handover').map(r=>{const {accountTerms,...settlement}=r.settlement;return {...r,settlement}})}}
+ if(actor.role!=='owner')s={...s,records:{...s.records,storageCase:[],storageRule:[],event:rows(s,'event').filter(r=>!r.kind.startsWith('storage.')),handover:rows(s,'handover').map(r=>{const {accountTerms,...settlement}=r.settlement;return {...r,settlement}})}}
  if(actor.role!=='owner'){const {audit:_audit,...records}=s.records;s={...s,records}}
  if(actor.role!=='owner')s={...s,records:Object.fromEntries(Object.entries(s.records).filter(([kind])=>!['taxCreditBasis','tenderClearance','arTerms','arInvoice','arDispute','arPromise','arReminder','deposit','retentionPolicy','retentionHold','retentionReceipt','diagnosticResult'].includes(kind)))}
  if(actor.role!=='owner')s={...s,records:{...s.records,event:rows(s,'event').filter(row=>!row.kind.startsWith('tax.creditBasis')&&!row.kind.startsWith('tender.')&&!row.kind.startsWith('ar.')&&!row.kind.startsWith('deposit.')&&!row.kind.startsWith('diagnosticResult.'))}}
@@ -242,6 +243,7 @@ function formInput(data:FormData) {
  checkInFormInput(data,input)
  intakeTemplateInput(data,input)
  if(input.command==='intakeForm.create'&&input.templateSource){let t:any;try{t=JSON.parse(input.templateSource)}catch{throw new HttpError(400,'invalid_template')};input.templateId=t.id;input.templateVersion=t.version}
+ storageFormInput(input)
  returnFormInput(data,input)
  warrantyFormInput(input)
  receivablesInput(input)
@@ -406,6 +408,7 @@ async function workshopResponse(request:Request,original:Bindings,execution:Pick
    if(command==='intakeForm.revoke')return redirect(`/app/jobs/${e(input.jobId)}/intake`)
    if(command==='intake.secretReveal')return page('Temporary unlock secret',`<section class="card"><p>Use only for the recorded purpose. Close this page after use, then end the purpose.</p><pre>${e(result.secret)}</pre><a href="/app/jobs/${e(input.jobId)}/intake">Return to custody</a></section>`,actor,200,{section:'jobs'})
    if(command.startsWith('intake.'))return redirect(`/app/jobs/${e(input.jobId)}/intake`)
+   if(command.startsWith('storage.'))return redirect(command==='storage.rule'?'/app/settings/storage':'/app/jobs/'+encodeURIComponent(String(input.jobId))+'/storage')
    if(command.startsWith('return.')||command==='payment.verifyStripe'||command==='flow.collect')return redirect(`/app/jobs/${e(input.jobId)}/return`)
    if(command==='payment.record'&&input.returnTo==='return')return redirect(`/app/jobs/${e(input.jobId)}/return`)
    if(command.startsWith('warranty.')||command==='payment.record')return redirect(`/app/jobs/${e(command==='warranty.open'?result.jobId:input.jobId)}/warranty`)
@@ -537,6 +540,9 @@ async function workshopResponse(request:Request,original:Bindings,execution:Pick
   if(handoverMatch){if(!human(actor))throw new HttpError(403,'manager_required');const receipt=rows(state,'handover').find(r=>r.id===handoverMatch[1]);if(!receipt)throw new HttpError(404,'not_found');return page('Handover receipt',`<div class="narrow">${handoverReceipt(receipt)}</div>`,actor,200,frame('jobs'))}
   const reviewMatch=path.match(/^\/app\/jobs\/([^/]+)\/reviews$/)
   if(reviewMatch){if(actor.role!=='owner')throw new HttpError(403,'owner_required');const job=rows(state,'job').find(j=>j.id===reviewMatch[1]);if(!job)throw new HttpError(404,'not_found');return page('Review & satisfaction',`<div class="narrow"><p><a href="/app/jobs/${e(job.id)}/return">Back to documented handover</a></p>${reviewPanel(await reviewState(env,state,actor),job,actor)}</div>`,actor,200,frame('jobs'))}
+  if(path==='/app/settings/storage'){if(actor.role!=='owner')throw new HttpError(403,'owner_required');return page('Storage settings',storageRulesPage(state),actor,200,frame('data'))}
+  const storageMatch=path.match(/^\/app\/jobs\/([^/]+)\/storage$/)
+  if(storageMatch){if(actor.role!=='owner')throw new HttpError(403,'owner_required');const job=rows(state,'job').find(j=>j.id===storageMatch[1]);if(!job)throw new HttpError(404,'not_found');return page('Storage & notices',storagePage(state,job),actor,200,frame('jobs'))}
   const returnMatch=path.match(/^\/app\/jobs\/([^/]+)\/return$/)
   if(returnMatch){if(!human(actor))throw new HttpError(403,'manager_required');const job=rows(state,'job').find(j=>j.id===returnMatch[1]);if(!job)throw new HttpError(404,'not_found');return page('Documented handover',returnPage(await reviewState(env,state,actor),job,actor),actor,200,frame('jobs'))}
   const warrantyMatch=path.match(/^\/app\/jobs\/([^/]+)\/warranty$/)

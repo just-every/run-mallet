@@ -1,3 +1,4 @@
+import {releaseStorage} from './storage'
 import {openTermsRelease} from './receivables'
 import {assetType,requiresReturnReading} from './asset-types'
 import {bump,event,expectVersion,fail,find,integer,put,rows,text,who,type Handler,type Context,type Row} from './model'
@@ -46,5 +47,6 @@ export function handover(c:Context,job:Row,invoice:Row,p:any){
  const needsReading=requiresReturnReading(job.asset),mileage=needsReading?readings(c.s,job.assetId).find(r=>r.id===p.readingId):null
  if(needsReading&&(!mileage||mileage.jobId!==job.id||mileage.stage!=='out'||assetType(job.asset)==='equipment'&&mileage.unit!=='hours'))fail('RETURN_MILEAGE',assetType(job.asset)==='equipment'?'Record current hours-out on this visit before handover.':'Record current mileage-out on this visit before handover.')
  const receipt=put(c.s,'handover',{jobId:job.id,assetId:job.assetId,invoiceId:invoice.id,invoiceNumber:invoice.number,invoice:publicInvoiceSnapshot(invoice),collectorName,delegate:delegate?structuredClone(delegate):null,identityEvidence,identityVerifiedByMallet:false,comparison:structuredClone(comparison),mileage:structuredClone(mileage),quality:{technician:structuredClone(quality.technicianSignoff),reviewer:structuredClone(quality.qualitySignoff)},settlement:{verifiedCents,receipts,accountTerms,tender:structuredClone(tender),override:override?structuredClone(override):null,label:accountTerms?accountTerms.label:override?'Released under explicit owner exception; settlement is not verified. Release may end the shop’s possessory lien.':invoice.totals.totalCents===0?'No payment due on this zero-total invoice; no processor check was needed.':tender.recordedCents>0?tender.label+(verifiedCents>0?' · Stripe confirmed the remaining captured funds; bank payout is not verified.':''):'Stripe confirmed captured funds at handover; bank payout is not verified.'},warrantyAdvice:text(p.warrantyAdvice,'warranty advice and paper receipt instructions',4000),by:who(c),at:c.now,label:'Documented handover recorded by staff. Collector identity was checked by staff, not verified by Mallet.'})
+ receipt.storageRelease=releaseStorage(c,job,receipt)
  return receipt
 }
