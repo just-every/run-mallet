@@ -124,6 +124,12 @@ export async function shopApiAuthorityJourney(h){
  for(const resource of ['customers','bookings','repairs','parts','orders'])await read(h,client,resource,403)
  await prepare(h,client,'dispatch.prepare',{jobId:job.id,version:job.version},'synthetic-mallet-16',403)
  await read(h,prep,'assets',403)
+ // Each preparation requires its own grant even when the client holds every other preparation grant.
+ for(const [command,scope] of [['estimate.prepare','estimate:prepare'],['estimate.revise','estimate:revise'],['dispatch.prepare','dispatch:prepare'],['invoice.prepare','invoice:prepare']]){
+  const otherGrants=await mint(h,prepScopes.filter(s=>s!==scope))
+  const refused=await prepare(h,otherGrants,command,{},'synthetic-mallet-per-action',403)
+  assert.equal(refused.error,'api_scope_required',command+' requires its own explicit scope')
+ }
  const denied=['/api/mallet/state','/api/mallet/state?download=1','/api/mallet/assets/'+asset.id+'/history.csv','/api/mallet/media/synthetic-mallet-1','/api/mallet/accounts/synthetic-mallet-1/billing','/api/mallet/repairs/'+job.id,'/api/mallet/accounts','/api/mallet/board','/api/mallet/inventory','/api/mallet/purchasing','/api/mallet/reports/sales?format=csv','/api/mallet/reports/profitability','/api/mallet/exports/synthetic-mallet-1','/api/portability/exports','/app','/app/data','/app/assets/'+asset.id,'/api/mallet/security/state','/api/mallet/connectors','/api/mallet/jobs']
  const original=(await h.state()).records
  for(const path of denied){const response=await h.request(path,access(client));assert.equal(response.status,403,path)}
