@@ -23,7 +23,9 @@ test('DVI-002 and OPS-001: private original and shared custody, interrupted uplo
  await h.api(path+'/findings',{...input,capturedAt:'2026-02-31T09:15:00Z'},{status:400})
  const finding=await h.api(path+'/findings',input,{as:tech.cookie})
  assert.equal(finding.by.id,tech.id);assert.equal(finding.capturedAt,'2026-10-01T13:15:00.000Z');assert.ok(Date.parse(finding.createdAt)>=started)
+ const createdAudit=(await h.api('/api/mallet/audit?q='+finding.id)).entries
  assert.deepEqual(await h.api(path+'/findings',input,{as:tech.cookie}),finding)
+ assert.deepEqual((await h.api('/api/mallet/audit?q='+finding.id)).entries,createdAudit,'Finding replay adds no change')
  await h.api(path+'/findings',{...input,title:'Changed replay'},{status:409})
  const originalInput={findingId:finding.id,clientId:randomUUID(),variant:'original',filename:'front-brake.png',mime:'image/png',size:photo.length,sha256:hash(photo),capturedAt:finding.capturedAt}
  await h.api(path+'/uploads',{...originalInput,size:8*1024*1024+1},{status:400})
@@ -50,7 +52,8 @@ test('DVI-002 and OPS-001: private original and shared custody, interrupted uplo
  assert.deepEqual(upload.received,[0])
  for(let i=1;i<Math.ceil(photo.length/65536);i++)await h.api(path+'/uploads/'+upload.id+'/chunks/'+i,chunk(photo,i),{method:'PUT'})
  upload=await h.api(path+'/uploads/'+upload.id+'/complete',{})
- const mediaAudit=(await h.api('/api/mallet/audit?action=media.write')).entries;assert.ok(mediaAudit.some(e=>e.actor.id===tech.id&&e.evidence.includes('job:'+job.id)),'Private media writes retain the real actor and repair reference');assert.ok(!JSON.stringify(mediaAudit).includes(photo.toString('base64')),'Audit never copies media bytes')
+ const mediaAudit=(await h.api('/api/mallet/audit?q='+job.id)).entries.filter(e=>e.action.startsWith('media.'));assert.ok(mediaAudit.some(e=>e.actor.id===tech.id&&e.evidence.includes('job:'+job.id)),'Private media writes retain the real actor and repair reference');assert.ok(!JSON.stringify(mediaAudit).includes(photo.toString('base64')),'Audit never copies media bytes')
+ assert.deepEqual(mediaAudit.find(e=>e.action==='media.finding.created').changes,[{kind:'mediaFinding',id:finding.id,beforeRevision:null,afterRevision:1}]);assert.deepEqual(mediaAudit.find(e=>e.action==='media.upload.completed').changes,[{kind:'mediaUpload',id:upload.id,beforeRevision:1,afterRevision:2}]);assert.equal(upload.revision,2)
  assert.equal(upload.complete,true);assert.equal(upload.sha256,hash(photo));assert.equal(upload.by.id,tech.id);assert.equal(upload.capturedAt,finding.capturedAt);assert.ok(Date.parse(upload.receivedAt)>=started)
  const duplicate=await h.api(path+'/uploads',{...originalInput,clientId:randomUUID()});assert.equal(duplicate.id,upload.id)
  await h.api(path+'/uploads',{...originalInput,filename:'changed.png'},{status:409})
@@ -75,6 +78,7 @@ test('DVI-002 and OPS-001: private original and shared custody, interrupted uplo
  const backup=await archive(h),fresh=await installation({bindings:{OWNER_EMAIL:'media-recovery@example.test'}})
  try{
   await restore(fresh,backup)
+  assert.deepEqual((await fresh.api('/api/mallet/audit?q='+job.id)).entries.filter(e=>e.action.startsWith('media.')),(await h.api('/api/mallet/audit?q='+job.id)).entries.filter(e=>e.action.startsWith('media.')))
   assert.deepEqual((await fresh.api(path+'/findings?jobId='+job.id)).findings,findings)
   for(const m of [upload,shared]){const response=await fresh.request(m.contentUrl);assert.equal(response.status,200);assert.equal(hash(Buffer.from(await response.arrayBuffer())),m.sha256)}
   await fresh.api(upload.contentUrl,undefined,{as:h.owner,status:401})
@@ -107,7 +111,9 @@ test('DVI-004 / OPS-001: compare same-asset measurements/images, imported proven
  await h.api(path+'/carry',input,{as:other.cookie,status:404});await h.api(path+'/carry',input,{headers:{origin:'https://elsewhere.test'},status:403})
  const carried=await h.api(path+'/carry',{...input,capturedAt:'2026-10-01T09:10:00Z',observation:{measurements:[]}},{as:tech.cookie})
  assert.equal(carried.capturedAt,source.capturedAt);assert.equal(carried.observation,null);assert.equal(carried.carriedFrom.id,source.id);assert.equal(carried.carriedFrom.by.id,tech.id);assert.deepEqual(carried.carriedFrom.measurements,base.observation.measurements);assert.equal(carried.carriedFrom.declinedWorkId,decline.id)
+ const carriedAudit=(await h.api('/api/mallet/audit?action=media.finding.carried&q='+source.id)).entries;assert.equal(carriedAudit.length,1);assert.deepEqual(carriedAudit[0].changes,[{kind:'mediaFinding',id:carried.id,beforeRevision:null,afterRevision:1}]);assert.ok(carriedAudit[0].evidence.includes('declinedWork:'+decline.id))
  assert.deepEqual(await h.api(path+'/carry',input,{as:tech.cookie}),carried)
+ assert.deepEqual((await h.api('/api/mallet/audit?action=media.finding.carried&q='+source.id)).entries,carriedAudit)
  const history=await h.api(path+'/history?jobId='+next.id,undefined,{as:tech.cookie})
  assert.deepEqual(history.visits.map(v=>v.job.id),[job.id,next.id]);assert.equal(history.visits[0].findings.find(f=>f.id===source.id).media[0].id,upload.id)
  assert.equal(history.visits[0].findings.find(f=>f.id===imported.id).observation.provenance.observer,'Pat, prior technician')
@@ -118,6 +124,7 @@ test('DVI-004 / OPS-001: compare same-asset measurements/images, imported proven
  const unrelated=(await booking(h,{asset:await h.command('asset.create',{customerName:'Someone Else',label:'Different vehicle',identifier:'OTHER-VEHICLE'}),bayId:'Bay 3',technicianId:'Someone',startAt:'2026-11-01T09:00:00Z',endAt:'2026-11-01T10:00:00Z'})).job
  await h.api(path+'/carry',{...input,jobId:unrelated.id},{status:400});await h.api(path+'/carry',{jobId:job.id,findingId:measured.id},{status:400})
  const resolution=await h.api(path+'/findings/'+source.id+'/resolve',{reason:'Pads replaced under a later separately authorized repair'},{as:tech.cookie})
+ const resolvedAudit=(await h.api('/api/mallet/audit?action=media.finding.resolved&q='+source.id)).entries;assert.equal(resolvedAudit.length,1);assert.deepEqual(resolvedAudit[0].changes,[{kind:'mediaFinding',id:source.id,beforeRevision:1,afterRevision:2},{kind:'mediaResolution',id:source.id,beforeRevision:null,afterRevision:1}]);assert.deepEqual(await h.api(path+'/findings/'+source.id+'/resolve',{reason:resolution.reason},{as:tech.cookie}),resolution);assert.deepEqual((await h.api('/api/mallet/audit?action=media.finding.resolved&q='+source.id)).entries,resolvedAudit)
  assert.equal(JSON.parse(resolution.actor_json).id,tech.id);await h.api(path+'/carry',input,{status:409})
  const after=await h.api(path+'/history?jobId='+next.id)
  assert.equal(after.visits[0].findings.find(f=>f.id===source.id).resolution.reason,resolution.reason)

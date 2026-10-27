@@ -2,7 +2,8 @@ import {HttpError,type Actor,type Authority} from './auth'
 import type {State} from './model'
 import {e,field,box,when} from './ui/common'
 
-export type AuditEntry={id:string;version:number;action:string;at:string;actor:{id:string;name:string;role:string};policy:string;changes:any[];evidence:string[]}
+export type AuditChange={kind:string;id:string;beforeRevision:number|null;afterRevision:number}
+export type AuditEntry={id:string;version:number;action:string;at:string;actor:{id:string;name:string;role:string};policy:string;changes:AuditChange[];evidence:string[]}
 // Only revision references enter this ledger. Command payloads, credentials, raw provider bodies and free text do not.
 export function retainAudit(s:State, before:Map<string,string>, actor:AuditEntry['actor'],action:string,at:string) {
  const changes:any[]=[],evidence:string[]=[]

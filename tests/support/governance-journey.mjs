@@ -1,9 +1,75 @@
 import assert from 'node:assert/strict'
+import {createHash,randomUUID} from 'node:crypto'
 import {archive,restore,installation,booking,estimate,snapshots} from '../harness.mjs'
 import {creditAccountFixture,creditInvoice,creditInput} from './refunds-journey.mjs'
 export const grantInput=(operatorId,role,version=0,limits={})=>({operatorId,role,version,location:'shop',discountBps:500,spendCents:1000,refundCents:200,costRight:false,confirm:'grant-staff',reason:'Owner reviewed the staff responsibility',...limits})
+// Real private media doors; the expected transition set is independent of the
+// exported ledger. Replays must not masquerade as additional changes.
+export function auditCsvEntries(text){
+ const lines=text.trimEnd().split('\r\n').slice(1)
+ return lines.map(line=>{
+  const cells=[...line.matchAll(/"((?:[^"]|"")*)"(?:,|$)/g)].map(m=>m[1].replaceAll('""','"'))
+  assert.equal(cells.length,7)
+  const [id,action,at,actor,policy,changes,evidence]=cells
+  return {id,action,at,actor:JSON.parse(actor),policy,changes:JSON.parse(changes),evidence:JSON.parse(evidence)}
+ })
+}
+export async function mediaAuditJourney(h){
+ const tech=await h.person('synthetic-mallet-media-audit@example.test'),other=await h.person('synthetic-mallet-media-denied@example.test')
+ const assetInput=await h.command('asset.create',{customerName:'Synthetic media audit',label:'Audit vehicle',identifier:'synthetic-mallet-media-audit'})
+ const {asset,job}=await booking(h,{asset:assetInput,technicianId:tech.id,startAt:'2026-09-01T09:00:00Z',endAt:'2026-09-01T10:00:00Z'})
+ const next=(await booking(h,{asset:(await h.state()).records.asset.find(a=>a.id===asset.id),technicianId:tech.id,startAt:'2026-10-01T09:00:00Z',endAt:'2026-10-01T10:00:00Z'})).job
+ const path='/api/mallet/media',as={as:tech.cookie},input={jobId:job.id,clientId:randomUUID(),title:'Private measured finding',capturedAt:'2026-09-01T09:15:00Z',observation:{measurements:[{name:'Private measurement',value:3,unit:'mm'}],recommendation:'Private recommendation payload',provenance:{kind:'native'}}}
+ const finding=await h.api(path+'/findings',input,as)
+ const bytes=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=','base64'),sha256=createHash('sha256').update(bytes).digest('hex')
+ const uploadInput={findingId:finding.id,clientId:randomUUID(),variant:'original',filename:'private-evidence.png',mime:'image/png',size:bytes.length,sha256,capturedAt:finding.capturedAt}
+ let upload=await h.api(path+'/uploads',uploadInput,as)
+ await h.api(path+'/uploads/'+upload.id+'/complete',{}, {...as,status:409})
+ await h.api(path+'/uploads/'+upload.id+'/chunks/0',{sha256,base64:bytes.toString('base64')},{...as,method:'PUT'})
+ upload=await h.api(path+'/uploads/'+upload.id+'/complete',{},as)
+ const carryInput={jobId:next.id,findingId:finding.id},carried=await h.api(path+'/carry',carryInput,as)
+ const query=new URLSearchParams({q:finding.id,actor:tech.id}),url='/api/mallet/audit?'+query
+ const beforeReplay=(await h.api(url)).entries
+ assert.deepEqual(await h.api(path+'/findings',input,as),finding)
+ assert.equal((await h.api(path+'/uploads',uploadInput,as)).id,upload.id)
+ assert.deepEqual(await h.api(path+'/uploads/'+upload.id+'/complete',{},as),upload)
+ await h.api(path+'/uploads/'+upload.id+'/chunks/0',{sha256,base64:bytes.toString('base64')},{...as,method:'PUT'})
+ assert.deepEqual(await h.api(path+'/carry',carryInput,as),carried)
+ assert.deepEqual((await h.api(url)).entries,beforeReplay,'Exact replays create no transition receipts')
+ const reason={reason:'Private resolution payload'},resolution=await h.api(path+'/findings/'+finding.id+'/resolve',reason,as)
+ const entries=(await h.api(url)).entries
+ const expected=[
+  ['media.finding.created',[{kind:'mediaFinding',id:finding.id,beforeRevision:null,afterRevision:1}]],
+  ['media.upload.created',[{kind:'mediaUpload',id:upload.id,beforeRevision:null,afterRevision:1}]],
+  ['media.chunk.received',[{kind:'mediaChunk',id:upload.id+':0',beforeRevision:null,afterRevision:1}]],
+  ['media.upload.completed',[{kind:'mediaUpload',id:upload.id,beforeRevision:1,afterRevision:2}]],
+  ['media.finding.carried',[{kind:'mediaFinding',id:carried.id,beforeRevision:null,afterRevision:1}]],
+  ['media.finding.resolved',[{kind:'mediaFinding',id:finding.id,beforeRevision:1,afterRevision:2},{kind:'mediaResolution',id:finding.id,beforeRevision:null,afterRevision:1}]]
+ ]
+ assert.deepEqual(entries.map(e=>e.action).sort(),expected.map(([action])=>action).sort(),'Every actual transition appears exactly once')
+ for(const [action,changes] of expected){const entry=entries.find(e=>e.action===action);assert.deepEqual(entry.changes,changes,action+' exact revisions');assert.equal(entry.actor.id,tech.id);assert.ok(entry.evidence.includes('finding:'+finding.id)||entry.evidence.includes('source-finding:'+finding.id));assert.ok(Number.isFinite(Date.parse(entry.at)))}
+ assert.equal(upload.revision,2);assert.equal((await h.api(path+'/findings?jobId='+job.id)).findings[0].revision,2)
+ const carryEntry=entries.find(e=>e.action==='media.finding.carried');assert.ok(carryEntry.evidence.includes('source-job:'+job.id));assert.ok(carryEntry.evidence.includes('job:'+next.id))
+ assert.deepEqual(await h.api(path+'/findings/'+finding.id+'/resolve',reason,as),resolution)
+ await h.api(path+'/findings/'+finding.id+'/resolve',{reason:'Changed replay'}, {...as,status:409})
+ await h.api(path+'/findings',{...input,title:'Changed replay'}, {...as,status:409})
+ await h.api(path+'/findings',{...input,clientId:randomUUID()},{as:other.cookie,status:404})
+ await h.api(path+'/findings',{...input,clientId:randomUUID()},{headers:{origin:'https://elsewhere.test'},status:403})
+ await h.api('/auth/operator/status',{operatorId:tech.id,status:'inactive'})
+ await h.api(path+'/findings',{...input,clientId:randomUUID()},{...as,status:401})
+ await h.api(path+'/uploads/'+upload.id+'/complete',{}, {...as,status:401})
+ await h.api(path+'/findings/'+finding.id+'/resolve',reason,{...as,status:401})
+ assert.deepEqual((await h.api(url)).entries,entries,'Denied writes and revoked actors do not change retained transitions')
+ const exported=await h.api(url+'&format=json');assert.deepEqual(exported.entries,entries)
+ assert.deepEqual(auditCsvEntries(await (await h.request(url+'&format=csv')).text()),entries.map(({version,...entry})=>entry),'CSV and JSON retain identical revision and evidence references')
+ const serialized=JSON.stringify(entries)
+ for(const privateValue of [bytes.toString('base64'),input.title,input.observation.recommendation,reason.reason,uploadInput.filename,tech.cookie,'test-mail-edge'])assert.ok(!serialized.includes(privateValue),'Audit contains references without private payloads or credentials')
+ for(const format of ['json','csv'])await h.api(url+'&format='+format,undefined,{as:other.cookie,status:403})
+ return {entries,finding,upload,carried,job,next,actorId:tech.id,url}
+}
 export async function auditJourney(h){
  await h.command('tax.configure',{ratePercent:7.5,partsTaxable:true,laborTaxable:true})
+ const media=await mediaAuditJourney(h)
  const admin=await h.person('synthetic-mallet-audit@example.test','admin'),member=await h.person('synthetic-mallet-tech@example.test')
  const {job}=await booking(h),q=await h.command('estimate.prepare',{jobId:job.id,version:job.version,lines:[{kind:'part',description:'Discounted repair',quantity:1,unitCents:1000,unitDiscountCents:100}]},{as:admin.cookie})
  const item=await h.command('stock.item',{sku:'synthetic-mallet-audit',name:'Audit part',unit:'each',barcode:'synthetic-mallet-item'}),bin=await h.command('stock.bin',{code:'Audit bin',barcode:'synthetic-mallet-bin'})
@@ -41,7 +107,7 @@ export async function auditJourney(h){
  const source=await snapshots(),plan=await h.api('/api/mallet/imports/preview',source),imported=await h.api('/api/mallet/imports/apply',{...source,fingerprint:plan.fingerprint});await h.api('/api/mallet/imports/undo',{id:imported.id});const imports=await h.api('/api/mallet/audit?q=import.');assert.ok(imports.entries.length>=2);const ownerId=(await h.state()).actor.id;assert.ok(imports.entries.every(x=>x.actor.id===ownerId))
  const retained=(await h.api('/api/mallet/audit')).entries;await h.cron('2099-01-01T12:00:00Z');await h.restart();const afterMaintenance=(await h.api('/api/mallet/audit')).entries;for(const entry of retained)assert.deepEqual(afterMaintenance.find(x=>x.id===entry.id),entry,'Scheduled maintenance and restart never delete audit evidence')
  const original=afterMaintenance,backup=await archive(h),fresh=await installation()
- try{await restore(fresh,backup);const recovered=(await fresh.api('/api/mallet/audit')).entries;for(const entry of original)assert.deepEqual(recovered.find(x=>x.id===entry.id),entry);await fresh.state({as:h.owner,status:401})}finally{await fresh.close()}
+ try{await restore(fresh,backup);assert.deepEqual((await fresh.api(media.url)).entries,media.entries,'Fresh-owner recovery retains exact media transitions');const recovered=(await fresh.api('/api/mallet/audit')).entries;for(const entry of original)assert.deepEqual(recovered.find(x=>x.id===entry.id),entry);await fresh.state({as:h.owner,status:401})}finally{await fresh.close()}
 }
 export async function staffJourney(h){
  await h.command('tax.configure',{ratePercent:7.5,partsTaxable:true,laborTaxable:true})
