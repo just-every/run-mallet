@@ -1,3 +1,4 @@
+import {runWebhooks} from './mallet/webhook-door'
 import {runReportSchedules} from './mallet/reports/schedules'
 import {expireIntakeSecrets} from './mallet/intake-secrets'
 import {salesReportResponse} from './mallet/sales-report-door'
@@ -47,6 +48,6 @@ export default withDemo<Bindings, ExportedHandler<Bindings>>({
   },
   // EST-006: the cron trigger in wrangler.jsonc sends due estimate reminders.
   async scheduled(controller, env, execution) {
-    execution.waitUntil((async()=>{await runReportSchedules(env,controller.scheduledTime);await runApprovalChase(env, controller.scheduledTime);await runRouting(env, controller.scheduledTime);await expireIntakeSecrets(env,new Date(controller.scheduledTime).toISOString())})())
+    execution.waitUntil((async()=>{await runWebhooks(env,controller.scheduledTime);await runReportSchedules(env,controller.scheduledTime);await runApprovalChase(env, controller.scheduledTime);await runRouting(env, controller.scheduledTime);await expireIntakeSecrets(env,new Date(controller.scheduledTime).toISOString())})())
   },
 } satisfies ExportedHandler<Bindings>, { seed: seedDemo })
