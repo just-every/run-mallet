@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import {archive,installation,restore} from '../harness.mjs'
+import {archive,booking,installation,restore} from '../harness.mjs'
 import {shopSetup} from './diagnosis-journey.mjs'
 import {makePart,ContentVerifier,ArchiveVerifier} from '@runeditrun/rer/modules/portability/format'
 
@@ -20,11 +20,11 @@ async function changedArchive(lines,change){
 export async function retailFixture(h){
  await shopSetup(h)
  await h.command('tax.configure',{ratePercent:7.5,partsTaxable:true,laborTaxable:false})
- const item=await h.command('stock.item',{sku:'synthetic-mallet-retail-1',barcode:'synthetic-mallet-retail-2',name:'Counter accessory',unit:'each'})
- const bin=await h.command('stock.bin',{code:'Counter shelf',barcode:'synthetic-mallet-retail-3'})
+ const item=await h.command('stock.item',{sku:'synthetic-mallet-retail-1',barcode:'synthetic-mallet-rétail-2',name:'Counter accessory',unit:'each'})
+ const bin=await h.command('stock.bin',{code:'Counter shelf',barcode:'synthetic-mallet-rétail-3'})
  const scans={itemBarcode:item.barcode,binBarcode:bin.barcode}
  await h.command('stock.receive',{...scans,quantity:5,expectedQuantity:5,reference:'synthetic-mallet-retail-4',reason:'Observed accessory delivery'})
- return {item,bin,scans,sale:{...scans,reference:'synthetic-mallet-retail-5',quantity:3,unitCents:99,cashCents:500}}
+ return {item,bin,scans,sale:{...scans,itemBarcode:item.barcode.toUpperCase(),binBarcode:bin.barcode.toUpperCase(),reference:'synthetic-mallet-retail-5',quantity:3,unitCents:99,cashCents:500}}
 }
 export async function retailJourney(h){
  const f=await retailFixture(h),member=await h.person('counter-member@example.test'),advisor=await h.person('counter-advisor@example.test','admin')
@@ -58,7 +58,14 @@ export async function retailJourney(h){
  assert.equal(inventory.movements.filter(m=>m.source.kind.startsWith('retail')).length,2)
  const privateView=await h.state({as:advisor.cookie});assert.equal(privateView.records.retailSale,undefined);assert.equal(privateView.records.retailReturn,undefined)
  assert.ok(!privateView.records.event.some(e=>e.kind.startsWith('retail.')))
- const audit=await h.api('/api/mallet/audit?format=json');assert.ok(JSON.stringify(audit).includes(sale.id),'Attributable receipt changes reach private audit')
+ const audit=await h.api('/api/mallet/audit?format=json')
+ for(const [action,kind,receipt] of [['retail.sell','retailSale',sale],['retail.return','retailReturn',partial]]){
+  const entries=audit.entries.filter(e=>e.action===action)
+  assert.equal(entries.length,1,'Only a new physical transaction appends a private audit decision')
+  assert.equal(entries[0].actor.id,sale.by.id)
+  assert.deepEqual(entries[0].changes.filter(c=>c.kind===kind),[{kind,id:receipt.id,beforeRevision:null,afterRevision:1}])
+  assert.deepEqual(entries[0].changes.filter(c=>c.kind==='stockMovement'),[{kind:'stockMovement',id:receipt.movementId,beforeRevision:null,afterRevision:1}])
+ }
  const saved=await archive(h),fresh=await installation({bindings:{OWNER_EMAIL:'fresh-counter-owner@example.test'}})
  try{
   await restore(fresh,saved)
@@ -79,6 +86,7 @@ export async function retailJourney(h){
   ['return amount', (kind,r)=>{if(kind!=='retailReturn')return false;r.totalCents++;return true}],
   ['stock quantity', (kind,r)=>{if(kind!=='stockMovement'||r.source.kind!=='retailSale')return false;r.deltaMilli=-1000;return true}],
   ['excess return', (kind,r)=>{if(kind!=='retailReturn')return false;r.quantity=4;r.quantityMilli=4000;return true}],
+  ['barcode retry identity', (kind,r)=>{if(kind!=='retailSale')return false;r.request.itemBarcode='synthetic-mallet-absent';return true}],
   ['retry identity', (kind,r)=>{if(kind!=='retailSale')return false;r.request.quantity=1;return true}],
  ]){
   const invalid=await changedArchive(saved,change),empty=await installation()
@@ -98,4 +106,55 @@ export async function retailJourney(h){
  await h.command('retail.sell',race)
  assert.equal((await h.api('/api/mallet/retail')).sales.filter(r=>r.reference===race.reference).length,1,'Concurrent retry records one receipt')
  assert.equal((await h.api('/api/mallet/inventory')).movements.filter(m=>m.source.kind==='retailSale'&&m.reason==='Counter sale '+race.reference).length,1,'Concurrent retry moves stock once')
+ const racedSale=(await h.api('/api/mallet/retail')).sales.find(r=>r.reference===race.reference)
+ const returning={...input,saleId:racedSale.id,reference:'synthetic-mallet-retail-15'}
+ const balanceBefore=(await h.api('/api/mallet/inventory')).balances.find(b=>b.itemId===f.item.id&&b.binId===f.bin.id).onHandMilli
+ const cashBefore=(await h.api('/api/mallet/retail')).netCashCents
+ const returned=await Promise.all([h.request('/api/mallet/commands',{method:'POST',body:{command:'retail.return',input:returning}}),h.request('/api/mallet/commands',{method:'POST',body:{command:'retail.return',input:returning}})])
+ assert.ok(returned.every(r=>[200,409].includes(r.status)));assert.ok(returned.some(r=>r.status===200))
+ await h.command('retail.return',returning)
+ report=await h.api('/api/mallet/retail')
+ assert.equal(report.returns.filter(r=>r.reference===returning.reference).length,1,'Concurrent return retry appends one return')
+ assert.equal(report.netCashCents,cashBefore-119,'Concurrent return refunds the original 99 cents and 20 cents tax once')
+ assert.equal((await h.api('/api/mallet/inventory')).balances.find(b=>b.itemId===f.item.id&&b.binId===f.bin.id).onHandMilli,balanceBefore+1000)
+ const excessBefore=(await h.state()).records
+ await h.command('retail.return',{...returning,reference:'synthetic-mallet-retail-16'},{status:409})
+ assert.deepEqual((await h.state()).records,excessBefore,'A fully returned receipt cannot refund cash or restore stock again')
+ // Reserve all remaining units through a repair door; the counter cannot sell them.
+ const {job}=await booking(h),available=(await h.api('/api/mallet/inventory')).balances.find(b=>b.itemId===f.item.id&&b.binId===f.bin.id).availableMilli
+ const reservation=await h.command('stock.reserve',{...f.scans,jobId:job.id,quantity:available/1000,reference:'synthetic-mallet-retail-17'})
+ const reservedBefore=(await h.state()).records
+ await h.command('retail.sell',{...race,reference:'synthetic-mallet-retail-18'},{status:409})
+ assert.deepEqual((await h.state()).records,reservedBefore,'Reserved repair stock cannot become counter stock')
+ await h.command('stock.release',{reservationId:reservation.id,version:reservation.version,reason:'Repair no longer needs accessory'})
+ await h.command('retail.sell',{...race,reference:'synthetic-mallet-retail-18'})
+ // Expiring the proof simulates the security boundary without a wall-clock wait.
+ await (await h.mf.getD1Database('DB')).prepare('UPDATE mallet_session_proofs SET step_up_until=0').run()
+ const unconfirmedBefore=(await h.state()).records
+ for(const [command,input] of [['retail.sell',race],['retail.return',returning]]){
+  const response=await h.request('/api/mallet/commands',{method:'POST',body:{command,input}})
+  assert.equal(response.status,403);assert.equal((await response.json()).error,'step_up_required')
+ }
+ assert.deepEqual((await h.state()).records,unconfirmedBefore,'Even a receipt replay requires current fresh owner confirmation')
+ await h.stepUp()
+ await h.api('/auth/operator/status',{operatorId:advisor.id,status:'inactive'})
+ await h.command('agent.revoke',{id:key.id})
+ for(const [command,input] of [['retail.sell',race],['retail.return',returning]])for(const options of [{as:advisor.cookie,status:401},{...agent,status:401}])await h.command(command,input,options)
+ for(const options of [{as:advisor.cookie},{...agent}]){
+  assert.equal((await h.request('/api/mallet/retail',options)).status,401)
+  const response=await h.request('/app/retail',options)
+  assert.equal(response.status,303);assert.equal(response.headers.get('location'),'/signin?returnTo=%2Fapp%2Fretail')
+ }
+ const complete=(await h.state()).records,recovered=await installation({bindings:{OWNER_EMAIL:'recovered-counter-owner@example.test'}})
+ try{
+  await restore(recovered,await archive(h))
+  const records=(await recovered.state()).records
+  for(const kind of ['retailSale','retailReturn','stockItem','stockBin','stockLot','stockMovement','audit'])assert.deepEqual(records[kind],complete[kind],'Fresh-owner recovery preserves '+kind+' exactly')
+  assert.deepEqual(await recovered.api('/api/mallet/retail'),await h.api('/api/mallet/retail'))
+  assert.deepEqual(await recovered.api('/api/mallet/inventory'),await h.api('/api/mallet/inventory'))
+  assert.equal((await recovered.api('/api/mallet/trace?q='+lot.supplierLot)).lots[0].remainingMilli,1000)
+  await recovered.state({as:h.owner,status:401})
+  await recovered.state({...agent,status:401})
+ }finally{await recovered.close()}
+
 }

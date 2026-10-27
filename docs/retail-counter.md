@@ -8,7 +8,9 @@ verify a bank balance or close a drawer.
 Register an accessory and bin, receive its stock, and configure the shop's
 sales tax. Scan or type the accessory and bin barcodes. Choose its non-serialized
 stock lot when applicable; leave the lot empty only for untracked stock. The
-home shop is the only supported location. Enter the quantity, unit price and
+home shop is the only supported location. Barcode matching ignores letter case,
+including accented letters; receipts keep the registered barcode and the exact
+normalized instruction for retries and recovery. Enter the quantity, unit price and
 cash physically received. The receipt freezes subtotal, tax, total, cash,
 change, stock source, recorder and time. It creates no repair or customer.
 

@@ -1,5 +1,5 @@
 // Reject inconsistent cash receipts in private staging before restoring stock.
-export async function validateRetail({table,rejectIf}){
+export async function validateRetail({db,table,rejectIf}){
  const records=table('mallet_records');if(!records)return
  const j=(field,a='r')=>`json_extract(${a}.value,'$.${field}')`
  const whole=(field,min=0,max=1_000_000_000)=>`(json_type(r.value,'$.${field}') IS NOT 'integer' OR ${j(field)} NOT BETWEEN ${min} AND ${max})`
@@ -14,7 +14,19 @@ export async function validateRetail({table,rejectIf}){
   await check(kind,'lot',`${j('lotId')} IS NOT NULL AND NOT ${ref('stockLot',j('lotId'),`AND ${j('itemId','target')}=${j('itemId')} AND ${j('binId','target')}=${j('binId')} AND COALESCE(${j('serial','target')},'')=''`)}`)
  }
  await check('retailSale','sale_amounts',`${whole('unitCents',0,100_000_000)} OR ${whole('cashCents')} OR ${whole('changeCents')} OR ${whole('taxRateMillionths',0,1000000)} OR (json_type(r.value,'$.taxable') IS NOT 'true' AND json_type(r.value,'$.taxable') IS NOT 'false') OR ${j('subtotalCents')}<>${j('quantity')}*${j('unitCents')} OR ${j('salesTaxCents')}<>CASE WHEN ${j('taxable')} THEN CAST((${j('subtotalCents')}*${j('taxRateMillionths')}+500000)/1000000 AS INTEGER) ELSE 0 END OR ${j('cashCents')}-${j('changeCents')}<>${j('totalCents')}`)
- for(const field of ['unitCents','cashCents','itemBarcode','binBarcode'])await check('retailSale','sale_retry',`${j('request.'+field)} IS NOT ${j(field)}`)
+ for(const field of ['unitCents','cashCents'])await check('retailSale','sale_retry',`${j('request.'+field)} IS NOT ${j(field)}`)
+ // Match the scanner's Unicode case folding without loading the whole table.
+ for(const field of ['itemBarcode','binBarcode'])await check('retailSale','sale_barcode',`json_type(r.value,'$.${field}') IS NOT 'text' OR json_type(r.value,'$.request.${field}') IS NOT 'text'`)
+ let cursor=''
+ while(true){
+  const batch=await db.prepare(`SELECT id,value FROM ${records} WHERE kind='retailSale' AND id>? ORDER BY id LIMIT 100`).bind(cursor).all()
+  for(const row of batch.results){
+   const sale=JSON.parse(row.value)
+   if(['itemBarcode','binBarcode'].some(field=>sale.request[field].toLowerCase()!==sale[field].toLowerCase()))await rejectIf('retail_sale_retry','SELECT 1')
+  }
+  if(batch.results.length<100)break
+  cursor=batch.results.at(-1).id
+ }
  await check('retailSale','sale_lot_retry',`${j('request.lotId')} IS NOT COALESCE(${j('lotId')},'')`)
  for(const field of ['saleId','reason'])await check('retailReturn','return_retry',`${j('request.'+field)} IS NOT ${j(field)}`)
  await check('retailReturn','return_confirmation',`${j('request.confirm')} IS NOT 'saleable-cash-returned'`)
