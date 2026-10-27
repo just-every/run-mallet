@@ -2256,7 +2256,7 @@
       "executable": false
     },
     "src/mallet/status-notices.ts": {
-      "sha256": "3d9b85d47ec82b040462e2967ac399ca031f3e42171452ac0d90df5427ccd1ee",
+      "sha256": "8e01641a710786ab71a79275b93e5f6fbdd38b886fd9c79fd62b40d7e9d1e69c",
       "executable": false
     },
     "src/mallet/stock-replenishment.ts": {
@@ -5068,7 +5068,7 @@
       "executable": false
     },
     "tests/support/status-notices-journey.mjs": {
-      "sha256": "8df0d7d253d0d5c7b28652014616870856190c2f88bdc34f77f0584d0bc1eecb",
+      "sha256": "501c22cafeba3ec89cbc06b28fd0f8ecd1aceb8775cf707c2edc5096a553111d",
       "executable": false
     },
     "tests/support/stock-consumption-journey.mjs": {

@@ -100,9 +100,9 @@ export async function statusStopsJourney(){
  }finally{await collected.close()}
  const erased=await installation();try{
   const f=await statusFixture(erased),contact=await erased.command('contact.save',{name:'Cedar Bikes',email:f.asset.customerEmail,phone:'',communication:'none',notes:''}),account=await erased.command('customer.save',{name:'Cedar Bikes',kind:'person',contactIds:[contact.id],payerId:contact.id,billingContactId:contact.id,taxStatus:'unknown',notes:''})
-  await erased.command('customer.linkAsset',{assetId:f.asset.id,version:f.asset.version,customerId:account.id,customerVersion:account.version,reason:'Owner checked exact customer identity'})
+  await erased.command('customer.linkAsset',{assetId:f.asset.id,version:(await erased.state()).records.asset.find(a=>a.id===f.asset.id).version,customerId:account.id,customerVersion:account.version,reason:'Owner checked exact customer identity'})
   await f.diagnosis();const n=await f.approve('diagnosis'),backup=await archive(erased)
-  await erased.command('retention.hold',{customerId:account.id,scope:'all',jobId:'',reason:'Preserve customer authorization history',reference:'synthetic-mallet-951'})
+  await erased.command('retention.hold',{customerId:account.id,scope:'all',jobId:'',reason:'Preserve customer authorization history',caseReference:'synthetic-mallet-951'})
   const categories=['personal','import'],preview=await erased.command('retention.preview',{customerId:account.id,categories})
   await erased.command('customer.erase',{customerId:account.id,categories,fingerprint:preview.fingerprint,consent:true,confirm:'ERASE',reason:'Customer requested erasure; honor active hold',consentEvidence:'synthetic-mallet-952'})
   const before=erased.messages.length;await erased.cron(noticeAt(f.base,.1));assert.equal(erased.messages.length,before,'Erasure revokes pending send authority even under a hold')

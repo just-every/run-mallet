@@ -75,7 +75,7 @@ export const statusNotices:Handler=(c,command,p)=>{
    if(p.localIds?.includes(live.consentId)&&live.pickupDueAt&&c.now>=live.pickupDueAt&&!live.pickupClosed){
     const job=find(c.s,'job',live.jobId),collected=rows(c.s,'flow').some(f=>f.jobId===job.id&&f.collection)
     if(!collected&&!job.closure&&flowStage(c.s,job)==='ready'&&!rows(c.s,'statusNotice').some(n=>n.jobId===job.id&&n.uncollectedTaskId)){
-     const task=put(c.s,'subtask',{kind:'pickup-followup',jobId:job.id,noticeId:r.id,title:'Contact customer about uncollected repair',assigneeId:'current-owner',dependsOn:[],createdBy:who(c),createdAt:c.now,completedAt:null,completedBy:null,policy:live.pickupPolicy})
+     const task=put(c.s,'subtask',{kind:'pickup-followup',jobId:job.id,noticeId:r.id,title:'Contact customer about uncollected repair',assigneeId:live.by.id,dependsOn:[],createdBy:who(c),createdAt:c.now,completedAt:null,completedBy:null,policy:live.pickupPolicy})
      bump(c.s,'statusNotice',live,{uncollectedTaskId:task.id});event(c,command,job.id,r.id,{taskId:task.id,reason:'Pickup deadline elapsed'})
     }
    }
@@ -100,7 +100,7 @@ export const statusNotices:Handler=(c,command,p)=>{
  if(row.status!=='claimed')fail('NOTICE_STATE','The handoff outcome was already recorded.')
  const status=choice(p.status,['accepted','development','failed','uncertain','skipped'] as const,'handoff outcome')
  let contactTaskId=row.contactTaskId
- if(['failed','uncertain'].includes(status)&&['ready','pickup'].includes(row.kind)&&!contactTaskId){const task=put(c.s,'subtask',{kind:'pickup-followup',jobId:row.jobId,noticeId:row.id,title:'Resolve failed pickup contact',assigneeId:'current-owner',dependsOn:[],createdBy:who(c),createdAt:c.now,completedAt:null,completedBy:null});contactTaskId=task.id}
+ if(['failed','uncertain'].includes(status)&&['ready','pickup'].includes(row.kind)&&!contactTaskId){const task=put(c.s,'subtask',{kind:'pickup-followup',jobId:row.jobId,noticeId:row.id,title:'Resolve failed pickup contact',assigneeId:row.by.id,dependsOn:[],createdBy:who(c),createdAt:c.now,completedAt:null,completedBy:null});contactTaskId=task.id}
  const next=bump(c.s,'statusNotice',row,{...(contactTaskId?{contactTaskId}:{}),status,provider:text(p.provider,'provider',100),providerReference:text(p.providerReference,'provider reference',1024,true),outcomeAt:c.now})
  event(c,command,row.jobId,row.id,{status});return next
 }
