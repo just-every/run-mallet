@@ -8,7 +8,7 @@ export async function readRepairBlockers(db:D1Database,actor:Actor,authority:Aut
  const checked=await routingPeople(db,authority),state=await load(db)
  const valid=await db.prepare(`SELECT 1 AS ok FROM mallet_meta WHERE id=1 AND version=? AND (${checked.authority.sql})`).bind(state.version,...checked.authority.params).first()
  if(!valid)throw new HttpError(409,'source_changed')
- return {view:repairBlockerView(state,jobId,checked.people),people:checked.people.map(p=>({...p,status:'active'}))}
+ return {view:{...repairBlockerView(state,jobId,checked.people),observedAt:new Date().toISOString()},people:checked.people.map(p=>({...p,status:'active'}))}
 }
 export async function repairBlockerCommand(db:D1Database,actor:Actor,authority:Authority,command:string,input:any){
  if(!['owner','admin'].includes(actor.role)||actor.staff)throw new HttpError(403,'manager_required')

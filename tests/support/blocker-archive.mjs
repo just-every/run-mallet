@@ -21,8 +21,8 @@ async function changedArchive(lines,change){
 export async function refuseBlockerArchives(backup){
  for(const change of [
   (kind,row)=>{if(kind==='repairBlockerTask')row.packetId='synthetic-mallet-990'},
-  (kind,row)=>{if(kind==='repairBlockerPacket')row.revisions[0].sources.diagnostics[0].href='javascript:alert(1)'},
-  (kind,row)=>{if(kind==='repairBlockerPacket')row.revisions[0].sources.diagnostics[0].revision=9999}
+  (kind,row)=>{if(kind==='repairBlockerPacket'&&row.revisions[0].sources.diagnostics.length)row.revisions[0].sources.diagnostics[0].href='javascript:alert(1)'},
+  (kind,row)=>{if(kind==='repairBlockerPacket'&&row.revisions[0].sources.diagnostics.length)row.revisions[0].sources.diagnostics[0].revision=9999}
  ]){
   const fresh=await installation()
   try{
