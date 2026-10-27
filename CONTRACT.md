@@ -496,7 +496,9 @@ Every capability claim on the approved homepage (`src/site/landing/`, checked ag
 
 ## Status
 
-Historical baseline: code and tests at commit `e44c6ec74b13443d13094d57b15ceccebeaefaf3` (21 October 2026). ADV-006 uses the implementation and named assertions in this revision; the historical pins do not establish its current verification or landing.
+Judged from the code and tests at commit `538d0f282cfedc54545054bd704d58a7501789b7` (27 October 2026).
+
+ADV-006 source and assertion provenance is that revision; later historical pins apply only to other rows. This source judgment does not claim current verification or landing.
 
 REPORT-002 and AUTO-002 are updated by the named i925 acceptance journeys in this revision; earlier pins below are historical attributions, not a judgment of this candidate. SUBLET-001 is updated by its acceptance journeys; other unchanged rows retain their historical attribution at `d26ff42f6cc1027e3e7dcc5d7616519a68ba1985`.
 
