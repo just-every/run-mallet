@@ -10,6 +10,8 @@ import {resourceRead} from './api/resources'
 import {preparation} from './api/commands'
 import {readRepairBlockers,repairBlockerCommand} from './repair-blocker-door'
 import {repairBlockersPage} from './ui/repair-blockers'
+import {retailPage,retailFormInput} from './ui/retail'
+import {retailReport} from './retail'
 import {statusNoticeCommand,statusNoticeState} from './status-notice-door'
 import {internalStatusCommands} from './status-notices'
 import {statusNoticePage} from './ui/status-notices'
@@ -192,6 +194,7 @@ function visible(s:State,actor:Actor):State {
  if(!human(actor)){const {repairBlockerPacket:_packet,repairBlockerTask:_task,...records}=s.records;s={...s,records:{...records,event:rows(s,'event').filter(e=>!e.kind.startsWith('blocker.'))}}}
  s={...s,records:{...s.records,reportDelivery:rows(s,'reportDelivery').filter(r=>r.ownerId===actor.id),reportFilter:rows(s,'reportFilter').filter(r=>r.ownerId===actor.id)}}
  if(actor.role!=='owner'){s={...s,records:{...Object.fromEntries(Object.entries(s.records).filter(([kind])=>!kind.startsWith('stripe'))),event:rows(s,'event').filter(r=>!r.kind.startsWith('stripe.'))}};s=withoutFleetApproval(s)}
+ if(actor.role!=='owner')s={...s,records:{...Object.fromEntries(Object.entries(s.records).filter(([kind])=>!kind.startsWith('retail'))),event:rows(s,'event').filter(r=>!r.kind.startsWith('retail.'))}}
  if(actor.role==='owner')s={...s,records:{...s.records,deposit:rows(s,'deposit').map(d=>({...d,balance:depositBalance(s,d)}))}}
  if(actor.role!=='owner')s={...s,records:{...s.records,handover:rows(s,'handover').map(r=>{const {accountTerms,...settlement}=r.settlement;return {...r,settlement}})}}
  if(actor.role!=='owner'){const {audit:_audit,...records}=s.records;s={...s,records}}
@@ -273,6 +276,7 @@ function formInput(data:FormData) {
  returnFormInput(data,input)
  warrantyFormInput(input)
  receivablesInput(input)
+ retailFormInput(input)
  depositFormInput(input)
  intakeFormInput(data,input)
  customerFormInput(data,input)
@@ -482,6 +486,7 @@ async function workshopResponse(request:Request,original:Bindings,execution:Pick
    if(command==='diagnosisLink.create')return page('Customer inspection link',`<section class="card"><p>Copy this read-only link to the customer yourself. Mallet has not sent it, and it will not be shown again.</p><pre>${e(result.url)}</pre><p>Expires ${when(result.expiresAt)}</p><p class="card-foot"><a href="/app/jobs/${e(result.jobId)}#diagnosis">Return to the repair</a></p></section>`,actor,200,{section:'jobs'})
    if(command==='agent.revoke')return redirect('/app/data')
    if(['tax.certificate','tax.assignJurisdiction','tax.suppliesRule','tax.discountRule','tax.adjustEstimate'].includes(command))return redirect('/app/tax/custody')
+   if(command.startsWith('retail.'))return redirect('/app/retail')
    if(command==='tax.configure')return redirect('/app/tax?saved=1')
    if(command==='handoff.decline')return redirect('/app/jobs')
    if(['chasePolicy.save','chaseOptOut.record','chaseOptOut.lift'].includes(command)||command==='chaseTask.resolve'&&!input.jobId)return redirect('/app/approvals#'+(command==='chasePolicy.save'?'chase-policy':command==='chaseTask.resolve'?'chase-tasks':'chase-opt-outs'))
@@ -578,6 +583,7 @@ async function workshopResponse(request:Request,original:Bindings,execution:Pick
   if(path==='/app/settings/balance-reviews'){if(actor.role!=='owner')throw new HttpError(403,'owner_required');return page('Balance review settings',balanceReviewSettings(state),actor,200,frame('data'))}
   if(path==='/api/mallet/receivables/recovery'){if(actor.role!=='owner')throw new HttpError(403,'owner_required');const reviews=balanceReminderReviews(state,url.searchParams.get('accountId')??'');if(!await env.DB.prepare(`SELECT 1 AS ok WHERE (${auth.authority.sql})`).bind(...auth.authority.params).first())throw new HttpError(403,'owner_required');return json(reviews)}
   if(path==='/app/receivables'){if(actor.role!=='owner')throw new HttpError(403,'owner_required');const content=receivablesPage(state,url.searchParams.get('accountId')??'',utcDate(url.searchParams.get('asOf')??new Date().toISOString().slice(0,10)),url.searchParams.get('recovery')==='balance');if(!await env.DB.prepare(`SELECT 1 AS ok WHERE (${auth.authority.sql})`).bind(...auth.authority.params).first())throw new HttpError(403,'owner_required');return page('Commercial receivables',content,actor,200,frame('customers'))}
+  if(['/app/retail','/api/mallet/retail'].includes(path)){if(actor.role!=='owner')throw new HttpError(403,'owner_required');return path.startsWith('/api/')?json(retailReport(state)):page('Retail counter',retailPage(state),actor,200,frame('inventory'))}
   if(path==='/app/tax/filing'){if(actor.role!=='owner')throw new HttpError(403,'owner_required');const today=new Date().toISOString().slice(0,10);return page('Filing-period tax preview',filingPage(state,url.searchParams.get('from')??today.slice(0,8)+'01',url.searchParams.get('to')??today),actor,200,frame('tax'))}
   if(path==='/api/mallet/tax/filing'){if(actor.role!=='owner')throw new HttpError(403,'owner_required');return json(filingTax(state,url.searchParams.get('from'),url.searchParams.get('to')))}
   if(path==='/api/mallet/receivables'){if(actor.role!=='owner')throw new HttpError(403,'owner_required');return json(accountStatement(state,url.searchParams.get('accountId')??'',utcDate(url.searchParams.get('asOf')??new Date().toISOString().slice(0,10))))}

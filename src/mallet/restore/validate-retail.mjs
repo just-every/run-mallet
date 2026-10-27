@@ -1,0 +1,21 @@
+// Reject inconsistent cash receipts in private staging before restoring stock.
+export async function validateRetail({table,rejectIf}){
+ const records=table('mallet_records');if(!records)return
+ const j=(field,a='r')=>`json_extract(${a}.value,'$.${field}')`
+ const whole=(field,min=0,max=1_000_000_000)=>`(json_type(r.value,'$.${field}') IS NOT 'integer' OR ${j(field)} NOT BETWEEN ${min} AND ${max})`
+ const ref=(kind,id,extra='')=>`EXISTS(SELECT 1 FROM ${records} target WHERE target.kind='${kind}' AND target.id=${id} ${extra})`
+ const check=(kind,code,condition)=>rejectIf('retail_'+code,`SELECT 1 FROM ${records} r WHERE kind='${kind}' AND (${condition})`)
+ for(const kind of ['retailSale','retailReturn']){
+  await check(kind,'shape',`r.revision<>1 OR ${j('currency')} IS NOT 'USD' OR ${j('jobId')} IS NOT NULL OR ${whole('quantity',1,1000)} OR ${whole('quantityMilli',1000,1000000)} OR ${j('quantityMilli')}<>${j('quantity')}*1000 OR ${whole('subtotalCents')} OR ${whole('salesTaxCents')} OR ${whole('totalCents')} OR ${j('totalCents')}<>${j('subtotalCents')}+${j('salesTaxCents')} OR json_type(r.value,'$.request') IS NOT 'object' OR json_type(r.value,'$.reference') IS NOT 'text' OR length(trim(${j('reference')}))=0 OR ${j('by.role')} IS NOT 'owner' OR json_type(r.value,'$.by.id') IS NOT 'text' OR julianday(${j('at')}) IS NULL`)
+  await rejectIf('retail_reference',`SELECT 1 FROM ${records} WHERE kind='${kind}' GROUP BY json_extract(value,'$.reference') HAVING count(*)>1`)
+  for(const [field,target] of [['itemId','stockItem'],['binId','stockBin']])await check(kind,'reference',`NOT ${ref(target,j(field))}`)
+  await check(kind,'movement',`NOT ${ref('stockMovement',j('movementId'),`AND ${j('source.kind','target')}='${kind}' AND ${j('source.id','target')}=r.id AND ${j('itemId','target')}=${j('itemId')} AND ${j('binId','target')}=${j('binId')} AND ${j('source.lotId','target')} IS ${j('lotId')} AND ${j('deltaMilli','target')}=${kind==='retailSale'?'-':''}${j('quantityMilli')}`)}`)
+  await check(kind,'lot',`${j('lotId')} IS NOT NULL AND NOT ${ref('stockLot',j('lotId'),`AND ${j('itemId','target')}=${j('itemId')} AND ${j('binId','target')}=${j('binId')} AND COALESCE(${j('serial','target')},'')=''`)}`)
+ }
+ await check('retailSale','sale_amounts',`${whole('unitCents',0,100_000_000)} OR ${whole('cashCents')} OR ${whole('changeCents')} OR ${whole('taxRateMillionths',0,1000000)} OR json_type(r.value,'$.taxable') NOT IN ('true','false') OR ${j('subtotalCents')}<>${j('quantity')}*${j('unitCents')} OR ${j('salesTaxCents')}<>CASE WHEN ${j('taxable')} THEN CAST((${j('subtotalCents')}*${j('taxRateMillionths')}+500000)/1000000 AS INTEGER) ELSE 0 END OR ${j('cashCents')}-${j('changeCents')}<>${j('totalCents')}`)
+ const allocated=q=>`CAST((${j('salesTaxCents','target')}*(${q})+CAST(${j('quantity','target')}/2 AS INTEGER))/${j('quantity','target')} AS INTEGER)`
+ await check('retailReturn','return_amounts',`${whole('returnedBefore',0,999)} OR json_type(r.value,'$.reason') IS NOT 'text' OR length(trim(${j('reason')}))=0 OR NOT ${ref('retailSale',j('saleId'),`AND ${j('itemId','target')}=${j('itemId')} AND ${j('binId','target')}=${j('binId')} AND ${j('lotId','target')} IS ${j('lotId')} AND ${j('returnedBefore')}+${j('quantity')}<=${j('quantity','target')} AND ${j('subtotalCents')}=${j('quantity')}*${j('unitCents','target')} AND ${j('salesTaxCents')}=${allocated(j('returnedBefore')+'+'+j('quantity'))}-${allocated(j('returnedBefore'))}`)}`)
+ await rejectIf('retail_return_sequence',`SELECT 1 FROM ${records} r WHERE kind='retailReturn' AND ${j('returnedBefore')}<>(SELECT COALESCE(SUM(json_extract(other.value,'$.quantity')),0) FROM ${records} other WHERE other.kind='retailReturn' AND json_extract(other.value,'$.saleId')=${j('saleId')} AND json_extract(other.value,'$.returnedBefore')<${j('returnedBefore')})`)
+ await rejectIf('retail_return_duplicate',`SELECT 1 FROM ${records} WHERE kind='retailReturn' GROUP BY json_extract(value,'$.saleId'),json_extract(value,'$.returnedBefore') HAVING count(*)>1`)
+ await rejectIf('retail_orphan_movement',`SELECT 1 FROM ${records} r WHERE kind='stockMovement' AND ${j('source.kind')} IN ('retailSale','retailReturn') AND NOT EXISTS(SELECT 1 FROM ${records} target WHERE target.kind=${j('source.kind')} AND target.id=${j('source.id')} AND ${j('movementId','target')}=r.id)`)
+}
