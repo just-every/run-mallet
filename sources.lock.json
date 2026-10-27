@@ -572,11 +572,11 @@
       "executable": false
     },
     "ACCEPTANCE.md": {
-      "sha256": "98deb782a7a22468c45c871feeab53561aa6cf94b3d6e594bf623abc2766a8fe",
+      "sha256": "c2741c7d1655432c6357e03952c38b3c22358ed59b14b2579e8a37e1087261f3",
       "executable": false
     },
     "AGENTS.md": {
-      "sha256": "766af90316f0b880de7a2a6295313befb67d1b638a22e2b8004887a5244650e8",
+      "sha256": "b8625b86d864607ae97b3655003b4b6aafa1255461c9df65a9646be4f7a99208",
       "executable": false
     },
     "base-copies.json": {
@@ -584,7 +584,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "a37ad2f4e4478da35e24a9060db3841e0d52eec3cbe4a162a184675906b5455b",
+      "sha256": "50a9638fc87c9d0ee50b3d9d164a8e00dfb9ae1e0ff65e47336e0c540ab4b9bf",
       "executable": false
     },
     "deploy-demo.json": {
@@ -613,6 +613,10 @@
     },
     "docs/bookings-and-history.md": {
       "sha256": "81cce5556283018c56b647d95a1effa2f091be232c89eb23c0f573278d00e3cd",
+      "executable": false
+    },
+    "docs/CLAIMS.md": {
+      "sha256": "063fef00a0bacfdf709524a8228cd7bfcea64b4f098d0f4c5e2a22c7413ea552",
       "executable": false
     },
     "docs/complete-a-repair.md": {
@@ -1247,6 +1251,10 @@
       "sha256": "53f62f5e7a1a6d9b7a97ee4ecbb5faa107513914dbab9a78fb5e11e8f5afc96e",
       "executable": false
     },
+    "scripts/contract-docs.mjs": {
+      "sha256": "463eef29894501b564381a26fc7676fba965da5f9e067d890197c7181d3ab17c",
+      "executable": false
+    },
     "scripts/delivery/base/artifact.mjs": {
       "sha256": "129f210f1556e816ba94ffe74359ac553cd26466aaf8c6c299765e9cea29aa07",
       "executable": false
@@ -1560,7 +1568,7 @@
       "executable": false
     },
     "src/mallet/api/commands.ts": {
-      "sha256": "defdcd9e269bdee13f8b5401e756660165fcda0874f708cbec22765766d62d7b",
+      "sha256": "5dfef98d603a9a644c08a45b7c3e0d138e1fad70a9b05a1291e5b725c9edaae2",
       "executable": false
     },
     "src/mallet/api/resources.ts": {
@@ -5092,7 +5100,7 @@
       "executable": false
     },
     "tests/support/shop-api-journey.mjs": {
-      "sha256": "1916795956507156254e2c489668e29b5f2d34fcfd1d82e213560937f3a97da0",
+      "sha256": "a37ff7d04383b87090d70142555608afab72a2e3533275e059af34bd84c9f301",
       "executable": false
     },
     "tests/support/special-part-journey.mjs": {
@@ -5204,7 +5212,7 @@
       "executable": false
     },
     "verification.json": {
-      "sha256": "b9115e7e7347430c95c6ef5d522eb96fffce58fe031db016ef439565cd657157",
+      "sha256": "15991ad6e81afe99b36163aa76bf6a635869d2658fe9b2ff5e4817c5045e182e",
       "executable": false
     },
     "VERIFY-WORKFLOW.md": {
