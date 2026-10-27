@@ -584,7 +584,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "9a5872b62a15d3443370822a74ffcb0304d2e5929719e5bc20430ae327320a25",
+      "sha256": "9c4ee3ddbdb57d9ac55f2975b707d90d0a8a78cfb7b774fa341ce28b72b02997",
       "executable": false
     },
     "deploy-demo.json": {
@@ -712,7 +712,7 @@
       "executable": false
     },
     "docs/shop-api.md": {
-      "sha256": "61c17f977c5cdfe75462688b233f111c090dd5a072137c8396890bc6e5fcbbab",
+      "sha256": "e0188375ceee85b6c5fc653384b205353073f8841548915f8b30e7d4167b838c",
       "executable": false
     },
     "docs/site.json": {
@@ -1221,6 +1221,10 @@
     },
     "rer-setup.json": {
       "sha256": "78fe71aeeb388f03db6f61e962fb8a863bdae473fd7f2e815f6b52db9540992a",
+      "executable": false
+    },
+    "RULINGS.md": {
+      "sha256": "4e1847915e322d3cb3593ac2c5690a39f29737b33285337ed46fbccb9dcec6e4",
       "executable": false
     },
     "RUN-LOCALLY.md": {

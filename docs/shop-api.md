@@ -33,8 +33,13 @@ also invalidates the client. Each read, write and retry rechecks current authori
 Conservative interim policy: only a fresh-confirmed current owner may issue or
 revoke these installation-local clients. Administrators, delegated operators,
 legacy preparation keys and clients cannot manage them. No financial-read or
-decision capability exists in this slice. This adopted API authority policy
-awaits ct approval; API-001 remains PARTIAL.
+decision capability exists in this slice. CT approved this interim floor with
+riders on 27 October 2026; API-001 remains PARTIAL. See RULINGS.md and the
+authority ruling in CONTRACT.md. Owner-only management is an interim limit:
+audited, revocable staff delegation, bounded renewal or rotation, usable stock
+and order reads, and separately scoped receiving, allocation and fulfilment
+writes remain required. Future money reads and decisions need separate explicit
+capabilities, current consent, revisions and provider authority.
 
 ## Read resources
 
@@ -124,8 +129,11 @@ Client tokens, hashes, grants and retry receipts are installation-local and
 excluded from archives. A restored installation has its own native owner and
 must issue fresh clients; archived actor IDs remain attribution only. Product
 data and external IDs survive restoration, but archived credentials cannot read
-or replay a write. Retry receipts remain until local reset; this slice adds no
-automatic retention or deletion schedule.
+or replay a write. A new destination owner issues fresh grants and reconciles
+retained product state before resubmitting work. Retry receipts do not cross
+restoration, so a resubmission is not deduplicated against the old installation.
+Retry receipts remain until local reset; this slice adds no automatic retention
+or deletion schedule.
 
 Native integration settings and recovery screens, delegated operator rights,
 complete sentence-level DONE evidence and ct approval remain held under
