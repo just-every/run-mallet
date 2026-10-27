@@ -77,20 +77,28 @@ export async function patternJourney(h,f,w){
  assert.deepEqual(reviewed.patternReviews.map(r=>r.decision),['rejected','rejected','retained'])
 
  // A valid captured packet must become stale when a cited diagnosis revision changes.
- const captured=await h.api(url),d=await h.command('diagnosis.share',{diagnosisId:diagnosis.id,version:diagnosis.version,revision:1,share:true})
+ const reworkJob=(await h.state()).records.job.find(j=>j.id===second.jobId)
+ const diagnosticInput={jobId:reworkJob.id,version:reworkJob.version,complaint:'Technician rechecked the returned squeal',measurements:[{name:'Pad thickness',value:3.1,unit:'mm'}],testMethod:'Independent caliper recheck'}
+ const mutableDiagnosis=await h.command('diagnosis.record',diagnosticInput)
+ const captured=await h.api(url)
+ const d=await h.command('diagnosis.record',{...diagnosticInput,diagnosisId:mutableDiagnosis.id,diagnosisVersion:mutableDiagnosis.version,measurements:[{name:'Pad thickness',value:3,unit:'mm'}]})
+ const revisedSources=(await h.state()).records
  await h.command('warranty.patternReview',{...review,version:reviewed.version,sourceKey:captured.sourceKey},{status:409})
+ assert.deepEqual((await h.state()).records,revisedSources,'Captured stale review makes no writes')
  const claim={warrantyId:w.id,version:reviewed.version,claimant:'Cedar Parts',reference:'synthetic-mallet-new-claim',amountCents:1,evidence:'Human reviewed cited cost',sourceKey:captured.sourceKey}
  // Use an unallocated covered case so stale evidence, rather than a cost cap, refuses approval.
  let payable=await h.command('warranty.decide',{warrantyId:second.id,version:second.version,outcome:'covered',responsibility:'supplier',reason:'Human coverage approval'})
  const {noChargeWork}=await import('./warranty-journey.mjs'),work=await noChargeWork(h,payable)
  payable=await h.command('warranty.cost',{warrantyId:payable.id,version:payable.version,actualId:work.actuals[0].id,amountCents:100,evidence:'Recorded replacement cost'})
  const claimPacket=await h.api('/api/mallet/warranty-patterns/'+payable.id)
- await h.command('diagnosis.share',{diagnosisId:d.id,version:d.version,share:false})
+ await h.command('diagnosis.record',{...diagnosticInput,version:(await h.state()).records.job.find(j=>j.id===reworkJob.id).version,diagnosisId:d.id,diagnosisVersion:d.version,measurements:[{name:'Pad thickness',value:2.9,unit:'mm'}]})
  const beforeStaleClaim=(await h.state()).records
  await h.command('warranty.claim',{...claim,warrantyId:payable.id,version:payable.version,sourceKey:claimPacket.sourceKey},{status:409})
  assert.deepEqual((await h.state()).records,beforeStaleClaim,'Captured stale claim makes no writes')
  const freshPacket=await h.api('/api/mallet/warranty-patterns/'+payable.id)
  payable=await h.command('warranty.claim',{...claim,warrantyId:payable.id,version:payable.version,sourceKey:freshPacket.sourceKey},{as:admin.cookie})
+ const claimAudit=(await h.api('/api/mallet/audit?action=warranty.claim')).entries
+ assert.ok(claimAudit.some(e=>e.actor.id===admin.id&&e.changes.some(c=>c.kind==='warranty'&&c.id===payable.id&&c.beforeRevision===beforeStaleClaim.warranty.find(w=>w.id===payable.id).version&&c.afterRevision===payable.version)),'Detected-cluster claim approval is audited with exact revisions')
  assert.equal(payable.claims[0].status,'prepared');assert.deepEqual(payable.claims[0].history,[]);citationSchema(payable.claims[0].patternSources)
  assert.deepEqual(new Set(payable.claims[0].patternMembers),new Set([w.id,second.id]))
  assert.match(payable.claims[0].label,/not submitted/)
@@ -110,6 +118,8 @@ export async function patternJourney(h,f,w){
   for(const recordKind of ['diagnosis','quality','invoice','export','payment','stockSupplierCredit'])assert.deepEqual(afterAction[recordKind],beforeAction[recordKind],'Approval does not execute or post: '+recordKind)
  }
  assert.deepEqual(reviewed.patternActions.map(a=>a.kind),['customerClaim','correctiveAction'])
+ const actionAudit=(await h.api('/api/mallet/audit?action=warranty.patternAction')).entries
+ assert.equal(actionAudit.length,2);assert.ok(actionAudit.every(e=>e.actor.id===admin.id&&e.changes.some(c=>c.kind==='warranty'&&c.id===w.id&&c.afterRevision===c.beforeRevision+1)))
  const financialBefore=(await h.state()).records,backup=await archive(h),fresh=await installation({bindings:{OWNER_EMAIL:'pattern-erasure@example.test'}})
  try{
   await restore(fresh,backup)
