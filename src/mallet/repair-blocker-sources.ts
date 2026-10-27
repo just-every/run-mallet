@@ -9,7 +9,7 @@ export type Citation={kind:string;id:string;version:number;revision?:number;item
 export type RepairBlocker={key:string;kind:'evidence'|'consent'|'backorder';title:string;source:Citation;action:{label:string;href:string}}
 const related=(s:State,kind:string,jobId:string)=>rows(s,kind).filter(r=>r.jobId===jobId).sort((a,b)=>a.id.localeCompare(b.id))
 export function citation(kind:string,row:Row,jobId:string):Citation {
- const base='/app/jobs/'+encodeURIComponent(jobId),revision=row.revisions?.at(-1)?.n??row.n??row.template?.revision??row.template?.n
+ const base='/app/jobs/'+encodeURIComponent(jobId),revision=row.revisions?.at(-1)?.n??row.n??row.revision??row.template?.revision??row.template?.n
  const href=kind==='purchaseOrder'||kind==='purchaseReceipt'?'/app/purchasing#po-'+encodeURIComponent(row.purchaseId??row.id):kind==='intakeForm'||kind==='intake'||kind==='intakeComparison'?base+'/intake':kind==='diagnosis'?base+'#diagnosis':kind==='inspection'?base+'#inspections':kind==='specialPart'?base+'#special-parts':kind.startsWith('promise')?base+'#promises':base
  return {kind,id:row.id,version:row.version,...(Number.isSafeInteger(revision)?{revision}:{}),label:kind+' · version '+row.version+(Number.isSafeInteger(revision)?' · revision '+revision:''),href}
 }

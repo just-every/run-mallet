@@ -2,7 +2,8 @@ import assert from 'node:assert/strict'
 import {randomBytes} from 'node:crypto'
 import {mkdir} from 'node:fs/promises'
 import {chromium} from '@playwright/test'
-import {installation} from './harness.mjs'
+import {installation,archive,restore} from './harness.mjs'
+import {shopSetup} from './support/diagnosis-journey.mjs'
 import {publicDoor} from './support/portable-repair.mjs'
 import {blockerFixture} from './support/blocker-journey.mjs'
 
@@ -12,7 +13,7 @@ const cookies=(cookie,origin)=>cookie.split('; ').map(pair=>({name:pair.slice(0,
 // and existing proposal approval, captured with real assigned repair evidence.
 export async function blockerBrowser(){
  const h=await installation({entry:'tests/dev-worker.ts',network:true,assets:true,bindings:{AUTH_LOCAL:'true',RER_DEV_KEY:randomBytes(32).toString('base64url')}})
- let browser
+ let browser,fresh
  try{
   const f=await blockerFixture(h,{person:publicDoor(h.origin,h.owner).person}),errors=[]
   browser=await chromium.launch({headless:true,args:['--use-mock-keychain','--password-store=basic']})
@@ -131,6 +132,58 @@ export async function blockerBrowser(){
   assert.equal(backorder.current.progress.recordedActuals,unchanged.actuals.length);assert.equal(backorder.current.progress.remainingHours,1)
   assert.equal((await h.state()).records.specialPart.find(r=>r.id===f.backorder.part.id).receipt,null)
   await shot('09-native-proposal-approved-part-still-pending')
+  // Follow actual native source outcomes before reconciling the packet.
+  for(const itemId of ['point-a','point-b']){
+   await p.goto(h.origin+'/app/jobs/'+f.evidence.job.id)
+   const observation=form(p,'inspection.record').filter({has:p.locator(`input[name="itemId"][value="${itemId}"]`)})
+   await observation.locator('[name="outcome"]').selectOption('green')
+   await observation.locator('[name="reason"]').fill('Customer supplied access; the assigned point was physically inspected')
+   await submit(p,observation,'Record inspection point')
+  }
+  await p.goto(f.evidence.form.url)
+  const terms=p.locator('form:has(input[name="typedName"])')
+  await terms.locator('[name="symptom"]').fill('Rumbling from the rear axle at highway speed')
+  await terms.locator('[name="concern"]').fill('Starts after about ten minutes of driving')
+  await terms.locator('[name="typedName"]').fill(f.evidence.asset.customerName)
+  for(const checkbox of await terms.locator('input[type="checkbox"]').all())await checkbox.check()
+  await submit(p,terms,'Sign terms & request copy')
+  v=await refresh(f.evidence.job)
+  assert.equal(v.current.blockers.length,0);assert.ok(v.tasks.length>=3&&v.tasks.every(t=>t.resolution))
+  await shot('10-evidence-source-cleared')
+  await p.goto(h.origin+'/app/jobs/'+f.consent.job.id)
+  const decision=form(p,'estimate.authorise')
+  for(const checkbox of await decision.locator('input[name="lineIds"]').all())await checkbox.check()
+  await decision.locator('[name="method"]').selectOption('signed')
+  await decision.locator('[name="evidence"]').fill('Customer signed exact printed revision 2, retained with this visit')
+  await submit(p,decision,'Record customer authorization')
+  consent=await refresh(f.consent.job)
+  assert.equal(consent.current.blockers.length,0);assert.ok(consent.tasks.length&&consent.tasks.every(t=>t.resolution))
+  await shot('11-exact-customer-decision-recorded')
+  await p.goto(h.origin+'/app/jobs/'+f.backorder.job.id)
+  await p.locator('#special-parts').getByText('Record physical receipt',{exact:true}).click()
+  const receipt=form(p,'specialPart.receive')
+  await receipt.locator('[name="receivedAt"]').fill(new Date(Date.now()-60000).toISOString())
+  await receipt.locator('[name="receiptReference"]').fill('Bearing counted and matched at the counter, receiving slip 876')
+  await submit(p,receipt,'Confirm physical receipt')
+  backorder=await refresh(f.backorder.job)
+  assert.equal(backorder.current.blockers.length,0);assert.ok(backorder.tasks.length&&backorder.tasks.every(t=>t.resolution))
+  assert.equal(backorder.current.progress.remainingHours,1);assert.equal(backorder.current.progress.recordedActuals,1)
+  await shot('12-receipt-cleared-labor-still-open')
+  const saved=await archive(h)
+  fresh=await installation({entry:'tests/dev-worker.ts',network:true,assets:true,bindings:{AUTH_LOCAL:'true',RER_DEV_KEY:randomBytes(32).toString('base64url'),OWNER_EMAIL:'synthetic-mallet-897@example.test'}})
+  await restore(fresh,saved);await shopSetup(fresh)
+  const restored=(await fresh.state()).records,original=(await h.state()).records
+  for(const kind of ['repairBlockerPacket','repairBlockerTask'])assert.deepEqual(restored[kind],original[kind])
+  const recoveredContext=await browser.newContext({viewport:{width:1440,height:1000}})
+  await recoveredContext.addCookies(cookies(fresh.owner,fresh.origin))
+  const recovered=await recoveredContext.newPage()
+  for(const [index,repair] of f.repairs.entries()){
+   await recovered.goto(fresh.origin+blockerPath(repair.job))
+   const history=recovered.getByText(`Handler, acknowledgment and resolution history (${restored.repairBlockerTask.filter(t=>t.jobId===repair.job.id).length})`,{exact:true})
+   await history.click()
+   assert.ok((await recovered.locator('main').innerText()).includes('Resolution:'))
+   await shot('13-recovered-source-history-'+index,recovered)
+  }
   assert.deepEqual(errors,[])
- }finally{try{await browser?.close()}finally{await h.close()}}
+ }finally{try{await browser?.close()}finally{await fresh?.close();await h.close()}}
 }
