@@ -1,4 +1,4 @@
-import {statusNoticeCommand} from './status-notice-door'
+import {statusNoticeCommand,statusNoticeState} from './status-notice-door'
 import {internalStatusCommands} from './status-notices'
 import {statusNoticePage} from './ui/status-notices'
 import {profitabilityReport} from './reports/profitability'
@@ -545,7 +545,7 @@ async function workshopResponse(request:Request,original:Bindings,execution:Pick
   const handoverMatch=path.match(/^\/app\/handovers\/([^/]+)\/print$/)
   if(handoverMatch){if(!human(actor))throw new HttpError(403,'manager_required');const receipt=rows(state,'handover').find(r=>r.id===handoverMatch[1]);if(!receipt)throw new HttpError(404,'not_found');return page('Handover receipt',`<div class="narrow">${handoverReceipt(receipt)}</div>`,actor,200,frame('jobs'))}
   const noticesMatch=path.match(/^\/app\/jobs\/([^/]+)\/notifications$/)
-  if(noticesMatch){if(actor.role!=='owner')throw new HttpError(403,'owner_required');const job=rows(state,'job').find(j=>j.id===noticesMatch[1]);if(!job)throw new HttpError(404,'not_found');return page('Status & pickup',statusNoticePage(state,job),actor,200,frame('jobs'))}
+  if(noticesMatch){if(actor.role!=='owner')throw new HttpError(403,'owner_required');const job=rows(state,'job').find(j=>j.id===noticesMatch[1]);if(!job)throw new HttpError(404,'not_found');return page('Status & pickup',statusNoticePage(await statusNoticeState(env,state,actor),job),actor,200,frame('jobs'))}
   const reviewMatch=path.match(/^\/app\/jobs\/([^/]+)\/reviews$/)
   if(reviewMatch){if(actor.role!=='owner')throw new HttpError(403,'owner_required');const job=rows(state,'job').find(j=>j.id===reviewMatch[1]);if(!job)throw new HttpError(404,'not_found');return page('Review & satisfaction',`<div class="narrow"><p><a href="/app/jobs/${e(job.id)}/return">Back to documented handover</a></p>${reviewPanel(await reviewState(env,state,actor),job,actor)}</div>`,actor,200,frame('jobs'))}
   const returnMatch=path.match(/^\/app\/jobs\/([^/]+)\/return$/)

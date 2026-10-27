@@ -7,6 +7,11 @@ import {e} from './ui/common'
 
 const scheduler={id:'mallet-status-mail',name:'Repair status email',role:'system' as const}
 const ownerGrant=(actor:Actor,authority:Authority):Authority=>({sql:`(${authority.sql}) AND EXISTS(SELECT 1 FROM oa_operators WHERE id=? AND role='owner' AND status='active')`,params:[...authority.params,actor.id]})
+export async function statusNoticeState(env:Bindings,state:Awaited<ReturnType<typeof load>>,actor:Actor){
+ const local=(await env.DB.prepare("SELECT a.consent_id FROM mallet_status_authority a JOIN oa_operators o ON o.id=a.owner_id WHERE o.id=? AND o.version=a.owner_version AND o.role='owner' AND o.status='active'").bind(actor.id).all<{consent_id:string}>()).results
+ const ids=new Set(local.map(r=>r.consent_id))
+ return {...state,records:{...state.records,statusConsent:rows(state,'statusConsent').map(c=>({...c,localAuthority:ids.has(c.id)}))}}
+}
 export async function statusNoticeCommand(original:Bindings,actor:Actor,authority:Authority,command:string,input:any){
  const env=runtimeBindings(original)
  if(actor.role!=='owner')fail('FORBIDDEN','Only the current owner manages repair-status email.',null,403)

@@ -93,7 +93,17 @@ export async function statusStopsJourney(){
  }finally{await h.close()}
  // Recorded collection suppresses the uncollected-property task.
  const collected=await installation();try{
-  const f=await statusFixture(collected),q=await f.prepare(),plan=await f.parts(q);await f.ready(q,plan);await f.approve('ready')
+  const f=await statusFixture(collected),q=await f.prepare(),plan=await f.parts(q);await f.ready(q,plan)
+  const recovered=await installation();try{
+   await restore(recovered,await archive(collected));await shopSetup(recovered)
+   const page=await recovered.request('/app/jobs/'+f.job.id+'/notifications');assert.equal(page.status,200)
+   assert.doesNotMatch(await page.text(),/value="statusNotice.approve"/,'Archived permission cannot offer runnable approval controls')
+   await recovered.command('statusNotice.approve',await f.approval('ready'),{status:409})
+   const consent=await recovered.command('statusNotice.consent',{...f.consentInput,version:(await f.current()).version,sourceEvidence:'synthetic-mallet-953: fresh destination customer permission'})
+   await recovered.command('statusNotice.approve',{...await f.approval('ready'),consentId:consent.id,version:consent.version})
+   await recovered.cron(noticeAt(f.base,.1));assert.equal(recovered.messages.filter(m=>m.subject==='Your repair: ready').length,1,'Fresh destination permission and approval permit the new eligible event')
+  }finally{await recovered.close()}
+  await f.approve('ready')
   let bill=await collected.command('invoice.prepare',{jobId:f.job.id,version:(await f.current()).version});bill=await collected.command('invoice.approve',{invoiceId:bill.id,version:bill.version})
   await collected.command('flow.collect',await handoverInput(collected,f.job.id,'Elena Torres'))
   await collected.cron(noticeAt(f.base,4));assert.equal(((await collected.state()).records.subtask??[]).filter(t=>t.kind==='pickup-followup').length,0);assert.equal(collected.messages.filter(m=>m.subject==='Your repair: ready').length,0)

@@ -572,7 +572,7 @@
       "executable": false
     },
     "ACCEPTANCE.md": {
-      "sha256": "ecd489dd2bf736828055c2d7ded724a6964f7459ff4457ab10a8bbd4fc005ffd",
+      "sha256": "89408baf040e22e99aa310d2f9b3dd46be7c822308deff5bae51ab77dd56e071",
       "executable": false
     },
     "AGENTS.md": {
@@ -1756,7 +1756,7 @@
       "executable": false
     },
     "src/mallet/http.ts": {
-      "sha256": "5911fd2ed9d1edb7b720baabdef1ccbbc47f104f062463acd417d185bfd49ee3",
+      "sha256": "e6826f51900f9eed43e9a6664572257bbc477099f0981cd9137c01798c1c2240",
       "executable": false
     },
     "src/mallet/imports/context.ts": {
@@ -2252,7 +2252,7 @@
       "executable": false
     },
     "src/mallet/status-notice-door.ts": {
-      "sha256": "c62c7c86faa13253d969b26efb8e1a93af902b96c2bccf5fd9a643140abcd9cf",
+      "sha256": "102214cc77e12f5c3ec2a30be3a9e07412d35d9190bda1b7020cf817b442c343",
       "executable": false
     },
     "src/mallet/status-notices.ts": {
@@ -2624,7 +2624,7 @@
       "executable": false
     },
     "src/mallet/ui/status-notices.ts": {
-      "sha256": "a46da2a3e0416638b8de8f0fe2692b2091f3dda89edd80e8fc044d85ee2f9ad1",
+      "sha256": "45cd7b9e065e1731ebe410571a2f94413f0d0427974d42998bec4c95ff66c142",
       "executable": false
     },
     "src/mallet/ui/stock-trace.ts": {
@@ -5068,7 +5068,7 @@
       "executable": false
     },
     "tests/support/status-notices-journey.mjs": {
-      "sha256": "501c22cafeba3ec89cbc06b28fd0f8ecd1aceb8775cf707c2edc5096a553111d",
+      "sha256": "b721a74b479b354bc5343f4b31151d2f5c529e0a6ce8980cdbf0f0497133da43",
       "executable": false
     },
     "tests/support/stock-consumption-journey.mjs": {
