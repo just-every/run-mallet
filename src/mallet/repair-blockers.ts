@@ -4,17 +4,21 @@ import {currentRoutingHandler} from './routing'
 
 export const repairBlockerCommands=['blocker.refresh','blocker.assign','blocker.acknowledge'] as const
 const packetFor=(s:State,jobId:string)=>rows(s,'repairBlockerPacket').find(r=>r.jobId===jobId)
-export function repairBlockerView(s:State,jobId:string,people:any[]){
- const job=find(s,'job',jobId),current=blockerProjection(s,job),packet=packetFor(s,job.id)
- const tasks:(Row&{handlerActive:boolean;acknowledgmentCurrent:boolean})[]=rows(s,'repairBlockerTask').filter(r=>r.jobId===job.id).map(task=>({...task,handlerActive:people.some(p=>p.id===task.handler.id),acknowledgmentCurrent:task.acknowledgment?.basis===current.basis}))
+function currentProjection(s:State,job:Row){
+ const current=blockerProjection(s,job)
  // Keep missing source conditions visible rather than treating disappearance as success.
- for(const task of tasks)if(!task.resolution&&!current.blockers.some(b=>b.key===task.key)&&!blockerClearance(s,job,task))current.blockers.push({key:task.key,kind:task.kind,title:'Retained blocker source needs review; fulfillment is unavailable.',source:task.source,action:{label:'Review original source',href:task.source.href}})
+ for(const task of rows(s,'repairBlockerTask').filter(t=>t.jobId===job.id))if(!task.resolution&&!current.blockers.some(b=>b.key===task.key)&&!blockerClearance(s,job,task))current.blockers.push({key:task.key,kind:task.kind,title:'Retained blocker source needs review; fulfillment is unavailable.',source:task.source,action:{label:'Review original source',href:task.source.href}})
+ return current
+}
+export function repairBlockerView(s:State,jobId:string,people:any[]){
+ const job=find(s,'job',jobId),current=currentProjection(s,job),packet=packetFor(s,job.id)
+ const tasks:(Row&{handlerActive:boolean;acknowledgmentCurrent:boolean})[]=rows(s,'repairBlockerTask').filter(r=>r.jobId===job.id).map(task=>({...task,handlerActive:people.some(p=>p.id===task.handler.id),acknowledgmentCurrent:task.acknowledgment?.basis===current.basis}))
  return {job,current,packet:packet??null,tasks,stale:!packet||packet.revisions.at(-1).basis!==current.basis}
 }
 export const repairBlockers:Handler=(c,command,p)=>{
  if(!(repairBlockerCommands as readonly string[]).includes(command))return
  if(!['owner','admin'].includes(c.actor.role))fail('FORBIDDEN','Only a current owner or admin may manage a blocker packet.',null,403)
- const job=find(c.s,'job',p.jobId),current=blockerProjection(c.s,job),packet=packetFor(c.s,job.id),people=p.activePeople??[]
+ const job=find(c.s,'job',p.jobId),current=currentProjection(c.s,job),packet=packetFor(c.s,job.id),people=p.activePeople??[]
  if(p.basis!==current.basis)fail('STALE_PACKET','Source records changed. Refresh the blocker packet before continuing.')
  if(integer(p.packetVersion,'packetVersion',0)!==(packet?.version??0))fail('VERSION','The saved blocker packet changed. Reload before continuing.')
  if(command==='blocker.refresh'){

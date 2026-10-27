@@ -572,11 +572,11 @@
       "executable": false
     },
     "ACCEPTANCE.md": {
-      "sha256": "f98405f9ee6b57ae5b4e7e634ebea3998881144c77c4824224921c2b6bd2713c",
+      "sha256": "c343939136fc9954a85aec70ac027b1dc6f50ad1d1d5f686ed764b1790402c57",
       "executable": false
     },
     "AGENTS.md": {
-      "sha256": "b8625b86d864607ae97b3655003b4b6aafa1255461c9df65a9646be4f7a99208",
+      "sha256": "64689709ec1eba168292a5b1555b728e6dd82dfd44e0972eada1bebbb23bd98b",
       "executable": false
     },
     "base-copies.json": {
@@ -584,7 +584,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "6553ed0f91c321d0c7a6d272c69137ddaaca89ba95460b6f9f6c21e6c48cb002",
+      "sha256": "028c4a31f10c2bda332a7fba005a4c5543230c7429354b586f391878bd826191",
       "executable": false
     },
     "deploy-demo.json": {
@@ -2116,11 +2116,11 @@
       "executable": false
     },
     "src/mallet/repair-blocker-sources.ts": {
-      "sha256": "149658fa05f21457d168c5100c7dc143ff2ea830cedc93d3f6c6a3dcc3be247e",
+      "sha256": "5d9e7e68bf56a781b6db539c34f7b7411f92dfd362a4f1b56aa58eef36443c3f",
       "executable": false
     },
     "src/mallet/repair-blockers.ts": {
-      "sha256": "b7e42d6dffa849d7620750ea11a630af2973a520c28d1edc5078578227fb97d6",
+      "sha256": "30aac9e9ed021af9b22f8b36dc6eee85a029a1cd3026df8240e09f42c319bd1b",
       "executable": false
     },
     "src/mallet/reports/cost-rates.ts": {
@@ -2196,7 +2196,7 @@
       "executable": false
     },
     "src/mallet/restore/validate-blockers.mjs": {
-      "sha256": "6886dd50d4e88a0dfc59c32e44bbed486c132732e1fa0e98246b4ba682ed1374",
+      "sha256": "fc0bbbf0a8c851f6ff0b8f1c0e26c86e1950ce9c8833ecd5f4b3390fc3a4f176",
       "executable": false
     },
     "src/mallet/restore/validate-cost-rates.mjs": {
@@ -4636,7 +4636,7 @@
       "executable": false
     },
     "tests/blocker-browser.mjs": {
-      "sha256": "79a4c07a8bb694ce99edeb408bd92bbb3e5dfecf6b90bff92874b4d87843b61f",
+      "sha256": "daf5dbe5adac26fdf3dba4b202ec0fb10660c2b315550917ab2fff822f28233e",
       "executable": false
     },
     "tests/bookings-browser.mjs": {
@@ -4927,8 +4927,16 @@
       "sha256": "c10a2a1b30286c25596a80a47b8046fe5f839f1342bb447ae98eb7350b513c46",
       "executable": false
     },
+    "tests/support/blocker-archive.mjs": {
+      "sha256": "80cd83381d6d172717d2bd1d39e970018cee92f9aad3b71e75b6858470050188",
+      "executable": false
+    },
     "tests/support/blocker-journey.mjs": {
-      "sha256": "7cddd6ac13cbc8ff7f46a52d796cd462d54a07c2a81b0f76a4f7a8c83e7faad8",
+      "sha256": "18c2c91309ae576b4ce5ed68e1fe69c1c6ca981957bc36140d3df43ae2a8d070",
+      "executable": false
+    },
+    "tests/support/blocker-parts.mjs": {
+      "sha256": "5233222f3a9dec79bda5197806aae03360d68c414b45aee39861014263b66f24",
       "executable": false
     },
     "tests/support/board-live-journey.mjs": {

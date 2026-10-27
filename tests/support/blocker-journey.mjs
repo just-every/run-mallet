@@ -2,6 +2,8 @@ import assert from 'node:assert/strict'
 import {archive,authorise,booking,installation,restore} from '../harness.mjs'
 import {shopSetup} from './diagnosis-journey.mjs'
 import {acknowledgmentTerms,formPost,templateInput} from './intake-forms-journey.mjs'
+import {refuseBlockerArchives} from './blocker-archive.mjs'
+import {blockerParts} from './blocker-parts.mjs'
 
 const at=hours=>new Date(Date.now()+hours*3_600_000).toISOString()
 const rows=async(h,kind)=>(await h.state()).records[kind]??[]
@@ -36,12 +38,15 @@ export async function blockerFixture(h,{person=h.person}={}){
  const owner=(await h.state()).actor,advisor=await person('synthetic-mallet-801@example.test','admin'),other=await person('synthetic-mallet-802@example.test','admin'),member=await person('synthetic-mallet-803@example.test')
  const repairs=[]
  for(let n=0;n<3;n++){
-  const asset=await h.command('asset.create',{customerName:`synthetic-mallet-${810+n}`,customerEmail:`synthetic-mallet-${810+n}@example.test`,label:`synthetic-mallet-${820+n}`,identifier:`synthetic-mallet-${830+n}`})
+  const asset=await h.command('asset.create',{customerName:['Dana Brooks','Rivera Plumbing','Taylor Wilson'][n],customerEmail:`synthetic-mallet-${810+n}@example.test`,label:['2019 Honda CR-V','2020 Ford Transit','2018 Subaru Outback'][n],identifier:`OH-BLOCK-${830+n}`})
   const {job}=await booking(h,{asset,technicianId:owner.id,startAt:at(2+n*3),endAt:at(4+n*3),bayId:`synthetic-mallet-${840+n}`})
   repairs.push({asset,job})
  }
  const [evidence,consent,backorder]=repairs
- const template=await h.command('inspectionTemplate.save',{version:0,name:'synthetic-mallet-850',vehicle:'All',service:'Inspection',reason:'Assigned evidence requirements',items:[{id:'point-a',label:'synthetic-mallet-851'},{id:'point-b',label:'synthetic-mallet-852'}]})
+ await h.command('routing.configure',{policyVersion:0,rules:[{id:'synthetic-mallet-849',location:'Detroit',repairType:'brakes',skill:'diagnosis',priority:'any',handlerId:advisor.id}],managerId:owner.id,reason:'Native advisor owns evidence follow-up',calendar:{timeZone:'America/New_York',weekdays:[1,2,3,4,5],openMinute:480,closeMinute:1020,closedDates:[]},deadlineMinutes:{unassigned:60,'approval-waiting':60,'parts-stalled':60,'diagnostic-exception':60}})
+ await h.command('routing.intake',{jobId:evidence.job.id,version:(await jobNow(h,evidence.job.id)).version,location:'Detroit',repairType:'brakes',skill:'diagnosis'})
+ await h.command('routing.run',{})
+ const template=await h.command('inspectionTemplate.save',{version:0,name:'Brake and bearing evidence',vehicle:'All',service:'Inspection',reason:'Assigned evidence requirements',items:[{id:'point-a',label:'Front brake inspection'},{id:'point-b',label:'Rear brake inspection'}]})
  evidence.inspection=await h.command('inspection.assign',{jobId:evidence.job.id,version:(await jobNow(h,evidence.job.id)).version,templateId:template.id,templateVersion:template.version,templateRevision:1,technicianId:owner.id,reason:'Inspect these two assigned requirements'})
  evidence.inspection=await h.command('inspection.record',{jobId:evidence.job.id,version:(await jobNow(h,evidence.job.id)).version,inspectionId:evidence.inspection.id,inspectionVersion:evidence.inspection.version,itemId:'point-a',outcome:'not-inspected',reason:'Access requires the customer to supply the key'})
  evidence.unassigned=await h.command('inspectionTemplate.save',{version:0,name:'synthetic-mallet-853',vehicle:'All',service:'Unassigned',reason:'Not required on these repairs',items:[{id:'never-assigned',label:'synthetic-mallet-854'}]})
@@ -51,11 +56,11 @@ export async function blockerFixture(h,{person=h.person}={}){
  const diagnosisInput={complaint:'synthetic-mallet-857',cause:'Inspection pending',correction:'Obtain measured evidence',testMethod:'Visual access review',staffNote:'synthetic-mallet-858 private diagnostic note',customerExplanation:'Evidence collection is pending',dtcs:[],measurements:[]}
  evidence.diagnosis=await h.command('diagnosis.record',{jobId:evidence.job.id,version:(await jobNow(h,evidence.job.id)).version,...diagnosisInput})
  evidence.diagnosis=await h.command('diagnosis.record',{jobId:evidence.job.id,version:(await jobNow(h,evidence.job.id)).version,diagnosisId:evidence.diagnosis.id,diagnosisVersion:evidence.diagnosis.version,...diagnosisInput,testMethod:'Second access review; still awaiting the key'})
- const lines=[{kind:'part',description:'synthetic-mallet-860',quantity:1,unitCents:12000},{kind:'labor',description:'synthetic-mallet-861',quantity:1.5,unitCents:12000}]
+ const lines=[{kind:'part',description:'Rear wheel bearing',quantity:1,unitCents:12000},{kind:'labor',description:'Diagnose bearing noise',quantity:1.5,unitCents:12000}]
  consent.quote=await h.command('estimate.prepare',{jobId:consent.job.id,version:(await jobNow(h,consent.job.id)).version,lines})
  consent.quote=await h.command('estimate.revise',{estimateId:consent.quote.id,version:consent.quote.version,revision:1,lines:lines.map(l=>({...l,unitCents:l.unitCents+1000})),notes:'Second reviewed scope needs its own customer decision'})
  backorder.quote=await authorise(h,await h.command('estimate.prepare',{jobId:backorder.job.id,version:(await jobNow(h,backorder.job.id)).version,lines}))
- backorder.part=await h.command('specialPart.record',{jobId:backorder.job.id,version:(await jobNow(h,backorder.job.id)).version,estimateId:backorder.quote.id,revision:1,lineId:backorder.quote.revisions[0].lines[0].id,supplier:'synthetic-mallet-862',orderReference:'synthetic-mallet-863',acknowledgment:'Supplier confirmed the order; no physical shipment received',eta:at(-2),reason:'Authorized charge requires a special-order part'})
+ backorder.part=await h.command('specialPart.record',{jobId:backorder.job.id,version:(await jobNow(h,backorder.job.id)).version,estimateId:backorder.quote.id,revision:1,lineId:backorder.quote.revisions[0].lines[0].id,supplier:'Great Lakes Subaru Parts',orderReference:'synthetic-mallet-863',acknowledgment:'Supplier confirmed the order; no physical shipment received',eta:at(-2),reason:'Authorized charge requires a special-order part'})
  await h.command('work.record',{jobId:backorder.job.id,version:(await jobNow(h,backorder.job.id)).version,estimateId:backorder.quote.id,revision:1,lineId:backorder.quote.revisions[0].lines[1].id,quantity:.5,note:'Actual diagnostic labor completed'})
  backorder.promise=await h.command('promise.set',{jobId:backorder.job.id,version:(await jobNow(h,backorder.job.id)).version,pickupAt:at(16),reason:'Customer pickup recorded separately from the booking'})
  backorder.plan=(await rows(h,'promisePlan')).find(p=>p.jobId===backorder.job.id)
@@ -67,6 +72,7 @@ export async function blockerFixture(h,{person=h.person}={}){
 async function recovery(h,f,key){
  const before=(await h.state()).records,backup=await archive(h),fresh=await installation({bindings:{OWNER_EMAIL:'synthetic-mallet-899@example.test'}})
  try{
+  await refuseBlockerArchives(backup)
   const owner=(await fresh.state()).actor
   assert.notEqual(owner.id,f.owner.id)
   await restore(fresh,backup)
@@ -121,7 +127,7 @@ export async function blockerJourney(h){
  let v=await refresh(h,evidence.job)
  for(const r of [consent,backorder])await refresh(h,r.job)
  let task=v.tasks.find(t=>t.source.id===evidence.inspection.id&&!t.resolution)
- assert.ok(task)
+ assert.ok(task);assert.equal(task.handler.id,advisor.id,'ADV-003 current native routing handler owns the initial follow-up task')
  const beforeInvalid=(await h.state()).records
  for(const handlerId of [undefined,'synthetic-mallet-absent',member.id])await refused(h,'blocker.assign',{...fences(v,task),handlerId,activePeople:[{id:handlerId,role:'admin',status:'active'}]})
  await refused(h,'blocker.assign',{...fences(v,task),packetVersion:v.packet.version+1,handlerId:advisor.id},{},'VERSION')
@@ -200,6 +206,9 @@ export async function blockerJourney(h){
  assert.equal(afterReceipt.status,beforeReceipt.status);assert.deepEqual(afterReceipt.actuals,beforeReceipt.actuals)
  assert.equal(b.current.progress.recordedActuals,beforeReceipt.actuals.length);assert.equal(b.current.progress.remainingHours,1,'ADV-003 received parts never infer completed labor')
  for(const r of f.repairs)assert.ok(!['completed','invoiced'].includes((await jobNow(h,r.job.id)).status))
+ await blockerParts(h,backorder.job.id)
+ const completedBackup=await archive(h),recovered=await installation({bindings:{OWNER_EMAIL:'synthetic-mallet-898@example.test'}})
+ try{await restore(recovered,completedBackup);const actual=(await recovered.state()).records,expected=(await h.state()).records;for(const kind of ['repairBlockerPacket','repairBlockerTask'])assert.deepEqual(actual[kind],expected[kind],'ADV-003 cleared source and original acknowledgment history recover exactly')}finally{await recovered.close()}
  const securityView=await view(h,evidence.job),historic=securityView.tasks.find(t=>t.id===task.id)
  for(const options of [agent,{as:advisor.cookie},{as:''}]){
   for(const path of [`/api/mallet/repairs/${evidence.job.id}/blockers`,`/app/jobs/${evidence.job.id}/blockers`]){const denied=await h.request(path,options);assert.ok([303,401,403,404].includes(denied.status));assert.ok(!(await denied.text()).includes(f.diagnosisInput.staffNote))}
