@@ -2,7 +2,7 @@ import type {Row} from '../model'
 import {HttpError} from '../auth'
 
 const ids:Record<string,string[]>={
- assetId:['asset'],estimateId:['estimate'],invoiceId:['invoice'],customerAccountId:['customerAccount'],customerId:['customerAccount'],
+ ruleId:['storageRule'],assetId:['asset'],estimateId:['estimate'],invoiceId:['invoice'],customerAccountId:['customerAccount'],customerId:['customerAccount'],
  payerId:['contact'],billingContactId:['contact'],driverId:['contact'],authorizerId:['contact'],
  templateId:['inspectionTemplate','intakeTemplate'],recipeId:['inspectionJob'],matrixId:['pricingMatrix'],rateProfileId:['rateProfile'],
  lotId:['stockLot'],itemId:['stockItem'],binId:['stockBin'],receiptId:['stockReceipt','purchaseReceipt'],purchaseReceiptId:['purchaseReceipt'],purchaseOrderId:['purchaseOrder'],

@@ -467,3 +467,6 @@ test('AUTO-005: owner request, customer feedback and completed-repair task throu
 test('AUTO-002: approved stage email sends once, uncollected pickup reaches the owner and recovery is inert',async()=>{const {statusDeliveryJourney}=await import('./support/status-notices-journey.mjs');await statusDeliveryJourney()})
 test('AUTO-002: quiet hours, changed repairs, failed contact, withdrawal and collection stop unsafe notices',async()=>{const {statusStopsJourney}=await import('./support/status-notices-journey.mjs');await statusStopsJourney()})
 test('AUTO-002: owner reviews status email, failed contact and pickup follow-up through native forms at 1440 and 390',async()=>{const {statusNoticesBrowser}=await import('./status-notices-browser.mjs');await statusNoticesBrowser()})
+
+test('RETURN-002: reviewed state rules, exact accrual, notice clocks, owner disposal and paid release retain portable history',async t=>{const {storageJourney}=await import('./support/storage-journey.mjs');await storageJourney(t)})
+test('RETURN-002: owner records rules, notice clocks, early refusal and paid handover at 1440 and 390',async t=>{const {storageBrowser}=await import('./storage-browser.mjs');await storageBrowser(t)})
