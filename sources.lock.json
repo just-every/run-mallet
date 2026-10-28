@@ -2116,7 +2116,7 @@
       "executable": false
     },
     "src/mallet/repair-blocker-sources.ts": {
-      "sha256": "5d9e7e68bf56a781b6db539c34f7b7411f92dfd362a4f1b56aa58eef36443c3f",
+      "sha256": "ee683cd149e827550435cf62448c1b6e9ec409c09ad71b920dfaa7000f0bea47",
       "executable": false
     },
     "src/mallet/repair-blockers.ts": {
@@ -2196,7 +2196,7 @@
       "executable": false
     },
     "src/mallet/restore/validate-blockers.mjs": {
-      "sha256": "fc0bbbf0a8c851f6ff0b8f1c0e26c86e1950ce9c8833ecd5f4b3390fc3a4f176",
+      "sha256": "6e3ed66592f5b06d5a2f8d5827bf3d7f464e3b6cecc0564402a570b85ba96fd8",
       "executable": false
     },
     "src/mallet/restore/validate-cost-rates.mjs": {
