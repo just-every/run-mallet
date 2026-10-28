@@ -4,6 +4,8 @@ import {inspectionStatus} from './inspections'
 import {jobEstimates} from './supplement-scope'
 import {currentPromisePlan,promiseLabor} from './promises'
 import {flowStage} from './flow'
+import {promiseProjection} from './promises'
+import {blockerNextAction} from './repair-blocker-actions'
 
 export type Citation={kind:string;id:string;version:number;revision?:number;itemId?:string;lineId?:string;label:string;href:string}
 export type RepairBlocker={key:string;kind:'evidence'|'consent'|'backorder';title:string;source:Citation;action:{label:string;href:string}}
@@ -16,10 +18,10 @@ export function citation(kind:string,row:Row,jobId:string):Citation {
 const key=(kind:string,id:string,item='')=>[kind,id,item].filter(Boolean).join(':')
 
 /** Requirements come from issued forms and assigned checklists, never inferred diagnostic quality. */
-export function blockerProjection(s:State,job:Row){
- const groups:Record<string,string[]>={intake:['intake','intakeComparison','intakeForm'],diagnostics:['diagnosis','inspection'],authorization:['estimate','approvalLink'],parts:['specialPart','purchaseOrder','purchaseReceipt'],progress:['job','flow','quality','timeEntry','subtask','handoff','jobNote','proposal','routingCase','routingBlocker'],promises:['promise','promisePlan','promiseRevision','promiseNotice']}
+export function blockerProjection(s:State,job:Row,now=new Date().toISOString()){
+ const groups:Record<string,string[]>={intake:['asset','intake','intakeComparison','intakeForm'],diagnostics:['diagnosis','inspection','diagnosticResult'],authorization:['estimate','approvalLink'],parts:['specialPart','purchaseOrder','purchaseReceipt'],progress:['job','flow','quality','timeEntry','subtask','handoff','jobNote','proposal','routingCase','routingBlocker'],promises:['promise','promisePlan','promiseRevision','promiseNotice']}
  const purchases=rows(s,'purchaseOrder').filter(po=>po.lines.some((l:any)=>l.jobId===job.id)).sort((a,b)=>a.id.localeCompare(b.id)),purchaseIds=new Set(purchases.map(po=>po.id))
- const sourceRows=(kind:string)=>kind==='job'?[job]:kind==='purchaseOrder'?purchases:kind==='purchaseReceipt'?rows(s,kind).filter(r=>purchaseIds.has(r.purchaseId)&&purchases.some(po=>po.id===r.purchaseId&&po.lines.some((line:any)=>line.id===r.lineId&&line.jobId===job.id))).sort((a,b)=>a.id.localeCompare(b.id)):related(s,kind,job.id)
+ const sourceRows=(kind:string)=>kind==='job'?[job]:kind==='asset'?rows(s,'asset').filter(a=>a.id===job.assetId):kind==='purchaseOrder'?purchases:kind==='purchaseReceipt'?rows(s,kind).filter(r=>purchaseIds.has(r.purchaseId)&&purchases.some(po=>po.id===r.purchaseId&&po.lines.some((line:any)=>line.id===r.lineId&&line.jobId===job.id))).sort((a,b)=>a.id.localeCompare(b.id)):related(s,kind,job.id)
  const sources=Object.fromEntries(Object.entries(groups).map(([group,kinds])=>[group,kinds.flatMap(kind=>sourceRows(kind).map(row=>citation(kind,row,job.id)))]))
  const blockers:RepairBlocker[]=[]
  const add=(kind:RepairBlocker['kind'],sourceKind:string,row:Row,item:string,title:string,action:string,extra:Partial<Citation>={})=>{
@@ -42,8 +44,11 @@ export function blockerProjection(s:State,job:Row){
  const proposals=[...jobEstimates(s,job).filter(q=>q.status==='draft'&&['booked','working'].includes(job.status)).map(q=>({kind:'estimate',id:q.id,version:q.version,revision:q.revisions.at(-1).n,label:'Review estimate revision '+q.revisions.at(-1).n,href:'/app/jobs/'+encodeURIComponent(job.id)})),...related(s,'proposal',job.id).filter(p=>p.status==='pending'&&p.jobVersion===job.version&&['booked','working'].includes(job.status)).map(p=>({kind:'dispatch',id:p.id,version:p.version,label:'Review prepared dispatch plan',href:'/app/jobs/'+encodeURIComponent(job.id)}))]
  const promise=sourceRows('promise')[0],progress={stage:flowStage(s,job),status:job.status,recordedActuals:job.actuals.length,remainingHours:promiseLabor(s,job).remainingHours,promiseAt:promise?.revisions.at(-1)?.pickupAt??null}
  // Sorted source identities fence changes without copying private notes into a packet.
- const basis=createHash('sha256').update(JSON.stringify(sources)).digest('hex')
- return {basis,sources,blockers,proposals,progress}
+ const promiseState=promiseProjection(s,job,now),promiseStatus=promiseState.status
+ const nextAction=blockerNextAction(s,job,blockers)
+ const promiseAction=promise&&['at-risk','overdue'].includes(promiseStatus)&&['booked','working'].includes(job.status)?{label:'Review the pickup promise with the advisor',command:'promise.propose',source:citation('promise',promise,job.id),href:'/app/jobs/'+encodeURIComponent(job.id)+'#promises',input:{jobId:job.id,version:job.version,promiseVersion:promise.version,planVersion:plan?.version??0},status:promiseStatus}:null
+ const basis=createHash('sha256').update(JSON.stringify([sources,promiseStatus])).digest('hex')
+ return {basis,sources,blockers,proposals,progress:{...progress,promiseStatus},nextAction,promiseAction}
 }
 
 /** A vanished source, elapsed ETA, changed stage or acknowledgment is never fulfillment. */

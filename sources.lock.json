@@ -572,7 +572,7 @@
       "executable": false
     },
     "ACCEPTANCE.md": {
-      "sha256": "c343939136fc9954a85aec70ac027b1dc6f50ad1d1d5f686ed764b1790402c57",
+      "sha256": "902e02c65d9471687ceeb93efe632e1efc214e71797dfb41ac2eb4ac303d9cda",
       "executable": false
     },
     "AGENTS.md": {
@@ -584,7 +584,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "028c4a31f10c2bda332a7fba005a4c5543230c7429354b586f391878bd826191",
+      "sha256": "dc4e553f5555882a0bfc027ae1e6e2a64846d15b9e58c3bd20a8251de91149e7",
       "executable": false
     },
     "deploy-demo.json": {
@@ -1812,7 +1812,7 @@
       "executable": false
     },
     "src/mallet/http.ts": {
-      "sha256": "83ef232de245c71d655aafa83e55cf88b3cce7c3db8c4333241adcbc97fa1644",
+      "sha256": "18e2f030aa68bdf36df4b174ea898934d79d0f54254518ae896464df5aab3b3a",
       "executable": false
     },
     "src/mallet/imports/context.ts": {
@@ -2004,7 +2004,7 @@
       "executable": false
     },
     "src/mallet/model.ts": {
-      "sha256": "4d9f3a3e61c0d1f740f96a66c069fcd0cc768ffe4b6e4644d0e06469a2c0da9c",
+      "sha256": "7d0e785790a735ebe9d47f2dbe83b96b44df1676b049b6018c33318793473d08",
       "executable": false
     },
     "src/mallet/money.ts": {
@@ -2111,16 +2111,20 @@
       "sha256": "633b4f45ba088191d667f285d06c6c5dc5fe873ab0c9016c618d4b2e8ff342dd",
       "executable": false
     },
+    "src/mallet/repair-blocker-actions.ts": {
+      "sha256": "84764b27ae51f6d204a3c35c57ad32bfbb7499fb530ba22d71edd83d0ff405c0",
+      "executable": false
+    },
     "src/mallet/repair-blocker-door.ts": {
-      "sha256": "9efbfae02afc5a976624101fee9adde353554e072df380f1d4e588c55cc21e74",
+      "sha256": "5d034977d8ddc7e3abbb0549faca6fad3dc3984a0910edb58e871253a3f110f2",
       "executable": false
     },
     "src/mallet/repair-blocker-sources.ts": {
-      "sha256": "ee683cd149e827550435cf62448c1b6e9ec409c09ad71b920dfaa7000f0bea47",
+      "sha256": "c6ddd210480f1506ed3427cee22da3a02b0592524d2638a76c934b0f9b01bbd1",
       "executable": false
     },
     "src/mallet/repair-blockers.ts": {
-      "sha256": "30aac9e9ed021af9b22f8b36dc6eee85a029a1cd3026df8240e09f42c319bd1b",
+      "sha256": "4afd3996478d32eb3d85ac0ff12e0da47ede075a328f53b873e23c274d1f9f44",
       "executable": false
     },
     "src/mallet/reports/cost-rates.ts": {
@@ -2196,7 +2200,7 @@
       "executable": false
     },
     "src/mallet/restore/validate-blockers.mjs": {
-      "sha256": "6e3ed66592f5b06d5a2f8d5827bf3d7f464e3b6cecc0564402a570b85ba96fd8",
+      "sha256": "0ddd5cde75495e547b34b37096b08291ffebbf3fa7d2141bbe75c79166758349",
       "executable": false
     },
     "src/mallet/restore/validate-cost-rates.mjs": {
@@ -2652,7 +2656,7 @@
       "executable": false
     },
     "src/mallet/ui/repair-blockers.ts": {
-      "sha256": "ebaad5c8a4218b255bff0cd492722e8bb6f2cfb100dddb5f13ea7226eb6bacff",
+      "sha256": "874ea7a09da083cd57b0071b4e7e4a474ea4242b7394dec4c9cac2e57d05bcef",
       "executable": false
     },
     "src/mallet/ui/repair.ts": {
@@ -4460,7 +4464,7 @@
       "executable": false
     },
     "src/server.ts": {
-      "sha256": "af4b0635be1fb0ea236310147ef4780d5bac1d1b2e34825ccac1e17aadba3e35",
+      "sha256": "239ccd5d461091dfd5cb7c7985d99acee3c4abd6d8fe3746a9a4d1a4ed7659c1",
       "executable": false
     },
     "src/site/docs/build/manifest.ts": {
@@ -4931,8 +4935,12 @@
       "sha256": "a0c8a488503a775d53d3540c8668e2c069b137c10433207ac224e21faa79c751",
       "executable": false
     },
+    "tests/support/blocker-follow-through.mjs": {
+      "sha256": "79e4b7090080699cef98703e2e4f317059b800d53db9e440a270d699e8d63822",
+      "executable": false
+    },
     "tests/support/blocker-journey.mjs": {
-      "sha256": "18c2c91309ae576b4ce5ed68e1fe69c1c6ca981957bc36140d3df43ae2a8d070",
+      "sha256": "829838f502a8fa06d03141887dd5aca83bdf24f0c2fad1e236aeef8c188d4bd9",
       "executable": false
     },
     "tests/support/blocker-parts.mjs": {
@@ -5296,7 +5304,7 @@
       "executable": false
     },
     "tests/worker.ts": {
-      "sha256": "91a2281f9852d34a47a546d0dd20ca75a8ddd99dfef27d9d5bbefc862c7b70f1",
+      "sha256": "f7d8851e174132149d2dda25ec0d16e0eeaeee7cd4088c49b6831f0a164b875c",
       "executable": false
     },
     "tsconfig.json": {

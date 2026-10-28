@@ -1,3 +1,4 @@
+import {runtimeBindings,type Bindings} from '../auth.server'
 import {HttpError,type Actor,type Authority} from './auth'
 import {execute,load} from './model'
 import {routingPeople} from './routing-door'
@@ -14,4 +15,10 @@ export async function repairBlockerCommand(db:D1Database,actor:Actor,authority:A
  if(!['owner','admin'].includes(actor.role)||actor.staff)throw new HttpError(403,'manager_required')
  const checked=await routingPeople(db,authority)
  return execute(db,actor,command,{...input,activePeople:checked.people},checked.authority)
+}
+
+/** Reconcile observations only; this worker cannot approve, send, perform or complete work. */
+export async function runRepairBlockers(original:Bindings,at:number){
+ const env=runtimeBindings(original),checked=await routingPeople(env.DB)
+ return execute(env.DB,{id:'mallet-blocker-scheduler',name:'Repair blocker scheduler',role:'system'},'blocker.sweep',{activePeople:checked.people},checked.authority,new Date(at).toISOString())
 }

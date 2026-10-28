@@ -1,3 +1,4 @@
+import {runRepairBlockers} from './mallet/repair-blocker-door'
 import {runWebhooks} from './mallet/webhook-door'
 import {runReportSchedules} from './mallet/reports/schedules'
 import {expireIntakeSecrets} from './mallet/intake-secrets'

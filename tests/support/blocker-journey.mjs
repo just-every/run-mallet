@@ -3,6 +3,7 @@ import {archive,authorise,booking,installation,restore} from '../harness.mjs'
 import {shopSetup} from './diagnosis-journey.mjs'
 import {acknowledgmentTerms,formPost,templateInput} from './intake-forms-journey.mjs'
 import {refuseBlockerArchives} from './blocker-archive.mjs'
+import {blockerFollowThrough} from './blocker-follow-through.mjs'
 import {blockerParts} from './blocker-parts.mjs'
 
 const at=hours=>new Date(Date.now()+hours*3_600_000).toISOString()
@@ -26,7 +27,7 @@ async function refresh(h,job,options={}){
  const before=await view(h,job,options),saved=await h.command('blocker.refresh',fences(before),options),after=await view(h,job,options)
  assert.deepEqual(after.packet,saved,'ADV-003 refresh returns the saved packet record')
  const revision=saved.revisions.at(-1)
- for(const key of ['basis','sources','blockers','proposals','progress'])assert.deepEqual(revision[key],before.current[key],`ADV-003 saved ${key} is the exact reviewed source snapshot`)
+ for(const key of ['basis','sources','blockers','proposals','progress','nextAction','promiseAction'])assert.deepEqual(revision[key],before.current[key],`ADV-003 saved ${key} is the exact reviewed source snapshot`)
  assert.equal(after.stale,false)
  return after
 }
@@ -124,6 +125,15 @@ export async function blockerJourney(h){
  const native=await h.state(),allowed=new Set([...native.records.estimate.filter(q=>q.status==='draft'),...(native.records.proposal??[]).filter(p=>p.status==='pending')].map(r=>r.id))
  for(const p of initial.flatMap(v=>v.current.proposals))assert.ok(allowed.has(p.id),'ADV-003 packet only offers an existing native draft or pending dispatch')
  for(const b of initial.flatMap(v=>v.current.blockers)){assert.ok(b.action.label&&b.action.href.startsWith('/app/'));assert.ok(b.source.label&&b.source.version)}
+ await h.cron(new Date().toISOString())
+ const observed=await Promise.all(f.repairs.map(r=>view(h,r.job)))
+ for(const packet of observed){assert.ok(packet.packet);assert.equal(packet.stale,false);assert.ok(packet.tasks.length);assert.equal(packet.packet.revisions.at(-1).by.role,'system')}
+ assert.equal(observed[0].current.nextAction.command,'inspection.record')
+ assert.equal(observed[1].current.nextAction.command,'estimate.approve')
+ assert.equal(observed[2].current.nextAction.command,'specialPart.receive')
+ const stable=(await h.state()).records
+ await h.cron(new Date().toISOString())
+ assert.deepEqual((await h.state()).records,stable,'ADV-003 repeated background checks retain one source episode without inferred actions')
  let v=await refresh(h,evidence.job)
  for(const r of [consent,backorder])await refresh(h,r.job)
  let task=v.tasks.find(t=>t.source.id===evidence.inspection.id&&!t.resolution)
@@ -220,4 +230,5 @@ export async function blockerJourney(h){
   const response=await h.request(path,agent);assert.ok(!(await response.text()).includes(f.diagnosisInput.staffNote),'ADV-003 bearer cannot recover private diagnosis through an older read door')
   const revoked=await h.request(path,{as:advisor.cookie});assert.ok([303,401].includes(revoked.status));assert.ok(!(await revoked.text()).includes(f.diagnosisInput.staffNote))
  }
+ await blockerFollowThrough(h,f,agent)
 }
