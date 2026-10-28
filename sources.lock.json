@@ -1696,7 +1696,7 @@
       "executable": false
     },
     "src/mallet/coverage-follow-up.ts": {
-      "sha256": "514b1555d3a32d91acc2ff1e6d2ab72502def5efdfcce36e12b0d4650d6e788b",
+      "sha256": "159903098e87b7ef95a3e52e77d646dec5f1b1e8c7a9621126cbe7b8ddce7d4e",
       "executable": false
     },
     "src/mallet/credits.ts": {
@@ -1824,7 +1824,7 @@
       "executable": false
     },
     "src/mallet/http.ts": {
-      "sha256": "ac6f07307e53d58e9f7594ebf36c2366fe317e1568ca3adebfe7b17bb91878da",
+      "sha256": "185a52f0498c105d58a4e10ca09b70ed1513becc540020f24c34e52e4933f471",
       "executable": false
     },
     "src/mallet/imports/context.ts": {
@@ -2256,7 +2256,7 @@
       "executable": false
     },
     "src/mallet/retention/coverage.ts": {
-      "sha256": "9976ebf53e3e28d0d50e10073a07658115870fbffbd6a22571e5efcec852675f",
+      "sha256": "292ec418ad90770556be9bf1e8c132507bcb639d50a328a3080de4443e6fe30c",
       "executable": false
     },
     "src/mallet/retention/export.ts": {
@@ -2324,7 +2324,7 @@
       "executable": false
     },
     "src/mallet/staff.ts": {
-      "sha256": "f244293023ece508a5f16e8a139eef7ae729181655d5fb3fa69d4b22e90e1ec0",
+      "sha256": "ef7f4d163e4c859f4f9333268da6fc99669672c278e171e23f3a4a3a60eb06ae",
       "executable": false
     },
     "src/mallet/status-notice-door.ts": {
@@ -4668,7 +4668,7 @@
       "executable": false
     },
     "tests/coverage-follow-up-browser.mjs": {
-      "sha256": "7317ad6096eec649c4e2b95fdd08c2420a5def8e79d5db086c4dcba8b33aaf9f",
+      "sha256": "f5dc049b69af99f820214f0aa556e4357eb6c87f3cef5e4e8c240ae20d733509",
       "executable": false
     },
     "tests/customers-browser.mjs": {
@@ -4968,7 +4968,7 @@
       "executable": false
     },
     "tests/support/coverage-follow-up-journey.mjs": {
-      "sha256": "a80985956ac28e0a411141db6478324079fedd5f519dba0de3725f6ac1f14cc0",
+      "sha256": "4265359084bbb3e3d6da6ded0e55c3ee82d72848d9af4c3dd30fe1da709c6683",
       "executable": false
     },
     "tests/support/customers-journey.mjs": {

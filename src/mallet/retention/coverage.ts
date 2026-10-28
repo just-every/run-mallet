@@ -14,5 +14,9 @@ export function eraseCoverageContent(s:State,scope:CustomerScope,at:string):Sql[
   const task=rows(s,'coverageTask').find(t=>t.coverageId===r.id)
   if(task)changes.push(write('coverageTask',{...task,version:task.version+1,status:task.status==='open'?'suppressed':task.status,resolution:{action:'erased',reason:'Erased personal content',at,by:next.history.at(-1)!.by}}))
  }
+ for(const row of rows(s,'event').filter(r=>scope.jobIds.has(r.jobId)&&r.kind==='coverage.symptom'&&'reference' in r.data)){
+  const {reference:_reference,...data}=row.data
+  changes.push(write('event',{...row,version:row.version+1,data}))
+ }
  return changes
 }

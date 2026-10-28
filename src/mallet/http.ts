@@ -175,16 +175,16 @@ async function nativeForm(request:Request) {
  return data
 }
 const withoutSubletCosts=(value:any)=>{if(!value||!('sublets' in value))return value;const {sublets,...rest}=value;return rest}
-function withoutFleetApproval(value:any):any {
- if(Array.isArray(value))return value.map(withoutFleetApproval)
- if(value&&typeof value==='object')return Object.fromEntries(Object.entries(value).filter(([key])=>key!=='fleet').map(([key,v])=>[key,withoutFleetApproval(v)]))
+function withoutOwnerEvidence(value:any):any {
+ if(Array.isArray(value))return value.map(withoutOwnerEvidence)
+ if(value&&typeof value==='object')return Object.fromEntries(Object.entries(value).filter(([key])=>!['fleet','coverageTransfers'].includes(key)).map(([key,v])=>[key,withoutOwnerEvidence(v)]))
  return value
 }
 function visible(s:State,actor:Actor):State {
  if(actor.role!=='owner')s={...s,records:Object.fromEntries(Object.entries(s.records).filter(([kind])=>!kind.startsWith('coverage')).map(([kind,values])=>[kind,kind==='event'?values.filter(x=>!x.kind.startsWith('coverage.')):values]))}
  if(actor.role!=='owner')s={...s,records:Object.fromEntries(Object.entries(s.records).filter(([kind])=>!kind.startsWith('webhook')&&!kind.startsWith('assistant')).map(([kind,values])=>[kind,kind==='event'?values.filter(x=>!x.kind.startsWith('assistant.')):values]))}
  s={...s,records:{...s.records,reportDelivery:rows(s,'reportDelivery').filter(r=>r.ownerId===actor.id),reportFilter:rows(s,'reportFilter').filter(r=>r.ownerId===actor.id)}}
- if(actor.role!=='owner'){s={...s,records:{...Object.fromEntries(Object.entries(s.records).filter(([kind])=>!kind.startsWith('stripe'))),event:rows(s,'event').filter(r=>!r.kind.startsWith('stripe.'))}};s=withoutFleetApproval(s)}
+ if(actor.role!=='owner'){s={...s,records:{...Object.fromEntries(Object.entries(s.records).filter(([kind])=>!kind.startsWith('stripe'))),event:rows(s,'event').filter(r=>!r.kind.startsWith('stripe.'))}};s=withoutOwnerEvidence(s)}
  if(actor.role==='owner')s={...s,records:{...s.records,deposit:rows(s,'deposit').map(d=>({...d,balance:depositBalance(s,d)}))}}
  if(actor.role!=='owner')s={...s,records:{...s.records,handover:rows(s,'handover').map(r=>{const {accountTerms,...settlement}=r.settlement;return {...r,settlement}})}}
  if(actor.role!=='owner'){const {audit:_audit,...records}=s.records;s={...s,records}}
@@ -423,7 +423,7 @@ async function workshopResponse(request:Request,original:Bindings,execution:Pick
    }
    else if(command==='inspection.record'&&actor.role!=='agent'){const checked=await inspectionRecordInput(env.DB,actor,auth.authority,input);result=await execute(env.DB,actor as any,command,checked.input,checked.authority)}
    else result=await execute(env.DB,actor as any,command,input,auth.authority)
-   if(actor.role!=='owner')result=withoutFleetApproval(result)
+   if(actor.role!=='owner')result=withoutOwnerEvidence(result)
    if(actor.staff){if(isApi)return json(result);return redirect('/app/staff')}
    if(command.startsWith('staff.')){if(isApi)return json(result);return redirect('/app/staff-access')}
    if(isApi){if(!human(actor)&&result&&typeof result==='object'&&'billing' in result){const {billing,...rest}=result;result=rest}return json(actor.role==='agent'?withoutSubletCosts(withoutInspectionSource(result)):result)}

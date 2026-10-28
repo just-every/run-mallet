@@ -63,7 +63,7 @@ export async function staffSettings(db:D1Database) {
 function redact(value:any,cost=false):any {
  if(Array.isArray(value))return value.map(x=>redact(x,cost))
  if(!value||typeof value!=='object')return value
- return Object.fromEntries(Object.entries(value).filter(([key])=>!['billing','receipt','evidence','consentEvidence','raw','token','secret','payRate','pricingProvenance'].includes(key)&&(cost||!['costCents','unitCostCents','loadedCostCents'].includes(key))).map(([k,v])=>[k,redact(v,cost)]))
+ return Object.fromEntries(Object.entries(value).filter(([key])=>!['billing','receipt','evidence','consentEvidence','coverageTransfers','raw','token','secret','payRate','pricingProvenance'].includes(key)&&(cost||!['costCents','unitCostCents','loadedCostCents'].includes(key))).map(([k,v])=>[k,redact(v,cost)]))
 }
 export function staffState(state:State,actor:Actor){
  const g=actor.staff!,records:Record<string,any[]>={}

@@ -3,11 +3,22 @@ import {bump,choice,event,expectVersion,fail,find,put,rows,text,who,type Context
 import {instant} from './workshop'
 
 export const coverageCommands=['coverage.schedule','coverage.cancel','coverage.transfer','coverage.symptom','coverage.resolve','coverage.activate','coverage.sweep'] as const
-export const coverageOwnership=(s:State,asset:Row)=>createHash('sha256').update(JSON.stringify([asset.customerAccountId??null,asset.driverContactId??null,asset.customerName,asset.customerEmail,rows(s,'customerAccount').find(a=>a.id===asset.customerAccountId)?.version??null])).digest('hex')
+const ownershipIdentity=(asset:Row)=>[asset.customerAccountId??null,asset.driverContactId??null,asset.customerName,asset.customerEmail]
+const ownershipHash=(identity:unknown[])=>createHash('sha256').update(JSON.stringify(identity)).digest('hex')
+export const coverageOwnership=(_s:State,asset:Row)=>ownershipHash(ownershipIdentity(asset))
+function sameOwnership(s:State,asset:Row,fingerprint:string){
+ if(coverageOwnership(s,asset)===fingerprint)return true
+ // Earlier captures also hashed the account revision. Retained revisions let
+ // those captures survive unrelated account edits without accepting a changed vehicle identity.
+ const account=rows(s,'customerAccount').find(a=>a.id===asset.customerAccountId)
+ return [account,...(account?.history??[])].some(a=>ownershipHash([...ownershipIdentity(asset),a?.version??null])===fingerprint)
+}
+const sameAgreement=(a:Row,b:Row)=>a.kind==='service-contract'&&b.kind==='service-contract'&&a.assetId===b.assetId&&a.source.documentReference===b.source.documentReference
 export function coverageStop(s:State,r:Row){
  const asset=rows(s,'asset').find(a=>a.id===r.assetId)
  if(!asset||asset.privacyErasedAt)return 'erased'
- if(coverageOwnership(s,asset)!==r.ownership)return 'transferred'
+ if(!sameOwnership(s,asset,r.ownership))return 'transferred'
+ if(rows(s,'coverageReview').some(other=>other.status==='canceled'&&sameAgreement(r,other)))return 'canceled'
  return null
 }
 function transition(c:Context,r:Row,status:string,reason:string){
@@ -24,7 +35,7 @@ export const coverageFollowUp:Handler=(c,command,p)=>{
   const local=new Set(Array.isArray(p.localIds)?p.localIds:[]),changed=[]
   for(const r of [...rows(c.s,'coverageReview')].filter(r=>['scheduled','due'].includes(r.status))){
    const stop=coverageStop(c.s,r)
-   if(stop){changed.push(transition(c,r,stop,'Current vehicle ownership or erasure record suppresses review.'));continue}
+   if(stop){changed.push(transition(c,r,stop,'Current coverage, vehicle ownership or erasure record suppresses review.'));continue}
    if(r.status!=='scheduled'||r.dueAt>c.now||!local.has(r.id))continue
    const task=put(c.s,'coverageTask',{coverageId:r.id,jobId:r.jobId,assetId:r.assetId,title:r.kind==='warranty'?'Review retained warranty coverage':'Review evidenced service-contract renewal',dueAt:r.dueAt,status:'open',scheduledBy:r.by,createdBy:who(c),createdAt:c.now,resolution:null})
    const next=bump(c.s,'coverageReview',r,{status:'due',taskId:task.id,history:[...r.history,{action:'due',taskId:task.id,by:who(c),at:c.now}]})
@@ -55,7 +66,7 @@ export const coverageFollowUp:Handler=(c,command,p)=>{
    if(JSON.stringify(old.basis)!==JSON.stringify(basis))fail('COVERAGE_REPLAY','This review reference already identifies different coverage or permission.')
    return old
   }
-  if((asset.coverageTransfers??[]).some((t:any)=>t.ownership===coverageOwnership(c.s,asset))||rows(c.s,'coverageReview').some(r=>r.assetId===asset.id&&r.status==='transferred'&&r.ownership===coverageOwnership(c.s,asset)))fail('COVERAGE_TRANSFERRED','Record the new vehicle ownership before scheduling another review.')
+  if((asset.coverageTransfers??[]).some((t:any)=>sameOwnership(c.s,asset,t.ownership))||rows(c.s,'coverageReview').some(r=>r.assetId===asset.id&&r.status==='transferred'&&sameOwnership(c.s,asset,r.ownership)))fail('COVERAGE_TRANSFERRED','Record the new vehicle ownership before scheduling another review.')
   if(kind==='service-contract'&&rows(c.s,'coverageReview').some(r=>r.assetId===asset.id&&r.status==='canceled'&&r.source.documentReference===source.documentReference))fail('COVERAGE_CANCELED','This retained agreement was canceled; a different review reference cannot revive it.')
   expectVersion(job,p.version)
   const row=put(c.s,'coverageReview',{...basis,basis,ownership:coverageOwnership(c.s,asset),assetRevision:asset.version,status:'scheduled',taskId:null,symptoms:[],history:[{action:'scheduled',by:who(c),at:c.now}],by:who(c),at:c.now})
@@ -72,7 +83,9 @@ export const coverageFollowUp:Handler=(c,command,p)=>{
  const r=find(c.s,'coverageReview',p.id);expectVersion(r,p.version)
  if(command==='coverage.cancel'){
   if(!['scheduled','due'].includes(r.status))fail('COVERAGE_STATE','This review has already stopped.')
-  return transition(c,r,'canceled',text(p.reason,'cancellation evidence',2000))
+  const reason=text(p.reason,'cancellation evidence',2000)
+  const affected=rows(c.s,'coverageReview').filter(other=>(other.id===r.id||sameAgreement(r,other))&&['scheduled','due'].includes(other.status)).map(other=>transition(c,other,'canceled',reason))
+  return affected.find(other=>other.id===r.id)
  }
  const stop=coverageStop(c.s,r)
  if(stop||!['scheduled','due'].includes(r.status))fail('COVERAGE_STOPPED','This review is stopped or its ownership or erasure record changed.')
