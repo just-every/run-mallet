@@ -4,7 +4,7 @@ import {join} from 'node:path'
 import {chromium} from '@playwright/test'
 import {installation,booking,archive,restore} from './harness.mjs'
 import {creditAccountFixture,creditInvoice} from './support/refunds-journey.mjs'
-import {grantInput,mediaAuditJourney,auditCsvEntries} from './support/governance-journey.mjs'
+import {grantInput,mediaAuditJourney,auditCsvEntries,payrollFixture} from './support/governance-journey.mjs'
 const cookies=(h,cookie)=>cookie.split('; ').map(pair=>({name:pair.slice(0,pair.indexOf('=')),value:pair.slice(pair.indexOf('=')+1),url:h.origin}))
 export async function governanceBrowser(){
  const h=await installation({network:true,secureNetwork:true,assets:true});let browser
@@ -24,7 +24,7 @@ export async function governanceBrowser(){
   await h.stepUp();await p.goto(h.origin+'/app/data');await p.getByRole('link',{name:'Staff roles and limits'}).click();await shot('staff-01-owner-settings')
   const grant=p.locator('section.card').filter({has:p.getByRole('heading',{name:'synthetic-mallet-browser-advisor',exact:true})}).locator('form').first()
   await grant.locator('select[name="role"]').selectOption('advisor');await grant.getByLabel('Discount limit (%)').fill('5');await grant.getByLabel('Delegation reason').fill('Owner approved advisor responsibilities');await grant.getByLabel('I approve these exact rights and limits.').check();await grant.getByRole('button',{name:'Save staff grant'}).click();await p.waitForURL('**/app/staff-access')
-  for(const role of ['manager','purchaser','cashier','accountant'])await h.command('staff.grant',grantInput(people[role].id,role))
+  for(const role of ['manager','purchaser','cashier','accountant'])await h.command('staff.grant',grantInput(people[role].id,role,0,role==='cashier'?{collectionCents:500}:{}))
   const {job}=await booking(h),item=await h.command('stock.item',{sku:'synthetic-mallet-browser',name:'Browser part',unit:'each',barcode:'synthetic-mallet-browser-item'}),bin=await h.command('stock.bin',{code:'Browser bin',barcode:'synthetic-mallet-browser-bin'})
   await use(people.advisor.cookie);await p.goto(h.origin+'/app');await p.waitForURL('**/app/staff');await shot('staff-02-advisor')
   await advisorIntakeBrowser(h,p,{shot,person:people.advisor,technician:people.manager})
@@ -32,16 +32,18 @@ export async function governanceBrowser(){
   await fill('0.51');const before=(await h.state()).records;await p.getByRole('button',{name:'Prepare estimate',exact:true}).click();assert.match(await p.locator('main').innerText(),/could not be completed/);assert.deepEqual((await h.state()).records,before);await shot('staff-03-discount-refused')
   await p.goto(h.origin+'/app/staff');await fill('0.50');await p.getByRole('button',{name:'Prepare estimate',exact:true}).click();await p.waitForURL('**/app/staff');const quote=(await h.state()).records.estimate.find(q=>q.jobId===job.id);assert.equal(quote.revisions[0].preparedBy.staffRole,'advisor')
   await use(people.manager.cookie);await p.goto(h.origin+'/app/staff');await shot('staff-04-manager-handoff');await p.getByRole('button',{name:'Approve exact estimate'}).click();await p.waitForURL('**/app/staff');assert.equal((await h.state()).records.estimate.find(q=>q.id===quote.id).status,'approved')
+  await advisorCommunicationBrowser(h,p,{use,shot,person:people.advisor,quote})
   await use(people.purchaser.cookie);await p.goto(h.origin+'/app/staff');await p.getByLabel('Scanned item barcode').fill(item.barcode);await p.getByLabel('Scanned bin barcode').fill(bin.barcode);await p.getByLabel('Counted quantity').fill('2');await p.getByLabel('Count reason',{exact:true}).fill('Physical count');await p.getByRole('button',{name:'Record stock count'}).click();await p.waitForURL('**/app/staff');await p.getByLabel('Correction reason').fill('Reviewed count');await shot('staff-05-purchaser-correction');await p.getByRole('button',{name:'Approve correction'}).click();await p.waitForURL('**/app/staff');assert.ok((await h.state()).records.stockCount[0].approval)
   const purchase=await purchaserBrowser(h,p,{use,shot,person:people.purchaser,item,bin,job})
   const {account}=await creditAccountFixture(h),{invoice}=await creditInvoice(h,account,'7');await h.stepUp(people.cashier.cookie)
-  await use(people.cashier.cookie);await p.goto(h.origin+'/app/staff');await p.locator('select[name="staffInvoice"]').selectOption({label:invoice.number});await p.getByLabel('Amount (USD)').fill('5.41');await p.getByLabel('Tender reference').fill('synthetic-mallet-browser-tender');await p.getByLabel('Staff evidence').fill('Cash counted by cashier');await shot('staff-06-cashier-tender');await p.getByRole('button',{name:'Record tender'}).click();await p.waitForURL('**/app/staff');assert.equal((await h.state()).records.payment.at(-1).by.staffRole,'cashier')
+  await use(people.cashier.cookie);await p.goto(h.origin+'/app/staff');await p.locator('select[name="staffInvoice"]').selectOption({label:invoice.number});await p.getByLabel('Amount (USD)').fill('5.41');await p.getByLabel('Tender reference').fill('synthetic-mallet-browser-tender');await p.getByLabel('Staff evidence').fill('Cash counted by cashier');await shot('staff-06-cashier-tender');const tenderBefore=(await h.state()).records;await p.getByRole('button',{name:'Record tender'}).click();await p.waitForLoadState('domcontentloaded');assert.match(await p.locator('main').innerText(),/exceeds your delegated collection limit/);assert.deepEqual((await h.state()).records,tenderBefore);await shot('staff-finance-00-collection-refused');await h.command('staff.grant',grantInput(people.cashier.id,'cashier',1,{collectionCents:541}));await p.goto(h.origin+'/app/staff');await p.locator('select[name="staffInvoice"]').selectOption({label:invoice.number});await p.getByLabel('Amount (USD)').fill('5.41');await p.getByLabel('Tender reference').fill('synthetic-mallet-browser-tender');await p.getByLabel('Staff evidence').fill('Cash counted by cashier');await p.getByRole('button',{name:'Record tender'}).click();await p.waitForURL('**/app/staff');assert.equal((await h.state()).records.payment.at(-1).by.staffRole,'cashier')
   await cashierFinanceBrowser(h,p,{use,shot,person:people.cashier,invoice})
   await use(people.accountant.cookie);await p.goto(h.origin+'/app/staff');await shot('staff-07-accountant-read');const [download]=await Promise.all([p.waitForEvent('download'),p.getByRole('link',{name:'Download permitted records'}).click()]);assert.equal(download.suggestedFilename(),'mallet-staff.json');await download.cancel();assert.equal(await p.getByRole('button').count(),0)
   await p.locator('#finance-'+invoice.id+' summary').click();const financeText=await p.locator('#finance-'+invoice.id).innerText();assert.ok(financeText.includes('$1.09'));assert.ok(financeText.includes('$4.32'));assert.ok(financeText.includes('Staff-recorded manual refund'));await shot('staff-finance-05-accountant-reconciliation')
   const report=await h.api('/api/mallet/staff/finance',undefined,{as:people.accountant.cookie});assert.deepEqual(report.invoices.find(i=>i.invoiceId===invoice.id).refunds[0].history.map(r=>r.status),['refunded'])
   for(const format of ['JSON','CSV']){const [file]=await Promise.all([p.waitForEvent('download'),p.getByRole('link',{name:'Download reconciliation '+format}).click()]);const content=await readFile(await file.path(),'utf8');assert.equal(file.suggestedFilename(),'mallet-reconciliation.'+format.toLowerCase());if(format==='JSON')assert.deepEqual(JSON.parse(content),report);else assert.ok(content.includes('541","109","432","541","109","0","432","0","0","0'));await file.delete()}
-  await h.command('staff.revoke',grantInput(people.accountant.id,'accountant',1));const financeDenied=await p.request.get(h.origin+'/api/mallet/staff/finance?format=csv');assert.equal(financeDenied.status(),403)
+  await accountantPayrollBrowser(h,p,{use,shot,person:people.accountant})
+  await h.command('staff.revoke',grantInput(people.accountant.id,'accountant',3));const financeDenied=await p.request.get(h.origin+'/api/mallet/staff/finance?format=csv');assert.equal(financeDenied.status(),403)
   await use(h.owner);await p.goto(h.origin+'/app/audit');await shot('audit-01-history');await p.getByLabel('Exact action').fill('estimate.prepare');await p.getByRole('button',{name:'Search audit'}).click();await p.locator('summary').first().click();await shot('audit-02-filtered-revisions');assert.match(await p.locator('main').innerText(),/advisor/)
   for(const format of ['JSON','CSV']){const [file]=await Promise.all([p.waitForEvent('download'),p.getByRole('link',{name:'Download '+format+' page'}).click()]);assert.equal(file.suggestedFilename(),'mallet-audit.'+format.toLowerCase());await file.cancel()}
   await h.command('staff.revoke',grantInput(people.advisor.id,'advisor',1));await use(people.advisor.cookie);const denied=await p.goto(h.origin+'/app/staff');assert.equal(denied.status(),403);await shot('staff-08-revoked')
@@ -71,8 +73,8 @@ export async function governanceBrowser(){
    }
   }
   await mediaScreen(h,'audit-03-media-transitions')
-  const backup=await archive(h),fresh=await installation({network:true,secureNetwork:true,assets:true,bindings:{OWNER_EMAIL:'synthetic-mallet-browser-recovery@example.test'}})
-  try{const retained=(await h.state()).records;await restore(fresh,backup);for(const kind of ['purchaseOrder','purchaseReceipt','purchaseBill','stockReservation','stockMovement'])assert.deepEqual((await fresh.state()).records[kind],retained[kind],'Fresh owner recovers '+kind);await fresh.api('/api/mallet/staff/state?download=1',undefined,{as:people.purchaser.cookie,status:401});await fresh.command('purchase.receive',purchase.captured,{as:people.purchaser.cookie,status:401});assert.equal(await (await fresh.mf.getD1Database('DB')).prepare('SELECT count(*) AS n FROM mallet_staff_grants').first('n'),0);await fresh.api('/api/mallet/audit',undefined,{as:h.owner,status:401});await mediaScreen(fresh,'audit-04-fresh-owner-media')}finally{await fresh.close()}
+  const backup=await archive(h),fresh=await installation({network:true,secureNetwork:true,assets:true,bindings:{OWNER_EMAIL:['synthetic-mallet-browser-recovery','example.test'].join('@')}})
+  try{const retained=(await h.state()).records;await restore(fresh,backup);for(const kind of ['purchaseOrder','purchaseReceipt','purchaseBill','stockReservation','stockMovement','invoice','payment','creditNote','refund','payRate','timeEntry','timeCorrection'])assert.deepEqual((await fresh.state()).records[kind],retained[kind],'Fresh owner recovers '+kind);await fresh.api('/api/mallet/staff/state?download=1',undefined,{as:people.purchaser.cookie,status:401});await fresh.command('purchase.receive',purchase.captured,{as:people.purchaser.cookie,status:401});assert.equal(await (await fresh.mf.getD1Database('DB')).prepare('SELECT count(*) AS n FROM mallet_staff_grants').first('n'),0);await fresh.api('/api/mallet/staff/payroll?format=csv',undefined,{as:people.accountant.cookie,status:401});await fresh.api('/api/mallet/staff/finance?format=json',undefined,{as:people.cashier.cookie,status:401});await fresh.api('/api/mallet/audit',undefined,{as:h.owner,status:401});await mediaScreen(fresh,'audit-04-fresh-owner-media')}finally{await fresh.close()}
 
  }finally{await browser?.close();await h.close()}
 }
@@ -202,7 +204,7 @@ async function cashierFinanceBrowser(h,p,{use,shot,person,invoice}){
  const replay=await p.request.post(h.origin+'/app/actions',{form:observed,headers:{origin:h.origin},maxRedirects:0});assert.equal(replay.status(),303);assert.deepEqual((await h.state()).records,before,'Observation replay cannot record another refund')
  assert.equal(await form('refund.record').count(),0,'A completed original-tender refund offers no second payment')
  await shot('staff-finance-04-completed')
- await h.command('staff.revoke',grantInput(person.id,'cashier',1));before=(await h.state()).records
+ await h.command('staff.revoke',grantInput(person.id,'cashier',2));before=(await h.state()).records
  const revoked=await p.request.post(h.origin+'/app/actions',{form:observed,headers:{origin:h.origin}});assert.equal(revoked.status(),403)
  await h.command('refund.record',{refundId:refund.id,version:refund.version,status:'refunded',reference:'synthetic-mallet-revoked-refund',evidence:'Revoked',confirm:'record-refund'},{as:person.cookie,status:403})
  assert.deepEqual((await h.state()).records,before,'A revoked form and API cannot write another observation')
@@ -232,4 +234,39 @@ async function advisorIntakeBrowser(h,p,{shot,person,technician}){
  const stale=await p.request.post(h.origin+'/app/actions',{form:captured,headers:{origin:h.origin}});assert.equal(stale.status(),409);assert.deepEqual((await h.state()).records,records,'Captured intake form cannot create another visit')
  const download=await p.request.get(h.origin+'/api/mallet/staff/state?download=1'),view=await download.json();assert.ok(view.records.job.some(j=>j.id===job.id));assert.ok(view.technicians.every(t=>Object.keys(t).sort().join(',')==='id,name'))
  await shot('staff-intake-02-booked')
+}
+
+async function accountantPayrollBrowser(h,p,{use,shot,person}){
+ const {tech,query}=await payrollFixture(h)
+ const ownerGrant=async enabled=>{
+  await use(h.owner);await h.stepUp();await p.goto(h.origin+'/app/staff-access')
+  const target=p.locator('section.card').filter({has:p.getByRole('heading',{name:person.session.operator.displayName,exact:true})}).locator('form').first()
+  await target.locator('input[name="payrollRight"]').setChecked(enabled)
+  await target.getByLabel('Delegation reason',{exact:true}).fill(enabled?'Separate payroll read authority':'Remove payroll read authority')
+  await target.getByLabel('I approve these exact rights and limits.').check()
+  await shot(enabled?'staff-payroll-01-grant':'staff-payroll-03-withdraw')
+  await target.getByRole('button',{name:'Save staff grant',exact:true}).click();await p.waitForURL('**/app/staff-access')
+ }
+ await ownerGrant(true);await use(person.cookie);await p.goto(h.origin+'/app/staff?'+query)
+ const panel=p.locator('section.card').filter({has:p.getByRole('heading',{name:'Payroll reconciliation',exact:true})})
+ await panel.locator('summary').click();const text=await panel.innerText();assert.ok(text.includes('$240.00'));assert.ok(text.includes('Attendance 8 hours'));assert.ok(text.includes('$30.00 per hour'));assert.ok(text.includes('$40.00 per hour'))
+ assert.equal(await p.getByRole('button').count(),0,'Payroll read grant adds no write controls');await shot('staff-payroll-02-reconcile')
+ const report=await h.api('/api/mallet/staff/payroll?'+query,undefined,{as:person.cookie});assert.equal(report.technicians.find(t=>t.technicianId===tech.id).payCents,24000)
+ for(const format of ['JSON','CSV']){const [file]=await Promise.all([p.waitForEvent('download'),p.getByRole('link',{name:'Download payroll '+format,exact:true}).click()]);const content=await readFile(await file.path(),'utf8');assert.equal(file.suggestedFilename(),'mallet-payroll.'+format.toLowerCase());if(format==='JSON')assert.deepEqual(JSON.parse(content),report);else assert.ok(content.includes('"28800000","0","28800000","24000","0"'));await file.delete()}
+ await ownerGrant(false);await use(person.cookie);await p.goto(h.origin+'/app/staff?'+query);assert.equal(await p.getByRole('heading',{name:'Payroll reconciliation',exact:true}).count(),0)
+ for(const format of ['json','csv'])assert.equal((await p.request.get(h.origin+'/api/mallet/staff/payroll?'+query+'&format='+format)).status(),403)
+}
+
+async function advisorCommunicationBrowser(h,p,{use,shot,person,quote}){
+ await use(person.cookie);await p.goto(h.origin+'/app/staff')
+ const form=command=>p.locator('form').filter({has:p.locator('input[name="command"][value="'+command+'"]')}).filter({has:p.locator('input[name="estimateId"][value="'+quote.id+'"]')})
+ await form('estimate.markSent').locator('select[name="channel"]').selectOption('phone');await form('estimate.markSent').getByLabel('Estimate handoff note',{exact:true}).fill('Advisor explained the exact approved quote by phone')
+ const captured=await form('estimate.markSent').evaluate(f=>Object.fromEntries(new FormData(f))),mail=h.messages.length
+ await shot('staff-communication-01-manual-handoff');await form('estimate.markSent').getByRole('button',{name:'Record manual estimate handoff',exact:true}).click();await p.waitForURL('**/app/staff')
+ let current=(await h.state()).records.estimate.find(q=>q.id===quote.id);assert.equal(current.sent[0].recordedBy.id,person.id);assert.equal(current.sent[0].deliveryConfirmed,false)
+ const before=(await h.state()).records,stale=await p.request.post(h.origin+'/app/actions',{form:captured,headers:{origin:h.origin}});assert.equal(stale.status(),409);assert.deepEqual((await h.state()).records,before)
+ await form('estimate.authorise').locator('input[name="lineIds"]').first().check();await form('estimate.authorise').getByLabel('Customer giving the decision',{exact:true}).fill('Native customer');await form('estimate.authorise').getByLabel('Exact customer instruction evidence',{exact:true}).fill('Customer explicitly approved only the selected part')
+ await shot('staff-communication-02-exact-choice');await form('estimate.authorise').getByRole('button',{name:'Record exact customer decision',exact:true}).click();await p.waitForURL('**/app/staff')
+ current=(await h.state()).records.estimate.find(q=>q.id===quote.id);assert.deepEqual(current.authorisation.lineIds,[quote.revisions[0].lines[0].id]);assert.equal(current.authorisation.recordedBy.id,person.id);assert.equal(h.messages.length,mail,'Native manual communications send no provider message');assert.equal(await form('estimate.authorise').count(),0)
+ const view=await h.api('/api/mallet/staff/state',undefined,{as:person.cookie});assert.ok(!JSON.stringify(view).includes('Customer explicitly approved only the selected part'));await shot('staff-communication-03-retained-decision')
 }

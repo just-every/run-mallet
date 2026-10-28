@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import {createHash,randomUUID} from 'node:crypto'
 import {archive,restore,installation,booking,estimate,snapshots} from '../harness.mjs'
 import {creditAccountFixture,creditInvoice,creditInput} from './refunds-journey.mjs'
-export const grantInput=(operatorId,role,version=0,limits={})=>({operatorId,role,version,location:'shop',discountBps:500,spendCents:1000,refundCents:200,costRight:false,confirm:'grant-staff',reason:'Owner reviewed the staff responsibility',...limits})
+export const grantInput=(operatorId,role,version=0,limits={})=>({operatorId,role,version,location:'shop',discountBps:500,spendCents:1000,refundCents:200,collectionCents:1000,costRight:false,confirm:'grant-staff',reason:'Owner reviewed the staff responsibility',...limits})
 // Real private media doors; the expected transition set is independent of the
 // exported ledger. Replays must not masquerade as additional changes.
 export function auditCsvEntries(text){
@@ -28,7 +28,7 @@ export async function mediaAuditJourney(h){
   await h.api(path,input,options)
   assert.deepEqual(await auditSnapshot(h),before,'Denied write leaves the entire audit unchanged: '+path)
  }
- const tech=await h.person('synthetic-mallet-media-audit@example.test'),other=await h.person('synthetic-mallet-media-denied@example.test')
+ const tech=await h.person(['synthetic-mallet-media-audit','example.test'].join('@')),other=await h.person(['synthetic-mallet-media-denied','example.test'].join('@'))
  const assetInput=await h.command('asset.create',{customerName:'Synthetic media audit',label:'Audit vehicle',identifier:'synthetic-mallet-media-audit'})
  const {asset,job}=await booking(h,{asset:assetInput,technicianId:tech.id,startAt:'2026-09-01T09:00:00Z',endAt:'2026-09-01T10:00:00Z'})
  const next=(await booking(h,{asset:(await h.state()).records.asset.find(a=>a.id===asset.id),technicianId:tech.id,startAt:'2026-10-01T09:00:00Z',endAt:'2026-10-01T10:00:00Z'})).job
@@ -91,7 +91,7 @@ export async function mediaAuditJourney(h){
 export async function auditJourney(h){
  await h.command('tax.configure',{ratePercent:7.5,partsTaxable:true,laborTaxable:true})
  const media=await mediaAuditJourney(h)
- const admin=await h.person('synthetic-mallet-audit@example.test','admin'),member=await h.person('synthetic-mallet-tech@example.test')
+ const admin=await h.person(['synthetic-mallet-audit','example.test'].join('@'),'admin'),member=await h.person(['synthetic-mallet-tech','example.test'].join('@'))
  const {job}=await booking(h),q=await h.command('estimate.prepare',{jobId:job.id,version:job.version,lines:[{kind:'part',description:'Discounted repair',quantity:1,unitCents:1000,unitDiscountCents:100}]},{as:admin.cookie})
  const item=await h.command('stock.item',{sku:'synthetic-mallet-audit',name:'Audit part',unit:'each',barcode:'synthetic-mallet-item'}),bin=await h.command('stock.bin',{code:'Audit bin',barcode:'synthetic-mallet-bin'})
  const count=await h.command('stock.count',{itemBarcode:item.barcode,binBarcode:bin.barcode,quantity:2,mode:'cycle',reason:'Counted physically'})
@@ -123,7 +123,7 @@ export async function auditJourney(h){
  const csv=await h.request('/api/mallet/audit?format=csv');assert.match(csv.headers.get('content-disposition'),/attachment/);assert.match(await csv.text(),/beforeRevision/)
  const exported=await h.request('/api/mallet/audit?format=json');assert.match(exported.headers.get('content-disposition'),/attachment/);assert.deepEqual((await exported.json()).entries,(await h.api('/api/mallet/audit')).entries,'Export retains the exact stored revision and evidence references')
  await h.api('/api/mallet/audit?from=2026-02-30',undefined,{status:400});await h.api('/api/mallet/audit?offset=-1',undefined,{status:400})
- await h.api('/auth/operator/status',{operatorId:admin.id,status:'active'});const restoredAdmin=await h.signInAs('synthetic-mallet-audit@example.test');for(const cookie of [member.cookie,restoredAdmin])for(const path of ['/app/audit','/api/mallet/audit','/api/mallet/audit?format=json','/api/mallet/audit?format=csv'])assert.equal((await h.request(path,{as:cookie})).status,403,'Non-owner cannot inspect private audit')
+ await h.api('/auth/operator/status',{operatorId:admin.id,status:'active'});const restoredAdmin=await h.signInAs(['synthetic-mallet-audit','example.test'].join('@'));for(const cookie of [member.cookie,restoredAdmin])for(const path of ['/app/audit','/api/mallet/audit','/api/mallet/audit?format=json','/api/mallet/audit?format=csv'])assert.equal((await h.request(path,{as:cookie})).status,403,'Non-owner cannot inspect private audit')
  assert.equal((await h.state({as:member.cookie})).records.audit,undefined)
  const source=await snapshots(),plan=await h.api('/api/mallet/imports/preview',source),imported=await h.api('/api/mallet/imports/apply',{...source,fingerprint:plan.fingerprint});await h.api('/api/mallet/imports/undo',{id:imported.id});const imports=await h.api('/api/mallet/audit?q=import.');assert.ok(imports.entries.length>=2);const ownerId=(await h.state()).actor.id;assert.ok(imports.entries.every(x=>x.actor.id===ownerId))
  const retained=(await h.api('/api/mallet/audit')).entries;await h.cron('2099-01-01T12:00:00Z');await h.restart();const afterMaintenance=(await h.api('/api/mallet/audit')).entries;for(const entry of retained)assert.deepEqual(afterMaintenance.find(x=>x.id===entry.id),entry,'Scheduled maintenance and restart never delete audit evidence')
@@ -133,10 +133,10 @@ export async function auditJourney(h){
 export async function staffJourney(h){
  await h.command('tax.configure',{ratePercent:7.5,partsTaxable:true,laborTaxable:true})
  const people={};for(const role of ['advisor','manager','purchaser','cashier','accountant'])people[role]=await h.person('synthetic-mallet-'+role+'@example.test')
- const admin=await h.person('synthetic-mallet-grants@example.test','admin')
+ const admin=await h.person(['synthetic-mallet-grants','example.test'].join('@'),'admin')
  await h.command('staff.grant',grantInput(people.advisor.id,'advisor'),{as:admin.cookie,status:403})
  const noProof=(await h.state()).records;await h.command('staff.grant',grantInput(people.advisor.id,'advisor'),{status:403});assert.deepEqual((await h.state()).records,noProof,'Grant without fresh confirmation writes nothing')
- const unlimited=await h.person('synthetic-mallet-no-limits@example.test');const zero=grantInput(unlimited.id,'manager');delete zero.discountBps;delete zero.spendCents;delete zero.refundCents
+ const unlimited=await h.person(['synthetic-mallet-no-limits','example.test'].join('@'));const zero=grantInput(unlimited.id,'manager');delete zero.discountBps;delete zero.spendCents;delete zero.refundCents;delete zero.collectionCents
  await h.command('staff.grant',zero);const noLimitBefore=(await h.state()).records
  for(const path of ['/app/staff','/api/mallet/staff/state','/api/mallet/staff/state?download=1'])assert.equal((await h.request(path,{as:unlimited.cookie})).status,403)
  await h.command('asset.create',{customerName:'No authority',label:'Refused',identifier:'synthetic-mallet-zero'},{as:unlimited.cookie,status:403});assert.deepEqual((await h.state()).records,noLimitBefore,'A grant without limits allows no delegated door or write')
@@ -157,6 +157,13 @@ export async function staffJourney(h){
  const q=await h.command('estimate.prepare',{jobId:job.id,version:job.version,lines:[{...lines[0],unitDiscountCents:50}]},{as:people.advisor.cookie})
  assert.equal(q.revisions[0].preparedBy.staffRole,'advisor')
  await h.command('estimate.approve',{estimateId:q.id,version:q.version,revision:1},{as:people.manager.cookie})
+ const approved=(await h.state()).records.estimate.find(r=>r.id===q.id),shareInput={estimateId:q.id,version:approved.version,revision:1,method:'phone',note:'Exact approved estimate explained manually'}
+ const mailBefore=h.messages.length,shared=await h.command('estimate.markSent',shareInput,{as:people.advisor.cookie})
+ assert.equal(shared.sent[0].recordedBy.staffRole,'advisor');assert.equal(shared.sent[0].deliveryConfirmed,false)
+ const handoffBefore=(await h.state()).records;await h.command('estimate.markSent',shareInput,{as:people.advisor.cookie,status:409});assert.deepEqual((await h.state()).records,handoffBefore)
+ const decided=await h.command('estimate.authorise',{estimateId:q.id,version:shared.version,revision:1,lineIds:[q.revisions[0].lines[0].id],customerName:'Synthetic customer',method:'phone',evidence:'Customer explicitly authorized only the selected exact line'},{as:people.advisor.cookie})
+ assert.deepEqual(decided.authorisation.lineIds,[q.revisions[0].lines[0].id]);assert.equal(decided.authorisation.recordedBy.staffRole,'advisor');assert.equal(h.messages.length,mailBefore,'Manual handoff and decision never send provider mail')
+
  const otherLocationBefore=(await h.state()).records
  await h.command('asset.create',{customerName:'Other shop',label:'Denied',identifier:'synthetic-mallet-other-location',location:'other'},{as:people.manager.cookie,status:403});assert.deepEqual((await h.state()).records,otherLocationBefore,'Other location refusal writes nothing')
  const item=await h.command('stock.item',{sku:'synthetic-mallet-role',name:'Role part',unit:'each',barcode:'synthetic-mallet-role-barcode'},{as:people.purchaser.cookie})
@@ -169,6 +176,10 @@ export async function staffJourney(h){
  const order=await h.command('purchase.create',{...po,lines:[{...po.lines[0],unitCents:1000}]},{as:people.purchaser.cookie});await h.command('purchase.approve',{purchaseId:order.id,version:order.version,reason:'Within owner limit'},{as:people.manager.cookie})
  const {account}=await creditAccountFixture(h),{invoice}=await creditInvoice(h,account,'8')
  await h.stepUp(people.cashier.cookie)
+ await h.command('staff.grant',grantInput(people.cashier.id,'cashier',1,{collectionCents:500}))
+ const collectionBefore=(await h.state()).records
+ await h.command('payment.record',{invoiceId:invoice.id,version:invoice.version,amountCents:541,method:'cash',reference:'synthetic-mallet-over-collection',evidence:'Cash counted'},{as:people.cashier.cookie,status:403});assert.deepEqual((await h.state()).records,collectionBefore,'Over-limit collection writes nothing')
+ await h.command('staff.grant',grantInput(people.cashier.id,'cashier',2,{collectionCents:541}))
  const pay=await h.command('payment.record',{invoiceId:invoice.id,version:invoice.version,amountCents:541,method:'cash',reference:'synthetic-mallet-cashier',evidence:'Cash counted'},{as:people.cashier.cookie})
  const input=creditInput(invoice,pay,'synthetic-mallet-refund-limit',invoice.lines[0],2);await h.command('credit.preview',input,{as:people.cashier.cookie,status:403});const ownerReview=await h.command('credit.preview',input),refundBefore=(await h.state()).records;await h.command('credit.issue',{...input,review:ownerReview,confirm:'issue-credit'},{as:people.cashier.cookie,status:403});assert.deepEqual((await h.state()).records,refundBefore)
  const small=creditInput(invoice,pay,'synthetic-mallet-refund-authorized'),smallReview=await h.command('credit.preview',small,{as:people.cashier.cookie})
@@ -178,11 +189,11 @@ export async function staffJourney(h){
  await delegatedPurchasingJourney(h,people,{item,order,po})
  await delegatedFinanceJourney(h,people,{invoice,pay,note})
  const current=(await h.state()).records,backup=await archive(h),fresh=await installation()
- try{await restore(fresh,backup);assert.deepEqual((await fresh.state()).records,current,'Purchase receipts, reservations and every supplier bill version recover exactly');for(const role of ['purchaser','manager']){await fresh.api('/api/mallet/staff/state?download=1',undefined,{as:people[role].cookie,status:401});await fresh.command('purchase.bill',{purchaseId:order.id,version:order.version},{as:people[role].cookie,status:401})}assert.equal(await (await fresh.mf.getD1Database('DB')).prepare('SELECT count(*) AS n FROM mallet_staff_grants').first('n'),0);assert.ok((await fresh.api('/api/mallet/audit?action=staff.grant')).entries.length>=5)}finally{await fresh.close()}
+ try{await restore(fresh,backup);assert.deepEqual((await fresh.state()).records,current,'Purchase receipts, reservations and every supplier bill version recover exactly');for(const role of ['purchaser','manager','cashier','accountant']){await fresh.api('/api/mallet/staff/state?download=1',undefined,{as:people[role].cookie,status:401});await fresh.command('purchase.bill',{purchaseId:order.id,version:order.version},{as:people[role].cookie,status:401})}assert.equal(await (await fresh.mf.getD1Database('DB')).prepare('SELECT count(*) AS n FROM mallet_staff_grants').first('n'),0);assert.ok((await fresh.api('/api/mallet/audit?action=staff.grant')).entries.length>=5)}finally{await fresh.close()}
  await h.command('staff.revoke',grantInput(people.advisor.id,'advisor',grant.version))
  assert.equal((await h.request('/app/staff',{as:people.advisor.cookie})).status,403)
  await h.command('estimate.prepare',{jobId:job.id,version:job.version,lines},{as:people.advisor.cookie,status:403})
- const grantAudit=(await h.api('/api/mallet/audit')).entries.filter(e=>['staff.grant','staff.revoke'].includes(e.action));assert.equal(grantAudit.length,13);for(const entry of grantAudit){assert.equal(entry.actor.id,(await h.state()).actor.id);assert.equal(entry.changes.length,1);assert.equal(entry.changes[0].kind,'staffGrant');assert.equal(entry.changes[0].afterRevision,(entry.changes[0].beforeRevision??0)+1)}
+ const grantAudit=(await h.api('/api/mallet/audit')).entries.filter(e=>['staff.grant','staff.revoke'].includes(e.action));assert.equal(grantAudit.length,17);for(const entry of grantAudit){assert.equal(entry.actor.id,(await h.state()).actor.id);assert.equal(entry.changes.length,1);assert.equal(entry.changes[0].kind,'staffGrant');assert.equal(entry.changes[0].afterRevision,(entry.changes[0].beforeRevision??0)+1)}
  await h.api('/auth/operator/status',{operatorId:people.purchaser.id,status:'inactive'});await h.api('/api/mallet/staff/state',undefined,{as:people.purchaser.cookie,status:401})
 }
 
@@ -286,11 +297,12 @@ async function delegatedFinanceJourney(h,people,{invoice,pay,note}){
  assert.ok(text.includes("\"'=synthetic-mallet-refund-observation\""),'Refund references are formula-safe in CSV');assert.ok(!JSON.stringify(report).includes('Private counted original cash return'));assert.ok(!JSON.stringify(report).includes('consentEvidence'))
  const second={...creditInput(invoice,pay,'synthetic-mallet-lowered-limit'),lines:[{lineId:invoice.lines[0].id,sourceEstimateId:invoice.lines[0].sourceEstimateId,sourceRevision:invoice.lines[0].sourceRevision,quantity:1}]}
  const review=await h.command('credit.preview',second,as)
- await h.command('staff.grant',grantInput(people.cashier.id,'cashier',1,{refundCents:100}))
+ await h.command('staff.grant',grantInput(people.cashier.id,'cashier',3,{refundCents:100,collectionCents:541}))
  let unchanged=(await h.state()).records
  await h.command('credit.issue',{...second,review,confirm:'issue-credit'},{...as,status:403})
  assert.deepEqual((await h.state()).records,unchanged,'Lowered current limit applies even to a prior permitted review')
- await h.command('staff.revoke',grantInput(people.accountant.id,'accountant',1))
+ await delegatedPayrollJourney(h,people)
+ await h.command('staff.revoke',grantInput(people.accountant.id,'accountant',3))
  unchanged=(await h.state()).records
  for(const format of ['json','csv'])await h.api(endpoint+'?format='+format,undefined,{...read,status:403})
  assert.deepEqual((await h.state()).records,unchanged,'Revoked finance exports have no effects')
@@ -316,4 +328,34 @@ async function delegatedIntakeJourney(h,people){
  unchanged=(await h.state()).records
  for(const person of [people.purchaser,people.cashier,people.accountant])for(const command of ['asset.create','job.book'])await h.command(command,command==='asset.create'?{...input,identifier:'synthetic-mallet-denied-intake'}:plan,{as:person.cookie,status:403})
  assert.deepEqual((await h.state()).records,unchanged,'Unlisted role intake attempts leave every record unchanged')
+}
+
+export async function payrollFixture(h){
+ const tech=await h.person(['synthetic-mallet-payroll-technician','example.test'].join('@')),as={as:tech.cookie}
+ const entry=await h.command('time.clockIn',{},as);await h.command('time.clockOut',{},as)
+ const closed=(await h.state()).records.timeEntry.find(t=>t.id===entry.id)
+ const correction=await h.command('time.correct',{entryId:entry.id,entryVersion:closed.version,startAt:'2020-01-02T09:00:00Z',endAt:'2020-01-02T17:00:00Z',reason:'Owner-reviewed historical attendance correction'},as)
+ await h.command('time.approveCorrection',{correctionId:correction.id,correctionVersion:correction.version})
+ const rate=await h.command('payRate.set',{technicianId:tech.id,centsPerHour:3000,effectiveFrom:'2020-01-01',reason:'Reviewed historical wage'})
+ await h.command('payRate.set',{technicianId:tech.id,version:rate.version,centsPerHour:4000,effectiveFrom:'2099-01-01',reason:'Future wage must not rewrite prior attendance'})
+ return {tech,query:'from=2020-01-02&to=2020-01-02'}
+}
+async function delegatedPayrollJourney(h,people){
+ const {tech,query}=await payrollFixture(h),path='/api/mallet/staff/payroll?'+query
+ const accountant={as:people.accountant.cookie}
+ for(const person of Object.values(people))for(const format of ['json','csv'])await h.api(path+'&format='+format,undefined,{as:person.cookie,status:403})
+ assert.equal((await h.api('/api/mallet/staff/state',undefined,accountant)).payroll,undefined)
+ await h.command('staff.grant',grantInput(people.accountant.id,'accountant',1,{payrollRight:true,costRight:false}))
+ const before=(await h.state()).records,report=await h.api(path,undefined,accountant),row=report.technicians.find(t=>t.technicianId===tech.id)
+ assert.deepEqual([row.attendanceMs,row.breakMs,row.netAttendanceMs,row.payCents,row.unratedMs],[28800000,0,28800000,24000,0])
+ assert.deepEqual(row.rates.map(r=>[r.centsPerHour,r.effectiveFrom]),[[3000,'2020-01-01'],[4000,'2099-01-01']])
+ assert.deepEqual((await h.api('/api/mallet/staff/state?'+query,undefined,accountant)).payroll,report)
+ assert.equal((await h.api('/api/mallet/staff/state?'+query,undefined,accountant)).limits.costRight,false,'Payroll rights do not grant cost rights')
+ for(const format of ['json','csv']){const file=await h.request(path+'&format='+format,accountant);assert.match(file.headers.get('content-disposition'),new RegExp('mallet-payroll.'+format));if(format==='json')assert.deepEqual(await file.json(),report);else assert.ok((await file.text()).includes('"28800000","0","28800000","24000","0"'))}
+ await h.command('payRate.set',{technicianId:tech.id,centsPerHour:1,effectiveFrom:'2020-01-01',reason:'Read access cannot change rates'},{...accountant,status:403})
+ await h.api('/api/mallet/reports/technicians?'+query,undefined,{...accountant,status:403})
+ assert.deepEqual((await h.state()).records,before,'Payroll reads and denied edits leave source attendance and wages unchanged')
+ await h.command('staff.grant',grantInput(people.accountant.id,'accountant',2,{payrollRight:false}))
+ for(const format of ['json','csv'])await h.api(path+'&format='+format,undefined,{...accountant,status:403})
+ assert.equal((await h.api('/api/mallet/staff/state?'+query,undefined,accountant)).payroll,undefined,'Removed payroll right also hides the workspace projection')
 }

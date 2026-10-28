@@ -146,7 +146,7 @@ export async function load(db: Database, normalize = true): Promise<State> {
   if (normalize) migrateSalesTax(s)
   return s
 }
-export async function execute(db: Database, actor: Actor, command: string, payload: any, authority?: { sql: string; params: any[] }, now?: string, limits?:{spendCents:number;refundCents:number;discountBps:number},retry?:{clientId:string;key:string;hash:string;response:(result:any)=>any}): Promise<any> {
+export async function execute(db: Database, actor: Actor, command: string, payload: any, authority?: { sql: string; params: any[] }, now?: string, limits?:{spendCents:number;refundCents:number;collectionCents:number;discountBps:number},retry?:{clientId:string;key:string;hash:string;response:(result:any)=>any}): Promise<any> {
   const replay=async()=>{
     if(!retry)return null
     const row=await db.prepare('SELECT request_hash,response FROM mallet_api_requests WHERE client_id=? AND request_key=?').bind(retry.clientId,retry.key).first()
@@ -160,6 +160,7 @@ export async function execute(db: Database, actor: Actor, command: string, paylo
   for (const [kind, values] of Object.entries(s.records)) for (const row of values) before.set(`${kind}:${row.id}`, JSON.stringify(row))
   const at=now??new Date().toISOString()
   if(limits){
+    if(command==='payment.record'&&Number(payload.amountCents)>limits.collectionCents)fail('COLLECTION_LIMIT','This tender exceeds your delegated collection limit.',null,403)
     for(const [kind,field] of [['asset','assetId'],['job','jobId'],['estimate','estimateId'],['invoice','invoiceId'],['purchaseOrder','purchaseId'],['stockBin','binId'],['stockCount','countId'],['refund','refundId']]){
       if(!payload[field])continue;const row=find(s,kind,payload[field]);if((row.location??row.locationId??'shop')!=='shop')fail('LOCATION_SCOPE','This record belongs to another location.',null,403);if(row.jobId&&(find(s,'job',row.jobId).location??'shop')!=='shop')fail('LOCATION_SCOPE','This record belongs to a repair at another location.',null,403);if(row.binId&&(find(s,'stockBin',row.binId).location??'shop')!=='shop')fail('LOCATION_SCOPE','This record belongs to a bin at another location.',null,403)
     }

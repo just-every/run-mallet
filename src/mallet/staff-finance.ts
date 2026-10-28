@@ -2,6 +2,7 @@ import {HttpError} from './auth'
 import {invoiceBalance} from './payments'
 import {rows,type State} from './model'
 import {box,e,field,form,money,select,when} from './ui/common'
+import {period,technicianRow} from './reports/technicians'
 
 // This report reconciles native records. A staff observation never establishes bank settlement.
 export function staffFinance(state:State){
@@ -19,7 +20,7 @@ export function staffFinance(state:State){
  return {currency:'USD',label:'Native invoice and tender reconciliation; no bank settlement is verified.',totals,invoices}
 }
 export function staffFinanceCsv(report:ReturnType<typeof staffFinance>){
- const cell=(value:unknown)=>{let text=String(value??'');if(/^[=+\-@\t\r\n]/.test(text))text="'"+text;return '"'+text.replaceAll('"','""')+'"'}
+ const cell=(value:unknown)=>{let text=String(value??'');if(/^[\t\r\n]|^\s*[=+@-]/.test(text))text="'"+text;return '"'+text.replaceAll('"','""')+'"'}
  const data:unknown[][]=[['Record','Invoice','Source','Method or status','Original cents','Credit cents','Adjusted cents','Recorded tender cents','Refunded cents','Returned cents','Net applied cents','Outstanding cents','Excess cents','Pending refund cents'],['definition',report.label]]
  for(const i of report.invoices){
   data.push(['invoice',i.number,i.invoiceId,'',i.totalCents,i.creditedCents,i.adjustedTotalCents,i.recordedTenderCents,i.refundedCents,i.returnedCents,i.netAppliedCents,i.outstandingCents,i.excessCents,i.pendingRefundCents])
@@ -47,4 +48,25 @@ export function staffCreditPreview(review:any,input:any){
 export function staffFinanceInput(input:any){
  if(input.command==='credit.preview'&&input.staffCreditLine){let line;try{line=JSON.parse(input.staffCreditLine)}catch{throw new HttpError(400,'invalid_credit_line')};input.lines=[{...line,quantity:Number(input.quantity)}]}
  if(input.command==='credit.issue'&&input.staffCreditRequest){let request,review;try{request=JSON.parse(input.staffCreditRequest);review=JSON.parse(input.staffCreditReview)}catch{throw new HttpError(400,'invalid_credit_review')};const confirm=input.confirm;Object.assign(input,request,{command:'credit.issue',review,confirm})}
+}
+
+export function staffPayroll(state:State,params:URLSearchParams,now=new Date().toISOString()){
+ const range=period(params.get('from'),params.get('to'),now)
+ const ids=[...new Set([...rows(state,'timeEntry').map(t=>t.ownerId),...rows(state,'payRate').map(r=>r.technicianId)])]
+ const technicians=ids.filter(id=>!rows(state,'job').some(j=>j.technicianId===id&&(j.location??j.locationId??'shop')!=='shop')).map(id=>{
+  const row=technicianRow(state,id,range,now,true)
+  return {technicianId:id,name:rows(state,'timeEntry').find(t=>t.ownerId===id)?.owner?.name??'Technician',attendanceMs:row.attendanceMs,breakMs:row.breakMs,netAttendanceMs:row.netAttendanceMs,payCents:row.payCents,unratedMs:row.unratedMs,
+   rates:(row.rates?.revisions??[]).map((r:any)=>({centsPerHour:r.centsPerHour,effectiveFrom:r.effectiveFrom,at:r.at,by:r.by})),intervals:row.intervals.filter((i:any)=>i.kind==='attendance'||i.kind==='break').map((i:any)=>({id:i.id,kind:i.kind,countedMs:i.countedMs,running:i.running}))}
+ })
+ return {period:{from:range.from,to:range.to},label:'Recorded attendance and effective payroll rates; no payroll payment or filing.',technicians}
+}
+export function staffPayrollCsv(report:ReturnType<typeof staffPayroll>){
+ const cell=(value:unknown)=>{const text=String(value??'');return '"'+(/^[\t\r\n]|^\s*[=+@-]/.test(text)?"'":'')+text.replaceAll('"','""')+'"'}
+ const data:unknown[][]=[['Record','Technician','Source','Attendance ms','Break ms','Net attendance ms','Pay cents','Unrated ms','Effective from','Hourly cents'],['definition',report.label],['period',report.period.from,report.period.to]]
+ for(const t of report.technicians){data.push(['technician',t.name,t.technicianId,t.attendanceMs,t.breakMs,t.netAttendanceMs,t.payCents,t.unratedMs]);for(const r of t.rates)data.push(['rate',t.name,t.technicianId,'','','','','',r.effectiveFrom,r.centsPerHour]);for(const i of t.intervals)data.push([i.kind,t.name,i.id,i.countedMs])}
+ return data.map(row=>row.map(cell).join(',')).join('\r\n')+'\r\n'
+}
+export function staffPayrollPage(report:ReturnType<typeof staffPayroll>){
+ const query=new URLSearchParams(report.period)
+ return box('Payroll reconciliation',`<p>${e(report.label)} UTC dates ${e(report.period.from)} to ${e(report.period.to)}.</p><p><a href="/api/mallet/staff/payroll?${e(query)}&amp;format=json">Download payroll JSON</a> · <a href="/api/mallet/staff/payroll?${e(query)}&amp;format=csv">Download payroll CSV</a></p>`+report.technicians.map(t=>`<details><summary>${e(t.name)} · Recorded pay ${money(t.payCents)}</summary><p>Attendance ${e(t.attendanceMs/3600000)} hours · Breaks ${e(t.breakMs/3600000)} hours · Net ${e(t.netAttendanceMs/3600000)} hours · Unrated ${e(t.unratedMs/3600000)} hours</p><ul>${t.rates.map((r:any)=>`<li>${money(r.centsPerHour)} per hour from ${e(r.effectiveFrom)}</li>`).join('')}${t.intervals.map((i:any)=>`<li>${e(i.kind)} · ${e(i.countedMs/3600000)} hours${i.running?' · Still running':''}</li>`).join('')}</ul></details>`).join(''))
 }
