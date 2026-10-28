@@ -57,7 +57,7 @@ A claim is done when every clause behind it is done, missing when every one is m
 | 49 | Reminders stopped for a sold vehicle | `AUTO-003` missing | missing |
 | 50 | Emailed weekly report: car count, ARO, sales, on promise | `REPORT-001` partial; `REPORT-004` partial; `REPORT-006` partial | partial |
 | 51 | Technician sold, clocked and efficiency | `REPORT-003` done | done |
-| 52 | "Every number opens the repair orders behind it" | `REPORT-001` partial | partial |
+| 52 | "Every number opens the repair orders behind it" | `REPORT-001` partial; `REPORT-007` partial | partial |
 | 53 | "31,906 Tekmetric repair orders, all searchable" | `MOVE-001` missing | missing |
 | 54 | "Customers, vehicles, history, canned jobs and open work come across before cutover" | `MOVE-001` missing; `MOVE-012` missing; `MOVE-013` missing | missing |
 | 55 | Reviewed import (preview, apply what was reviewed) | `MOVE-010` partial; `IMPORT-001` partial | partial |

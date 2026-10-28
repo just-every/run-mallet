@@ -1,4 +1,4 @@
-// GOV-004 / GOV-007: every customer-link door answers an unknown, revoked or expired link alike and reveals nothing, a client that keeps
+// GOV-007: every customer-link door answers an unknown, revoked or expired link alike and reveals nothing, a client that keeps
 // missing is paused per door, and a link never grants payer billing authority.
 import assert from 'node:assert/strict'
 import {booking,estimate} from '../harness.mjs'
@@ -36,8 +36,8 @@ export async function linkProtectionJourney(h) {
   for(const how of ['revoke','expire']) {
    const link=await door.make(),live=await h.request(link.path,{as:''});assert.equal(live.status,200,door.name+' live link');assert.notEqual(live.headers.get('cache-control'),null)
    await door[how](link);const gone=await snap(await h.request(link.path,{as:''}))
-   assert.deepEqual(gone,unknown,`GOV-004 ${door.name} ${how}d link looks like an unknown one`)
-   for(const text of customer)assert.ok(!gone[1].includes(text),`GOV-004 ${door.name} ${how}d link reveals no customer history`)
+   assert.deepEqual(gone,unknown,`GOV-007 ${door.name} ${how}d link looks like an unknown one`)
+   for(const text of customer)assert.ok(!gone[1].includes(text),`GOV-007 ${door.name} ${how}d link reveals no customer history`)
   }
  }
  // An unusable link cannot be used to act either.
@@ -46,8 +46,8 @@ export async function linkProtectionJourney(h) {
  await db.prepare('DELETE FROM mallet_rate').run()
  const inspection=await doors[1].make(),approval=await doors[0].make()
  for(let n=0;n<20;n++)assert.equal((await h.request(`/approve/${String(n).padStart(43,'B')}`,{as:''})).status,404)
- const paused=await h.request(approval.path,{as:''}),pausedBody=await paused.text();assert.equal(paused.status,429);assert.ok(paused.headers.get('retry-after'));for(const text of customer)assert.ok(!pausedBody.includes(text),'GOV-004 a paused client learns nothing')
- assert.equal((await h.request(inspection.path,{as:''})).status,200,'GOV-004 pausing one door leaves the others open')
+ const paused=await h.request(approval.path,{as:''}),pausedBody=await paused.text();assert.equal(paused.status,429);assert.ok(paused.headers.get('retry-after'));for(const text of customer)assert.ok(!pausedBody.includes(text),'GOV-007 a paused client learns nothing')
+ assert.equal((await h.request(inspection.path,{as:''})).status,200,'GOV-007 pausing one door leaves the others open')
  assert.equal((await portalPost(h,`/portal/confirm/${'C'.repeat(43)}`,{confirm:'yes'})).status,403,'an unknown customer sign-in link opens nothing')
  await db.prepare('DELETE FROM mallet_rate').run();assert.equal((await h.request(approval.path,{as:''})).status,200)
  // Holding a link never proves who the payer is: billing needs a customer account session.

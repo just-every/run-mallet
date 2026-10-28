@@ -45,4 +45,4 @@ The declared-capacity five-minute deadlines are not yet proven. See
 [performance.md](performance.md) for the remaining OPS-002 work.
 
 These conservative job authority and recovery defaults await ct approval;
-OPS-002 remains partial.
+OPS-003 remains partial.

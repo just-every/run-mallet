@@ -67,7 +67,7 @@ export const approvalLinks:Handler=(c,command,p)=>{
    const estimate=find(c.s,'estimate',link.estimateId),share={revision:link.revision,method:'email',note:status==='accepted'?`Approval link handed to ${delivery.provider}; delivery not confirmed`:'Approval link written to the development mail outbox; not sent',recordedBy:who(c),at:c.now,deliveryConfirmed:false}
    bump(c.s,'estimate',estimate,{status:'sent',sent:[...estimate.sent,share]});event(c,'estimate.markSent',link.jobId,estimate.id,share)
   } else {
-   // EST-006: a first send that failed or is uncertain is never retried by reminders; an advisor follows up.
+   // EST-006 / EST-007: a first send that failed or is uncertain is never retried by reminders; an advisor follows up.
    stopFor(c,link.id,'delivery-failed');openTask(c,link,'delivery-failed',`The approval link email was ${status==='uncertain'?'given an uncertain outcome; it was not retried':status.replace('_',' ')+' by the mail provider'}.`)
   }
   return next

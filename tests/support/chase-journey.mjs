@@ -89,6 +89,6 @@ export async function chaseJourney(){
   for(const kind of ['approvalChase','chaseTask','chaseOptOut'])assert.equal(agentView[kind],undefined)
   // OPS-001: policy, chases, tasks and opt-outs restore exactly; reminder tokens do not.
   const state=await st(),backup=await archive(h),target=await installation()
-  try{await restore(target,backup);const restored=(await target.state()).records;for(const kind of ['chasePolicy','approvalChase','chaseTask','chaseOptOut'])assert.deepEqual(restored[kind],state[kind],'EST-006 restores '+kind);assert.equal((await target.request(replacementPath,{as:''})).status,404)}finally{await target.close()}
+  try{await restore(target,backup);const restored=(await target.state()).records;for(const kind of ['chasePolicy','approvalChase','chaseTask','chaseOptOut'])assert.deepEqual(restored[kind],state[kind],'EST-006 / EST-007 restores '+kind);assert.equal((await target.request(replacementPath,{as:''})).status,404)}finally{await target.close()}
  }finally{await h.close()}
 }

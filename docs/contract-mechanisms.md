@@ -80,6 +80,8 @@ Customer erasure immediately destroys INTAKE-004 unlock data keys outside D1 rec
 
 ## OPS-002
 
+OPS-002 retains the capacity and restart deadlines. The following authority mechanism belongs to OPS-003.
+
 Current native semantics (sx c27): persistent business-event jobs use atomic installation-wide concurrency of four, one-minute leases and cron, stopped failed/uncertain handoffs and explicit owner recovery; only GET-only payment evidence may be replayed under fresh audited approval.
 
 

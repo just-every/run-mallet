@@ -329,8 +329,8 @@ test('PORTAL-001: known and unknown requests answer before mail; address and cli
 
 test('PORTAL-001: confirmation, separate sessions, sign-out and contact changes fence account access',async()=>{const {portalSessionJourney}=await import('./support/portal-journey.mjs');await portalSessionJourney()})
 
-test('PAY-005 / OPS-001: reviewed original-tender refunds, exact tax credits, exchanges, account isolation and recovery',async()=>{const {refundsJourney}=await import('./support/refunds-journey.mjs');await refundsJourney()})
-test('PAY-005: one approved Stripe refund, uncertain recovery and duplicate or failed provider outcomes',async()=>{const {stripeRefundJourney}=await import('./support/refunds-journey.mjs');await stripeRefundJourney()})
+test('PAY-005 / PAY-008 / OPS-001: reviewed original-tender refunds, exact tax credits, exchanges, account isolation and recovery',async()=>{const {refundsJourney}=await import('./support/refunds-journey.mjs');await refundsJourney()})
+test('PAY-005 / PAY-008: one approved Stripe refund, uncertain recovery and duplicate or failed provider outcomes',async()=>{const {stripeRefundJourney}=await import('./support/refunds-journey.mjs');await stripeRefundJourney()})
 
 test('PAY-005: full original cash, check and other manual refunds preserve issued invoices and zero the balance',async()=>{const {fullRefundJourney}=await import('./support/refunds-journey.mjs');await fullRefundJourney()})
 
@@ -362,7 +362,7 @@ test('BOOK-002 / BOOK-003: waitlist offers share the tentative source capacity b
 test('BOOK-002 / BOOK-003: failed or uncertain waitlist mail never automatically retries',waitlistMailFailureJourney)
 
 const {calendarBrowser}=await import('./calendar-browser.mjs')
-test('BOOK-002: native day week resources and cancellation offers at 1440 and 390',calendarBrowser)
+test('BOOK-002 / BOOK-003: native day week resources and cancellation offers at 1440 and 390',calendarBrowser)
 
 test('GOV-004: authenticator app, passkey and recovery-code sign-in with replay, clone, origin and guessing fences',()=>run(secondFactorJourney))
 test('GOV-004: owner-required policy, lost-device reset and deployment owner recovery',()=>run(policyRecoveryJourney))
