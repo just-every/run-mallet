@@ -40,7 +40,8 @@ export const collaboration:Handler=(c,command,p)=>{
  if(command==='subtask.complete') {
   const task=find(c.s,'subtask',p.subtaskId);expectVersion(task,p.version)
   if(task.kind==='pickup-followup')fail('PICKUP_RESOLUTION','Record contact resolution on the status and pickup screen.',null,403)
-  if(task.kind==='review-feedback'){if(c.actor.role!=='owner')fail('FORBIDDEN','Only the current owner handles private feedback.',null,403);find(c.s,'job',task.jobId)}else open(c,task.jobId)
+  const job=task.kind==='review-feedback'?find(c.s,'job',task.jobId):open(c,task.jobId);member(c,job)
+  if(task.kind==='review-feedback'&&c.actor.role!=='owner')fail('FORBIDDEN','Only the current owner handles private feedback.',null,403)
   if(!manager(c)&&c.actor.id!==task.assigneeId)fail('FORBIDDEN','Only the assignee, the owner or a service advisor completes this subtask.',null,403)
   if(task.completedAt)fail('SUBTASK_STATE','This subtask is already complete.')
   const waiting=task.dependsOn.map((d:string)=>find(c.s,'subtask',d)).filter((d:Row)=>!d.completedAt)
@@ -56,7 +57,7 @@ export const collaboration:Handler=(c,command,p)=>{
   event(c,command,job.id,row.id,{mentions:row.mentions.map((m:any)=>m.id),attachments:row.attachments.length});return row
  }
  if(command==='mention.acknowledge') {
-  const note=find(c.s,'jobNote',p.noteId);expectVersion(note,p.version)
+  const note=find(c.s,'jobNote',p.noteId);expectVersion(note,p.version);member(c,find(c.s,'job',note.jobId))
   const mine=note.mentions.find((m:any)=>m.id===c.actor.id)
   if(!mine)fail('FORBIDDEN','Only the mentioned person acknowledges a mention.',null,403)
   if(mine.acknowledgedAt)return note

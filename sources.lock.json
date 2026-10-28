@@ -1672,7 +1672,7 @@
       "executable": false
     },
     "src/mallet/collaboration.ts": {
-      "sha256": "e49e70a4018097675f825aedf55373f54aa66601ec482512fba935ac355e6e18",
+      "sha256": "2b3f0324e9e5d70d7dcc06c15ed1d830682bfe8dad3ca6d689297fa3d51431d3",
       "executable": false
     },
     "src/mallet/connectors/door.ts": {
@@ -4780,7 +4780,7 @@
       "executable": false
     },
     "tests/mallet.test.mjs": {
-      "sha256": "132d16ecb2180fe1c16987fd97a6bca6811ca3db91d88ff934f09b311136e347",
+      "sha256": "7f7569c8e091104ee399117c0415e04001ce597a6b7af09f2fb34d51f12d0633",
       "executable": false
     },
     "tests/media-browser.mjs": {
