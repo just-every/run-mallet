@@ -32,6 +32,11 @@ export async function declinedReviewBrowser(){
   await click('declineReview.refresh','Refresh cited packet')
   assert.ok((await p.locator('main').innerText()).includes('Suppressed: Replacement inspection'))
   assert.equal(await form('declineReview.prepare').count(),0)
+  await p.getByText('Citations and retained revisions',{exact:true}).click()
+  const original=p.locator('[data-packet-revision="1"]')
+  await original.locator('summary').click()
+  assert.ok((await original.innerText()).includes('3.5 mm'))
+  assert.ok((await original.innerText()).includes('1,350 miles'))
   await shot('declined-02-replacement-suppressed-history')
   const before=(await h.state()).records,backup=await archive(h),fresh=await installation({network:true,secureNetwork:true,assets:true})
   try{
@@ -42,6 +47,9 @@ export async function declinedReviewBrowser(){
    const recovered=await browser.newContext({ignoreHTTPSErrors:true});await recovered.addCookies(cookies(fresh));const page=await recovered.newPage()
    await page.goto(fresh.origin+'/app/jobs/'+f.job.id+'/declined-review');await page.setViewportSize({width:1440,height:1000})
    text=await page.locator('main').innerText();assert.ok(text.includes('Advisory only'));assert.ok(text.includes('Suppressed: Replacement inspection'))
+   await page.getByText('Citations and retained revisions',{exact:true}).click()
+   const retained=page.locator('[data-packet-revision="1"]');await retained.locator('summary').click()
+   assert.ok((await retained.innerText()).includes('3.5 mm'))
    for(const width of [1440,390]){await page.setViewportSize({width,height:1000});await page.screenshot({path:join(dir,'declined-03-recovered-history-'+width+'.png'),fullPage:true})}
    await recovered.close()
   }finally{await fresh.close()}
