@@ -82,3 +82,43 @@ Customer erasure immediately destroys INTAKE-004 unlock data keys outside D1 rec
 
 Current native semantics (sx c27): persistent business-event jobs use atomic installation-wide concurrency of four, one-minute leases and cron, stopped failed/uncertain handoffs and explicit owner recovery; only GET-only payment evidence may be replayed under fresh audited approval.
 
+
+## INTAKE-004 — retained source details
+
+Temporary unlock material is owner-only after explicit consent, authenticated encryption encrypted under per-secret data keys wrapped by dedicated private installation configuration, excluded from archives/state/audits, preserving the exact entered value.
+
+## INTAKE-004 — retained source details
+
+It becomes inaccessible immediately when its purpose ends or its at-most-24-hour lifetime expires; ciphertext is removed on explicit purpose end, documented handover, the next custody/vault request or the next 15-minute scheduled sweep.
+
+## INTAKE-004 — retained source details
+
+Each secret is encrypted under its own data key, held outside the database's point-in-time recovery and destroyed at purge, so a restored database copy yields undecryptable ciphertext.
+
+## INTAKE-004 — retained source details
+
+The vault key is a dedicated private setting.
+
+## INTAKE-004 — native reveal floor
+
+Until GOV-001 ships only the owner reveals; GOV-001 then lets the job's assigned technician reveal, each reveal reasoned and audited.
+
+## PAY-005 — retained source details
+
+Until GOV-001 ships, only the current owner previews, issues, applies and records refunds, credit notes and exchanges, and explicitly confirms each Stripe submission. GOV-001 then delegates bounded refund rights to manager, cashier and advisor roles and read access to the accountant, and GOV-004 adds refund step-up.
+
+## PAY-005 — retained source details
+
+Mallet never submits or retries a refund automatically.
+
+## PAY-005 — retained source details
+
+A pending or uncertain refund stays reserved until GET-only reconciliation resolves it.
+
+## RETURN-001 — retained source details
+
+Until GOV-001 adds delegated manager authority, only the current owner may approve a reasoned unpaid-release exception for that exact invoice (24-hour expiry); it never records payment.
+
+## REPORT-002 — prior native scope and proof notes
+
+Show gross profit and margin by repair, parts/labor/sublet, technician, advisor, service, supplier and location using actual purchase cost, loaded labor, discounts, core/refund adjustments and warranty rework; distinguish estimated from realized margin. Only the current owner reads profitability or declares versioned loaded hourly costs; other roles receive neither loaded rates nor profitability. The report selects repairs by inclusive UTC booking dates and derives estimated and realized pretax values from retained native sources. Loaded rates are separate from payroll wages. Missing cost evidence leaves profit unavailable. The declared basis, allocation, refund and warranty rules are documented in the documented operation; no money, outbound action or accounting posting is performed. Personal-owner-only profitability access and explicit owner-declared loaded hourly costs are approved as the current slice. Each rate revision retains its effective UTC date, USD-cent amount, basis, reason, actor and timestamp; earlier revisions remain inspectable. A dated correction may recompute the current repair-cohort projection, whose selection dates and calculation basis remain visible, without rewriting source invoices, approved timer history, published results or accounting records. Missing cost remains unavailable rather than zero. Estimated and realized margin remain distinct, with actual received costs, discounts, credits, refunds and warranty recovery reconciled once. Report access grants no send, purchase, payment, payroll or accounting-posting authority. The complete profitability target and OPS-001 portability remain binding. Complete location comparison awaits SHOP-001. The full acceptance sentence remains open for those cost and comparison cases despite the asserted native higher-cost, discount and comeback journey. GOV-001 retains the missing delegated profitability permissions; REPORT-002 must prove their application when available. Direct proof of complete rate-change audit content and contrasting effective-date selection cases remains incomplete. Existing native report, source, recomputation and fresh-owner recovery assertions retain their stated scope. Retained priced-package snapshots keep their original service revision after a later rename. The same journey asserts complete dated rate declarations with original actor and audit references, contrasts earlier, later and equal-effective-date revisions, preserves invoices and approved time history, and recovers the projection under fresh authority. Complete historical package attribution without retained source links remains unavailable. Location comparison remains SHOP-001, excluded from this campaign by its plan; delegated margin access remains GOV-001 and must be asserted when that door exists. The governing recorded decision is RL-12.
