@@ -1,3 +1,5 @@
+import {coverageCommand,coverageState} from './coverage-door'
+import {coveragePage} from './ui/coverage-follow-up'
 import {webhookResponse} from './webhook-door'
 import {assistantsPage} from './ui/assistants'
 import {assistantCommand,scopedAssistantView} from './assistant-door'
@@ -179,6 +181,7 @@ function withoutFleetApproval(value:any):any {
  return value
 }
 function visible(s:State,actor:Actor):State {
+ if(actor.role!=='owner')s={...s,records:Object.fromEntries(Object.entries(s.records).filter(([kind])=>!kind.startsWith('coverage')).map(([kind,values])=>[kind,kind==='event'?values.filter(x=>!x.kind.startsWith('coverage.')):values]))}
  if(actor.role!=='owner')s={...s,records:Object.fromEntries(Object.entries(s.records).filter(([kind])=>!kind.startsWith('webhook')&&!kind.startsWith('assistant')).map(([kind,values])=>[kind,kind==='event'?values.filter(x=>!x.kind.startsWith('assistant.')):values]))}
  s={...s,records:{...s.records,reportDelivery:rows(s,'reportDelivery').filter(r=>r.ownerId===actor.id),reportFilter:rows(s,'reportFilter').filter(r=>r.ownerId===actor.id)}}
  if(actor.role!=='owner'){s={...s,records:{...Object.fromEntries(Object.entries(s.records).filter(([kind])=>!kind.startsWith('stripe'))),event:rows(s,'event').filter(r=>!r.kind.startsWith('stripe.'))}};s=withoutFleetApproval(s)}
@@ -367,6 +370,7 @@ async function workshopResponse(request:Request,original:Bindings,execution:Pick
    if(['connector.save','connector.revoke'].includes(command)&&actor.role==='owner'&&!auth.gate?.enrolled)throw new HttpError(403,'step_up_required','Enrol your own second factor before opening the credential door.')
    if(command.startsWith('apiClient.')&&actor.role==='owner')auth.authority=requireStepUp(auth)
    if(needsStepUp(command,actor.role))auth.authority=requireStepUp(auth,command.startsWith('deposit.'))
+   if(command==='coverage.sweep')throw new HttpError(404,'unknown_command')
    if(internalStatusCommands.includes(command))throw new HttpError(404,'unknown_command')
    if(internalReviewCommands.includes(command))throw new HttpError(404,'unknown_command')
    if(internalOutreachCommands.includes(command))throw new HttpError(404,'unknown_command')
@@ -397,6 +401,7 @@ async function workshopResponse(request:Request,original:Bindings,execution:Pick
    else if(['intake.secretStore','intake.secretReveal','intake.secretEnd','intake.secretEraseCustomer'].includes(command))result=await intakeSecret(env,actor,auth.authority,command,input)
    else if(command.startsWith('statusNotice.'))result=await statusNoticeCommand(env,actor,auth.authority,command,input)
    else if(command.startsWith('review.'))result=await reviewCommand(env,actor,auth.authority,command,input)
+   else if(command.startsWith('coverage.'))result=await coverageCommand(env,actor,auth.authority,command,input)
    else if(command.startsWith('outreach.'))result=await outreachCommand(env,actor,auth.authority,command,input)
    else if(command.startsWith('routing.'))result=await routingCommand(env.DB,actor as any,auth.authority,command,input)
    else if(command==='promise.approveAndNotify')result=await sendPromiseNotice(env,actor,auth.authority,input)
@@ -447,6 +452,7 @@ async function workshopResponse(request:Request,original:Bindings,execution:Pick
    if(command.startsWith('intake.'))return redirect(`/app/jobs/${e(input.jobId)}/intake`)
    if(command.startsWith('return.')||command==='payment.verifyStripe'||command==='flow.collect')return redirect(`/app/jobs/${e(input.jobId)}/return`)
    if(command==='payment.record'&&input.returnTo==='return')return redirect(`/app/jobs/${e(input.jobId)}/return`)
+   if(command.startsWith('coverage.'))return redirect('/app/jobs/'+encodeURIComponent(String(input.jobId))+'/coverage')
    if(command.startsWith('warranty.')||command==='payment.record')return redirect(`/app/jobs/${e(command==='warranty.open'?result.jobId:input.jobId)}/warranty`)
    if(command==='assistant.grant')return page('Scoped assistant key',`<section class="card"><p>Copy this separate key once into the assistant’s private environment.</p><pre>${e(result.token)}</pre><p>Allowed action: ${e(result.kind)}. Zero spend. Expires ${when(result.expiresAt)}.</p><a href="/app/settings/assistants">Return to assistant settings</a></section>`,actor,200,{section:'data'})
    if(command.startsWith('assistant.'))return redirect('/app/settings/assistants')
@@ -584,8 +590,10 @@ async function workshopResponse(request:Request,original:Bindings,execution:Pick
   if(reviewMatch){if(actor.role!=='owner')throw new HttpError(403,'owner_required');const job=rows(state,'job').find(j=>j.id===reviewMatch[1]);if(!job)throw new HttpError(404,'not_found');return page('Review & satisfaction',`<div class="narrow"><p><a href="/app/jobs/${e(job.id)}/return">Back to documented handover</a></p>${reviewPanel(await reviewState(env,state,actor),job,actor)}</div>`,actor,200,frame('jobs'))}
   const returnMatch=path.match(/^\/app\/jobs\/([^/]+)\/return$/)
   if(returnMatch){if(!human(actor))throw new HttpError(403,'manager_required');const job=rows(state,'job').find(j=>j.id===returnMatch[1]);if(!job)throw new HttpError(404,'not_found');return page('Documented handover',returnPage(await reviewState(env,state,actor),job,actor),actor,200,frame('jobs'))}
+  const coverageMatch=path.match(/^\/app\/jobs\/([^/]+)\/coverage$/)
+  if(coverageMatch){if(actor.role!=='owner')throw new HttpError(403,'owner_required');const job=rows(state,'job').find(j=>j.id===coverageMatch[1]);if(!job)throw new HttpError(404,'not_found');return page('Coverage review register',coveragePage(await coverageState(env,state),job),actor,200,frame('jobs'))}
   const warrantyMatch=path.match(/^\/app\/jobs\/([^/]+)\/warranty$/)
-  if(warrantyMatch){if(!human(actor))throw new HttpError(403,'manager_required');const job=rows(state,'job').find(j=>j.id===warrantyMatch[1]);if(!job)throw new HttpError(404,'not_found');return page('Warranty & comeback work',warrantyPage(state,job,(await operators(env.DB)).list),actor,200,frame('jobs'))}
+  if(warrantyMatch){if(!human(actor))throw new HttpError(403,'manager_required');const job=rows(state,'job').find(j=>j.id===warrantyMatch[1]);if(!job)throw new HttpError(404,'not_found');return page('Warranty & comeback work',warrantyPage(state,job,(await operators(env.DB)).list,actor.role==='owner'),actor,200,frame('jobs'))}
   const intakeMatch=path.match(/^\/app\/jobs\/([^/]+)\/intake$/)
   if(intakeMatch){if(!human(actor))throw new HttpError(403,'manager_required');const job=rows(state,'job').find(j=>j.id===intakeMatch[1]);if(!job)throw new HttpError(404,'not_found');await expireIntakeSecrets(env);const secrets=actor.role==='owner'?(await env.DB.prepare('SELECT id,purpose,expires_at FROM mallet_intake_secrets WHERE job_id=? ORDER BY expires_at').bind(job.id).all()).results:[];return page('Condition & custody',intakePage(state,job,actor,await diagnosisMedia(env.DB,actor,auth.authority,job.id),secrets),actor,200,frame('jobs'))}
   const previewMatch=path.match(/^\/app\/jobs\/([^/]+)\/media\/view\/([^/]+)$/)

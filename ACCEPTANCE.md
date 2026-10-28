@@ -378,9 +378,9 @@ Evidence: `tests/mallet.test.mjs`; `tests/support/outreach-journey.mjs`; `tests/
 
 Evidence: `tests/mallet.test.mjs`; `tests/support/reviews-journey.mjs`; `tests/reviews-browser.mjs`.
 
-**AUTO-006 — Warranty and contract renewal follow-up.** Status: **missing**. [Target, acceptance and remaining work](./CONTRACT.md#customer-communication-and-follow-up).
+**AUTO-006 — Warranty and contract renewal follow-up.** Status: **partial**. [Target, acceptance and remaining work](./CONTRACT.md#customer-communication-and-follow-up).
 
-Evidence: No implementation evidence yet.
+Evidence: `tests/mallet.test.mjs`; `tests/support/coverage-follow-up-journey.mjs`; `tests/warranty-browser.mjs`; `tests/coverage-follow-up-browser.mjs`.
 
 **MSG-004 — Communication controls and searchable history.** Status: **missing**. [Target, acceptance and remaining work](./CONTRACT.md#customer-communication-and-follow-up).
 
