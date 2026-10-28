@@ -119,6 +119,7 @@ export async function declinedEligibilityJourney(){
 }
 
 export async function declinedErasureJourney(){
+ await declinedTransferErasureJourney()
  const h=await installation({clock:OUTREACH_CLOCK})
  try{
   const fixture=await declinedFixture(h),{item,job}=fixture
@@ -297,5 +298,71 @@ export async function declinedBookingJourney(){
    const destinationFields={...holdFields(destination),email:fixture.asset.customerEmail,declinedToken:fields.declinedToken}
    assert.equal((await bookingPost(fresh,'/book',destinationFields)).status,404,'Restored invitation content grants no new source-binding capability even with valid fresh capacity')
   }finally{await fresh.close()}
+ }finally{await h.close()}
+}
+
+
+/** Erasing a former vehicle owner follows captured consent, without erasing the new owner. */
+export async function declinedTransferErasureJourney(){
+ const h=await installation({clock:OUTREACH_CLOCK})
+ try{
+  const fixture=await declinedFixture(h),{item}=fixture
+  const latest=async(kind,id)=>(await h.state()).records[kind].find(r=>r.id===id)
+  const accountFor=async(name,email)=>{
+   const contact=await h.command('contact.save',{name,email,phone:'',communication:'email',notes:''})
+   return h.command('customer.save',{name,kind:'person',contactIds:[contact.id],payerId:contact.id,billingContactId:contact.id,taxStatus:'unknown',notes:''})
+  }
+  const original=await accountFor(fixture.asset.customerName,fixture.asset.customerEmail)
+  fixture.asset=await h.command('customer.linkAsset',{assetId:item.assetId,version:(await latest('asset',item.assetId)).version,customerId:original.id,customerVersion:original.version,reason:'Reviewed original customer relationship'})
+  const pending=await h.command('outreach.schedule',await declinedScheduleFields(h,fixture))
+  const withdrawalPath=new URL(pending.content.match(/Stop declined-work emails: (https?:[^\s]+)/)[1]).pathname
+  const invitation=new URL(pending.content.match(/Book a follow-up: (https?:[^\s]+)/)[1])
+  const {bookingService,bookingPost,holdFields,slotId}=await import('./booking-journey.mjs')
+  const service=await bookingService(h,{windows:[{startAt:'2026-11-03T09:00:00Z',endAt:'2026-11-03T12:00:00Z',bayId:'synthetic-mallet-867',technicianId:(await h.state()).actor.id,skills:['inspection']}]})
+  const held=await bookingPost(h,'/book',{...holdFields(service),email:fixture.asset.customerEmail,declinedToken:invitation.searchParams.get('declined')})
+  assert.equal(held.status,303);const bookingPath=held.headers.get('location')
+  assert.equal((await bookingPost(h,bookingPath,{action:'confirm',version:1})).status,200)
+  const appointment=(await h.state()).records.appointment.find(r=>r.declinedConsentId===pending.consentId)
+  const reminder=await h.command('outreach.schedule',scheduleFields(appointment))
+  const replacementEmail='synthetic-mallet-868'+String.fromCharCode(64)+'example.test'
+  const replacement=await accountFor('synthetic-mallet-869',replacementEmail)
+  let asset=await h.command('customer.linkAsset',{assetId:item.assetId,version:(await latest('asset',item.assetId)).version,customerId:replacement.id,customerVersion:replacement.version,reason:'Reviewed vehicle transfer to a different customer'})
+  asset=await h.command('asset.update',{...asset,assetId:asset.id,customerEmail:replacementEmail})
+  const replacementBooking=await bookingPost(h,'/book',{...holdFields(service),email:replacementEmail,slotId:slotId(service,{...service.windows[0],startAt:'2026-11-03T10:00:00.000Z'})})
+  assert.equal(replacementBooking.status,303);const replacementPath=replacementBooking.headers.get('location')
+  assert.equal((await bookingPost(h,replacementPath,{action:'confirm',version:1})).status,200)
+  const replacementAppointment=(await h.state()).records.appointment.find(r=>r.email===replacementEmail)
+  const replacementReminder=await h.command('outreach.schedule',scheduleFields(replacementAppointment))
+  const hold=await h.command('retention.hold',{customerId:original.id,scope:'all',reason:'Retain the former customer authorization evidence',caseReference:'synthetic-mallet-870'})
+  const erase=async()=>{
+   const input={customerId:original.id,categories:['media','personal','import']},preview=await h.command('retention.preview',input)
+   const receipt=await h.command('customer.erase',{...input,fingerprint:preview.fingerprint,consent:true,confirm:'ERASE',reason:'Former customer requests eligible erasure',consentEvidence:'Recorded former customer erasure request; synthetic-mallet-871'})
+   assert.equal(receipt.phase,'complete');return receipt
+  }
+  await erase()
+  await h.cron('2026-11-01T14:00:00Z')
+  const outcome={withdrawal:(await h.request(withdrawalPath,{as:''})).status,management:(await h.request(bookingPath,{as:''})).status,oldReminders:h.messages.filter(m=>m.subject==='Your appointment reminder'&&m.to.includes(fixture.asset.customerEmail)).length,declinedStatus:(await latest('outreach',pending.id)).status,reminderStatus:(await latest('outreach',reminder.id)).status}
+  assert.deepEqual(outcome,{withdrawal:404,management:404,oldReminders:0,declinedStatus:'stopped',reminderStatus:'stopped'},'Former customer erasure revokes capabilities and stops pending outreach after vehicle transfer, even under a hold')
+  assert.equal((await bookingPost(h,bookingPath,{action:'cancel',version:appointment.version})).status,404)
+  assert.equal((await bookingPost(h,withdrawalPath,{action:'withdraw'})).status,404)
+  assert.equal((await bookingPost(h,'/book',{...holdFields(service),email:fixture.asset.customerEmail,slotId:slotId(service,{...service.windows[0],startAt:'2026-11-03T11:00:00.000Z'}),declinedToken:invitation.searchParams.get('declined')})).status,404,'Erased invitation cannot create another appointment')
+  assert.equal((await h.request(replacementPath,{as:''})).status,200)
+  assert.equal((await latest('outreach',replacementReminder.id)).status,'accepted','The new customer retains separately authorized reminders')
+  assert.equal(h.messages.filter(m=>m.subject==='Your appointment reminder'&&m.to.includes(replacementEmail)).length,1)
+  assert.deepEqual(await latest('asset',asset.id),asset,'Former customer erasure does not erase the transferred vehicle profile')
+  assert.deepEqual(await latest('customerAccount',replacement.id),replacement)
+  assert.equal((await latest('outreach',pending.id)).content,pending.content,'Held approved content remains historical evidence')
+  assert.ok((await latest('declinedConsent',pending.consentId)).erasureSuppressedAt)
+  await h.command('retention.release',{holdId:hold.id,version:hold.version,consent:true,reason:'Authorization review complete'})
+  await erase()
+  const erasedAppointment=await latest('appointment',appointment.id)
+  assert.equal(erasedAppointment.email,'');assert.equal(erasedAppointment.name,'Erased customer');assert.ok(erasedAppointment.privacyErasedAt)
+  assert.deepEqual(await latest('appointment',replacementAppointment.id),replacementAppointment)
+  assert.equal((await latest('appointment',replacementAppointment.id)).email,replacementEmail)
+  assert.deepEqual((await latest('declinedWork',item.id)).decision,item.decision)
+  await h.restart();await h.cron('2026-11-01T14:15:00Z')
+  assert.equal(h.messages.filter(m=>m.subject==='Your appointment reminder'&&m.to.includes(fixture.asset.customerEmail)).length,0)
+  assert.equal((await h.request(bookingPath,{as:''})).status,404)
+  assert.deepEqual(await latest('asset',asset.id),asset)
  }finally{await h.close()}
 }
