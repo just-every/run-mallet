@@ -22,6 +22,7 @@ function synchronize(c:Context,job:Row,people:any[],current=currentProjection(c.
  const packet=packetFor(c.s,job.id),person=people.find(p=>p.id===c.actor.id)??currentRoutingHandler(c.s,job.id,people)??people.find(p=>p.role==='owner')??people[0]
  if(!person)return packet
  const fallback={id:person.id,name:person.name,role:person.role}
+ const erased=rows(c.s,'asset').some(a=>a.id===job.assetId&&a.privacyErasedAt)
   let saved=packet
   if(!packet||packet.revisions.at(-1).basis!==current.basis){
    const revision={n:(packet?.revisions.length??0)+1,...current,by:who(c),at:c.now}
@@ -30,7 +31,7 @@ function synchronize(c:Context,job:Row,people:any[],current=currentProjection(c.
   }
   for(const task of rows(c.s,'repairBlockerTask').filter(t=>t.jobId===job.id&&!t.resolution)){
    const cleared=blockerClearance(c.s,job,task)
-   if(cleared){const resolution={...cleared,by:who(c),at:c.now};bump(c.s,'repairBlockerTask',task,{resolution});event(c,'blocker.cleared',job.id,task.id,resolution)}
+   if(cleared){const resolution={...cleared,...(erased?{reason:'Actual source condition cleared; customer detail erased.'}:{}),by:who(c),at:c.now};bump(c.s,'repairBlockerTask',task,{resolution});event(c,'blocker.cleared',job.id,task.id,resolution)}
    else if(!people.some((person:any)=>person.id===task.handler.id)){
     const handler=fallback,assignment={handler,by:who(c),at:c.now};bump(c.s,'repairBlockerTask',task,{handler,assignments:[...task.assignments,assignment],acknowledgment:null});event(c,'blocker.assign',job.id,task.id,assignment)
    }

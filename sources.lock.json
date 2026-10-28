@@ -2140,7 +2140,7 @@
       "executable": false
     },
     "src/mallet/repair-blockers.ts": {
-      "sha256": "0ed6442963d3b1fbcac4db575ca9e4e4260c30fcc02e3d4aff8ba39782038fb3",
+      "sha256": "df3d070658ef02386bf4877bd0a1761bc6690c990c67579dc5aeb888d1eb1dc6",
       "executable": false
     },
     "src/mallet/reports/cost-rates.ts": {
@@ -2684,7 +2684,7 @@
       "executable": false
     },
     "src/mallet/ui/repair-blockers.ts": {
-      "sha256": "874ea7a09da083cd57b0071b4e7e4a474ea4242b7394dec4c9cac2e57d05bcef",
+      "sha256": "84e17a503124059f5744a59ca1a88934c8e2c1a5b9154cf05899ff3f2b432d4e",
       "executable": false
     },
     "src/mallet/ui/repair.ts": {

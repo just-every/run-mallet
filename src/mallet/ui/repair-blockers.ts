@@ -12,7 +12,7 @@ const proposals=(items:any[])=>{
 const progress=(value:any)=>`<dl><dt>Stage</dt><dd>${e(value.stage)}</dd><dt>Repair status</dt><dd>${e(value.status)}</dd><dt>Recorded parts and labor entries</dt><dd>${e(value.recordedActuals)}</dd><dt>Remaining authorized labor</dt><dd>${e(value.remainingHours)} hours</dd><dt>Promise assessment</dt><dd>${e(value.promiseStatus??'Not recorded')}</dd><dt>Customer pickup promise</dt><dd>${value.promiseAt?when(value.promiseAt):'No pickup promise recorded'}</dd></dl>`
 function preparedAction(action:any){
  if(!action)return '<p>No further action is prepared for this repair.</p>'
- return `<p><a href="${e(action.href)}">${e(action.label)}</a></p><ul class="list"><li class="plain">${citation(action.source)}</li></ul>${action.remainingQuantity?`<p>${e(action.remainingQuantity)} authorized units or hours remain on this exact line.</p>`:''}${action.requirements?.length?`<ul>${action.requirements.map((reason:string)=>`<li>${e(reason)}</li>`).join('')}</ul>`:''}<p>The linked workflow rechecks its current sources and required human approval.</p>`
+ return `<p><a href="${e(action.href)}">${e(action.label)}</a></p><ul class="list"><li class="plain">${citation(action.source)}</li></ul>${action.remainingQuantity?`<p>${e(action.remainingQuantity)} authorized units or hours remain on this exact line.</p>`:''}${action.requirements?.length?`<ul>${action.requirements.map((reason:string)=>`<li>${e(reason)}</li>`).join('')}</ul>`:''}<p>Review the cited source before recording the action.</p>`
 }
 const handler=(value:any)=>`${e(value.name)} · ${e(role(value.role))}`
 function acknowledgment(task:any){
