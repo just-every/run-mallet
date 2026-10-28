@@ -53,9 +53,9 @@ export async function capacityDataset({scale='smoke',shops=1,identifierFormat='s
   const per=spec.photosPerRepairOrder+spec.videosPerRepairOrder
   for(let job=1;job<=spec.repairOrders;job++)for(let n=0;n<per;n++){
    const number=(job-1)*per+n+1,clip=n>=spec.photosPerRepairOrder,m=media[clip?1:0],findingId=uuid('finding',number),uploadId=uuid('upload',number),clientId=uuid('finding-client',number),uploadClient=uuid('upload-client',number),jobId=syntheticId('job',job)
-   const finding={id:findingId,job_id:jobId,client_id:clientId,title:`Synthetic repeated ${clip?'video':'photo'} ${n+1}`,captured_at:at,created_at:at,actor_json:JSON.stringify(actor),request_json:JSON.stringify({jobId,clientId,title:`Synthetic repeated ${clip?'video':'photo'} ${n+1}`,capturedAt:at})}
+   const finding={id:findingId,revision:1,job_id:jobId,client_id:clientId,title:`Synthetic repeated ${clip?'video':'photo'} ${n+1}`,captured_at:at,created_at:at,actor_json:JSON.stringify(actor),request_json:JSON.stringify({jobId,clientId,title:`Synthetic repeated ${clip?'video':'photo'} ${n+1}`,capturedAt:at})}
    const request={findingId,variant:'original',originalId:null,filename:m.filename,mime:m.mime,size:m.bytes.length,sha256:m.sha256,capturedAt:at,annotations:null}
-   const upload={id:uploadId,finding_id:findingId,job_id:jobId,variant:'original',original_id:null,filename:m.filename,mime:m.mime,size:m.bytes.length,sha256:m.sha256,captured_at:at,received_at:at,actor_json:JSON.stringify(actor),annotations_json:null,request_json:JSON.stringify(request),complete:1,completed_at:at}
+   const upload={id:uploadId,revision:2,finding_id:findingId,job_id:jobId,variant:'original',original_id:null,filename:m.filename,mime:m.mime,size:m.bytes.length,sha256:m.sha256,captured_at:at,received_at:at,actor_json:JSON.stringify(actor),annotations_json:null,request_json:JSON.stringify(request),complete:1,completed_at:at}
    yield {finding,upload,client:{finding_id:findingId,client_id:uploadClient,upload_id:uploadId},media:m}
   }
  }

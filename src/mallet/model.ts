@@ -1,3 +1,5 @@
+import {webhooks,webhookCommands,internalWebhookCommands,retainWebhookEvent} from './webhooks'
+import {assistant,assistantCommands} from './assistant'
 import {statusNotices,statusNoticeCommands,internalStatusCommands} from './status-notices'
 import {costRates,costRateCommands} from './reports/cost-rates'
 import {reviews,reviewCommands} from './reviews'
@@ -59,11 +61,11 @@ import {inspectionReports,reportCommands} from './inspection-reports'
 import {bookings,bookingCommands} from './bookings'
 
 export type Row = { id: string; version: number; [key: string]: any }
-export type Actor = { id: string; name: string; role: 'owner' | 'admin' | 'member' | 'agent' | 'customer' | 'system'; staffRole?:string }
+export type Actor = { id: string; name: string; role: 'owner' | 'admin' | 'member' | 'agent' | 'customer' | 'system'; staffRole?:string; assistantGrantId?:string }
 export type State = { version: number; records: Record<string, Row[]> }
 export type Context = { s: State; actor: Actor; now: string }
 export type Handler = (c: Context, command: string, p: any) => any
-type Statement = { bind(...values: any[]): Statement; all(): Promise<any> }
+type Statement = { bind(...values: any[]): Statement; all(): Promise<any>; first(): Promise<any> }
 export type Database = { prepare(sql: string): Statement; batch(statements: Statement[]): Promise<any[]> }
 export class MalletError extends Error {
   constructor(public code: string, message: string, public status = 409, public details: any = null) { super(message); this.name = 'MalletError' }
@@ -108,7 +110,7 @@ export function bump(s: State, kind: string, row: Row, changes: Record<string, a
   return next
 }
 export function event(c: Context, kind: string, jobId: string | null, subjectId: string, data: any) {
-  return put(c.s, 'event', { kind, jobId, assetId: jobId ? find(c.s, 'job', jobId).assetId : kind.startsWith('asset.') ? subjectId : null, subjectId, at: c.now, actor: who(c), data })
+  const saved=put(c.s, 'event', { kind, jobId, assetId: jobId ? find(c.s, 'job', jobId).assetId : kind.startsWith('asset.') ? subjectId : null, subjectId, at: c.now, actor: who(c), data });retainWebhookEvent(c,saved);return saved
 }
 export function selfApproval(c: Context, preparedBy: { id: string; role: string }) {
   if (preparedBy.role === 'agent' && preparedBy.id === c.actor.id) fail('SELF_APPROVAL', 'Another person must decide work prepared by this agent identity.')
@@ -117,18 +119,18 @@ export function approval(c: Context, kind: string, row: Row, revision: number, p
   return put(c.s, 'approval', { subjectKind: kind, subjectId: row.id, revision, subjectVersion: row.version, preparedBy, approvedBy: who(c), decision: 'approved', at: c.now })
 }
 const agentCommands = new Set(['estimate.prepare', 'estimate.revise', 'invoice.prepare', 'dispatch.prepare'])
-const customerCommands = ['review.respond','review.customerWithdraw','booking.hold','booking.confirm','booking.cancel','booking.reschedule','booking.outcome','checkin.submit','estimate.customerDecide', 'chaseOptOut.customer','intakeForm.customerSave','intakeForm.copyClaim','intakeForm.copyOutcome','intakeForm.copyAccess'], systemCommands = [...internalStatusCommands,'review.outcome','outreach.claim','outreach.outcome','reportDelivery.claim','reportDelivery.outcome','ar.reminderOutcome','routing.sweep', 'approvalChase.sweep', 'approvalChase.outcome']
-const commands = new Set([...statusNoticeCommands,...costRateCommands,...reviewCommands,...outreachCommands,...returnRecordCommands,...terminalRecordCommands,...stripeCommands,...filterCommands,...taxBasisCommands,...clearanceCommands,...receivableCommands,...depositCommands,...taxCommands,...documentCommands,...diagnosticResultCommands,...supplierOrderCommands,...transferCommands,...rmaCommands,...coreCommands,...replenishmentCommands,...waitlistCommands,...calendarCommands,...reportCommands,...bookingCommands,...checkInCommands,...creditCommands,...intakeFormCommands,...returnCommands,...warrantyCommands,...paymentCommands,...intakeCommands,...traceCommands,...accountCommands,...purchasingCommands,...inventoryCommands,...subletCommands,...rateProfileCommands,...routingCommands,...specialPartCommands,...flowCommands,...promiseCommands,...approvalLinkCommands,...chaseCommands,...internalChaseCommands,...collaborationCommands,...timeCommands,...payRateCommands,...diagnosisCommands,...pricingCommands,...inspectionCommands,...qualityCommands,'decline.record', 'decline.reprice', 'decline.inapplicable', 'reading.record', 'serviceInterval.save', 'tax.configure', 'asset.create', 'asset.update', 'job.book', 'job.complete', 'work.record', 'estimate.prepare', 'estimate.revise', 'estimate.approve', 'estimate.markSent', 'estimate.authorise', 'invoice.prepare', 'invoice.approve', 'invoice.export', 'dispatch.prepare', 'dispatch.approve'])
+const customerCommands = ['review.respond','review.customerWithdraw','booking.hold','booking.confirm','booking.cancel','booking.reschedule','booking.outcome','checkin.submit','estimate.customerDecide', 'chaseOptOut.customer','intakeForm.customerSave','intakeForm.copyClaim','intakeForm.copyOutcome','intakeForm.copyAccess'], systemCommands = [...internalWebhookCommands,...internalStatusCommands,'review.outcome','outreach.claim','outreach.outcome','reportDelivery.claim','reportDelivery.outcome','ar.reminderOutcome','routing.sweep', 'approvalChase.sweep', 'approvalChase.outcome']
+const commands = new Set([...assistantCommands,...webhookCommands,...statusNoticeCommands,...costRateCommands,...reviewCommands,...outreachCommands,...returnRecordCommands,...terminalRecordCommands,...stripeCommands,...filterCommands,...taxBasisCommands,...clearanceCommands,...receivableCommands,...depositCommands,...taxCommands,...documentCommands,...diagnosticResultCommands,...supplierOrderCommands,...transferCommands,...rmaCommands,...coreCommands,...replenishmentCommands,...waitlistCommands,...calendarCommands,...reportCommands,...bookingCommands,...checkInCommands,...creditCommands,...intakeFormCommands,...returnCommands,...warrantyCommands,...paymentCommands,...intakeCommands,...traceCommands,...accountCommands,...purchasingCommands,...inventoryCommands,...subletCommands,...rateProfileCommands,...routingCommands,...specialPartCommands,...flowCommands,...promiseCommands,...approvalLinkCommands,...chaseCommands,...internalChaseCommands,...collaborationCommands,...timeCommands,...payRateCommands,...diagnosisCommands,...pricingCommands,...inspectionCommands,...qualityCommands,'decline.record', 'decline.reprice', 'decline.inapplicable', 'reading.record', 'serviceInterval.save', 'tax.configure', 'asset.create', 'asset.update', 'job.book', 'job.complete', 'work.record', 'estimate.prepare', 'estimate.revise', 'estimate.approve', 'estimate.markSent', 'estimate.authorise', 'invoice.prepare', 'invoice.approve', 'invoice.export', 'dispatch.prepare', 'dispatch.approve'])
 export function reduce(s: State, actor: Actor, command: string, payload: any, now = new Date().toISOString()): any {
   object(actor, 'actor'); text(actor.id, 'actor.id'); text(actor.name, 'actor.name'); choice(actor.role, ['owner', 'admin', 'member', 'agent', 'customer', 'system'], 'role')
   // A customer link actor exists only to record its own decision or opt-out; the scheduler only runs reminders.
   if ((actor.role === 'customer') !== customerCommands.includes(command) || (actor.role === 'system') !== systemCommands.includes(command)) fail('FORBIDDEN', 'This role cannot perform that command.', null, 403)
   if (!commands.has(command)) fail('COMMAND', 'Unknown Mallet command.', null, 400)
-  if (actor.role === 'agent' && !agentCommands.has(command) || actor.role === 'member' && ![...filterCommands,...collaborationMemberCommands,...promiseMemberCommands,...timeMemberCommands,...diagnosisMemberCommands,...inspectionMemberCommands,'work.record','quality.record','quality.correct','quality.signTechnician'].includes(command)) fail('FORBIDDEN', 'This role cannot perform that command.', null, 403)
+  if (actor.role === 'agent' && !(actor.assistantGrantId?assistantCommands.includes(command):agentCommands.has(command)) || actor.role === 'member' && ![...filterCommands,...collaborationMemberCommands,...promiseMemberCommands,...timeMemberCommands,...diagnosisMemberCommands,...inspectionMemberCommands,'work.record','quality.record','quality.correct','quality.signTechnician'].includes(command)) fail('FORBIDDEN', 'This role cannot perform that command.', null, 403)
   migrateSalesTax(s)
   const c = { s, actor, now }, p = object(payload), eventCount = rows(s,'event').length
   guardCheckoutBalance(s,command,p)
-  for (const handler of [statusNotices,costRates,reviews,outreach,returnRecords,terminalRecords,stripeRecords,reportFilters,taxCreditBasis,tenderClearance,receivables,deposits,invoiceDocuments,diagnosticResults,supplierOrders,transfers,supplierReturns,cores,replenishment,bookingWaitlist,calendarCapacity,inspectionReports,bookings,checkIns,credits,intakeForms,returns,warranty,payments,intake,stockTrace,customers,purchasing,inventory,sublets,rateProfiles,routing,specialParts,flow, promises, approvalLinks, approvalChasing, collaboration, time, payRates, diagnostics, pricing, tax, workshop, mileage, estimates, declinedWork, invoices, quality, inspections]) {
+  for (const handler of [assistant,webhooks,statusNotices,costRates,reviews,outreach,returnRecords,terminalRecords,stripeRecords,reportFilters,taxCreditBasis,tenderClearance,receivables,deposits,invoiceDocuments,diagnosticResults,supplierOrders,transfers,supplierReturns,cores,replenishment,bookingWaitlist,calendarCapacity,inspectionReports,bookings,checkIns,credits,intakeForms,returns,warranty,payments,intake,stockTrace,customers,purchasing,inventory,sublets,rateProfiles,routing,specialParts,flow, promises, approvalLinks, approvalChasing, collaboration, time, payRates, diagnostics, pricing, tax, workshop, mileage, estimates, declinedWork, invoices, quality, inspections]) {
     const result = handler(c, command, p)
     if (result !== undefined) { retainStageChanges(c,rows(s,'event').slice(eventCount)); return result }
   }
@@ -143,7 +145,16 @@ export async function load(db: Database, normalize = true): Promise<State> {
   if (normalize) migrateSalesTax(s)
   return s
 }
-export async function execute(db: Database, actor: Actor, command: string, payload: any, authority?: { sql: string; params: any[] }, now?: string, limits?:{spendCents:number;refundCents:number;discountBps:number}): Promise<any> {
+export async function execute(db: Database, actor: Actor, command: string, payload: any, authority?: { sql: string; params: any[] }, now?: string, limits?:{spendCents:number;refundCents:number;discountBps:number},retry?:{clientId:string;key:string;hash:string;response:(result:any)=>any}): Promise<any> {
+  const replay=async()=>{
+    if(!retry)return null
+    const row=await db.prepare('SELECT request_hash,response FROM mallet_api_requests WHERE client_id=? AND request_key=?').bind(retry.clientId,retry.key).first()
+    if(!row)return null
+    if(!authority||!await db.prepare('SELECT 1 AS ok WHERE ('+authority.sql+')').bind(...authority.params).first())fail('FORBIDDEN','Current API authority is required for a replay.',null,403)
+    if(row.request_hash!==retry.hash)fail('IDEMPOTENCY_CONFLICT','This retry key belongs to a different command or payload.')
+    return {value:JSON.parse(row.response)}
+  }
+  const prior=await replay();if(prior)return prior.value
   const s = await load(db, false), before = new Map<string, string>()
   for (const [kind, values] of Object.entries(s.records)) for (const row of values) before.set(`${kind}:${row.id}`, JSON.stringify(row))
   const at=now??new Date().toISOString()
@@ -154,7 +165,8 @@ export async function execute(db: Database, actor: Actor, command: string, paylo
     if(payload.binBarcode){const bin=rows(s,'stockBin').find(b=>b.barcode===payload.binBarcode);if(bin?.location&&bin.location!=='shop')fail('LOCATION_SCOPE','This bin belongs to another location.',null,403)}
   }
   if(limits&&command.startsWith('purchase.')&&payload.purchaseId){const purchase=find(s,'purchaseOrder',payload.purchaseId);if(purchase.totalCents>limits.spendCents)fail('SPEND_LIMIT','This purchase exceeds your delegated spend limit.',null,403)}
-  const result = reduce(s, actor, command, payload, at)
+  let result:any
+  try{result=reduce(s,actor,command,payload,at)}catch(error){const saved=await replay();if(saved)return saved.value;throw error}
   if(limits){
     if(command.startsWith('purchase.')&&Number(result.totalCents??0)>limits.spendCents)fail('SPEND_LIMIT','This purchase exceeds your delegated spend limit.',null,403)
     if((command.startsWith('credit.')||command.startsWith('refund.'))&&Number(result.totals?.totalCents??result.amountCents??0)>limits.refundCents)fail('REFUND_LIMIT','This refund exceeds your delegated refund limit.',null,403)
@@ -168,10 +180,13 @@ export async function execute(db: Database, actor: Actor, command: string, paylo
     const value = JSON.stringify(row)
     if (before.get(`${kind}:${row.id}`) !== value) statements.push(db.prepare('INSERT INTO mallet_records(kind,id,revision,value) VALUES(?,?,?,?) ON CONFLICT(kind,id) DO UPDATE SET revision=excluded.revision,value=excluded.value').bind(kind, row.id, row.version, value))
   }
+  const response=retry?retry.response(result):result
+  if(retry)statements.push(db.prepare('INSERT INTO mallet_api_requests(client_id,request_key,request_hash,response,created_at) VALUES(?,?,?,?,?)').bind(retry.clientId,retry.key,retry.hash,JSON.stringify(response),Date.now()))
   statements.push(db.prepare('DELETE FROM mallet_assert'))
   try { await db.batch(statements) } catch (error) {
+    const saved=await replay();if(saved)return saved.value
     if (/CHECK constraint failed.*(?:mallet_assert|ok)/i.test(String(error))) fail('CONCURRENT_CHANGE', 'Data or session authority changed. Refresh before continuing.')
     throw error
   }
-  return result
+  return response
 }

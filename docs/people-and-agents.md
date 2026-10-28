@@ -1,4 +1,4 @@
-Mallet has three roles for people and one kind of key for agents. People decide; agents only prepare work for a person to review.
+Mallet has three base roles for people, preparation keys and separate scoped assistant grants. People decide; each assistant receives only its explicitly granted work.
 
 ## Roles
 
@@ -39,3 +39,12 @@ A preparation key:
 Everything an agent prepares waits for a person. The approval record names who prepared it and who approved it, and the exact revision they approved.
 
 [Commands and API](/docs/agent-commands) lists every command an agent can send, with examples.
+
+
+## Scoped assistants
+
+The current owner opens **Data & access → Assistant settings** to create a separate receptionist, note-polishing or reviewed-email key. Choose one service, repair or requested tentative appointment, exact start and expiry, and an explicit reason. Every grant has zero spending authority. Only a reviewed appointment email permits an outbound channel. Copy the key once into private assistant configuration.
+
+The assistant uses its scoped tool API, identifies the AI interaction and offers a human handoff. Receptionist intake reserves existing capacity after recording the customer's request; it does not authorize repairs. Diagnostic wording is a proposal alongside the complete raw technician evidence and measurements. A person records approval or rejection without rewriting the source. The owner separately reviews the exact email recipient and content. Revocation stops queued messages, and failure or uncertainty never triggers an automatic retry.
+
+An archive preserves these decisions and proposals but excludes assistant keys. A restored grant is historical and cannot run. These interim defaults await policy approval under ADV-008; a conversational model connection and broader channels are not included.

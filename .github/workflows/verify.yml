@@ -45,6 +45,7 @@ jobs:
       matrix: ${{ fromJSON(needs.plan.outputs.matrix) }}
     env:
       CI: 'true'
+      GH_TOKEN: ${{ github.token }}
       WRANGLER_SEND_METRICS: 'false'
       PLAYWRIGHT_SKIP_BROWSER_GC: '1'
     steps:
