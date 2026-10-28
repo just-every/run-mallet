@@ -1,14 +1,14 @@
-import {execute,rows,load} from './model'
+import {APPOINTMENT_LINK} from './outreach-consent'
+import {execute,rows,load,find} from './model'
 import {digest,type Actor,type Authority} from './auth'
 import {runtimeBindings,type Bindings} from '../auth.server'
 import {operatorMail} from '../mail.server.mjs'
 import {outreachDue,outreachStop} from './outreach'
-import {shopTime} from './promise-zone'
 import {e} from './ui/common'
 const scheduler={id:'mallet-scheduler',name:'Scheduled reminders',role:'system' as const}
 export async function outreachCommand(env:Bindings,actor:Actor,authority:Authority,command:string,input:any){
  const row=await execute(env.DB,actor as any,command,input,authority)
- if(command==='outreach.schedule'){
+ if(command==='outreach.schedule'||command==='outreach.approve'){
   // A crash here leaves an inert business record, never an authorized send.
   await env.DB.prepare(`INSERT INTO mallet_outreach_authority SELECT ?,id,version FROM oa_operators WHERE id=? AND role='owner' AND status='active' AND (${authority.sql})`).bind(row.id,actor.id,...authority.params).run()
  }
@@ -30,7 +30,7 @@ export async function runOutreach(original:Bindings,at:number){
   if(!stop&&!outreachDue(snapshot,r,now))continue
   try{r=await execute(env.DB,scheduler,'outreach.claim',{id:r.id,version:r.version},undefined,now)}catch{continue}
   if(r.status!=='claimed')continue
-  let status='skipped',provider='none'
+  let status='skipped',provider='none',providerReference=''
   try{
    const current=await load(env.DB),handoffNow=new Date(Math.max(at,Date.now())).toISOString()
    if(await authorized(env,r.id)&&!outreachStop(current,rows(current,'outreach').find(x=>x.id===r.id)!,handoffNow)&&outreachDue(current,r,handoffNow)){
@@ -41,16 +41,18 @@ export async function runOutreach(original:Bindings,at:number){
      if(!await env.DB.prepare('SELECT appointment_id FROM mallet_booking_tokens WHERE appointment_id=? AND revoked_at IS NULL').bind(a.id).first())throw Error('Management authority unavailable')
      const secret=btoa(String.fromCharCode(...crypto.getRandomValues(new Uint8Array(32)))).replaceAll('+','-').replaceAll('/','_').replaceAll('=','')
      await env.DB.prepare('INSERT INTO mallet_booking_reminder_tokens(appointment_id,token_hash) VALUES(?,?)').bind(a.id,await digest(secret)).run()
-     content=`${a.service.name}\n${a.service.location}\n${shopTime(a.startAt,a.service.timeZone)}\n${r.instructions}\nReschedule or cancel: ${env.AUTH_ORIGIN}/book/${secret}\nNo repair work or payment is authorized.`
+     content=r.content.replace(APPOINTMENT_LINK,`${env.AUTH_ORIGIN}/book/${secret}`)
     }else if(r.kind==='balance')content=r.content
     else content+=`\nRefreshed quote: USD ${(r.totalCents/100).toFixed(2)}. Contact the shop to review and book. No work or payment is authorized.`
     const mail=operatorMail(env)
-    if(mail){
+    // Token preparation is not a send. Recheck after it, immediately before handoff.
+    const final=await load(env.DB),live=find(final,'outreach',r.id),finalNow=new Date(Math.max(at,Date.now())).toISOString()
+    if(mail&&live.status==='claimed'&&await authorized(env,r.id)&&!outreachStop(final,live,finalNow)&&outreachDue(final,live,finalNow)){
      const result=await mail.send({deliveryId:r.id,from:String(env.MAIL_FROM??''),to:[r.to],subject:r.kind==='appointment'?'Your appointment reminder':r.kind==='balance'?'Your invoice balance reminder':'Your declined-work follow-up',text:content,html:'<p>'+e(content).replaceAll('\n','<br>')+'</p>',headers:{}})
-     status=['rejected','rate_limited','unavailable'].includes(result.status)?'failed':result.status;provider=result.provider??'mail'
-    }else{status='failed';provider='unavailable'}
+     status=['rejected','rate_limited','unavailable'].includes(result.status)?'failed':result.status;if(!['accepted','development','failed','uncertain'].includes(status))status='uncertain';provider=result.provider??'mail';providerReference=result.providerMessageId??''
+    }else if(!mail){status='failed';provider='unavailable'}
    }
   }catch{status='uncertain';provider='mail'}
-  try{await execute(env.DB,scheduler,'outreach.outcome',{id:r.id,version:r.version,status,provider},undefined,now)}catch{}
+  try{r=find(await load(env.DB),'outreach',r.id);if(r.status==='claimed')await execute(env.DB,scheduler,'outreach.outcome',{id:r.id,version:r.version,status,provider,providerReference},undefined,new Date(Math.max(at,Date.now())).toISOString())}catch{}
  }
 }

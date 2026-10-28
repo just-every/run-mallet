@@ -1,3 +1,4 @@
+import {revokeOutreachAccess} from './outreach'
 import {revokeCoverageAccess} from './coverage'
 import {revokeReviewAccess} from './reviews'
 import type {Bindings} from '../../auth.server'
@@ -50,13 +51,14 @@ export async function retentionCommand(env:Bindings,actor:Actor,authority:Author
  if(p.fingerprint!==reviewed.value.fingerprint)fail('RETENTION_PREVIEW','Preview and approve the exact current retention candidates before deletion.')
  const reason=text(p.reason,'erasure reason',2000),consentEvidence=text(p.consentEvidence,'explicit request or retention approval evidence',2000),id=crypto.randomUUID()
  let receipt:Row={id,version:1,action:command,customerId:reviewed.scope.customerId,at:now,by,reason,consentEvidence,consent:true,fingerprint:reviewed.value.fingerprint,planned:reviewed.value.counts,held:reviewed.value.held,retained:reviewed.value.retained,phase:'started',counts:{unlockKeys:0,importProfiles:0}}
- await commit(env,grant,[...revokeCoverageAccess(reviewed.scope),...revokeReviewAccess(reviewed.scope),write('retentionReceipt',receipt)],snap)
+ const outreachRevocations=revokeOutreachAccess(snap.state,reviewed.scope,now,by)
+ await commit(env,grant,[...outreachRevocations.queries,...revokeCoverageAccess(reviewed.scope),...revokeReviewAccess(reviewed.scope),write('retentionReceipt',receipt)],snap)
  let unlockKeys=0
  try{
  // A request is durably audited before destroying external keys. The key purge
  // precedes every media/profile/import mutation, even when holds retain them.
  unlockKeys=reviewed.scope.jobIds.size?await purgeIntakeSecrets(env,'job_id IN (SELECT value FROM json_each(?))',[JSON.stringify([...reviewed.scope.jobIds])]):0
- let expectedVersion=snap.state.version+1
+ let expectedVersion=snap.state.version+1+outreachRevocations.recordCount
  const expectedMediaVersion=snap.mediaVersion+unlockKeys
  const checkedSnapshot=async()=>{const value=await snapshot(env,grant);if(value.state.version!==expectedVersion||value.mediaVersion!==expectedMediaVersion)fail('CONCURRENT_CHANGE','Records, media, temporary secrets or holds changed after approval. Preview the remaining work.');return value}
  let current=await checkedSnapshot()

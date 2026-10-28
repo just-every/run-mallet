@@ -42,14 +42,14 @@ export async function installation({entry='tests/worker.ts',bindings={},outbound
   // A second factor held by each cookie that asked for one, and the fresh proof a privileged command needs (GOV-004).
   const secrets=new Map()
   const stepUp=async(as=owner)=>{
-   const known=secrets.get(as)
+   const at=bindings.TEST_NOW?Date.parse(bindings.TEST_NOW):Date.now(),known=secrets.get(as)
    if(!known){
-    const begun=await (await request('/api/mallet/security/totp/begin',{method:'POST',as,body:{}})).json(),confirmed=await request('/api/mallet/security/totp/confirm',{method:'POST',as,body:{code:totpCode(begun.secret)}}),value=await confirmed.json()
+    const begun=await (await request('/api/mallet/security/totp/begin',{method:'POST',as,body:{}})).json(),confirmed=await request('/api/mallet/security/totp/confirm',{method:'POST',as,body:{code:totpCode(begun.secret,at)}}),value=await confirmed.json()
     assert.equal(confirmed.status,200,JSON.stringify(value));secrets.set(as,begun.secret);return {secret:begun.secret,recoveryCodes:value.recoveryCodes}
    }
    // The same authenticator again: a code is single-use per thirty-second step, so clear the replay fence the clock would.
    await (await mf.getD1Database('DB')).prepare('UPDATE mallet_factors SET last_step=NULL WHERE kind=?').bind('totp').run()
-   const verified=await request('/api/mallet/security/verify/totp',{method:'POST',as,body:{code:totpCode(known)}});assert.equal(verified.status,200,await verified.text());return {secret:known}
+   const verified=await request('/api/mallet/security/verify/totp',{method:'POST',as,body:{code:totpCode(known,at)}});assert.equal(verified.status,200,await verified.text());return {secret:known}
   }
   // A privileged command asks for a fresh proof; the shared harness gives it unless a test is asserting the refusal.
   const api=async(path,body,{status=200,...options}={})=>{const response=await request(path,{...(body===undefined?{}:{method:'POST',body}),...options});const value=await response.json();if(response.status===403&&value.error==='step_up_required'&&status!==403&&!options.refuseStepUp){await stepUp(options.as??owner);return api(path,body,{status,...options,refuseStepUp:true})}assert.equal(response.status,status,JSON.stringify(value));return value}
