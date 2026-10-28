@@ -4,6 +4,7 @@ import { businessSettings } from '../business.ts'
 import { localPreparation, nativePeople } from './people.ts'
 import { nativeTools } from './tools.ts'
 import { repairResources } from './records.ts'
+import { originGuard, HttpError } from '../auth'
 
 function trust(env: Bindings): Trust | null {
   const issuer = env.RER_OWNER_CLAIM_ISSUER, installationId = env.RER_OWNER_CLAIM_INSTALLATION_ID
@@ -38,5 +39,10 @@ export async function malletAgentDoor(original: Bindings) {
 export async function agentResponse(request: Request, env: Bindings): Promise<Response | null> {
   const path = new URL(request.url).pathname
   if (!['/mcp', '/api/rer/agent-policy', '/agents', '/.well-known/oauth-protected-resource', '/.well-known/oauth-protected-resource/mcp'].includes(path) && !path.startsWith('/agents/')) return null
+  try { originGuard(request, runtimeBindings(env), path === '/mcp' || path === '/api/rer/agent-policy') }
+  catch (error) {
+    if (error instanceof HttpError) return Response.json({ code: error.code }, { status: error.status, headers: { 'cache-control': 'no-store' } })
+    throw error
+  }
   return (await malletAgentDoor(env)).handle(request)
 }

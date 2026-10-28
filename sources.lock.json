@@ -1616,11 +1616,11 @@
       "executable": false
     },
     "src/mallet/agent-door/index.ts": {
-      "sha256": "2fe8ce915877001c1c6a86a40f8290ee92e810658c25ac3d1f891fd20de8bc26",
+      "sha256": "4d451745e540c459953aa3385c9a2f9dc5c2cd258fa8260a4cde5586addfd437",
       "executable": false
     },
     "src/mallet/agent-door/legacy.ts": {
-      "sha256": "757f64af892f636dfe924d1070686e9b780e6a8e04afa0bea50a19ce286f3932",
+      "sha256": "a19632dd8c177ccd9be0d5dc08e5b820b4a40de472928d1f43524c8f3860817c",
       "executable": false
     },
     "src/mallet/agent-door/people.ts": {

@@ -1,6 +1,7 @@
 import { runtimeBindings, type Bindings } from '../../auth.server'
 import { localPreparation } from './people.ts'
 import { malletAgentDoor } from './index.ts'
+import { originGuard, HttpError } from '../auth'
 
 const preparations: Record<string, string> = {
   'estimate.prepare': 'mallet.estimates.prepare', 'estimate.revise': 'mallet.estimates.revise',
@@ -12,6 +13,11 @@ export async function preparationAlias(request: Request, original: Bindings): Pr
   if (!request.headers.has('authorization') || !new URL(request.url).pathname.startsWith('/api/mallet/')) return null
   const env = runtimeBindings(original), credential = await localPreparation(request, env)
   if (!credential) return null // SDK/device/assistant credentials retain their separate native purpose.
+  try { originGuard(request, env, true) }
+  catch (error) {
+    if (error instanceof HttpError) return Response.json({ code: error.code }, { status: error.status, headers: { 'cache-control': 'no-store' } })
+    throw error
+  }
   const path = new URL(request.url).pathname
   let name = 'mallet.unsupported.command', args: Record<string, unknown> = {}
   if (path === '/api/mallet/state' && request.method === 'GET') name = 'mallet.repairs.list'
