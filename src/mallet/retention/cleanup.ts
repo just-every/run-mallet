@@ -26,7 +26,7 @@ export function personalCleanup(state:State,scope:CustomerScope,at:string){
  return {queries,counts}
 }
 
-const mutableMediaKinds=new Set(['inspection','inspectionReport','diagnosis','note'])
+const mutableMediaKinds=new Set(['inspection','inspectionReport','diagnosis','note','declinedReview'])
 /** Remove byte/metadata replicas from mutable diagnostics. Signed, financial
  * and authorization snapshots remain exact and are disclosed on the receipt. */
 function withoutMedia(value:any,ids:Set<string>):any{

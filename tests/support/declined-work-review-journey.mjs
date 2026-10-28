@@ -12,7 +12,11 @@ export async function declinedReviewFixture(h){
  const record=async(outcome,value)=>inspection=await h.command('inspection.record',{jobId:f.job.id,version:(await job()).version,inspectionId:inspection.id,inspectionVersion:inspection.version,itemId:'pads',outcome,measurementValue:value,measurementUnit:'mm',photoUploadId:photo.id,reason:'Later measured pad evidence '+value})
  await record('red',2.5);const originalResult=inspection.results.at(-1)
  await record('yellow',3.5)
- return {...f,reading,inspection,originalResult,record,jobNow:job,findingKey:inspection.id+':pads'}
+ const replacement=async(outcome,value)=>{
+  const assigned=await h.command('inspection.assign',{jobId:f.job.id,version:(await job()).version,templateId:template.id,templateVersion:template.version,templateRevision:1,technicianId:(await job()).technicianId,reason:'Replacement checklist after the earlier observation'})
+  return h.command('inspection.record',{jobId:f.job.id,version:(await job()).version,inspectionId:assigned.id,inspectionVersion:assigned.version,itemId:'pads',outcome,measurementValue:value,measurementUnit:'mm',photoUploadId:photo.id,reason:'Replacement measured pad evidence '+value})
+ }
+ return {...f,reading,inspection,photo,originalResult,record,replacement,jobNow:job,findingKey:inspection.id+':pads'}
 }
 export async function declinedReviewJourney(){
  const h=await installation()
@@ -74,6 +78,17 @@ export async function declinedReviewJourney(){
   await f.record('green',9);await refresh()
   assert.equal((await prepare({status:409})).error,'REVIEW_SUPPRESSED')
   await f.record('yellow',3);await refresh()
+  const earlier=(await packet()).revisions.at(-1)
+  const replacement=await f.replacement('green',9)
+  await prepare({status:409})
+  r=await refresh()
+  assert.equal(r.revisions.at(-1).findingKey,f.findingKey,'A historical selection cannot bypass its replacement')
+  assert.equal(r.revisions.at(-1).suppressed,'Replacement inspection records this finding as green')
+  assert.ok(r.revisions.at(-1).citations.some(c=>c.kind==='inspection'&&c.id===replacement.id&&c.version===replacement.version))
+  assert.equal((await prepare({status:409})).error,'REVIEW_SUPPRESSED')
+  assert.deepEqual(r.revisions.at(-2),earlier,'Replacement preserves the earlier captured observation')
+  await f.replacement('yellow',3);await refresh()
+  assert.equal((await prepare()).offers.at(-1).status,'advisory-only','A later applicable observation permits an advisory again')
   // Exact later authorized work is completed, then cannot be offered again.
   const approved=await h.command('estimate.approve',{estimateId:q.id,version:q.version,revision:2})
   const sent=await h.command('estimate.markSent',{estimateId:q.id,version:approved.version,revision:2,method:'printed'})
@@ -84,6 +99,47 @@ export async function declinedReviewJourney(){
   await h.command('decline.inapplicable',{declinedWorkId:itemId,version:currentItem.version,evidence:'Owner recorded no further applicable work'})
   r=await h.command('declineReview.refresh',{...input,itemVersion:currentItem.version+1,version:(await packet()).version})
   assert.equal(r.revisions.at(-1).suppressed,'Finding no longer applies')
+  // Packets copy media across visits. Erase eligible copies in every revision,
+  // while a held visit and the original decisions remain in private custody.
+  const originalJob=()=>h.state().then(s=>s.records.job.find(j=>j.id===f.item.jobId))
+  const heldPhoto=await inspectionPhoto(h,f.item.jobId,h.owner,'synthetic-mallet-815')
+  const heldInspection=await h.command('inspection.assign',{jobId:f.item.jobId,version:(await originalJob()).version,templateId:f.inspection.template.id,templateVersion:1,templateRevision:1,technicianId:(await originalJob()).technicianId,reason:'Retained earlier visit checklist'})
+  await h.command('inspection.record',{jobId:f.item.jobId,version:(await originalJob()).version,inspectionId:heldInspection.id,inspectionVersion:heldInspection.version,itemId:'pads',outcome:'yellow',measurementValue:4,measurementUnit:'mm',photoUploadId:heldPhoto.id,reason:'Retained measured evidence'})
+  await h.command('retention.hold',{customerId:account.id,jobId:f.item.jobId,scope:'media',reason:'Reviewed custody hold',caseReference:'synthetic-mallet-816'})
+  r=await h.command('declineReview.refresh',{...input,itemVersion:currentItem.version+1,version:(await packet()).version})
+  const beforeMedia=structuredClone(r),oldArchive=await archive(h),mediaInput={customerId:account.id,categories:['media']}
+  const mediaPreview=await h.command('retention.preview',mediaInput)
+  await h.command('customer.erase',{...mediaInput,fingerprint:mediaPreview.fingerprint,consent:false,confirm:'ERASE',reason:'Verified media request',consentEvidence:'synthetic-mallet-817'},{status:400})
+  assert.deepEqual(await packet(),beforeMedia,'Refused erasure changes no packet history')
+  await h.command('customer.erase',{...mediaInput,fingerprint:mediaPreview.fingerprint,consent:true,confirm:'ERASE',reason:'Verified media request',consentEvidence:'synthetic-mallet-817'})
+  const mediaErased=await packet()
+  assert.equal(mediaErased.revisions.length,beforeMedia.revisions.length)
+  assert.deepEqual(mediaErased.offers,beforeMedia.offers)
+  for(const revision of mediaErased.revisions){
+   const prior=beforeMedia.revisions.find(r=>r.n===revision.n)
+   assert.deepEqual(revision.decision,prior.decision)
+   assert.deepEqual(revision.citations,prior.citations)
+   for(const point of revision.inspections){
+    const original=prior.inspections.find(i=>i.inspectionId===point.inspectionId&&i.itemId===point.itemId)
+    assert.deepEqual(point.result?.measurement,original.result?.measurement)
+    if(original.result?.photo?.id===f.photo.id)assert.equal(point.result.photo,null,'Eligible copied photo metadata is erased from every revision')
+    if(original.result?.photo?.id===heldPhoto.id)assert.deepEqual(point.result.photo,original.result.photo,'Held media stays exact across visit boundaries')
+   }
+  }
+  assert.equal((await h.request(f.photo.contentUrl)).status,404)
+  assert.equal((await h.request(heldPhoto.contentUrl)).status,200)
+  const mediaArchive=await archive(h),staleFresh=await installation()
+  try{
+   const refused=await restore(staleFresh,oldArchive,{laterJournal:{sourceIdentity:mediaArchive[0].sourceIdentity,epoch:mediaArchive[0].epoch,journal:mediaArchive[0].journal},status:400})
+   assert.equal(refused.error,'erasure_epoch')
+  }finally{await staleFresh.close()}
+  const mediaFresh=await installation()
+  try{
+   await restore(mediaFresh,mediaArchive)
+   assert.deepEqual((await mediaFresh.state()).records.declinedReview.find(r=>r.id===mediaErased.id),mediaErased)
+   assert.equal((await mediaFresh.request(f.photo.contentUrl)).status,404)
+   assert.equal((await mediaFresh.request(heldPhoto.contentUrl)).status,200)
+  }finally{await mediaFresh.close()}
   await h.command('agent.revoke',{id:key.id});await h.command('declineReview.refresh',input,{...agent,status:401})
   assert.equal((await h.state({as:member.cookie})).records.declinedReview,undefined)
   await h.api('/auth/operator/status',{operatorId:admin.id,status:'inactive'})
