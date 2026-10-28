@@ -480,7 +480,7 @@ Every capability claim on the approved homepage (`src/site/landing/`, checked ag
 | 34 | 07 Board | "Every car’s stage, promise and clock, live" | FLOW-001, FLOW-002, TIME-001 | done |
 | 35 | 07 Board | "Technicians start and stop jobs from the bay" | WORK-001, TIME-001 | done |
 | 36 | 07 Board | Waiting parts: promise moved, customer told | PART-006, FLOW-002 | done |
-| 37 | 07 Board | Agent "Next blocker" | ADV-003 | partial |
+| 37 | 07 Board | Agent "Next blocker" | ADV-003 | done |
 | 38 | 07 Board | "clocked in 7:28 am · 6.1 hrs sold today" | TIME-001 | done |
 | 39 | 08 Pickup | Quality check: road test, pedal, lug torque, signed | QUALITY-001 | done |
 | 40 | 08 Pickup | "Dana gets a ready text with her balance and pays from her phone" (Apple Pay) | PAY-003, MSG-001 | missing |
@@ -521,7 +521,7 @@ carry the authenticated consent into native queued work. See
 
 ## Status
 
-Judged from the code and tests at commit `33a1e50a4250c55a1ca3fb8184f1372a68757364` (27 October 2026).
+Judged from the code and tests at commit `0c4b8e0be86462c713e63dc7875074220be9e636` (28 October 2026). The candidate changes only the generated status documents and source lock after that tested code commit. ADV-003 is newly completed; other clauses retain their existing judgments.
 
 API-001 is updated by the three named shop API public-door journeys in this revision and remains PARTIAL; its complete target and acceptance sentence are unchanged. Earlier judged-at pins are historical baselines.
 
@@ -534,8 +534,8 @@ OPEN-001 was added on 18 October 2026. Its acceptance builds the candidate run s
 | Clauses | Done | Partial | Missing | Total |
 | --- | ---: | ---: | ---: | ---: |
 | Published | 9 | 0 | 0 | 9 |
-| Target and push further | 38 | 41 | 55 | 134 |
-| All | 47 | 41 | 55 | 143 |
+| Target and push further | 39 | 40 | 55 | 134 |
+| All | 48 | 40 | 55 | 143 |
 
 | Clause | Title | Kind | Status | Evidence | Gap |
 | --- | --- | --- | --- | --- | --- |
@@ -676,7 +676,7 @@ OPEN-001 was added on 18 October 2026. Its acceptance builds the candidate run s
 | `OPEN-001` | Free and open source under the MIT license, run by one command | target | done | `LICENSE`; `rer-project.json`; `tests/clone-journey.mjs`; `tests/open-source-journey.mjs`; `tests/browser-journey.mjs` |  |
 | `ADV-001` | Inspection evidence to priced estimate | push-further | partial | `src/mallet/estimates.ts`; `src/mallet/model.ts`; `tests/mallet.test.mjs` | Scoped agents can prepare estimate revisions; no evidence interpretation, guide/supplier data, compatible stock pricing or integrated review packet. |
 | `ADV-002` | Approved customer conversations | push-further | missing |  | No repair conversational agent, delivered customer messages, approved reply policy or escalation handoff. |
-| `ADV-003` | Resolve the next repair blocker | push-further | partial | `src/mallet/workshop.ts`; `src/mallet/estimates.ts`; `tests/mallet.test.mjs` | Agent-prepared dispatch/estimate proposals with human approval ship; no continuous blocker analysis, ownership or action follow-through. |
+| `ADV-003` | Resolve the next repair blocker | push-further | done | `tests/mallet.test.mjs` — "ADV-003: source-cited blockers require actual evidence, exact consent and physical receipt, preserve handlers and recover privately" (`tests/support/blocker-journey.mjs`, `tests/support/blocker-parts.mjs`, `tests/support/blocker-follow-through.mjs`, `tests/support/blocker-archive.mjs`) proves continuous native reconciliation through the shared production scheduler across intake, diagnostics, authorization, parts, progress and promises; distinct source revisions; current handler acknowledgment; exact prepared native steps; stale and false-clearance refusal; actual evidence, customer decisions and receiving; all authorized work, both quality signatures and explicit completion. The same journey proves person approval of exact scope and price, recipient-change refusal before a promise notice, one human-approved mail-edge handoff, capture replay, unchanged bearer rights, erased copied notes, stale erasure replay refusal, malformed-archive refusal and exact OPS-001 fresh-owner recovery. "ADV-003: native blocker packet, handlers and proposal review at 1440 and 390" (`tests/blocker-browser.mjs`, `tests/support/blocker-browser-follow-through.mjs`) exercises the native forms through evidence, consent, receiving, work, independent quality, explicit completion and recovered source history at both widths. Mail-edge acceptance is a handoff, never a delivery claim; the observer grants no sending, work, completion or promise-changing authority. |  |
 | `ADV-004` | Source parts and keep promise times current | push-further | missing |  | No sourcing/ETA agent, supplier connections, arrival confirmation or promise-update follow-through. |
 | `ADV-005` | Bring declined work back at the right mileage | push-further | missing |  | No mileage-based declined-work agent, current evidence refresh, outreach or booking follow-through. |
 | `ADV-006` | Detect comeback and supplier quality patterns | push-further | done | `tests/mallet.test.mjs` — "WARRANTY-001 / OPS-001: paid original, linked lot and no-charge comeback, coverage decision, supplier claim and preserved invoice recovery" (`tests/support/warranty-pattern-journey.mjs`, `tests/support/warranty-journey.mjs`) asserts a positive cluster across two distinct original repairs, the exact member set excluding an unrelated symptom, cited measurements and installed provenance, append-only rejection and reinstatement, private-role refusals, explicit approved claims, unchanged diagnosis and clearance, and exact fresh-owner packet recovery; "PART-005 / OPS-001: installed and unused supplier returns, PO provenance, quarantine, authorization, shipment, partial credit and warranty costs survive recovery" (`tests/support/supplier-returns-journey.mjs`) asserts cited RMA history, serial and exact supplier credit; "WARRANTY-001: original invoice, linked rework, no-charge costs and supplier claim at 1440/390" (`tests/warranty-browser.mjs`) proves the native cited cluster, false-association rejection, stale-packet refusal and evidence-bound human claim approval, with both-width screens and icon-control audit. The same warranty registration in `tests/mallet.test.mjs`, through `tests/support/warranty-pattern-journey.mjs` (patternJourney), independently asserts two matching cases on one original repair produce no cluster or approved pattern action, followed by a positive cluster across distinct original repairs; normalized symptoms; exclusion by catalog item, supplier and marked lot; exact labor quantities and warranty decisions; reasonless refusal; positive admin packet review; captured valid packets becoming stale after actual diagnostic revisions; identifier-and-revision-only citation schemas; exact review and claim audit revisions; customer-claim and corrective-action approvals; no external submission, financial posting, diagnosis or clearance; and retained authorization citations across customer erasure in a fresh installation. |  |

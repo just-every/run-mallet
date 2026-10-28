@@ -40,7 +40,7 @@ async function target(def: typeof definitions[number], args: Record<string, unkn
 
 const preparations: ToolDefinition[] = definitions.map(def => ({
   name: def.name, title: def.title, description: `${def.title} through Mallet's native preparation service. A person still decides the resulting draft.`,
-  scope: def.scope, readOnly: false, inputSchema: def.schema, outputSchema: output, classes: ['standard'], clauses: def.clauses,
+  scope: def.scope, readOnly: false, inputSchema: def.schema, outputSchema: output, classes: ['standard'], clauses: def.clauses, untrusted: true,
   async classify(args, ctx) {
     await target(def, args, ctx)
     // Prices are draft proposals; preparing never moves money or shares a record.
