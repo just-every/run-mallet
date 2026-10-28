@@ -122,4 +122,32 @@ export async function coverageMailJourney(){
   try{assert.equal(JSON.stringify(erasedBackup).includes('Same pad squeal reported by customer'),false);await restore(recovered,erasedBackup);for(const kind of ['coverageReview','coverageRenewal','coverageConsent','coverageNotice','coverageCase'])assert.deepEqual((await recovered.state()).records[kind],s.records[kind]);await recovered.cron(at);assert.equal(recovered.messages.filter(m=>m.subject==='Your coverage review').length,0)}finally{await recovered.close()}
 
  }finally{await h.close()}
+ await coverageMailRevocationJourney()
+}
+
+async function coverageMailRevocationJourney(){
+ const h=await installation()
+ try{
+  const f=await warrantyOriginal(h),x=await coverageMailFixture(h,f),original=(await h.state()).actor
+  const consent=await h.command('coverage.consent',x.consent)
+  await h.command('coverage.approve',{...x.approval,consentId:consent.id,version:consent.version})
+  const next=await h.command('coverage.schedule',{...x.contract,reference:'synthetic-mallet-revoked-pending',documentReference:'synthetic-mallet-revoked-document'}),nextConsent=await h.command('coverage.consent',{...x.consent,id:next.id,version:next.version})
+  const future=new Date(Date.parse(x.dueAt)+86400000).toISOString(),pending=await h.command('coverage.approve',{...x.approval,dueAt:future,consentId:nextConsent.id,version:nextConsent.version})
+  await h.cron(x.dueAt)
+  const path=coverageResponsePath(h.messages);assert.equal((await h.request(path,{as:''})).status,200)
+  const email=['synthetic-mallet-current-owner','example.test'].join('@'),replacement=await h.person(email,'admin')
+  const confirmOwnerAdministration=async as=>{
+   await h.api('/auth/step-up',{action:'owner:transfer',returnTo:'/app'},{as,status:202})
+   const token=new URL(h.messages.at(-1).text.match(/https?:\/\/[^\s<>]+\/auth\/confirm\?token=[^\s<>]+/)[0]).searchParams.get('token')
+   assert.equal((await h.request('/auth/confirm',{method:'POST',as,body:{token}})).status,303)
+  }
+  await confirmOwnerAdministration(h.owner)
+  await h.api('/auth/operator/role',{operatorId:replacement.id,role:'owner'})
+  const cookie=await h.signInAs(email);await h.stepUp(cookie);await confirmOwnerAdministration(cookie)
+  await h.api('/auth/operator/status',{operatorId:original.id,status:'inactive'},{as:cookie})
+  await h.state({status:401})
+  assert.equal((await h.request(path,{as:''})).status,404,'A revoked approving owner also revokes the private reply link')
+  const messages=h.messages.length;await h.cron(future);await h.restart();await h.cron(future)
+  const s=await h.state({as:cookie});assert.equal(s.records.coverageNotice.find(n=>n.id===pending.id).status,'stopped');assert.equal(s.records.coverageCase?.length??0,0);assert.equal(h.messages.length,messages,'Revoked owner approvals cannot send or create customer cases')
+ }finally{await h.close()}
 }

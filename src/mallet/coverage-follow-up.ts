@@ -13,12 +13,13 @@ function sameOwnership(s:State,asset:Row,fingerprint:string){
  const account=rows(s,'customerAccount').find(a=>a.id===asset.customerAccountId)
  return [account,...(account?.history??[])].some(a=>ownershipHash([...ownershipIdentity(asset),a?.version??null])===fingerprint)
 }
-const sameAgreement=(a:Row,b:Row)=>a.kind==='service-contract'&&b.kind==='service-contract'&&a.assetId===b.assetId&&a.source.documentReference===b.source.documentReference
+const sameAgreement=(a:Record<string,any>,b:Row)=>a.kind==='service-contract'&&b.kind==='service-contract'&&a.assetId===b.assetId&&a.source.documentReference===b.source.documentReference
 export function coverageStop(s:State,r:Row){
  const asset=rows(s,'asset').find(a=>a.id===r.assetId)
  if(!asset||asset.privacyErasedAt)return 'erased'
  if(!sameOwnership(s,asset,r.ownership))return 'transferred'
  if(rows(s,'coverageReview').some(other=>other.status==='canceled'&&sameAgreement(r,other)))return 'canceled'
+ if(rows(s,'coverageRenewal').some(n=>rows(s,'coverageReview').some(old=>old.id===n.coverageId&&sameAgreement(r,old))))return 'renewed'
  return null
 }
 function transition(c:Context,r:Row,status:string,reason:string){
@@ -68,6 +69,7 @@ export const coverageFollowUp:Handler=(c,command,p)=>{
   }
   if((asset.coverageTransfers??[]).some((t:any)=>sameOwnership(c.s,asset,t.ownership))||rows(c.s,'coverageReview').some(r=>r.assetId===asset.id&&r.status==='transferred'&&sameOwnership(c.s,asset,r.ownership)))fail('COVERAGE_TRANSFERRED','Record the new vehicle ownership before scheduling another review.')
   if(kind==='service-contract'&&rows(c.s,'coverageReview').some(r=>r.assetId===asset.id&&r.status==='canceled'&&r.source.documentReference===source.documentReference))fail('COVERAGE_CANCELED','This retained agreement was canceled; a different review reference cannot revive it.')
+  if(kind==='service-contract'&&rows(c.s,'coverageRenewal').some(n=>rows(c.s,'coverageReview').some(old=>old.id===n.coverageId&&sameAgreement(basis,old))))fail('COVERAGE_RENEWED','This agreement has a recorded replacement; use the renewed agreement.')
   expectVersion(job,p.version)
   const row=put(c.s,'coverageReview',{...basis,basis,ownership:coverageOwnership(c.s,asset),assetRevision:asset.version,status:'scheduled',taskId:null,symptoms:[],history:[{action:'scheduled',by:who(c),at:c.now}],by:who(c),at:c.now})
   event(c,command,job.id,row.id,{kind,sourceId:source.id??null,dueAt});return row
@@ -93,6 +95,7 @@ export const coverageFollowUp:Handler=(c,command,p)=>{
   if(r.kind!=='service-contract'||p.confirm!=='record-evidenced-renewal')fail('COVERAGE_RENEWAL','Explicitly confirm a separately executed service-contract renewal.',null,422)
   if(p.documentReference===r.source.documentReference)fail('COVERAGE_RENEWAL','Retain the distinct signed renewal document or revision reference.')
   const reason=text(p.reason,'signed renewal and customer decision evidence',2000)
+  if(rows(c.s,'coverageReview').some(other=>other.reference===p.reference))fail('COVERAGE_RENEWAL','Choose a new unique reference for the renewed agreement review.')
   const replacement=coverageFollowUp(c,'coverage.schedule',{...p,kind:'service-contract',jobId:r.jobId,version:find(c.s,'job',r.jobId).version})
   const resolution={action:'renewal-recorded',reason,by:who(c),at:c.now}
   const task=rows(c.s,'coverageTask').find(t=>t.coverageId===r.id)

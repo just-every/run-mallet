@@ -572,7 +572,7 @@
       "executable": false
     },
     "ACCEPTANCE.md": {
-      "sha256": "1db054c7e2f3b05286416a377ab0486df5356ca02c04060cc29bcfa786210479",
+      "sha256": "d0aeeeee68862c708730cef386b35d9a53866838ed6c688e3ab905ce69dbefd3",
       "executable": false
     },
     "AGENTS.md": {
@@ -584,7 +584,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "d376a0b282b22de535309b0f0d57759bae3235a5780fd20d9a440946f17324e3",
+      "sha256": "88a822888181991511e26b4d5928717b2e98858ab2fa7d90beafe1ff941dab96",
       "executable": false
     },
     "deploy-demo.json": {
@@ -1700,7 +1700,7 @@
       "executable": false
     },
     "src/mallet/coverage-follow-up.ts": {
-      "sha256": "28765b8ed3cba95832513f86118c4dd0cfbc485b7389f3989e241a8bda1a5484",
+      "sha256": "a27a3df3fbe7af60c03883210ad00a97e381bfd6588c668aa29b9df408b0f515",
       "executable": false
     },
     "src/mallet/coverage-mail-door.ts": {
@@ -2216,7 +2216,7 @@
       "executable": false
     },
     "src/mallet/restore/validate-coverage.mjs": {
-      "sha256": "79431f89240d3d45ae0fbdb90c8f3ef8fcf3f64e97a3c9b02b5828d35596d35d",
+      "sha256": "493488973061479ecd0c2691099fe8a25bbb2f787be983247c66bc9f16086640",
       "executable": false
     },
     "src/mallet/restore/validate-finance.mjs": {
@@ -2532,7 +2532,7 @@
       "executable": false
     },
     "src/mallet/ui/collaboration.ts": {
-      "sha256": "de4b91632442aa6338303f1f55e4115e889e22a08d7378cd33d839f20484af28",
+      "sha256": "e7f663796151909768d9ef52c283386ffc9354883141a5fdb6bd52410c171b7f",
       "executable": false
     },
     "src/mallet/ui/common.ts": {
@@ -2556,7 +2556,7 @@
       "executable": false
     },
     "src/mallet/ui/coverage-mail.ts": {
-      "sha256": "16ce2afbfd424d2cc5f44ac8eda75445334fb5ff43fa6a192133475ef18dc016",
+      "sha256": "57ac44571ba06afc2683b33cc7a15283223afa1505c6d1b7905326d1a32b1d46",
       "executable": false
     },
     "src/mallet/ui/customers.ts": {
@@ -4688,7 +4688,7 @@
       "executable": false
     },
     "tests/coverage-follow-up-browser.mjs": {
-      "sha256": "f5dc049b69af99f820214f0aa556e4357eb6c87f3cef5e4e8c240ae20d733509",
+      "sha256": "80c3d61bbd71c81aac6b8439d673317a349abeb3e4100522e293b354a88f9afa",
       "executable": false
     },
     "tests/customers-browser.mjs": {
@@ -4992,7 +4992,7 @@
       "executable": false
     },
     "tests/support/coverage-mail-journey.mjs": {
-      "sha256": "6fcfc231cca337e5211ffd22342a264dbd33beccbf4adbb3ff1aa2205ea2537c",
+      "sha256": "a65916cf323a4a5be2c663808684989cad030d9b4a40159abe02424f0535014a",
       "executable": false
     },
     "tests/support/customers-journey.mjs": {

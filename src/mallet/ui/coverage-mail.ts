@@ -2,12 +2,13 @@ import {COVERAGE_WORDING,COVERAGE_WORDING_VERSION,coverageContent} from '../cove
 import {area,box,e,field,form,rows,select,when} from './common'
 export function coverageMailPanel(s:any,r:any,active:boolean){
  const consents=rows(s,'coverageConsent').filter(c=>c.coverageId===r.id),notice=rows(s,'coverageNotice').find(n=>n.coverageId===r.id),asset=rows(s,'asset').find(a=>a.id===r.assetId),v={jobId:r.jobId,id:r.id,version:r.version}
- const consent=consents.filter(c=>!c.withdrawnAt&&c.localAuthority).at(-1)
+ const consent=consents.filter(c=>!c.withdrawnAt&&c.localAuthority).at(-1),withdrawn=rows(s,'coverageConsent').some(c=>c.assetId===r.assetId&&c.withdrawnAt)
  let body=''
- if(active&&!notice){
+ if(active&&!notice&&!withdrawn){
   body+='<details><summary>Coverage email permission</summary>'+form('coverage.consent',field('Recipient email','to','email',asset.customerEmail??'','required maxlength="254"')+'<p>'+e(COVERAGE_WORDING)+'</p><label><input type="checkbox" name="consent" value="yes" required> The customer affirmatively agreed to this exact permission.</label>'+field('Permission time with UTC offset','consentedAt','text','','required')+select('Permission capture channel','captureChannel',[['customer-form','Customer form'],['customer-email','Customer email'],['telephone','Telephone'],['in-person','In person']])+area('Permission source evidence','sourceEvidence','','required maxlength="2000"'),'Record coverage email permission',{...v,wordingVersion:COVERAGE_WORDING_VERSION})+'</details>'
   if(consent)body+=box('Approve one coverage email','<p>Exact recipient: '+e(consent.to)+'</p><p>'+e(coverageContent(r))+'</p>'+form('coverage.approve',field('Scheduled email time with timezone','dueAt','text',r.dueAt,'required')+field('Approval expiry with timezone','expiresAt','text','','required')+field('Recipient IANA timezone','timeZone','text','','required')+field('First allowed hour (inclusive)','allowedStart','number','9','required min="0" max="23"')+field('Last allowed hour (exclusive)','allowedEnd','number','17','required min="0" max="23"')+'<label><input type="checkbox" name="confirm" value="yes" required> I approve this exact message, recipient, permission and schedule once.</label>','Approve coverage email',{jobId:r.jobId,consentId:consent.id,version:consent.version}))
  }
+ if(active&&!notice&&withdrawn)body+='<p>Customer coverage email permission is withdrawn. Owner approval cannot override that withdrawal.</p>'
  for(const c of consents){
   body+='<details><summary>Recorded coverage email permission</summary><p>'+e(c.to)+' · '+when(c.consentedAt)+' · '+e(c.captureChannel)+' · '+e(c.sourceEvidence)+'</p><p>'+e(c.wording)+'</p><p>Recorded by '+e(c.by.name)+' · '+when(c.at)+'</p>'+(c.withdrawnAt?'<p>Withdrawn '+when(c.withdrawnAt)+'</p>':form('coverage.withdraw',area('Withdrawal evidence','reason','','required maxlength="2000"'),'Withdraw coverage email permission',{jobId:r.jobId,consentId:c.id,version:c.version}))+'</details>'
  }
