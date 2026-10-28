@@ -36,6 +36,18 @@ export async function declinedReviewBrowser(){
   await p.reload();await click('declineReview.refresh','Refresh cited packet')
   assert.equal(await form('declineReview.prepare').count(),1)
 
+  const withdrawal=await h.command('chaseOptOut.record',{email:f.asset.customerEmail,note:'Customer asked the advisor to stop deferred-work reminders'})
+  await p.reload();assert.ok((await p.locator('main').innerText()).includes('Stale packet'))
+  assert.equal(await form('declineReview.prepare').count(),0)
+  await click('declineReview.refresh','Refresh cited packet')
+  assert.ok((await p.locator('main').innerText()).includes('Suppressed: Customer opted out of reminders'))
+  assert.equal(await form('declineReview.prepare').count(),0)
+  await shot('declined-03-customer-withdrawal')
+  await h.command('chaseOptOut.lift',{optOutId:withdrawal.id,version:withdrawal.version,reason:'Customer asked to resume reminders; separate item permission is still unknown'})
+  await p.reload();await click('declineReview.refresh','Refresh cited packet')
+  assert.ok((await p.locator('main').innerText()).includes('Outreach consent: unknown'))
+  assert.equal(await form('declineReview.prepare').count(),1,'Resuming reminders restores only private advisory preparation')
+
   const replacement=await f.replace('green',9);assert.notEqual(replacement.id,f.inspection.id);await p.reload()
   assert.ok((await p.locator('main').innerText()).includes('Stale packet'))
   assert.equal(await form('declineReview.prepare').count(),0)
@@ -48,7 +60,7 @@ export async function declinedReviewBrowser(){
   await original.locator('summary').click()
   assert.ok((await original.innerText()).includes('3.5 mm'))
   assert.ok((await original.innerText()).includes('1,350 miles'))
-  await shot('declined-03-replacement-suppressed-history')
+  await shot('declined-04-replacement-suppressed-history')
   const before=(await h.state()).records,backup=await archive(h),fresh=await installation({network:true,secureNetwork:true,assets:true})
   try{
    await restore(fresh,backup)
@@ -61,7 +73,7 @@ export async function declinedReviewBrowser(){
    await page.getByText('Citations and retained revisions',{exact:true}).click()
    const retained=page.locator('[data-packet-revision="1"]');await retained.locator('summary').click()
    assert.ok((await retained.innerText()).includes('3.5 mm'))
-   for(const width of [1440,390]){await page.setViewportSize({width,height:1000});await page.screenshot({path:join(dir,'declined-04-recovered-history-'+width+'.png'),fullPage:true})}
+   for(const width of [1440,390]){await page.setViewportSize({width,height:1000});await page.screenshot({path:join(dir,'declined-05-recovered-history-'+width+'.png'),fullPage:true})}
    await recovered.close()
   }finally{await fresh.close()}
   assert.deepEqual(errors,[])

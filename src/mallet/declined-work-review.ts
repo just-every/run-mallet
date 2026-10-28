@@ -2,6 +2,7 @@ import {createHash} from 'node:crypto'
 import {bump,event,expectVersion,fail,find,put,rows,who,type Handler,type Row,type State} from './model'
 import {readings} from './mileage'
 import {calendarReservations} from './calendar-capacity'
+import {optedOut} from './approval-chasing'
 
 export const declinedReviewCommands=['declineReview.refresh','declineReview.prepare']
 const hash=(value:any)=>createHash('sha256').update(JSON.stringify(value)).digest('hex')
@@ -24,7 +25,8 @@ export function declinedReviewSources(s:State,item:Row,now:string){
  const calendar=['bookingService','calendarResource','calendarTechnician','calendarAbsence','calendarSeries','appointment'].flatMap(kind=>ordered(rows(s,kind)).map(r=>({kind,row:r})))
  const stops=ordered(rows(s,'outreach').filter(r=>r.kind==='declined'&&r.subjectId===item.id)).map(r=>({id:r.id,version:r.version,status:r.status}))
  const reservations=calendarReservations(s,now).filter(r=>r.endAt>now).map(r=>({id:r.id,source:r.source,startAt:r.startAt,endAt:r.endAt})).sort((a,b)=>JSON.stringify(a).localeCompare(JSON.stringify(b)))
- const all=[{kind:'declinedWork',row:item},{kind:'asset',row:asset},...(account?[{kind:'customerAccount',row:account}]:[]),...contacts.map(row=>({kind:'contact',row})),...jobs.map(row=>({kind:'job',row})),...related,...calendar]
+ const preferences=ordered(rows(s,'chaseOptOut').filter(r=>r.email===(asset.customerEmail??'').trim().toLowerCase())).map(row=>({kind:'chaseOptOut',row}))
+ const all=[...preferences,{kind:'declinedWork',row:item},{kind:'asset',row:asset},...(account?[{kind:'customerAccount',row:account}]:[]),...contacts.map(row=>({kind:'contact',row})),...jobs.map(row=>({kind:'job',row})),...related,...calendar]
  // Hash actual contents as well as revisions. Retained snapshots are never authority.
  return {fingerprint:hash([now.slice(0,10),all,stops,reservations]),citations:all.map(({kind,row})=>citation(kind,row)),stops,reservations,asset,account,contacts,jobs}
 }
@@ -37,7 +39,7 @@ export function declinedReviewSnapshot(s:State,item:Row,now:string,findingKey=''
  // A later observation of the same checklist point supersedes the selected
  // finding, including when staff assigned a replacement checklist.
  const current=selected?inspections.filter(i=>i.templateId===selected.templateId&&i.itemId===selected.itemId&&i.result).sort((a,b)=>a.result.at.localeCompare(b.result.at)||find(s,'inspection',a.inspectionId).assignedAt.localeCompare(find(s,'inspection',b.inspectionId).assignedAt)).at(-1):null
- const suppressed=current?.result?.outcome==='green'?'Replacement inspection records this finding as green':sources.asset.privacyErasedAt?'Customer erased':item.inapplicable?'Finding no longer applies':quotes.some((q:any)=>q.completed)?'Work already completed':quotes.some((q:any)=>q.decision)?'A later customer decision requires human follow-through':sources.stops.some(r=>r.status==='stopped')?'A recorded follow-up stop requires human review':null
+ const suppressed=optedOut(s,sources.asset.customerEmail??'')?'Customer opted out of reminders':current?.result?.outcome==='green'?'Replacement inspection records this finding as green':sources.asset.privacyErasedAt?'Customer erased':item.inapplicable?'Finding no longer applies':quotes.some((q:any)=>q.completed)?'Work already completed':quotes.some((q:any)=>q.decision)?'A later customer decision requires human follow-through':sources.stops.some(r=>r.status==='stopped')?'A recorded follow-up stop requires human review':null
  return {fingerprint:hash([sources.fingerprint,findingKey]),findingKey,citations:sources.citations,asOfDay:now.slice(0,10),decision:{estimateId:item.estimateId,revision:item.revision,reason:item.reason,evidence:item.evidence,disposition:item.disposition,line:structuredClone(item.line),customer:structuredClone(item.decision)},reading:reading?structuredClone(reading):null,threshold:{distance:reading&&!reading.regression&&item.dueValue!==null?reading.value>=item.dueValue:null,time:item.dueDate?now.slice(0,10)>=item.dueDate:null,dueValue:item.dueValue,dueDate:item.dueDate,unit:item.unit},inspections,quotes,ownership:{assetId:item.assetId,assetVersion:sources.asset.version,accountId:sources.account?.id??null,accountVersion:sources.account?.version??null,contacts:sources.contacts.map(r=>citation('contact',r)),verified:false},capacity:{reservations:sources.reservations,configuredWindows:rows(s,'bookingService').filter(r=>r.active).reduce((n,r)=>n+(r.windows?.length??0),0),availability:'unknown'},eligibility:{licensedSchedule:'unknown',consent:'unknown',availability:'unknown'},suppressed}
 }
 export const declinedWorkReview:Handler=(c,command,p)=>{
