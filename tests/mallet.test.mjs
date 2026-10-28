@@ -275,17 +275,17 @@ test('EST-003: emailed approval link, signed line decision, replay, stale and re
 
 test('EST-003: customer approves and declines lines on a phone with a signed receipt at 390/1440',approvalBrowser)
 
-test('EST-006: scheduled reminders chase only the current undecided revision; reply, decision and opt-out stop them; failures and silence open advisor tasks',chaseJourney)
+test('EST-006 / EST-007: scheduled reminders chase only the current undecided revision; reply, decision and opt-out stop them; failures and silence open advisor tasks',chaseJourney)
 
-test('EST-006: native chase policy, reminder history, customer opt-out and advisor task at 1440/390',chaseBrowser)
+test('EST-006 / EST-007: native chase policy, reminder history, customer opt-out and advisor task at 1440/390',chaseBrowser)
 
 
 test('FLOW-002: delayed required parts, resource/labor plan, advisor promise notices and archive recovery',()=>run(promiseJourney))
 test('FLOW-002: failed/uncertain provider outcome claims one send and remains visible',promiseMailFailureJourney)
 test('FLOW-002: revised pickup promise and customer notice through native forms at 1440/390',promiseBrowser)
 
-test('FLOW-004: helper crew, dependent subtasks, mentioned advisor with media, acknowledged handoff, per-person time and recovery',()=>run(collaborationJourney))
-test('FLOW-004: native helper, dependent subtasks, mention and acknowledged handoff at 1440/390',collaborationBrowser)
+test('FLOW-004 / FLOW-005: helper crew, dependent subtasks, mentioned advisor with media, acknowledged handoff, per-person time and recovery',()=>run(collaborationJourney))
+test('FLOW-004 / FLOW-005: native helper, dependent subtasks, mention and acknowledged handoff at 1440/390',collaborationBrowser)
 test('FLOW-001 / REPORT-004 / REPORT-006: nine-stage board, measured delays, promises, gated moves, technician, overdue, priority and search filters, canceled and lost retention, recorded collection and recovery',()=>run(flowJourney))
 test('FLOW-001: native board filters, priority, cancel and recorded collection at 1440/390',flowBrowser)
 
@@ -355,11 +355,11 @@ const {calendarJourney}=await import('./support/calendar-journey.mjs')
 test('BOOK-002: qualified resources, absences, recurring DST reservations and dispatch contention recover',()=>run(calendarJourney))
 
 const {waitlistCancellationJourney,waitlistExpiryJourney,waitlistLimitsJourney,waitlistSourceLimitJourney,waitlistMailFailureJourney}=await import('./support/waitlist-journey.mjs')
-test('BOOK-002: cancellation offers FIFO eligible customers one private bounded reservation',()=>run(waitlistCancellationJourney))
-test('BOOK-002: waitlist offer expiry requires explicit staff advancement',()=>run(waitlistExpiryJourney))
-test('BOOK-002: existing tentative email holds preserve waitlist eligibility',()=>run(waitlistLimitsJourney))
-test('BOOK-002: waitlist offers share the tentative source capacity bound',()=>run(waitlistSourceLimitJourney))
-test('BOOK-002: failed or uncertain waitlist mail never automatically retries',waitlistMailFailureJourney)
+test('BOOK-002 / BOOK-003: cancellation offers FIFO eligible customers one private bounded reservation',()=>run(waitlistCancellationJourney))
+test('BOOK-002 / BOOK-003: waitlist offer expiry requires explicit staff advancement',()=>run(waitlistExpiryJourney))
+test('BOOK-002 / BOOK-003: existing tentative email holds preserve waitlist eligibility',()=>run(waitlistLimitsJourney))
+test('BOOK-002 / BOOK-003: waitlist offers share the tentative source capacity bound',()=>run(waitlistSourceLimitJourney))
+test('BOOK-002 / BOOK-003: failed or uncertain waitlist mail never automatically retries',waitlistMailFailureJourney)
 
 const {calendarBrowser}=await import('./calendar-browser.mjs')
 test('BOOK-002: native day week resources and cancellation offers at 1440 and 390',calendarBrowser)
@@ -367,7 +367,7 @@ test('BOOK-002: native day week resources and cancellation offers at 1440 and 39
 test('GOV-004: authenticator app, passkey and recovery-code sign-in with replay, clone, origin and guessing fences',()=>run(secondFactorJourney))
 test('GOV-004: owner-required policy, lost-device reset and deployment owner recovery',()=>run(policyRecoveryJourney))
 test('GOV-004: refunds, agent keys, erasure and custody reveals need a fresh second factor and refusals write nothing',()=>run(stepUpJourney))
-test('GOV-004: stolen, revoked and expired customer links look unknown on every door, misses are paced and no link grants payer authority',()=>run(linkProtectionJourney))
+test('GOV-004 / GOV-007: stolen, revoked and expired customer links look unknown on every door, misses are paced and no link grants payer authority',()=>run(linkProtectionJourney))
 test('GOV-004 / GOV-005: authenticator app, passkey, sign-in confirmation, step-up and sealed connector credentials through native forms at 1440/390',securityBrowser)
 test('GOV-005: sealed provider secrets rotate and revoke behind a fresh proof, webhooks prove their origin, and no secret reaches a response, archive, audit row or log',connectorJourney)
 
@@ -375,15 +375,15 @@ test('GOV-005: sealed provider secrets rotate and revoke behind a fresh proof, w
 
 test('GOV-006: owner reviews financial and media holds, erases eligible photos and releases a hold for manual retention at 1440/390',async()=>{const {retentionBrowser}=await import('./retention-browser.mjs');await retentionBrowser()})
 
-test('OPS-002: durable reminder jobs survive restart, preserve one provider handoff and expose owner recovery',async()=>{const {jobsJourney}=await import('./support/jobs-journey.mjs');await jobsJourney()})
+test('OPS-002 / OPS-003: durable reminder jobs survive restart, preserve one provider handoff and expose owner recovery',async()=>{const {jobsJourney}=await import('./support/jobs-journey.mjs');await jobsJourney()})
 
 test('OPS-002: account search is paged, indexed, exact across aliases and Unicode, and survives restore',async()=>{const {searchJourney}=await import('./support/search-journey.mjs');await searchJourney()})
-test('OPS-002: approved provider GET jobs survive restart, require explicit replay and deduplicate payment evidence',async()=>{const {providerJobsJourney}=await import('./support/provider-jobs-journey.mjs');await providerJobsJourney()})
+test('OPS-002 / OPS-003: approved provider GET jobs survive restart, require explicit replay and deduplicate payment evidence',async()=>{const {providerJobsJourney}=await import('./support/provider-jobs-journey.mjs');await providerJobsJourney()})
 
 test('OPS-002: core RO reads keep lines, inspections and decisions with current crew authority and exact recovery',async()=>{const {repairReadJourney}=await import('./support/repair-read-journey.mjs');await repairReadJourney()})
 test('OPS-002: native capacity import verifies record and media graphs before publishing',async()=>{const {capacityImportJourney}=await import('./support/capacity-import-journey.mjs');await capacityImportJourney()})
 
-test('OPS-002: owner queues, inspects and recovers background jobs through native forms at 1440/390',async()=>{const {jobsBrowser}=await import('./jobs-browser.mjs');await jobsBrowser()})
+test('OPS-002 / OPS-003: owner queues, inspects and recovers background jobs through native forms at 1440/390',async()=>{const {jobsBrowser}=await import('./jobs-browser.mjs');await jobsBrowser()})
 
 test('OPS-002: staff search phone and plate and page native account results at 1440/390',async()=>{const {searchBrowser}=await import('./search-browser.mjs');await searchBrowser()})
 

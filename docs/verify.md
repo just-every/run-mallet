@@ -74,7 +74,7 @@ Evidence: `tests/media.test.mjs`; `tests/support/check-in-journey.mjs`; `tests/c
 
 Evidence: `tests/mallet.test.mjs`; `tests/mallet.test.mjs`.
 
-**BOOK-002 — Resource calendars and waitlist.** Status: **partial**. [Target, acceptance and remaining work](./CONTRACT.md#customers-vehicles-and-intake).
+**BOOK-003 — Resource calendars and waitlist.** Status: **partial**. [Target, acceptance and remaining work](./CONTRACT.md#customers-vehicles-and-intake).
 
 Evidence: `tests/mallet.test.mjs`; `tests/support/calendar-journey.mjs`; `tests/support/waitlist-journey.mjs`; `tests/calendar-browser.mjs`.
 
@@ -172,7 +172,7 @@ Evidence: `src/mallet/routing.ts`; `src/mallet/routing-door.ts`; `docs/routing.m
 
 Evidence: `src/mallet/time.ts`; `src/mallet/ui/time.ts`; `src/mallet/http.ts`; `tests/mallet.test.mjs`; `tests/support/time-journey.mjs`; `tests/time-browser.mjs`.
 
-**FLOW-004 — Technician collaboration and handoff.** Status: **done**. [Target, acceptance and remaining work](./CONTRACT.md#workshop-execution-and-technician-work).
+**FLOW-005 — Technician collaboration and handoff.** Status: **done**. [Target, acceptance and remaining work](./CONTRACT.md#workshop-execution-and-technician-work).
 
 Evidence: `src/mallet/collaboration.ts`; `src/mallet/ui/collaboration.ts`; `src/mallet/http.ts`; `src/mallet/media/storage.ts`; `tests/support/collaboration-journey.mjs`; `tests/collaboration-browser.mjs`.
 
@@ -388,7 +388,7 @@ Evidence: No implementation evidence yet.
 
 ## Reporting and multi-shop management
 
-**REPORT-001 — ARO car count and sales funnel.** Status: **partial**. [Target, acceptance and remaining work](./CONTRACT.md#reporting-and-multi-shop-management).
+**REPORT-007 — ARO car count and sales funnel.** Status: **partial**. [Target, acceptance and remaining work](./CONTRACT.md#reporting-and-multi-shop-management).
 
 Evidence: `tests/sales-report.test.mjs`; `tests/mallet.test.mjs`; `tests/support/return-journey.mjs`.
 
@@ -544,7 +544,7 @@ Evidence: `tests/mallet.test.mjs`; `tests/support/governance-journey.mjs`; `test
 
 Evidence: `tests/mallet.test.mjs`; `tests/support/enterprise-journey.mjs`; `tests/support/saml-journey.mjs`; `tests/enterprise-browser.mjs`; `tests/enterprise-saml-browser.mjs`; `docs/enterprise-identity.md`.
 
-**GOV-004 — Strong authentication and customer link protection.** Status: **partial**. [Target, acceptance and remaining work](./CONTRACT.md#roles-security-and-operating-guarantees).
+**GOV-007 — Strong authentication and customer link protection.** Status: **partial**. [Target, acceptance and remaining work](./CONTRACT.md#roles-security-and-operating-guarantees).
 
 Evidence: `tests/mallet.test.mjs`; `tests/support/strong-auth-journey.mjs`; `tests/support/link-protection-journey.mjs`; `tests/security-browser.mjs`; `src/mallet/strong-auth/`; `src/mallet/ui/security.ts`; `docs/security.md`.
 
@@ -560,7 +560,7 @@ Evidence: `tests/mallet.test.mjs`; `tests/support/retention-journey.mjs`; `tests
 
 Evidence: `docs/operations.md`; `src/mallet/archive-policy.mjs`; `src/mallet/http.ts`; `tests/clone-journey.mjs`; `tests/browser-journey.mjs`; `tests/mallet.test.mjs`; `tests/support/portable-repair.mjs`; `tests/media.test.mjs`.
 
-**OPS-002 — Fast counter work and dependable background jobs.** Status: **partial**. [Target, acceptance and remaining work](./CONTRACT.md#roles-security-and-operating-guarantees).
+**OPS-003 — Fast counter work and dependable background jobs.** Status: **partial**. [Target, acceptance and remaining work](./CONTRACT.md#roles-security-and-operating-guarantees).
 
 Evidence: `tests/mallet.test.mjs`; `tests/support/capacity-import-journey.mjs`; `tests/support/search-journey.mjs`; `tests/search-browser.mjs`; `tests/support/repair-read-journey.mjs`; `tests/support/jobs-journey.mjs`; `tests/support/provider-jobs-journey.mjs`; `tests/jobs-browser.mjs`; `tests/support/board-live-journey.mjs`; `docs/background-jobs.md`; `docs/performance.md`; `scripts/capacity/README.md`.
 

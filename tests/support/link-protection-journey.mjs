@@ -1,4 +1,4 @@
-// GOV-004: every customer-link door answers an unknown, revoked or expired link alike and reveals nothing, a client that keeps
+// GOV-004 / GOV-007: every customer-link door answers an unknown, revoked or expired link alike and reveals nothing, a client that keeps
 // missing is paused per door, and a link never grants payer billing authority.
 import assert from 'node:assert/strict'
 import {booking,estimate} from '../harness.mjs'

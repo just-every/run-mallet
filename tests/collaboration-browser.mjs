@@ -5,7 +5,7 @@ import {chromium} from '@playwright/test'
 import {authorise,booking,estimate,installation} from './harness.mjs'
 import {publicDoor} from './support/portable-repair.mjs'
 import {shopSetup} from './support/diagnosis-journey.mjs'
-// FLOW-004 native forms: helper, dependent subtasks, a mention, and a handoff the specialist acknowledges at 1440/390.
+// FLOW-004 / FLOW-005 native forms: helper, dependent subtasks, a mention, and a handoff the specialist acknowledges at 1440/390.
 export async function collaborationBrowser(){
  const h=await installation({entry:'tests/dev-worker.ts',network:true,assets:true,bindings:{AUTH_LOCAL:'true',RER_DEV_KEY:randomBytes(32).toString('base64url')}});let browser
  try{

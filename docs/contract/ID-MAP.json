@@ -81,9 +81,10 @@
       ]
     },
     "INTAKE-001": {
-      "how": "kept",
+      "how": "split",
       "to": [
-        "INTAKE-001"
+        "INTAKE-001",
+        "INTAKE-004"
       ]
     },
     "INTAKE-002": {
@@ -105,9 +106,10 @@
       ]
     },
     "BOOK-002": {
-      "how": "kept",
+      "how": "split",
       "to": [
-        "BOOK-002"
+        "BOOK-002",
+        "BOOK-003"
       ]
     },
     "DIAG-001": {
@@ -213,9 +215,10 @@
       ]
     },
     "EST-006": {
-      "how": "kept",
+      "how": "split",
       "to": [
-        "EST-006"
+        "EST-006",
+        "EST-007"
       ]
     },
     "FLOW-001": {
@@ -243,9 +246,10 @@
       ]
     },
     "FLOW-004": {
-      "how": "kept",
+      "how": "split",
       "to": [
-        "FLOW-004"
+        "FLOW-004",
+        "FLOW-005"
       ]
     },
     "WARRANTY-001": {
@@ -267,9 +271,10 @@
       ]
     },
     "FLEET-001": {
-      "how": "kept",
+      "how": "split",
       "to": [
-        "FLEET-001"
+        "FLEET-001",
+        "FLEET-002"
       ]
     },
     "FLEET-002": {
@@ -417,9 +422,10 @@
       ]
     },
     "PAY-005": {
-      "how": "kept",
+      "how": "split",
       "to": [
-        "PAY-005"
+        "PAY-005",
+        "PAY-008"
       ]
     },
     "PAY-006": {
@@ -555,9 +561,10 @@
       ]
     },
     "REPORT-001": {
-      "how": "kept",
+      "how": "split",
       "to": [
-        "REPORT-001"
+        "REPORT-001",
+        "REPORT-007"
       ]
     },
     "REPORT-002": {
@@ -777,15 +784,17 @@
       ]
     },
     "GOV-004": {
-      "how": "kept",
+      "how": "split",
       "to": [
-        "GOV-004"
+        "GOV-004",
+        "GOV-007"
       ]
     },
     "GOV-005": {
-      "how": "kept",
+      "how": "split",
       "to": [
-        "GOV-005"
+        "GOV-005",
+        "GOV-008"
       ]
     },
     "GOV-006": {
@@ -801,9 +810,10 @@
       ]
     },
     "OPS-002": {
-      "how": "kept",
+      "how": "split",
       "to": [
-        "OPS-002"
+        "OPS-002",
+        "OPS-003"
       ]
     },
     "OPEN-001": {

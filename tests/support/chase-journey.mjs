@@ -57,7 +57,7 @@ export async function chaseJourney(){
   const third=(await booking(h,{asset:await h.command('asset.create',{...assetInput('3'),customerEmail:'riley@example.test'}),technicianId:tech.id,startAt:'2026-11-04T09:00:00Z',endAt:'2026-11-04T10:00:00Z'})).job
   let q3=await quote(third);const bounced=await h.command('approvalLink.create',{estimateId:q3.id,version:q3.version,revision:1},ADV)
   assert.equal(bounced.delivery.status,'rejected');assert.equal((await chaseOf(bounced.id)).stopReason,'delivery-failed')
-  let tasks=(await st()).chaseTask;assert.deepEqual(tasks.map(t=>[t.linkId,t.kind]),[[bounced.id,'delivery-failed']],'EST-006 a failed send opens an advisor task')
+  let tasks=(await st()).chaseTask;assert.deepEqual(tasks.map(t=>[t.linkId,t.kind]),[[bounced.id,'delivery-failed']],'EST-007 a failed send opens an advisor task')
   status=202;await h.command('approvalLink.revoke',{linkId:bounced.id,version:(await st()).approvalLink.find(l=>l.id===bounced.id).version},ADV)
   q3=(await st()).estimate.find(x=>x.id===q3.id);const resent=await h.command('approvalLink.create',{estimateId:q3.id,version:q3.version,revision:1},ADV);assert.equal(resent.delivery.status,'accepted')
   status=422;const before=calls;await h.cron(at(resent.createdAt,2));await h.cron(at(resent.createdAt,2,20))

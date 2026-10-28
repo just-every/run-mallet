@@ -137,7 +137,10 @@ Native-session/runtime evidence: https://github.com/runeditrun/base/tree/913926d
 
 ## Contract documents
 
-Lander-Regenerate: after editing CONTRACT.md, run
-`node scripts/contract-docs.mjs write` then `node scripts/contract-docs.mjs check`.
-This uses the existing pinned contract parser and generates ACCEPTANCE.md,
-docs/CLAIMS.md and the Status summary. Regenerate the edition source lock last.
+CONTRACT.md owns acceptance text and status. Generate its indexes, check them,
+then refresh the edition source lock.
+
+Lander-Regenerate: node src/base/contract-docs.mjs write
+Lander-Regenerate: node scripts/edition-authoring/cli.mjs lock
+
+Validate with node src/base/contract-docs.mjs check.
