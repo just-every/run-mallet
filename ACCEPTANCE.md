@@ -13,7 +13,7 @@ The primary journey: check in the customer and asset, diagnose and inspect, pric
 | Later | 0 | 0 | 0 | 0 |
 | Full target | 22 | 74 | 61 | 157 |
 
-Judged from the code and tests at commit `33a1e50a4250c55a1ca3fb8184f1372a68757364` (27 October 2026). Field proof register: 11 rows; 0 passed, 0 failed, 11 not run.
+Judged from the code and tests at commit `33a1e50a4250c55a1ca3fb8184f1372a68757364` (27 October 2026). Field proof register: 12 rows; 0 passed, 0 failed, 12 not run.
 
 ## Core
 
@@ -259,7 +259,7 @@ Core · target · **partial** · From BOOK-002 · Rules D-1, D-2, D-3
 2. Exercise recurring dates and a DST transition using the saved shop timezone and offsets.
 
 **Evidence.** `tests/mallet.test.mjs`; `tests/support/calendar-journey.mjs`; `tests/support/waitlist-journey.mjs`; `tests/calendar-browser.mjs`
-**Gap.** Conservative waitlist consent/ordering/default adopted as stated above; ct approval pending under mallet-calendar-waitlist-c25. No acceptance point is removed.
+**Gap.** Native resource calendars, qualifications, absences and dated recurring reservations are asserted. Point-level completion proof for every resource, competing-dispatch and recurring-DST outcome remains unestablished.
 
 #### BOOK-003 — Cancellation waitlist offers
 
@@ -272,7 +272,7 @@ Core · target · **partial** · From BOOK-002 · Cites BASE-ROLE-001, BASE-MAIL
 2. Review and send the offer once; expire it or fail the handoff and require explicit staff recovery without repair or payment authority.
 
 **Evidence.** `tests/mallet.test.mjs`; `tests/support/calendar-journey.mjs`; `tests/support/waitlist-journey.mjs`; `tests/calendar-browser.mjs`
-**Gap.** Conservative waitlist consent/ordering/default adopted as stated above; ct approval pending under mallet-calendar-waitlist-c25. No acceptance point is removed.
+**Gap.** Native matching-FIFO offers and explicit staff recovery are asserted. Complete permission, FIFO, expiry and failed/uncertain-handoff outcome proof remains unestablished.
 
 #### DIAG-001 — Diagnostic findings and private notes
 
@@ -951,7 +951,7 @@ Core · target · **partial** · From PAY-005 · Rules D-1, D-2, D-3
 4. Also (ct 22 Oct 2026): a failed Stripe refund is redirected once to account credit and applied to another RO of the same account; a second redirect, a redirect of an uncertain refund, and a redirect to another account are refused; refunded plus credited never exceeds recorded tender.
 
 **Evidence.** `tests/mallet.test.mjs`; `tests/support/refunds-journey.mjs`; `tests/customers-browser.mjs`; `docs/refunds.md`
-**Gap.** Refund authority, consent and recovery policy approved with change by ct (22 Oct 2026, be4ec20); the failed-refund redirection change is now built and asserted. GOV-004 refund step-up is built (every credit and refund command needs a confirmation from the last five minutes). Native refund-authoring forms and signed provider-webhook intake are not built; Stripe outcomes use explicit owner reconciliation. An uncertain refund that reconciliation never matches has no in-product resolution and stays reserved. PAY-005 remains PARTIAL.
+**Gap.** Failed-refund same-account redirection and read-only reconciliation are asserted. Complete native recovery authoring, provider-outcome resolution and payer-privacy branches remain unbuilt or unproved.
 
 #### PAY-006 — Consumer financing
 
@@ -977,7 +977,7 @@ Core · target · **partial** · Rules D-1, D-2, D-3
 3. The fleet statement, the REPORT-005 close and the deposit batch tie out to the cent.
 
 **Evidence.** `tests/sales-tax.test.mjs`; `tests/support/filing-tax-journey.mjs`; `tests/mallet.test.mjs`; `tests/receivables-browser.mjs`
-**Gap.** Existing recorded check and other-tender payments and deposits now have an immutable owner-observed clearing-evidence journal, privately retained and restored. Structured check number, payer, bank and date capture, named manual-tender configuration, returned-check reversal and fees, drawer and daily-close reconciliation, deposit batches and printable slips, and QBO or Xero posting remain unbuilt. BOOKS-001 requires an authorized QBO sandbox for the named acceptance receipt. The conservative clearance default awaits ct mallet-filing-i787; owner observation never claims independent bank verification.
+**Gap.** Existing recorded check and other-tender payments and deposits now have an immutable owner-observed clearing-evidence journal, privately retained and restored. Structured check number, payer, bank and date capture, named manual-tender configuration, returned-check reversal and fees, drawer and daily-close reconciliation, deposit batches and printable slips, and QBO or Xero posting remain unbuilt. BOOKS-001 requires an authorized QBO sandbox for the named acceptance receipt.
 
 #### POS-001 — Retail counter and cash drawer
 
@@ -1261,7 +1261,7 @@ Core · target · **partial** · From REPORT-001 · Cites BASE-AUDIT-001 · Rule
 4. Multiple-location reporting remains a named SHOP-001 gap.
 
 **Evidence.** `tests/sales-report.test.mjs`; `tests/mallet.test.mjs`; `tests/support/return-journey.mjs`
-**Gap.** Multiple-location filters and comparisons remain unbuilt under SHOP-001. Whole-invoice voids are represented by full issued credit notes, not deletion of immutable invoices. Settled-cash reporting belongs to REPORT-005.
+**Gap.** Native sales cohorts, conversion arithmetic and source drill-through are asserted. Multi-location cohorts and complete migrated/external-history coverage remain unproved under SHOP-001 and MOVE-011.
 
 #### REPORT-002 — Repair and parts profitability
 
@@ -1708,7 +1708,7 @@ Core · target · **partial** · Cites BASE-SIGNIN-001, BASE-SIGNIN-002, BASE-RO
 
 #### GOV-004 — Strong authentication and customer link protection
 
-Core · target · **partial** · From GOV-004 · Cites BASE-SIGNIN-002, BASE-ACCESS-002, BASE-AGENT-008, BASE-ROLE-001, BASE-DATA-001, BASE-DATA-003, BASE-DATA-006 · Rules D-1, D-2, D-3
+Core · target · **partial** · From GOV-004 · Cites BASE-SIGNIN-002, BASE-ACCESS-002, BASE-AGENT-008, BASE-ROLE-001, BASE-DATA-001, BASE-DATA-003, BASE-DATA-006 · Rules D-1, D-2, D-3 · Register R-12
 
 **Requirement.** Use Mallet’s native factor and recovery flows for staff, with owner-controlled factor requirements. Fresh confirmation gates refunds and credits, unpaid release, key creation, asset erasure and temporary unlock reveal; the specific native and enrolled-factor requirements stay in [security](docs/security.md). Recovery notices reach other active owners/admins. GOV-003 provider sessions retain the required local factor. GOV-007 governs customer links. The governing recorded decision is RL-18. Technical formats and custody parameters are in [contract mechanisms](docs/contract-mechanisms.md#gov-004).
 
@@ -1718,7 +1718,7 @@ Core · target · **partial** · From GOV-004 · Cites BASE-SIGNIN-002, BASE-ACC
 3. Recover a lost factor and inspect the other owners’ and admins’ recovery notices.
 
 **Evidence.** `tests/mallet.test.mjs`; `tests/support/strong-auth-journey.mjs`; `tests/support/link-protection-journey.mjs`; `tests/security-browser.mjs`; `src/mallet/ui/security.ts`; `docs/security.md`
-**Gap.** ct 22 Oct 15:55Z APPROVED AS LANDED with riders: fresh sign-in step-up for people without factors, new-owner enrolment prompt, audited recovery notices to other owners/admins, approval authority capped at seven days or use, and invalid links reveal no customer history. GOV-004 stays PARTIAL: GOV-003 enterprise SSO/SCIM/provider-session policy is missing, payment-link authority is not implemented or proved; appointment-management authority still needs a separate seven-day/single-use fence from its 24-hour-after-appointment read-only status link. That booking/waitlist link class touches BOOK-002, explicitly owned by ct in this round, and remains unproved here. Finer-role step-up belongs to GOV-001. Physical-device passkeys are not proved (software and Chromium virtual authenticators are proved).
+**Gap.** Native factors, recovery and refund step-up are asserted. Provider-session factor proof and complete delegated privileged-action coverage remain unproved under GOV-003 and GOV-001; physical-authenticator proof is in R-12.
 
 #### GOV-007 — Customer link protection
 
@@ -1731,7 +1731,7 @@ Core · target · **partial** · From GOV-004 · Cites BASE-SIGNIN-002, BASE-ACC
 2. Consume a decision link, expire appointment status and exercise appointment management separately; none gives payer authority.
 
 **Evidence.** `tests/mallet.test.mjs`; `tests/support/strong-auth-journey.mjs`; `tests/support/link-protection-journey.mjs`; `tests/security-browser.mjs`; `src/mallet/ui/security.ts`; `docs/security.md`
-**Gap.** ct 22 Oct 15:55Z APPROVED AS LANDED with riders: fresh sign-in step-up for people without factors, new-owner enrolment prompt, audited recovery notices to other owners/admins, approval authority capped at seven days or use, and invalid links reveal no customer history. GOV-004 stays PARTIAL: GOV-003 enterprise SSO/SCIM/provider-session policy is missing, payment-link authority is not implemented or proved; appointment-management authority still needs a separate seven-day/single-use fence from its 24-hour-after-appointment read-only status link. That booking/waitlist link class touches BOOK-002, explicitly owned by ct in this round, and remains unproved here. Finer-role step-up belongs to GOV-001. Physical-device passkeys are not proved (software and Chromium virtual authenticators are proved).
+**Gap.** Existing scoped links and guessing fences are asserted. Appointment-management authority still needs a separate seven-day-or-use fence from read-only status access, and payment-link authority remains unbuilt or unproved.
 
 #### GOV-005 — Provider credentials and attachment custody
 
@@ -1745,7 +1745,7 @@ Core · target · **partial** · From GOV-005 · Cites BASE-SECRET-001, BASE-DAT
 3. Revoke the credential and restore records into a fresh owner installation; no old credential authority returns.
 
 **Evidence.** `tests/mallet.test.mjs`; `tests/support/connector-journey.mjs`; `tests/support/inspection-report-journey.mjs`; `tests/media.test.mjs`; `tests/security-browser.mjs`; `src/mallet/strong-auth/secret-box.ts`; `src/mallet/auth.ts`; `src/mallet/pier.ts`; `src/mallet/archive-policy.mjs`; `docs/connectors.md`
-**Gap.** ct 22 Oct 15:55Z APPROVED AS LANDED with riders: owner enrolment before credential management, sealed secrets never read back and absent from logs/exports/archives, five-minute authorized media-byte URLs, revocable media links defaulting to seven days with owner extension up to 31 days, and bad-signature webhooks change nothing. GOV-005 stays PARTIAL until data-flow and licensing declarations are published and confirmed for every enabled connector. The deployment-secret email sending key cannot be rotated or revoked in product (named Gap). Future Stripe webhook intake belongs to PAY-005.
+**Gap.** Sealed credentials and native rotation/revocation are asserted. Published and confirmed data-flow and licensing declarations for every enabled connector, deployment mail-sending-key rotation and the remaining provider webhook doors remain unbuilt or unproved.
 
 #### GOV-008 — Private attachment access
 
@@ -1758,7 +1758,7 @@ Core · target · **partial** · From GOV-005 · Cites BASE-SECRET-001, BASE-DAT
 2. Expire or revoke the parent while a byte URL exists; the later read is refused.
 
 **Evidence.** `tests/mallet.test.mjs`; `tests/support/connector-journey.mjs`; `tests/support/inspection-report-journey.mjs`; `tests/media.test.mjs`; `tests/security-browser.mjs`; `src/mallet/strong-auth/secret-box.ts`; `src/mallet/auth.ts`; `src/mallet/pier.ts`; `src/mallet/archive-policy.mjs`; `docs/connectors.md`
-**Gap.** ct 22 Oct 15:55Z APPROVED AS LANDED with riders: owner enrolment before credential management, sealed secrets never read back and absent from logs/exports/archives, five-minute authorized media-byte URLs, revocable media links defaulting to seven days with owner extension up to 31 days, and bad-signature webhooks change nothing. GOV-005 stays PARTIAL until data-flow and licensing declarations are published and confirmed for every enabled connector. The deployment-secret email sending key cannot be rotated or revoked in product (named Gap). Future Stripe webhook intake belongs to PAY-005.
+**Gap.** Private originals and reviewed customer variants are asserted. The complete byte-URL expiry, parent revocation, review-set change and replay/read-authority proof matrix remains unestablished.
 
 #### GOV-006 — Retention erasure and legal holds
 
@@ -1811,7 +1811,7 @@ Core · target · **partial** · From OPS-002 · Cites BASE-ROLE-001, BASE-DATA-
 5. Recover an uncertain outbound effect explicitly; a restored or retried record alone grants no new sending authority.
 
 **Evidence.** `tests/mallet.test.mjs`; `tests/support/capacity-import-journey.mjs`; `tests/support/search-journey.mjs`; `tests/search-browser.mjs`; `tests/support/repair-read-journey.mjs`; `tests/support/jobs-journey.mjs`; `tests/support/provider-jobs-journey.mjs`; `tests/jobs-browser.mjs`; `tests/support/board-live-journey.mjs`; `docs/background-jobs.md`; `docs/performance.md`; `scripts/capacity/README.md`
-**Gap.** No declared-capacity proof: ten-shop identity/isolation is not built; complete volume/history/media, 30/300 active staff sessions and 50 customer links have not been loaded and measured. Every stated p95 and five-minute due/restart deadline remains unproved at that capacity. Native board/repair/account-editing reads still need bounded projections while preserving complete historical counts/selectors. Base native archive finalization re-verifies all parts and erasure sidecars in one invocation, without a resumable finalization/validation cursor; the register-only import exceeded its 15-minute bound before producing timings. HTTP portability also needs Worker-safe older-schema migration replay; released rer 0.2.79 does not close either Base dependency. The small import/restart/browser journeys and request timing instrumentation are functional proof only; OPS-002 stays PARTIAL.
+**Gap.** Small reminder and provider-read jobs prove restart and explicit recovery. Complete queued-authority lifecycle and every failed/uncertain resolution branch remain open for point-level completion proof.
 
 ### Open source and installation
 
@@ -2031,3 +2031,5 @@ None.
 | R-9 | Authorized incumbent production extraction and media completeness receipts | MOVE-001, MOVE-002, MOVE-003, MOVE-004, MOVE-005, MOVE-006, MOVE-007, MOVE-008 | not run | | |
 | R-10 | Real Claude, ChatGPT, Codex and Copilot client interoperability receipts | AGENT-001, SURFACE-001, SURFACE-005 | not run | | |
 | R-11 | Professional jurisdiction-specific legal and tax review | RETURN-002, TAX-001, TAX-002, GOV-006 | not run | | |
+
+| R-12 | Physical authenticator/passkey device pass | GOV-004 | not run | | |
