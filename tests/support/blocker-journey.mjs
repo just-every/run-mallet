@@ -134,6 +134,11 @@ export async function blockerJourney(h){
  const stable=(await h.state()).records
  await h.cron(new Date().toISOString())
  assert.deepEqual((await h.state()).records,stable,'ADV-003 repeated background checks retain one source episode without inferred actions')
+ for(const repair of [consent,backorder]){
+  const packet=await view(h,repair.job),task=packet.tasks.find(t=>!t.resolution)
+  assert.equal(task.handler.id,f.owner.id)
+  await h.command('blocker.acknowledge',{...fences(packet,task),note:'Current owner accepted the source-bound follow-up'})
+ }
  let v=await refresh(h,evidence.job)
  for(const r of [consent,backorder])await refresh(h,r.job)
  let task=v.tasks.find(t=>t.source.id===evidence.inspection.id&&!t.resolution)

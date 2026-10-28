@@ -4948,7 +4948,7 @@
       "executable": false
     },
     "tests/support/blocker-journey.mjs": {
-      "sha256": "829838f502a8fa06d03141887dd5aca83bdf24f0c2fad1e236aeef8c188d4bd9",
+      "sha256": "8b5136d55c78266d25283871d29f39375d17b1392f11d7abae8c0d0799c8c41d",
       "executable": false
     },
     "tests/support/blocker-parts.mjs": {
