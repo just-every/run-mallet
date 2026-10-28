@@ -18,3 +18,11 @@ provider acceptance or a completed intake-to-receipt journey.
 
 The API-001 Status Gap retains the exact replacement wording supplied by CT.
 Generated contract indexes follow CONTRACT.md.
+
+## ERASE-001 — 28 October 2026, 16:00 UTC
+
+CT assigned this new clause from the pre-existing appointment-link erasure finding:
+
+> Erasure follows the person's earlier mailboxes. After a linked customer's contact or vehicle email was corrected, customer.erase also revokes the old private appointment and booking links, and redacts or erases the appointment, email and booking records keyed by any prior mailbox, with the retention-cleanup path and the archive and restore fences unchanged; allowed erasure completes, an old link then returns the same refusal as any erased link.
+
+The four numbered acceptance points in CONTRACT.md split only this ruling.
