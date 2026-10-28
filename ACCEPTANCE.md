@@ -582,7 +582,7 @@ Evidence: No implementation evidence yet.
 
 **ADV-003 — Resolve the next repair blocker.** Status: **partial**. [Target, acceptance and remaining work](./CONTRACT.md#push-further-with-a-service-advisor-agent).
 
-Evidence: `src/mallet/workshop.ts`; `src/mallet/estimates.ts`; `tests/mallet.test.mjs`.
+Evidence: `tests/mallet.test.mjs`; `tests/support/blocker-journey.mjs`; `tests/support/blocker-archive.mjs`; `tests/support/blocker-parts.mjs`; `tests/blocker-browser.mjs`.
 
 **ADV-004 — Source parts and keep promise times current.** Status: **missing**. [Target, acceptance and remaining work](./CONTRACT.md#push-further-with-a-service-advisor-agent).
 

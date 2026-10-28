@@ -316,6 +316,12 @@
       "name": "core-0118_mallet_webhooks.sql",
       "sha256": "c492b2e580ac03c3144f6fdafbaf4592a9bdec1fb17121fb5c7900a2bbd538b8",
       "sql": "-- Installation-local endpoint and signing authority never enters a portable archive.\nCREATE TABLE mallet_webhook_authority (\n id TEXT PRIMARY KEY,\n endpoint TEXT NOT NULL,\n sealed TEXT NOT NULL,\n key_version INTEGER NOT NULL,\n owner_id TEXT NOT NULL,\n owner_version INTEGER NOT NULL\n);\n"
+    },
+    {
+      "binding": "DB",
+      "name": "core-0119_mallet_coverage_authority.sql",
+      "sha256": "e05a8bf1fe9ffe539ba77f86b014942cebca5ee96a282fab962b48310a7d4a47",
+      "sql": "-- Installation-local review scheduling permission; excluded from archives.\nCREATE TABLE mallet_coverage_authority (\n review_id TEXT PRIMARY KEY,\n owner_id TEXT NOT NULL,\n owner_version INTEGER NOT NULL\n);\n"
     }
   ],
   "compatibilityDate": "2026-09-08",

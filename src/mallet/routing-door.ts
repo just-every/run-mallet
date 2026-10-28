@@ -3,7 +3,7 @@ import {execute,MalletError,type Actor} from './model'
 import type {Authority} from './auth'
 
 /** Operator ids/names/roles come only from native identity; same-transaction version guards fence revocation. */
-async function routingPeople(db:D1Database,authority?:Authority){
+export async function routingPeople(db:D1Database,authority?:Authority){
  const people=(await db.prepare("SELECT id,display_name AS name,role,version FROM oa_operators WHERE status='active' AND role IN ('owner','admin') ORDER BY id").all()).results as any[]
  const snapshot=JSON.stringify(people)
  const sql=`(SELECT COALESCE(json_group_array(json_object('id',id,'name',display_name,'role',role,'version',version)),'[]') FROM (SELECT id,display_name,role,version FROM oa_operators WHERE status='active' AND role IN ('owner','admin') ORDER BY id))=?`
