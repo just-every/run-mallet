@@ -3,11 +3,7 @@ import {fail,find,rows,type State} from '../model'
 import {customerScope,write,type CustomerScope} from './store'
 import type {Sql} from '../media/types'
 
-function recipients(s:State,scope:CustomerScope){
- // Correcting a mailbox does not detach appointments made with its prior value.
- const contacts=rows(s,'contact').filter(c=>scope.contactIds.has(c.id)),changes=rows(s,'event').filter(e=>scope.assetIds.has(e.assetId)&&['asset.create','asset.update'].includes(e.kind))
- return new Set([...scope.assets.map(a=>a.customerEmail),...contacts.flatMap(c=>[c.email,...(c.history??[]).map((r:any)=>r.email)]),...changes.flatMap(e=>[e.data.customerEmail,e.data.before?.customerEmail,e.data.after?.customerEmail])].filter(Boolean).map(v=>v.trim().toLowerCase()))
-}
+function recipients(s:State,scope:CustomerScope){return new Set([...scope.assets.map(a=>a.customerEmail),...rows(s,'contact').filter(c=>scope.contactIds.has(c.id)).map(c=>c.email)].filter(Boolean).map(v=>v.trim().toLowerCase()))}
 function assetScope(a:any):CustomerScope{return {accounts:[],accountIds:new Set(),contactIds:new Set(),assets:[a],assetIds:new Set([a.id]),jobs:[],jobIds:new Set(),customerId:''}}
 function heldRecipients(s:State){
  const emails=new Set<string>()

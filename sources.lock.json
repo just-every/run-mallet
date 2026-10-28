@@ -572,7 +572,7 @@
       "executable": false
     },
     "ACCEPTANCE.md": {
-      "sha256": "a44ba08038208a253a3aa851bcdf4c6e71b794a5f221ea97e691cbe67cfe0b67",
+      "sha256": "5b7fa0d55c098733627df391752b8da44e9d650de609a07808d0e8f82326e626",
       "executable": false
     },
     "AGENTS.md": {
@@ -584,7 +584,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "76fbd314c519cef6c146245293736ad183dcda95a01c646c7a872340a9083c80",
+      "sha256": "b8371fe96dfb3e053e237fb2d5083e55681f0ce2ca3ecb933e2d52366b82cd19",
       "executable": false
     },
     "deploy-demo.json": {
@@ -1711,6 +1711,10 @@
       "sha256": "c6e5a1237773c1171f53c7ef4abf7ee3d54bc6d634ec78a624a1f206162afc99",
       "executable": false
     },
+    "src/mallet/declined-work-review.ts": {
+      "sha256": "9d44a4411ff740a42b0801fa8a96e7c62e017630f3c0b29289a763becce852f5",
+      "executable": false
+    },
     "src/mallet/declined-work.ts": {
       "sha256": "b3ede186671d9ac4caee793d8665aae56cef5e81b4aff82c439530b7f3a74e56",
       "executable": false
@@ -1828,7 +1832,7 @@
       "executable": false
     },
     "src/mallet/http.ts": {
-      "sha256": "15664c3956b1cacd02d49e643e203b8625df16cd04e77f60b4f22130ae5db1bb",
+      "sha256": "2749b0152568e5de0d90ebdc4282a6b3054d18722687305937076b014bccd3d0",
       "executable": false
     },
     "src/mallet/imports/context.ts": {
@@ -2020,7 +2024,7 @@
       "executable": false
     },
     "src/mallet/model.ts": {
-      "sha256": "ebea69b59ba8782b5c7c00c429c0a7e7e414259073208b20c3fa33e3980a0a22",
+      "sha256": "521a1a3994538ba751888ad0fde369c7b0e46cf6869b52d29313780d4704ff8a",
       "executable": false
     },
     "src/mallet/money.ts": {
@@ -2256,7 +2260,7 @@
       "executable": false
     },
     "src/mallet/restore/validate-records.mjs": {
-      "sha256": "b9214387c6781eb49119a9c8bc7316ead8c977fcc57c39105abc9a5192859931",
+      "sha256": "8195964c4242564ec2d6ea2f1d1ceb8758b6f83e78ba0a429c17fd75b0083de3",
       "executable": false
     },
     "src/mallet/restore/validate-reviews.mjs": {
@@ -2284,7 +2288,7 @@
       "executable": false
     },
     "src/mallet/retention/cleanup.ts": {
-      "sha256": "f8298a20e17fa892f8778bf720e0b58803987be1bbe94bbb1c6b28ec0f47b2d5",
+      "sha256": "87dc29bed25c855fb4dd5bdb2c5781d4468faed647f9bb62b2bf144d4bfd4ff9",
       "executable": false
     },
     "src/mallet/retention/consent.ts": {
@@ -2312,7 +2316,7 @@
       "executable": false
     },
     "src/mallet/retention/outreach.ts": {
-      "sha256": "bb3351b18e5210d1fc725e270610867346988d2518866aa9def57dafe41d2cf7",
+      "sha256": "e830759e3485e34386cfa87715d90ff1f5500bb4dbe80eff330f38a0a11afc40",
       "executable": false
     },
     "src/mallet/retention/plans.ts": {
@@ -2599,8 +2603,12 @@
       "sha256": "56b711d83b72ca6233b9a96e5a41a080af69082fd5fe01ba608f56cb284a49b5",
       "executable": false
     },
+    "src/mallet/ui/declined-work-review.ts": {
+      "sha256": "09e1cbbe01e7cb4d644a8aa9b5cd766e6ebb04f8c5f76f1f7999f629291b5f24",
+      "executable": false
+    },
     "src/mallet/ui/declined-work.ts": {
-      "sha256": "729c3088d8b25ce8ab37fd611aac4a5e28bcd1f5bd2dd9270428e4df8d7f6193",
+      "sha256": "46177542e6c00c41bba5815207de680c222d2eb2fc142dc1c9184672f276fbda",
       "executable": false
     },
     "src/mallet/ui/deposits.ts": {
@@ -4735,6 +4743,10 @@
       "sha256": "f510c8660acb5dfa6dd8be48802ab9bc19b41e44c4d610554c12d8a280876162",
       "executable": false
     },
+    "tests/declined-work-review-browser.mjs": {
+      "sha256": "e789dd69893364b541244c099a9cf14d04cdce9b23b3c616ce870be79b42f37a",
+      "executable": false
+    },
     "tests/demo-worker.ts": {
       "sha256": "3e0ab6930950f7c914df6d6ec5664e9d146b60a166e9523caf0ff8c71078d911",
       "executable": false
@@ -4840,7 +4852,7 @@
       "executable": false
     },
     "tests/mallet.test.mjs": {
-      "sha256": "8d269c4d1e332e20ced4979d5b9f91607b638c73ee8f04a9d07e6acaa255e0cd",
+      "sha256": "a6eb01621fa49af185b6ba7c37d51281651500c85280b07e0f4db35f6f66ef18",
       "executable": false
     },
     "tests/media-browser.mjs": {
@@ -5057,6 +5069,10 @@
     },
     "tests/support/customers-journey.mjs": {
       "sha256": "5ee247e9cb9fa35c8deb0d79b15cb3cc9109fbc7723b80bcc4428d7819b0505d",
+      "executable": false
+    },
+    "tests/support/declined-work-review-journey.mjs": {
+      "sha256": "3acabd26acfe50d552cb6c3c05f8f38213bf759d8427d1e2b6847b026e986d8c",
       "executable": false
     },
     "tests/support/deposits-journey.mjs": {

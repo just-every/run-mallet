@@ -1,3 +1,4 @@
+import {declinedReviewPage} from './ui/declined-work-review'
 import {coverageCommand,coverageState} from './coverage-door'
 import {coveragePage} from './ui/coverage-follow-up'
 import {webhookResponse} from './webhook-door'
@@ -185,6 +186,7 @@ function withoutFleetApproval(value:any):any {
  return value
 }
 function visible(s:State,actor:Actor):State {
+ if(!human(actor))s={...s,records:Object.fromEntries(Object.entries(s.records).filter(([kind])=>kind!=='declinedReview').map(([kind,values])=>[kind,kind==='event'?values.filter(r=>!r.kind.startsWith('declineReview.')):values]))}
  if(actor.role!=='owner')s={...s,records:Object.fromEntries(Object.entries(s.records).filter(([kind])=>!kind.startsWith('coverage')).map(([kind,values])=>[kind,kind==='event'?values.filter(x=>!x.kind.startsWith('coverage.')):values]))}
  if(actor.role!=='owner')s={...s,records:Object.fromEntries(Object.entries(s.records).filter(([kind])=>!kind.startsWith('webhook')&&!kind.startsWith('assistant')).map(([kind,values])=>[kind,kind==='event'?values.filter(x=>!x.kind.startsWith('assistant.')):values]))}
  if(!human(actor)){const {repairBlockerPacket:_packet,repairBlockerTask:_task,...records}=s.records;s={...s,records:{...records,event:rows(s,'event').filter(e=>!e.kind.startsWith('blocker.'))}}}
@@ -470,6 +472,7 @@ async function workshopResponse(request:Request,original:Bindings,execution:Pick
    if(command.startsWith('intake.'))return redirect(`/app/jobs/${e(input.jobId)}/intake`)
    if(command.startsWith('return.')||command==='payment.verifyStripe'||command==='flow.collect')return redirect(`/app/jobs/${e(input.jobId)}/return`)
    if(command==='payment.record'&&input.returnTo==='return')return redirect(`/app/jobs/${e(input.jobId)}/return`)
+   if(command.startsWith('declineReview.'))return redirect('/app/jobs/'+encodeURIComponent(String(input.jobId))+'/declined-review')
    if(command.startsWith('coverage.'))return redirect('/app/jobs/'+encodeURIComponent(String(input.jobId))+'/coverage')
    if(command.startsWith('warranty.')||command==='payment.record')return redirect(`/app/jobs/${e(command==='warranty.open'?result.jobId:input.jobId)}/warranty`)
    if(command==='assistant.grant')return page('Scoped assistant key',`<section class="card"><p>Copy this separate key once into the assistant’s private environment.</p><pre>${e(result.token)}</pre><p>Allowed action: ${e(result.kind)}. Zero spend. Expires ${when(result.expiresAt)}.</p><a href="/app/settings/assistants">Return to assistant settings</a></section>`,actor,200,{section:'data'})
@@ -514,6 +517,13 @@ async function workshopResponse(request:Request,original:Bindings,execution:Pick
    return new Response(await service.exports.download(id),{headers:{...headers,'content-type':'application/x-ndjson','content-disposition':'attachment; filename="workshop.rer"'}})
   }
   if(request.method!=='GET' && request.method!=='HEAD')throw new HttpError(405,'method_not_allowed')
+  const declinedReviewMatch=path.match(/^\/app\/jobs\/([^/]+)\/declined-review$/)
+  if(declinedReviewMatch){
+   if(!human(actor)||actor.staff)throw new HttpError(403,'manager_required')
+   const raw=await load(env.DB),job=rows(raw,'job').find(j=>j.id===declinedReviewMatch[1])
+   if(!job)throw new HttpError(404,'not_found')
+   return page('Declined-work review',declinedReviewPage(raw,job),actor,200,{section:'jobs'})
+  }
   const state=visible(await load(env.DB),actor)
   if(path==='/app/retention'){if(actor.role!=='owner')throw new HttpError(403,'owner_required');return page('Retention & erasure',retentionPage(state,url.searchParams.get('customerId')??''),actor,200,{section:'data'})}
   if(path==='/api/mallet/catalogue'){if(actor.role==='member')throw new HttpError(403,'manager_required');return json(await catalogue(env,await connectorSecret(env,'pier','PIER_SESSION')))}
