@@ -2031,5 +2031,4 @@ None.
 | R-9 | Authorized incumbent production extraction and media completeness receipts | MOVE-001, MOVE-002, MOVE-003, MOVE-004, MOVE-005, MOVE-006, MOVE-007, MOVE-008 | not run | | |
 | R-10 | Real Claude, ChatGPT, Codex and Copilot client interoperability receipts | AGENT-001, SURFACE-001, SURFACE-005 | not run | | |
 | R-11 | Professional jurisdiction-specific legal and tax review | RETURN-002, TAX-001, TAX-002, GOV-006 | not run | | |
-
 | R-12 | Physical authenticator/passkey device pass | GOV-004 | not run | | |
