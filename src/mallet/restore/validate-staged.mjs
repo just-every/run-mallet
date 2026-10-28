@@ -1,5 +1,6 @@
 import {validateLocations} from './validate-locations.mjs'
 import {validateCostRates} from './validate-cost-rates.mjs'
+import {validateRetail} from './validate-retail.mjs'
 import { PortabilityError } from '@runeditrun/rer/modules/portability/storage'
 import { validateRecords } from './validate-records.mjs'
 import { validateStock } from './validate-stock.mjs'
@@ -30,6 +31,7 @@ export async function validateStaged({ db, tables, manifest }) {
  await validateCostRates(context)
  await validateFinance(context)
  await validateStock(context)
+ await validateRetail(context)
  await validateMedia(context)
  // Native CTAS staging drops source indexes. These indexes only accelerate
  // the companion search validator; archive projection contents stay exact.
