@@ -15,7 +15,7 @@ import {promiseBrowser} from './promise-browser.mjs'
 import {timeBrowser} from './time-browser.mjs'
 import {reportBrowser} from './report-browser.mjs'
 import {reportJourney} from './support/report-journey.mjs'
-import {diagnosisJourney} from './support/diagnosis-journey.mjs'
+import {diagnosisJourney,shopSetup} from './support/diagnosis-journey.mjs'
 import {diagnosisBrowser} from './diagnosis-browser.mjs'
 import {approvalJourney} from './support/approval-journey.mjs'
 import {approvalBrowser,chaseBrowser} from './approval-browser.mjs'
@@ -426,6 +426,28 @@ test('AR-001, FLEET-001 and TAX-002: native terms, fleet PO, disputed statement,
  test('GOV-001: owner-only grants bound staff commands, private projections, handoffs and revoked authority',()=>run(staffJourney))
 
 test('GOV-001 and GOV-002: owner grants, bounded staff handoff and private audit search and downloads at 1440 and 390',governanceBrowser)
+
+test('Stripe public doors treat inherited handler names as unknown without exposing bindings',async()=>{
+ const edge=collectionEdge(),canary='synthetic-mallet-prototype-binding'
+ await run(async h=>{
+  await shopSetup(h)
+  await h.stepUp()
+  const results=[]
+  for(const command of ['unknown-handler','constructor','__proto__','hasOwnProperty']){
+   for(const api of [true,false]){
+    const response=api?await h.request('/api/mallet/stripe/'+command,{method:'POST',body:{}}):await h.mf.dispatchFetch(h.origin+'/app/stripe',{method:'POST',redirect:'manual',headers:{origin:h.origin,cookie:h.owner,'content-type':'application/x-www-form-urlencoded'},body:new URLSearchParams({command}).toString()})
+    const body=await response.text()
+    // Only booleans and status codes reach assertion diagnostics, never response bodies.
+    results.push({command,api,status:response.status,unknown:api?body.includes('"error":"not_found"'):body.includes('not_found'),private:![canary,'synthetic-mallet-800','SESSION_SECRET','SETUP_TOKEN','STRIPE_SECRET_KEY','AUTH_ORIGIN'].some(value=>body.includes(value))})
+   }
+  }
+  assert.deepEqual(results,['unknown-handler','constructor','__proto__','hasOwnProperty'].flatMap(command=>[true,false].map(api=>({command,api,status:404,unknown:true,private:true}))))
+  assert.equal(edge.calls.length,0,'Unknown names never reach Stripe')
+  const response=await h.request('/api/mallet/stripe/connect',{method:'POST',body:{consent:true}})
+  assert.equal(response.status,200)
+  assert.equal((await response.json()).accountId,'synthetic-mallet-801','A registered handler still works')
+ },{bindings:{AUTH_LOCAL:'true',STRIPE_SECRET_KEY:'synthetic-mallet-800',PROTOTYPE_CANARY:canary},outboundService:edge.edge})
+})
 
 test('PAY-001: owner checkout, authenticated event replay, exact fee and payout membership and inert recovery',async()=>{
  const edge=collectionEdge()
