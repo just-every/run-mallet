@@ -74,6 +74,8 @@ export async function appointmentOutreachJourney(){
  }finally{await h.close()}
  await appointmentRecoveryJourney()
  await appointmentErasureJourney()
+ await appointmentCorrectedErasureJourney()
+ await appointmentSharedHoldErasureJourney()
  await appointmentAuthorityJourney()
  await appointmentCustomerPreferenceJourney()
  await appointmentStandaloneErasureJourney()
@@ -335,5 +337,63 @@ export async function appointmentSeriesJourney(){
    assert.deepEqual((await fresh.state()).records.outreach,(await h.state()).records.outreach)
    await fresh.cron('2026-11-01T18:45:00Z');assert.equal(fresh.messages.filter(m=>m.subject==='Your appointment reminder').length,0)
   }finally{await fresh.close()}
+ }finally{await h.close()}
+}
+
+
+export async function appointmentCorrectedErasureJourney(){
+ const h=await outreachInstallation()
+ try{
+  const {appointment:a,path}=await appointmentFixture(h)
+  const asset=await h.command('asset.create',{customerName:a.name,customerEmail:a.email,label:'synthetic-mallet-770',identifier:'synthetic-mallet-770'})
+  const contact=await h.command('contact.save',{name:a.name,email:a.email,communication:'email'})
+  const account=await h.command('customer.save',{name:a.name,kind:'person',contactIds:[contact.id],payerId:contact.id,billingContactId:contact.id,taxStatus:'unknown'})
+  const linked=await h.command('customer.linkAsset',{assetId:asset.id,version:asset.version,customerId:account.id,customerVersion:account.version,reason:'Customer identified their appointment vehicle'})
+  const choice={...appointmentConsentFields(a),action:'reminder-consent',consent:'yes'}
+  assert.equal((await bookingPost(h,path,choice)).status,200,'The live customer form accepts explicit permission before erasure')
+  const pending=await approveAppointment(h,a,{},(await h.state()).records.outreachConsent[0])
+  const email=['synthetic-mallet-771','example.test'].join('@')
+  await h.command('contact.save',{...contact,contactId:contact.id,email})
+  await h.command('asset.update',{...linked,assetId:linked.id,customerEmail:email})
+  const preview=await h.command('retention.preview',{customerId:account.id,mode:'erase'})
+  await h.command('customer.erase',{customerId:account.id,fingerprint:preview.fingerprint,confirm:'ERASE',consent:true,reason:'Verified customer request after contact correction',consentEvidence:'synthetic-mallet-772'})
+  const before=await h.state(),calls=h.messages.length,response=await bookingPost(h,path,choice)
+  assert.equal(response.status,404,'An erased account cannot replay its prior-mailbox reminder form')
+  assert.deepEqual(await h.state(),before,'Replaying the erased customer form creates no permission or other records')
+  const erased=before.records.outreach.find(r=>r.id===pending.id)
+  assert.equal(erased.status,'stopped');assert.ok(erased.erasedAt);assert.equal(erased.to,'')
+  await h.cron('2026-11-01T14:00:00Z');assert.equal(h.messages.length,calls)
+ }finally{await h.close()}
+}
+
+export async function appointmentSharedHoldErasureJourney(){
+ const h=await outreachInstallation()
+ try{
+  const {appointment:a,path}=await appointmentFixture(h)
+  const contact=await h.command('contact.save',{name:a.name,email:a.email,communication:'email'})
+  const account=await h.command('customer.save',{name:a.name,kind:'person',contactIds:[contact.id],payerId:contact.id,billingContactId:contact.id,taxStatus:'unknown'})
+  const hold=await h.command('retention.hold',{customerId:account.id,scope:'personal',reason:'synthetic-mallet-773 continuing custody basis',caseReference:'synthetic-mallet-773'})
+  const unused=await h.command('asset.create',{customerName:a.name,customerEmail:a.email,label:'synthetic-mallet-774',identifier:'synthetic-mallet-774'})
+  const paused=await approveAppointment(h,a)
+  await h.command('outreach.stop',{id:paused.id,version:paused.version,reason:'Protected customer stop note '+a.email})
+  const pending=await approveAppointment(h,a),before=await h.state(),calls=h.messages.length
+  await h.command('asset.erase',{assetId:unused.id,confirm:'ERASE'})
+  const state=await h.state(),protectedAppointment=state.records.appointment.find(r=>r.id===a.id),protectedReminder=state.records.outreach.find(r=>r.id===pending.id),permission=state.records.outreachConsent.find(r=>r.id===pending.consentId)
+  assert.deepEqual(protectedAppointment,a,'Erasing an unused vehicle must preserve a shared held account appointment')
+  assert.equal(protectedReminder.content,pending.content,'A shared personal hold protects exact approved reminder content')
+  assert.equal(protectedReminder.to,pending.to);assert.equal(protectedReminder.instructions,pending.instructions);assert.equal(protectedReminder.erasedAt,undefined)
+  assert.equal(permission.to,a.email);assert.equal(permission.sourceEvidence,before.records.outreachConsent.find(r=>r.id===pending.consentId).sourceEvidence);assert.equal(permission.erasedAt,undefined)
+  assert.deepEqual(state.records.event.find(r=>r.kind==='outreach.stop'&&r.subjectId===paused.id),before.records.event.find(r=>r.kind==='outreach.stop'&&r.subjectId===paused.id))
+  assert.deepEqual(state.records.retentionHold.find(r=>r.id===hold.id),hold)
+  assert.equal((state.records.asset??[]).some(r=>r.id===unused.id),false,'Only the requested unused vehicle is removed')
+  assert.equal(protectedReminder.status,'stopped');assert.ok(permission.withdrawnAt)
+  assert.equal((await h.request(path,{as:''})).status,404,'A hold preserves content without retaining customer capability')
+  await h.cron('2026-11-01T14:00:00Z');assert.equal(h.messages.length,calls,'A hold never preserves runnable sending authority')
+  await h.command('retention.release',{holdId:hold.id,version:hold.version,consent:true,reason:'synthetic-mallet-775 custody review finished'})
+  const preview=await h.command('retention.preview',{customerId:account.id,mode:'erase'})
+  await h.command('customer.erase',{customerId:account.id,fingerprint:preview.fingerprint,confirm:'ERASE',consent:true,reason:'Verified eligible erasure after hold release',consentEvidence:'synthetic-mallet-776'})
+  const after=await h.state()
+  assert.equal(after.records.appointment.find(r=>r.id===a.id).email,'')
+  assert.equal(after.records.outreach.find(r=>r.id===pending.id).content,'Erased personal content')
  }finally{await h.close()}
 }

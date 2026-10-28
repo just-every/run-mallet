@@ -2288,7 +2288,7 @@
       "executable": false
     },
     "src/mallet/retention/outreach.ts": {
-      "sha256": "f1917e10868fb5f75fc6569412914e2e87e487e506a568083c9334b8af7d6520",
+      "sha256": "21663769b9b6e211ab20141897f04716cf0f64cc679f86caf6b15c9e083890a0",
       "executable": false
     },
     "src/mallet/retention/plans.ts": {
@@ -5092,7 +5092,7 @@
       "executable": false
     },
     "tests/support/outreach-journey.mjs": {
-      "sha256": "a968b42f231e1f06ed7db7a6a47628511d5a205ad1631aa4ed39a3525ebd3252",
+      "sha256": "2114724416ce328fb150035c02ad00a1dd57b117115a9f480576a55cf13bcfe2",
       "executable": false
     },
     "tests/support/parts-browser.mjs": {
