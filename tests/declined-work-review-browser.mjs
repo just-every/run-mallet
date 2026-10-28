@@ -26,6 +26,16 @@ export async function declinedReviewBrowser(){
   assert.ok(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth))
   assert.equal(await p.locator('button,a').evaluateAll(nodes=>nodes.filter(n=>!n.textContent.trim()&&!n.getAttribute('data-tooltip')).length),0,'Icon controls expose tooltips')
   await shot('declined-01-current-cited-advisory')
+  let quote=await h.command('estimate.revise',{estimateId:f.quote.id,version:f.quote.version,revision:1,lines:[{kind:'part',description:'Unrelated wiper blade',quantity:1,unitCents:1900}],notes:'Replace the work on this quote'})
+  await p.reload();assert.ok((await p.locator('main').innerText()).includes('Stale packet'))
+  await click('declineReview.refresh','Refresh cited packet')
+  assert.ok((await p.locator('main').innerText()).includes('Line association unknown'))
+  assert.equal(await form('declineReview.prepare').count(),0,'Unrelated quoted work cannot become the declined-work offer')
+  await shot('declined-02-unqualified-quote')
+  quote=await h.command('estimate.revise',{estimateId:quote.id,version:quote.version,revision:quote.revisions.at(-1).n,lines:[{kind:'part',description:'Brake pads',quantity:2,unitCents:3000}],notes:'Restore the declined work with a current price'})
+  await p.reload();await click('declineReview.refresh','Refresh cited packet')
+  assert.equal(await form('declineReview.prepare').count(),1)
+
   const replacement=await f.replace('green',9);assert.notEqual(replacement.id,f.inspection.id);await p.reload()
   assert.ok((await p.locator('main').innerText()).includes('Stale packet'))
   assert.equal(await form('declineReview.prepare').count(),0)
@@ -38,7 +48,7 @@ export async function declinedReviewBrowser(){
   await original.locator('summary').click()
   assert.ok((await original.innerText()).includes('3.5 mm'))
   assert.ok((await original.innerText()).includes('1,350 miles'))
-  await shot('declined-02-replacement-suppressed-history')
+  await shot('declined-03-replacement-suppressed-history')
   const before=(await h.state()).records,backup=await archive(h),fresh=await installation({network:true,secureNetwork:true,assets:true})
   try{
    await restore(fresh,backup)
@@ -51,7 +61,7 @@ export async function declinedReviewBrowser(){
    await page.getByText('Citations and retained revisions',{exact:true}).click()
    const retained=page.locator('[data-packet-revision="1"]');await retained.locator('summary').click()
    assert.ok((await retained.innerText()).includes('3.5 mm'))
-   for(const width of [1440,390]){await page.setViewportSize({width,height:1000});await page.screenshot({path:join(dir,'declined-03-recovered-history-'+width+'.png'),fullPage:true})}
+   for(const width of [1440,390]){await page.setViewportSize({width,height:1000});await page.screenshot({path:join(dir,'declined-04-recovered-history-'+width+'.png'),fullPage:true})}
    await recovered.close()
   }finally{await fresh.close()}
   assert.deepEqual(errors,[])

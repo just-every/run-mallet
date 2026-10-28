@@ -7,6 +7,14 @@ export const declinedReviewCommands=['declineReview.refresh','declineReview.prep
 const hash=(value:any)=>createHash('sha256').update(JSON.stringify(value)).digest('hex')
 const ordered=(values:Row[])=>[...values].sort((a,b)=>a.id.localeCompare(b.id))
 const citation=(kind:string,row:Row)=>({kind,id:row.id,version:row.version})
+function quotedDeclinedLine(quote:Row|undefined,proposal:any){
+ const original=quote?.revisions.find((r:any)=>r.n===proposal.revision)?.lines.find((l:any)=>l.id===proposal.lineId)
+ if(!original)return null
+ // Price and quantity may be refreshed. Replacing the work itself does not
+ // establish a new association merely because the quote has one line.
+ const matches=quote!.revisions.at(-1).lines.filter((l:any)=>l.kind===original.kind&&l.description===original.description&&l.pierItemId===original.pierItemId)
+ return matches.find((l:any)=>l.id===original.id)??(matches.length===1?matches[0]:null)
+}
 /** Observations are evidence for a person, never permission to contact or book. */
 export function declinedReviewSources(s:State,item:Row,now:string){
  const asset=find(s,'asset',item.assetId),jobs=ordered(rows(s,'job').filter(j=>j.assetId===asset.id)),jobIds=new Set(jobs.map(j=>j.id))
@@ -23,7 +31,7 @@ export function declinedReviewSources(s:State,item:Row,now:string){
 export function declinedReviewSnapshot(s:State,item:Row,now:string,findingKey=''){
  const sources=declinedReviewSources(s,item,now),active=readings(s,item.assetId),reading=active.filter(r=>r.unit===item.unit).at(-1)??null
  const inspections=rows(s,'inspection').filter(i=>sources.jobs.some(j=>j.id===i.jobId)).flatMap(i=>i.template.snapshot.items.map((point:any)=>({inspectionId:i.id,version:i.version,jobId:i.jobId,templateId:i.template.id,itemId:point.id,label:point.label,result:[...i.results].reverse().find((r:any)=>r.itemId===point.id)??null})))
- const quotes=(item.proposals??[]).map((p:any)=>{const q=rows(s,'estimate').find(q=>q.id===p.estimateId),rev=q?.revisions.at(-1),line=rev?.lines.find((l:any)=>l.id===p.lineId)??(rev?.lines.length===1?rev.lines[0]:null),job=sources.jobs.find(j=>j.id===p.jobId);return {estimateId:q?.id??p.estimateId,version:q?.version??null,revision:rev?.n??null,line:line??null,jobId:p.jobId,status:q?.status??'unknown',decision:q?.authorisation??null,completed:!!line&&(job?.actuals??[]).filter((a:any)=>a.estimateId===q?.id&&a.lineId===line.id&&a.revision===rev.n).reduce((n:number,a:any)=>n+a.quantityMilli,0)>=Math.round(line.quantity*1000)}})
+ const quotes=(item.proposals??[]).map((p:any)=>{const q=rows(s,'estimate').find(q=>q.id===p.estimateId),rev=q?.revisions.at(-1),line=quotedDeclinedLine(q,p),job=sources.jobs.find(j=>j.id===p.jobId);return {estimateId:q?.id??p.estimateId,version:q?.version??null,revision:rev?.n??null,line:line??null,jobId:p.jobId,status:q?.status??'unknown',decision:q?.authorisation??null,completed:!!line&&(job?.actuals??[]).filter((a:any)=>a.estimateId===q?.id&&a.lineId===line.id&&a.revision===rev.n).reduce((n:number,a:any)=>n+a.quantityMilli,0)>=Math.round(line.quantity*1000)}})
  const selected=inspections.find((i:any)=>i.inspectionId+':'+i.itemId===findingKey)
  if(findingKey&&!selected)fail('REVIEW_INSPECTION','Choose an inspection point from this vehicle.')
  // A later observation of the same checklist point supersedes the selected
