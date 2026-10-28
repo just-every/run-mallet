@@ -556,9 +556,9 @@ Evidence: `tests/mallet.test.mjs`; `tests/support/connector-journey.mjs`; `tests
 
 Evidence: `tests/mallet.test.mjs`; `tests/support/retention-journey.mjs`; `tests/retention-browser.mjs`.
 
-**ERASE-001 — Erasure follows earlier mailboxes.** Status: **missing**. [Target, acceptance and remaining work](./CONTRACT.md#roles-security-and-operating-guarantees).
+**ERASE-001 — Erasure follows earlier mailboxes.** Status: **partial**. [Target, acceptance and remaining work](./CONTRACT.md#roles-security-and-operating-guarantees).
 
-Evidence: No implementation evidence yet.
+Evidence: `tests/mallet.test.mjs`; `tests/support/mailbox-erasure-journey.mjs`.
 
 **OPS-001 — Owner-run deployment and complete portability.** Status: **done**. [Target, acceptance and remaining work](./CONTRACT.md#roles-security-and-operating-guarantees).
 

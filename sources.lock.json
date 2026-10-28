@@ -572,7 +572,7 @@
       "executable": false
     },
     "ACCEPTANCE.md": {
-      "sha256": "f76ab192628645ea6cc87308f94ed3cd1b87c88b383c1fc04273f9c2db8dce05",
+      "sha256": "ae514520b3673213d6466d3f18fc5e2b9066ef98982145433a0d04ad499e6f1b",
       "executable": false
     },
     "AGENTS.md": {
@@ -584,7 +584,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "afae224ea8793fc5040dd1d33ef1f1cf5e6dabbc6dc5520970c1473f08ba4ccb",
+      "sha256": "8a7ceab5a00276773156462a801bc4b71ec542f581862ed243917a61c817de47",
       "executable": false
     },
     "deploy-demo.json": {
@@ -2272,7 +2272,7 @@
       "executable": false
     },
     "src/mallet/retention/cleanup.ts": {
-      "sha256": "f9b767e06f74bfb9a672df0826f06598fa78fbeb1f7b13b66751630dccdc16bd",
+      "sha256": "24a0738e4bbca19387099465639d949c610be6a85b846030e5342f2eb8fbc6d4",
       "executable": false
     },
     "src/mallet/retention/consent.ts": {
@@ -2292,11 +2292,15 @@
       "executable": false
     },
     "src/mallet/retention/index.ts": {
-      "sha256": "ef9ed9c6c3a1201c840378a1e9271d8f4b61d9a9a6e2f25810af742c700916d3",
+      "sha256": "2aef12909fcc390d4ca91031ea32f0fa59bc717cea8f856d2c6f44e4a64b287d",
       "executable": false
     },
     "src/mallet/retention/job-history.ts": {
       "sha256": "d68a406c059652cf4e3d1370ef4d84c3dafdacf5fbed0f2a4cfea17de28e2cef",
+      "executable": false
+    },
+    "src/mallet/retention/mailboxes.ts": {
+      "sha256": "eceb80dbacfbf1df7b540f00223823791d33040f65f013944d14788e40edc9ff",
       "executable": false
     },
     "src/mallet/retention/plans.ts": {
@@ -4816,7 +4820,7 @@
       "executable": false
     },
     "tests/mallet.test.mjs": {
-      "sha256": "8d269c4d1e332e20ced4979d5b9f91607b638c73ee8f04a9d07e6acaa255e0cd",
+      "sha256": "8a32a5c192548ff4c97eed2bc17eea5345a972628380100cec798b2960cf9178",
       "executable": false
     },
     "tests/media-browser.mjs": {
@@ -4876,7 +4880,7 @@
       "executable": false
     },
     "tests/retention-browser.mjs": {
-      "sha256": "6732ed91c6a48ae309058d9407f72fff9e889fe5adc6254ceffa8dd256bde20e",
+      "sha256": "8301a9752de78ff7fbbe51236ae0dab44b023e8370885a8b62942fbd63d4af12",
       "executable": false
     },
     "tests/return-browser.mjs": {
@@ -5117,6 +5121,10 @@
     },
     "tests/support/local-people.mjs": {
       "sha256": "a0631847327adcb032ead78aef5ae9dc1f610d0d1bc8a1d267ef789b8622a285",
+      "executable": false
+    },
+    "tests/support/mailbox-erasure-journey.mjs": {
+      "sha256": "05504cb8670e8ec73df76496df241b1fb4d8c9d9db0f4729760505d32c0c8720",
       "executable": false
     },
     "tests/support/outreach-journey.mjs": {

@@ -1,3 +1,4 @@
+import {mailboxErasureJourney} from './support/mailbox-erasure-journey.mjs'
 import assert from 'node:assert/strict'
 import {mkdir} from 'node:fs/promises'
 import {join} from 'node:path'
@@ -41,6 +42,11 @@ export async function retentionBrowser(){
   const run=command('retention.run');await run.getByLabel('Reason for this action').fill('Apply the reviewed manual media policy after hold release');await run.getByLabel('Customer request or retention approval evidence').fill('Owner approved this exact post-review cleanup');await run.getByRole('checkbox').check();await run.getByLabel('Type RUN RETENTION',{exact:true}).fill('RUN RETENTION');await run.getByRole('button',{name:'Confirm reviewed action'}).click();await p.waitForLoadState('domcontentloaded');await shot('retention-08-retention-receipt',p.getByRole('heading',{name:'Retention receipt'}).locator('..'))
   assert.equal((await h.request(heldPhoto.contentUrl)).status,404);assert.equal((await h.state()).records.retentionReceipt.filter(r=>r.phase==='complete').length,2)
   const download=await Promise.all([p.waitForEvent('download'),command('customer.export').getByRole('button',{name:'Download private customer data'}).click()]);assert.equal(download[0].suggestedFilename(),'customer-data.json')
+  await mailboxErasureJourney(h,{observe:async(stage,{paths,person})=>{
+   await p.goto(h.origin+paths[0]);await shot('mailbox-'+stage+'-private-appointment')
+   await p.goto(h.origin+'/app/bookings');await shot('mailbox-'+stage+'-staff-bookings',p.getByRole('heading',{name:'Customer appointments'}).locator('..'))
+   await p.goto(h.origin+'/app/retention?customerId='+person.account.id);await shot('mailbox-'+stage+'-retention')
+  }})
   assert.deepEqual(errors,[])
  }finally{await browser?.close();await h.close()}
 }

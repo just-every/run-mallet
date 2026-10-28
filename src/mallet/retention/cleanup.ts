@@ -1,3 +1,4 @@
+import {eraseMailboxRecords} from './mailboxes'
 import {privateBlockerRecord} from '../repair-blocker-privacy'
 import {eraseCoverageContent} from './coverage'
 import {eraseReviewFeedback} from './reviews'
@@ -10,7 +11,7 @@ import type {Sql} from '../media/types'
 export function erasedAsset(asset:Row,at:string):Row{
  return {id:asset.id,version:asset.version+1,label:asset.label,identifier:asset.identifier,visits:asset.visits??[],createdAt:asset.createdAt,customerAccountId:asset.customerAccountId,customerName:'Erased customer',customerEmail:'',driverContactId:null,privacyErasedAt:at,updatedAt:at}
 }
-export function personalCleanup(state:State,scope:CustomerScope,at:string){
+export function personalCleanup(state:State,scope:CustomerScope,at:string,mailboxes:Set<string>){
  const queries:Sql[]=[],counts={accounts:0,contacts:0,sharedContactsRetained:0}
  for(const a of scope.accounts){
   queries.push(write('customerAccount',{id:a.id,version:a.version+1,name:'Erased customer',kind:a.kind,contactIds:a.contactIds??[],payerId:a.payerId,billingContactId:a.billingContactId,driverId:null,authorizerId:null,taxStatus:a.taxStatus,mergedInto:a.mergedInto??null,history:[],notes:'',payerRevision:(a.payerRevision??1)+1,privacyErasedAt:at,at}));counts.accounts++
@@ -26,7 +27,7 @@ export function personalCleanup(state:State,scope:CustomerScope,at:string){
  // Exact customer-merge consent receipts are authorization history. Their
  // historical snapshots remain with other signed decisions, not mutable data.
  queries.push({sql:'DELETE FROM mallet_portal_tokens WHERE account_id IN (SELECT value FROM json_each(?))',params:[JSON.stringify([...scope.accountIds])]})
- queries.push(...eraseCoverageContent(state,scope,at),...eraseReviewFeedback(state,scope,at))
+ queries.push(...eraseMailboxRecords(state,mailboxes,at),...eraseCoverageContent(state,scope,at),...eraseReviewFeedback(state,scope,at))
  return {queries,counts}
 }
 
