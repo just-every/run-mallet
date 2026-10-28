@@ -9538,11 +9538,20 @@
     {
       "file": "CONTRACT.md",
       "line": 363,
+      "to": "base",
+      "ids": [
+        "BASE-AUDIT-001"
+      ],
+      "text": "**GOV-002 \u2014 Approvals audit and accountable changes.** Maintain durable searchable/exportable audit"
+    },
+    {
+      "file": "CONTRACT.md",
+      "line": 363,
       "to": "clause",
       "ids": [
         "GOV-002"
       ],
-      "text": "**GOV-002 \u2014 Approvals audit and accountable changes.** Maintain durable searchable/exportable audit of login/access changes, prices, approvals/consent, dispatch, stock, time corrections, money actions, imports and agent sends with actor, timestamp, before/after revision, policy and evidence; corrections append and private secrets never enter audit."
+      "text": "of login/access changes, prices, approvals/consent, dispatch, stock, time corrections, money actions, imports and agent sends with actor, timestamp, before/after revision, policy and evidence; corrections append and private secrets never enter audit."
     },
     {
       "file": "CONTRACT.md",
@@ -10415,7 +10424,17 @@
       "ids": [
         "OPEN-001"
       ],
-      "text": "Every capability in this contract ships in the open-source product with no Mallet license key, per-shop or per-seat fee, paid gate or upgrade prompt."
+      "text": "Every capability in this contract ships in the open-source product"
+    },
+    {
+      "file": "CONTRACT.md",
+      "line": 393,
+      "to": "base",
+      "ids": [
+        "BASE-DATA-005",
+        "BASE-INSTALL-001"
+      ],
+      "text": "with no Mallet license key, per-shop or per-seat fee, paid gate or upgrade prompt."
     },
     {
       "file": "CONTRACT.md",

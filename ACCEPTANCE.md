@@ -115,7 +115,7 @@ Core · published · **partial** · Cites BASE-DATA-001, BASE-DATA-003, BASE-DAT
 1. Export populated records through portability routes, restore to an empty fresh installation and compare history; reject populated restore, unauthorized erase and pre-erasure archives; restore a post-erasure backup.
 
 **Evidence.** `src/mallet/archive-policy.mjs`; `src/mallet/imports/portability.ts`; `src/mallet/imports/erasure.ts`; `tests/mallet.test.mjs`; `src/mallet/restore/notice.mjs`; `src/mallet/ui/restore.ts`; `tests/restore.test.mjs`
-**Gap.** Not asserted in the old cited evidence: Populated repair history compares after empty-destination recovery; Populated restore has no effect; Unauthorized erasure has no effect. Asserted: Known pre-erasure archive leaves destination unpopulated; Current post-erasure archive excludes erased asset.
+**Gap.** Not asserted in the old cited evidence: Populated repair history compares after empty-destination recovery; Populated restore has no effect; Unauthorized erasure has no effect. Asserted: Known pre-erasure archive leaves destination unpopulated; Current post-erasure archive excludes erased asset. Matching repair-history and populated-restore assertions exist in uncited tests/support/portable-repair.mjs; they cannot be added to this carried evidence set.
 
 #### PIER-001 — Read only
 
@@ -196,7 +196,7 @@ Core · target · **partial** · From INTAKE-001 · Cites BASE-INPUT-003 · Rule
 1. Check in a vehicle with body damage and spare key and a device with charger, capture signed custody receipt and photos, then compare the actual handover against the same checklist.
 
 **Evidence.** `tests/media.test.mjs`; `tests/intake-browser.mjs`
-**Gap.** Not asserted in the old cited evidence: Vehicle damage condition is read back; Signed custody receipt fields are read back. Asserted: Vehicle key checklist is visible; Device charger checklist is visible; Photos remain attached; Actual returned checklist is compared.
+**Gap.** Not asserted in the old cited evidence: Vehicle damage condition is read back; Signed custody receipt fields are read back. Asserted: Vehicle key checklist is visible; Device charger checklist is visible; Photos remain attached; Actual returned checklist is compared. Additional signed-checklist and condition assertions live in uncited tests/support/intake-journey.mjs.
 
 #### INTAKE-004 — Temporary unlock custody
 
@@ -210,7 +210,7 @@ Core · target · **partial** · From INTAKE-001 · Cites BASE-ROLE-001, BASE-AU
 3. Retain the non-secret custody history under fresh destination authority.
 
 **Evidence.** `tests/media.test.mjs`; `tests/intake-browser.mjs`
-**Gap.** Not asserted in the old cited evidence: No material is copied to public state; No material is copied to audit; No material is copied to archives; Purpose end destroys readability; Lifetime expiry destroys readability; Older database cannot recover the secret; Destination authority is fresh. Asserted: Consented material is readable only through the authorized vault; Customer erasure removes reveal; Non-secret custody history restores exactly.
+**Gap.** Not asserted in the old cited evidence: No material is copied to public state; No material is copied to audit; No material is copied to archives; Purpose end destroys readability; Lifetime expiry destroys readability; Older database cannot recover the secret; Destination authority is fresh. Asserted: Consented material is readable only through the authorized vault; Customer erasure removes reveal; Non-secret custody history restores exactly. Additional vault, state/audit/archive absence and recovery assertions live in uncited tests/support/intake-journey.mjs.
 
 #### INTAKE-002 — Custom forms and signed shop terms
 
@@ -222,7 +222,7 @@ Core · target · **partial** · Cites BASE-ROLE-001, BASE-MAIL-001, BASE-OPS-00
 1. Publish two intake templates, change shop terms after an intake and retrieve its original signed version; a customer completes required fields by phone and receives a copy.
 
 **Evidence.** `tests/media.test.mjs`; `tests/intake-forms-browser.mjs`
-**Gap.** Not asserted in the old cited evidence: Two published templates are both read back. Asserted: Original terms survive template change; Staff retrieve the original signed version; Required phone fields retain saved answers; Exact readable copy is downloadable.
+**Gap.** Not asserted in the old cited evidence: Two published templates are both read back. Asserted: Original terms survive template change; Staff retrieve the original signed version; Required phone fields retain saved answers; Exact readable copy is downloadable. Additional vehicle/device-template and delivered-copy assertions live in uncited tests/support/intake-forms-journey.mjs.
 
 #### INTAKE-003 — Counter and after-hours check-in
 
@@ -246,7 +246,7 @@ Core · target · **partial** · Cites BASE-MAIL-001, BASE-DATA-003, BASE-DATA-0
 1. Embed a booking form, choose a service on a phone and contend for the last available bay; one confirmed appointment is sent and cancellation frees capacity.
 
 **Evidence.** `tests/mallet.test.mjs`
-**Gap.** Not asserted in the old cited evidence: Embedded booking form; Phone service selection; Last-bay contention result; Exactly one confirmed appointment is sent; Cancellation frees the claimed capacity. The native journeys exercise the workflow, but their title, performed step or uncited helper is not a point-level assertion here.
+**Gap.** Not asserted in the old cited evidence: Embedded booking form; Phone service selection; Last-bay contention result; Exactly one confirmed appointment is sent; Cancellation frees the claimed capacity. The native journeys exercise the workflow, but their title, performed step or uncited helper is not a point-level assertion here. Additional booking assertions live in uncited tests/support/booking-journey.mjs and tests/bookings-browser.mjs.
 
 #### BOOK-002 — Resource calendars and waitlist
 
