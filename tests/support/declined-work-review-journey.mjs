@@ -63,6 +63,24 @@ export async function declinedReviewJourney(){
   await stale();assert.equal(r.revisions.at(-1).quotes[0].line.totalCents,priceLine.totalCents)
   assert.equal((await prepare()).offers.at(-1).quoteRevision,q.revisions.at(-1).n)
 
+  // A recorded reminder withdrawal is a source change, not fresh consent.
+  const withdrawal=await h.command('chaseOptOut.record',{email:f.asset.customerEmail,note:'Customer asked the advisor to stop reminder emails about the deferred work'})
+  await stale()
+  assert.ok(r.revisions.at(-1).citations.some(c=>c.kind==='chaseOptOut'&&c.id===withdrawal.id&&c.version===withdrawal.version))
+  assert.equal(r.revisions.at(-1).suppressed,'Customer opted out of reminders')
+  const optedOutState=(await h.state()).records
+  assert.equal((await prepare({status:409})).error,'REVIEW_SUPPRESSED')
+  assert.deepEqual((await h.state()).records,optedOutState,'Customer withdrawal blocks preparation without changing decisions')
+  await h.command('chaseOptOut.lift',{optOutId:withdrawal.id,version:withdrawal.version,reason:'Customer separately asked to resume reminders; item permission still needs evidence'})
+  await stale()
+  assert.equal(r.revisions.at(-1).suppressed,null)
+  assert.equal(r.revisions.at(-1).eligibility.consent,'unknown','Lifting withdrawal does not establish item-specific outreach consent')
+  assert.ok(r.revisions.at(-1).citations.some(c=>c.kind==='chaseOptOut'&&c.id===withdrawal.id&&c.version===withdrawal.version+1))
+  const unrelatedWithdrawal=await h.command('chaseOptOut.record',{email:address(817),note:'Another customer requested no reminders'})
+  r=await prepare()
+  assert.ok(!r.revisions.at(-1).citations.some(c=>c.kind==='chaseOptOut'&&c.id===unrelatedWithdrawal.id),'Private packet cites only this customer preference history')
+  assert.equal(h.messages.length,messages,'Review and withdrawal never send mail')
+
   let a=(await h.state()).records.asset.find(a=>a.id===f.asset.id)
   a=await h.command('asset.update',{assetId:a.id,version:a.version,customerName:'Updated recorded customer',customerEmail:'',label:a.label,identifier:a.identifier})
   await stale();assert.equal(r.revisions.at(-1).ownership.assetVersion,a.version)
