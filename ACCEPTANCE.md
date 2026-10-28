@@ -588,9 +588,9 @@ Evidence: `src/mallet/workshop.ts`; `src/mallet/estimates.ts`; `tests/mallet.tes
 
 Evidence: No implementation evidence yet.
 
-**ADV-005 — Bring declined work back at the right mileage.** Status: **missing**. [Target, acceptance and remaining work](./CONTRACT.md#push-further-with-a-service-advisor-agent).
+**ADV-005 — Bring declined work back at the right mileage.** Status: **partial**. [Target, acceptance and remaining work](./CONTRACT.md#push-further-with-a-service-advisor-agent).
 
-Evidence: No implementation evidence yet.
+Evidence: `tests/support/declined-work-review-journey.mjs`; `tests/mallet.test.mjs`; `tests/declined-work-review-browser.mjs`.
 
 **ADV-006 — Detect comeback and supplier quality patterns.** Status: **done**. [Target, acceptance and remaining work](./CONTRACT.md#push-further-with-a-service-advisor-agent).
 
