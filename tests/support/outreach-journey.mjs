@@ -77,6 +77,7 @@ export async function appointmentOutreachJourney(){
  await appointmentAuthorityJourney()
  await appointmentCustomerPreferenceJourney()
  await appointmentStandaloneErasureJourney()
+ await appointmentCorrectedErasureJourney()
  await appointmentChangedApprovalJourney()
  await appointmentSeriesJourney()
 }
@@ -160,7 +161,7 @@ async function appointmentRecoveryJourney(){
  }finally{await h.close()}
 }
 
-async function appointmentErasureJourney(){
+export async function appointmentErasureJourney(){
  const h=await outreachInstallation()
  try{
   const {appointment}=await appointmentFixture(h)
@@ -172,6 +173,18 @@ async function appointmentErasureJourney(){
   await h.command('outreach.stop',{id:paused.id,version:paused.version,reason:'Held customer stop note '+appointment.email})
   const scheduled=await approveAppointment(h,appointment),old=await archive(h),before=h.messages.length
   const hold=await h.command('retention.hold',{customerId:account.id,scope:'personal',reason:'synthetic-mallet-732 documented custody review',caseReference:'synthetic-mallet-732'})
+  const unused=await h.command('asset.create',{customerName:appointment.name,customerEmail:appointment.email,label:'synthetic-mallet-771 unused vehicle',identifier:'synthetic-mallet-771'})
+  const protectedState=await h.state()
+  await h.command('asset.erase',{assetId:unused.id,confirm:'ERASE'})
+  const preserved=await h.state()
+  assert.equal(preserved.records.asset.some(a=>a.id===unused.id),false,'The unused vehicle can be erased independently')
+  assert.deepEqual(preserved.records.appointment,protectedState.records.appointment,'An unused vehicle sharing a held account mailbox must preserve protected appointments')
+  const protectedConsent=protectedState.records.outreachConsent.find(c=>c.id===scheduled.consentId),preservedConsent=preserved.records.outreachConsent.find(c=>c.id===scheduled.consentId)
+  assert.equal(preservedConsent.to,protectedConsent.to);assert.equal(preservedConsent.sourceEvidence,protectedConsent.sourceEvidence)
+  const preservedEmail=preserved.records.outreach.find(r=>r.id===scheduled.id)
+  assert.equal(preservedEmail.content,scheduled.content);assert.equal(preservedEmail.to,scheduled.to);assert.equal(preservedEmail.status,'stopped');assert.equal(preservedEmail.erasedAt,undefined)
+  assert.equal(preserved.records.event.find(e=>e.kind==='outreach.stop'&&e.subjectId===paused.id).data.reason,protectedState.records.event.find(e=>e.kind==='outreach.stop'&&e.subjectId===paused.id).data.reason,'A shared mailbox cannot bypass a hold on stop history')
+  await h.cron('2026-11-01T14:00:00Z');assert.equal(h.messages.length,before,'Preserving held content does not preserve sending authority')
   const heldPreview=await h.command('retention.preview',{customerId:account.id,mode:'erase'})
   await h.command('customer.erase',{customerId:account.id,fingerprint:heldPreview.fingerprint,confirm:'ERASE',consent:true,reason:'Verified customer erasure request with a scoped hold',consentEvidence:'synthetic-mallet-731'})
   const held=(await h.state()).records.outreach.find(r=>r.id===scheduled.id);assert.equal(held.status,'stopped');assert.equal(held.content,scheduled.content,'A scoped hold preserves content but never pending send authority')
@@ -280,6 +293,36 @@ async function appointmentStandaloneErasureJourney(){
    await restore(stale,old,{status:400,laterJournal:{sourceIdentity:latest[0].sourceIdentity,epoch:latest[0].epoch,journal:latest[0].journal}})
    await restore(fresh,latest);assert.deepEqual((await fresh.state()).records.outreach,state.records.outreach)
    await fresh.command('outreach.consent',appointmentConsentFields(state.records.appointment[0]),{status:409});await fresh.cron('2026-11-01T14:00:00Z');assert.equal(fresh.messages.filter(m=>m.subject==='Your appointment reminder').length,0)
+  }finally{await fresh.close();await stale.close()}
+ }finally{await h.close()}
+}
+
+export async function appointmentCorrectedErasureJourney(){
+ const h=await outreachInstallation()
+ try{
+  const {appointment:a,path}=await appointmentFixture(h),choice={action:'reminder-consent',version:a.version,consent:'yes',wordingVersion:'appointment-permission-v1',timeZone:'America/New_York',allowedStart:9,allowedEnd:18}
+  assert.equal((await bookingPost(h,path,choice)).status,200,'The current customer form records affirmative permission before erasure')
+  const consent=(await h.state()).records.outreachConsent[0],scheduled=await approveAppointment(h,a,{},consent)
+  const asset=await h.command('asset.create',{customerName:a.name,customerEmail:a.email,label:'synthetic-mallet-772 vehicle',identifier:'synthetic-mallet-772'})
+  let contact=await h.command('contact.save',{name:a.name,email:a.email,communication:'email'})
+  const account=await h.command('customer.save',{name:a.name,kind:'person',contactIds:[contact.id],payerId:contact.id,billingContactId:contact.id,taxStatus:'unknown'})
+  const linked=await h.command('customer.linkAsset',{assetId:asset.id,version:asset.version,customerId:account.id,customerVersion:account.version,reason:'Customer identified the appointment vehicle'})
+  const corrected=['synthetic-mallet-773','example.test'].join('@')
+  contact=await h.command('contact.save',{contactId:contact.id,version:contact.version,name:contact.name,email:corrected,communication:'email'})
+  await h.command('asset.update',{assetId:linked.id,version:linked.version,customerName:linked.customerName,customerEmail:corrected,label:linked.label,identifier:linked.identifier})
+  const old=await archive(h),preview=await h.command('retention.preview',{customerId:account.id,mode:'erase'})
+  await h.command('customer.erase',{customerId:account.id,fingerprint:preview.fingerprint,confirm:'ERASE',consent:true,reason:'Verified customer erasure after correcting the contact mailbox',consentEvidence:'synthetic-mallet-774 verified request'})
+  const erased=await h.state(),calls=h.messages.length
+  assert.equal((await bookingPost(h,path,choice)).status,404,'Erasure must refuse the old reminder form after a contact correction')
+  assert.deepEqual(await h.state(),erased,'Replaying the old consent form cannot create permission or change erased records')
+  await h.command('outreach.consent',appointmentConsentFields(a),{status:409});assert.deepEqual(await h.state(),erased,'Owner permission recording cannot bypass erasure')
+  assert.equal(erased.records.outreach.find(r=>r.id===scheduled.id).content,'Erased personal content')
+  await h.cron('2026-11-01T14:00:00Z');assert.equal(h.messages.length,calls)
+  const latest=await archive(h),fresh=await outreachInstallation(),stale=await outreachInstallation()
+  try{
+   await restore(stale,old,{status:400,laterJournal:{sourceIdentity:latest[0].sourceIdentity,epoch:latest[0].epoch,journal:latest[0].journal}})
+   await restore(fresh,latest);assert.equal((await bookingPost(fresh,path,choice)).status,404);await fresh.command('outreach.consent',appointmentConsentFields(a),{status:409})
+   await fresh.cron('2026-11-01T14:00:00Z');assert.equal(fresh.messages.filter(m=>m.subject==='Your appointment reminder').length,0)
   }finally{await fresh.close();await stale.close()}
  }finally{await h.close()}
 }

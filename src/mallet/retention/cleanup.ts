@@ -1,4 +1,5 @@
 import {eraseOutreachContent} from './outreach'
+import {privateBlockerRecord} from '../repair-blocker-privacy'
 import {eraseCoverageContent} from './coverage'
 import {eraseReviewFeedback} from './reviews'
 import type {Row,State} from '../model'
@@ -18,6 +19,10 @@ export function personalCleanup(state:State,scope:CustomerScope,at:string){
  for(const contact of rows(state,'contact').filter(c=>scope.contactIds.has(c.id))){
   if(rows(state,'customerAccount').some(a=>!scope.accountIds.has(a.id)&&a.contactIds?.includes(contact.id))){counts.sharedContactsRetained++;continue}
   queries.push(write('contact',{id:contact.id,version:contact.version+1,name:'Erased customer',email:'',phone:'',communication:'none',notes:'',history:[],privacyErasedAt:at,at}));counts.contacts++
+ }
+ for(const [kind,records] of Object.entries(state.records))for(const row of records)if(scope.jobIds.has(row.jobId)){
+  const next=privateBlockerRecord(kind,row,at)
+  if(next!==row)queries.push(write(kind,{...next,version:row.version+1}))
  }
  // Exact customer-merge consent receipts are authorization history. Their
  // historical snapshots remain with other signed decisions, not mutable data.
