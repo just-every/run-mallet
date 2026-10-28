@@ -584,7 +584,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "1082206da0fa9532d798768ff49b55140c4acd28e9aa171266c0c2492511077f",
+      "sha256": "4907ec12c30e0d91dc8ee6411b919964bb67514423618e1994ffe097fca08ded",
       "executable": false
     },
     "deploy-demo.json": {
@@ -684,7 +684,7 @@
       "executable": false
     },
     "docs/receivables.md": {
-      "sha256": "5231d368a5ead5439ce0d2eab61cb9abf4cd117c307e4787c61a86fbdfd1ceb2",
+      "sha256": "7c35dcf8565b715c3001f4c5162c9f6e2fb24a3ef12dd4c1e333e04fbdc1029d",
       "executable": false
     },
     "docs/refunds.md": {
@@ -2116,7 +2116,7 @@
       "executable": false
     },
     "src/mallet/receivables.ts": {
-      "sha256": "0abf40a725be055b2d4f64e70b8a29aff8389765cf7f30d9528a8f02caafd0bd",
+      "sha256": "f07dbe3e1dc46ed2a0ba20687bf82955140ddce29e4c9bcc11ccc947727c3c04",
       "executable": false
     },
     "src/mallet/refund-door.ts": {
@@ -2624,7 +2624,7 @@
       "executable": false
     },
     "src/mallet/ui/intake.ts": {
-      "sha256": "c7bfc42d34d4d16696ad3d3a086e39759ef5803a34a272178e4fa1f65e1aba2d",
+      "sha256": "21caba7781597ef649c0a8bc514e810a09cb4a4e70174c4890dd2252c2308c6f",
       "executable": false
     },
     "src/mallet/ui/inventory.ts": {
@@ -2684,7 +2684,7 @@
       "executable": false
     },
     "src/mallet/ui/receivables.ts": {
-      "sha256": "a05f2c1f9d1af6152215be7b2de73e5b323a36c31e1e60cfb1ea137f041f06f8",
+      "sha256": "90a8eb86d0065b24944108ae0b6e56eff2480341ca9f91ddd72ea28c71932bde",
       "executable": false
     },
     "src/mallet/ui/repair-blockers.ts": {
@@ -4860,7 +4860,7 @@
       "executable": false
     },
     "tests/receivables-browser.mjs": {
-      "sha256": "828b1da872cd8f2df0bba06a0d2e90347d8f34c1386afbb137076cf898a0671a",
+      "sha256": "a08c8acf557bfa33f5c84c5e11ace6c67c33bc274c5f69cff75127e709219866",
       "executable": false
     },
     "tests/replenishment-browser.mjs": {
@@ -5072,7 +5072,7 @@
       "executable": false
     },
     "tests/support/handover-input.mjs": {
-      "sha256": "9a14b791585a641094c0241d8c3844b6a066ba2d7523f3ea18304911d4ff4771",
+      "sha256": "b6c2afc09aa9b4205ac2105eaff1df04e6e6f24cc6fe98f62a553aa965f597e1",
       "executable": false
     },
     "tests/support/inspection-journey.mjs": {
@@ -5176,7 +5176,7 @@
       "executable": false
     },
     "tests/support/receivables-journey.mjs": {
-      "sha256": "23cbd4358522da6d27b7be29cb9d3d7f2552de431a8f95f0fd5f55d87745d0ce",
+      "sha256": "0a1ff8cbc09f435d0237fa88f34050cf268b3519066785f9a1edd380ebd3dfa9",
       "executable": false
     },
     "tests/support/refunds-journey.mjs": {
