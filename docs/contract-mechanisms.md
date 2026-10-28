@@ -2,7 +2,7 @@
 
 Technical source details retained from the contract at `0ccbe75470bbcc0298a3d88dae1ec4c6515df022`. The live contract governs scope; RULINGS.md governs changed decisions. These parameters describe the retained technical requirements, not a claim of completion.
 
-## INTAKE-001
+## INTAKE-004
 
 Temporary unlock material is owner-only after explicit consent, AES-GCM encrypted under per-secret data keys wrapped by dedicated private installation configuration, excluded from archives/state/audits, preserving the exact entered value. It becomes inaccessible immediately when its purpose ends or its at-most-24-hour lifetime expires; ciphertext is removed on explicit purpose end, documented handover, the next custody/vault request or the next 15-minute scheduled sweep. Each secret is encrypted under its own data key, held outside the database's point-in-time recovery and destroyed at purge, so a restored database copy yields undecryptable ciphertext.
 
