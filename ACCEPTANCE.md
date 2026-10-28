@@ -8,10 +8,10 @@ The primary journey: check in the customer and asset, diagnose and inspect, pric
 
 | Tier | Done | Partial | Missing | Total |
 | --- | ---: | ---: | ---: | ---: |
-| Core | 22 | 74 | 56 | 152 |
+| Core | 22 | 75 | 55 | 152 |
 | Agent surface | 0 | 0 | 5 | 5 |
 | Later | 0 | 0 | 0 | 0 |
-| Full target | 22 | 74 | 61 | 157 |
+| Full target | 22 | 75 | 60 | 157 |
 
 Judged from the code and tests at commit `33a1e50a4250c55a1ca3fb8184f1372a68757364` (27 October 2026). Field proof register: 12 rows; 0 passed, 0 failed, 12 not run.
 
@@ -1207,15 +1207,15 @@ Core · target · **partial** · Cites BASE-ROLE-001, BASE-MAIL-001, BASE-AUDIT-
 
 #### AUTO-006 — Warranty and contract renewal follow-up
 
-Core · target · **missing** · Rules D-1, D-2, D-3
+Core · target · **partial** · Rules D-1, D-2, D-3
 
 **Requirement.** Schedule warranty checks and service-contract renewals using actual coverage dates, vehicle ownership and consent; link a reported issue to original repair and stop renewals after cancellation or vehicle transfer.
 
 **Acceptance.**
 1. Advance a warranty check and maintenance renewal, reply with a repeat symptom and cancel another agreement; create the linked case without unwanted renewal sends.
 
-**Evidence.** None.
-**Gap.** No coverage/renewal schedules, issue capture or automated follow-up.
+**Evidence.** `tests/mallet.test.mjs`; `tests/support/coverage-follow-up-journey.mjs`; `tests/warranty-browser.mjs`; `tests/coverage-follow-up-browser.mjs`
+**Gap.** Owner-managed internal review register only. Retained shop warranty terms and owner-evidenced service-contract dates are assertions, never independently verified coverage. Adopted conservative default: current owner only, attributable customer permission for internal review, no repair, billing, sending or renewal authority; cancellation and recorded ownership changes stop affected reviews, and restored scheduling needs fresh owner activation. ct approval of this default and scoped delegation remain pending. Outbound renewal messages, customer reply-channel integration, complete consented automated follow-through and renewal execution remain unbuilt or unproved. BILL-001 recurring merchant charging still requires unavailable cloud Stripe credentials; existing payment and books holds and GOV-006 retention and eligibility approval remain unchanged. AUTO-006 remains PARTIAL.
 
 #### MSG-004 — Communication controls and searchable history
 

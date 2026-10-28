@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-10-28 — Internal coverage review register
+
+Main `a6625ce80f910bd30456449dde0bdbe87b6b1ea6` carried AUTO-006 from missing to partial. `tests/mallet.test.mjs` — "WARRANTY-001 / OPS-001: paid original, linked lot and no-charge comeback, coverage decision, supplier claim and preserved invoice recovery", extended by `tests/support/coverage-follow-up-journey.mjs` (coverageJourney), proves sourced coverage dates, due tasks once across replay and restart, attributable linked repeat symptoms, cancellation and recorded transfer suppression, current owner permission checks, no outbound action, exact recovery and fresh destination activation. `tests/warranty-browser.mjs` — "WARRANTY-001: original invoice, linked rework, no-charge costs and supplier claim at 1440/390", extended by `tests/coverage-follow-up-browser.mjs` (coverageBrowser), proves native scheduling, linked symptom recording, task completion, cancellation, ownership-change suppression and exact history screens.
+
 ## Contract source before 0ccbe75470bbcc0298a3d88dae1ec4c6515df022
 
 # Mallet product contract
