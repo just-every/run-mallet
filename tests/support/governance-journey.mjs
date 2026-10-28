@@ -159,7 +159,7 @@ export async function staffJourney(h){
  const otherLocationBefore=(await h.state()).records
  await h.command('asset.create',{customerName:'Other shop',label:'Denied',identifier:'synthetic-mallet-other-location',location:'other'},{as:people.manager.cookie,status:403});assert.deepEqual((await h.state()).records,otherLocationBefore,'Other location refusal writes nothing')
  const item=await h.command('stock.item',{sku:'synthetic-mallet-role',name:'Role part',unit:'each',barcode:'synthetic-mallet-role-barcode'},{as:people.purchaser.cookie})
- const po={reference:'synthetic-mallet-po',supplier:'Synthetic supplier',shipTo:'Shop',expectedAt:'2026-11-05T09:00:00Z',taxCents:0,freightCents:0,lines:[{itemId:item.id,quantity:1,unitCents:1001}]}
+ const po={reference:'synthetic-mallet-po',supplier:'Synthetic supplier',shipTo:'Shop',expectedAt:'2026-11-05T09:00:00Z',taxCents:0,freightCents:0,lines:[{itemId:item.id,quantity:1,unitCents:1001,jobId:job.id}]}
  await h.command('purchase.create',{...po,lines:[{...po.lines[0],unitCents:1000}]},{as:people.purchaser.cookie,status:403})
  assert.equal((await h.api('/api/mallet/staff/state',undefined,{as:people.purchaser.cookie})).records.purchaseOrder,undefined)
  await h.command('staff.grant',grantInput(people.purchaser.id,'purchaser',1,{costRight:true}));await h.command('staff.grant',grantInput(people.manager.id,'manager',1,{costRight:true}))
@@ -174,11 +174,53 @@ export async function staffJourney(h){
  const note=await h.command('credit.issue',{...small,review:smallReview,confirm:'issue-credit'},{as:people.cashier.cookie});assert.equal(note.totals.totalCents,109)
  const read=await h.api('/api/mallet/staff/state',undefined,{as:people.accountant.cookie});assert.ok(read.balances.some(x=>x.invoiceId===invoice.id));assert.ok(!JSON.stringify(read).includes('consentEvidence'));await h.command('payment.record',{}, {as:people.accountant.cookie,status:403})
  assert.ok((await h.api('/api/mallet/staff/state',undefined,{as:people.purchaser.cookie})).records.purchaseOrder.length)
+ await delegatedPurchasingJourney(h,people,{item,order,po})
  const current=(await h.state()).records,backup=await archive(h),fresh=await installation()
- try{await restore(fresh,backup);assert.equal(await (await fresh.mf.getD1Database('DB')).prepare('SELECT count(*) AS n FROM mallet_staff_grants').first('n'),0);assert.ok((await fresh.api('/api/mallet/audit?action=staff.grant')).entries.length>=5)}finally{await fresh.close()}
+ try{await restore(fresh,backup);assert.deepEqual((await fresh.state()).records,current,'Purchase receipts, reservations and every supplier bill version recover exactly');for(const role of ['purchaser','manager']){await fresh.api('/api/mallet/staff/state?download=1',undefined,{as:people[role].cookie,status:401});await fresh.command('purchase.bill',{purchaseId:order.id,version:order.version},{as:people[role].cookie,status:401})}assert.equal(await (await fresh.mf.getD1Database('DB')).prepare('SELECT count(*) AS n FROM mallet_staff_grants').first('n'),0);assert.ok((await fresh.api('/api/mallet/audit?action=staff.grant')).entries.length>=5)}finally{await fresh.close()}
  await h.command('staff.revoke',grantInput(people.advisor.id,'advisor',grant.version))
  assert.equal((await h.request('/app/staff',{as:people.advisor.cookie})).status,403)
  await h.command('estimate.prepare',{jobId:job.id,version:job.version,lines},{as:people.advisor.cookie,status:403})
- const grantAudit=(await h.api('/api/mallet/audit')).entries.filter(e=>['staff.grant','staff.revoke'].includes(e.action));assert.equal(grantAudit.length,9);for(const entry of grantAudit){assert.equal(entry.actor.id,(await h.state()).actor.id);assert.equal(entry.changes.length,1);assert.equal(entry.changes[0].kind,'staffGrant');assert.equal(entry.changes[0].afterRevision,(entry.changes[0].beforeRevision??0)+1)}
+ const grantAudit=(await h.api('/api/mallet/audit')).entries.filter(e=>['staff.grant','staff.revoke'].includes(e.action));assert.equal(grantAudit.length,11);for(const entry of grantAudit){assert.equal(entry.actor.id,(await h.state()).actor.id);assert.equal(entry.changes.length,1);assert.equal(entry.changes[0].kind,'staffGrant');assert.equal(entry.changes[0].afterRevision,(entry.changes[0].beforeRevision??0)+1)}
  await h.api('/auth/operator/status',{operatorId:people.purchaser.id,status:'inactive'});await h.api('/api/mallet/staff/state',undefined,{as:people.purchaser.cookie,status:401})
+}
+
+async function delegatedPurchasingJourney(h,people,{item,order,po}){
+ const as={as:people.purchaser.cookie},bin=await h.command('stock.bin',{code:'Purchaser receiving',barcode:'synthetic-mallet-purchaser-bin'},as)
+ let current=(await h.state()).records.purchaseOrder.find(p=>p.id===order.id)
+ const refs=()=>({purchaseId:current.id,version:current.version}),refresh=async()=>{current=(await h.state()).records.purchaseOrder.find(p=>p.id===order.id)}
+ const denied=async(command,input,status=409,options=as)=>{const before=(await h.state()).records;await h.command(command,input,{...options,status});assert.deepEqual((await h.state()).records,before,command+' refusal leaves all product and audit records unchanged')}
+ const over=await h.command('purchase.create',{...po,reference:'synthetic-mallet-over-limit'})
+ await denied('purchase.approve',{purchaseId:over.id,version:over.version,reason:'Too much spend'},403)
+ const receive=()=>({...refs(),lineId:current.lines[0].id,itemBarcode:item.barcode,binBarcode:bin.barcode,quantity:0.5,reference:'synthetic-mallet-purchaser-receipt-1'})
+ await denied('purchase.receive',{...receive(),version:order.version})
+ const first=receive();await h.command('purchase.receive',first,as);await refresh()
+ await denied('purchase.receive',first)
+ let inventory=await h.api('/api/mallet/inventory')
+ assert.equal(inventory.balances.find(b=>b.itemId===item.id&&b.binId===bin.id).onHandMilli,500)
+ assert.equal(inventory.balances.find(b=>b.itemId===item.id&&b.binId===bin.id).reservedMilli,500)
+ assert.equal(inventory.balances.find(b=>b.itemId===item.id&&b.binId===bin.id).availableMilli,0)
+ const bill=()=>({...refs(),invoiceNumber:'synthetic-mallet-purchaser-bill',lines:[{lineId:current.lines[0].id,quantity:1,unitCents:1000}],taxCents:0,freightCents:0,evidence:'Private supplier original retained by the owner'})
+ const exception=await h.command('purchase.bill',{...bill(),lines:[{lineId:current.lines[0].id,quantity:1,unitCents:900}]},as);await refresh()
+ assert.equal(exception.matched,false);assert.ok(exception.exceptions.some(e=>e.includes('unit cost')));assert.ok(exception.exceptions.some(e=>e.includes('quantities')))
+ await denied('purchase.close',{...refs(),reason:'A bill exception cannot close the order'})
+ await h.command('purchase.receive',{...receive(),reference:'synthetic-mallet-purchaser-receipt-2'},as);await refresh()
+ await denied('purchase.bill',{...bill(),version:current.version-1})
+ const matched=await h.command('purchase.bill',bill(),as);await refresh()
+ assert.equal(matched.matched,true);assert.equal(matched.sequence,2);assert.equal(matched.totalCents,1000);assert.equal(matched.receiptIds.length,2)
+ await h.command('purchase.close',{...refs(),reason:'All physical goods and exact bill matched'},as);await refresh()
+ const view=await h.api('/api/mallet/staff/state',undefined,as),download=await h.request('/api/mallet/staff/state?download=1',as)
+ assert.match(download.headers.get('content-disposition'),/attachment/);assert.deepEqual(await download.json(),view)
+ assert.deepEqual(view.records.purchaseBill.filter(b=>b.purchaseId===current.id).sort((a,b)=>a.sequence-b.sequence).map(b=>[b.sequence,b.matched,b.totalCents]),[[1,false,900],[2,true,1000]])
+ assert.equal(view.records.purchaseReceipt.filter(r=>r.purchaseId===current.id).reduce((n,r)=>n+r.quantityMilli,0),1000)
+ assert.equal(view.records.stockReservation.filter(r=>r.source.purchaseId===current.id).reduce((n,r)=>n+r.quantityMilli,0),1000)
+ assert.ok(!JSON.stringify(view).includes('Private supplier original'));assert.ok(view.records.job.every(j=>Object.keys(j).sort().join(',')==='id,status,title,version'))
+ await h.command('staff.revoke',grantInput(people.purchaser.id,'purchaser',2))
+ for(const path of ['/app/staff','/api/mallet/staff/state','/api/mallet/staff/state?download=1'])assert.equal((await h.request(path,as)).status,403)
+ await denied('purchase.create',{...po,reference:'synthetic-mallet-revoked'},403)
+ await denied('purchase.bill',bill(),403)
+ await h.command('staff.grant',grantInput(people.purchaser.id,'purchaser',3,{costRight:false}))
+ const hidden=await h.api('/api/mallet/staff/state',undefined,as)
+ assert.equal(hidden.records.purchaseOrder,undefined);assert.equal(hidden.records.purchaseBill,undefined);assert.equal(hidden.records.job,undefined)
+ assert.ok(!JSON.stringify(hidden).includes('Private supplier original'))
+ await denied('purchase.create',{...po,reference:'synthetic-mallet-no-cost'},403)
 }
