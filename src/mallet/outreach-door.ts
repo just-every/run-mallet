@@ -30,7 +30,7 @@ export async function runOutreach(original:Bindings,at:number){
   if(!stop&&!outreachDue(snapshot,r,now))continue
   try{r=await execute(env.DB,scheduler,'outreach.claim',{id:r.id,version:r.version},undefined,now)}catch{continue}
   if(r.status!=='claimed')continue
-  let status='skipped',provider='none'
+  let status='skipped',provider='none',providerReference=''
   try{
    const current=await load(env.DB),handoffNow=new Date(Math.max(at,Date.now())).toISOString()
    if(await authorized(env,r.id)&&!outreachStop(current,rows(current,'outreach').find(x=>x.id===r.id)!,handoffNow)&&outreachDue(current,r,handoffNow)){
@@ -43,14 +43,14 @@ export async function runOutreach(original:Bindings,at:number){
      await env.DB.prepare('INSERT INTO mallet_booking_reminder_tokens(appointment_id,token_hash) VALUES(?,?)').bind(a.id,await digest(secret)).run()
      content=`${a.service.name}\n${a.service.location}\n${shopTime(a.startAt,a.service.timeZone)}\n${r.instructions}\nReschedule or cancel: ${env.AUTH_ORIGIN}/book/${secret}\nNo repair work or payment is authorized.`
     }else if(r.kind==='balance')content=r.content
-    else content+=`\nRefreshed quote: USD ${(r.totalCents/100).toFixed(2)}. Contact the shop to review and book. No work or payment is authorized.`
+    else content=r.content
     const mail=operatorMail(env)
     if(mail){
      const result=await mail.send({deliveryId:r.id,from:String(env.MAIL_FROM??''),to:[r.to],subject:r.kind==='appointment'?'Your appointment reminder':r.kind==='balance'?'Your invoice balance reminder':'Your declined-work follow-up',text:content,html:'<p>'+e(content).replaceAll('\n','<br>')+'</p>',headers:{}})
-     status=['rejected','rate_limited','unavailable'].includes(result.status)?'failed':result.status;provider=result.provider??'mail'
+     status=['rejected','rate_limited','unavailable'].includes(result.status)?'failed':result.status;provider=result.provider??'mail';providerReference=result.providerMessageId??''
     }else{status='failed';provider='unavailable'}
    }
   }catch{status='uncertain';provider='mail'}
-  try{await execute(env.DB,scheduler,'outreach.outcome',{id:r.id,version:r.version,status,provider},undefined,now)}catch{}
+  try{await execute(env.DB,scheduler,'outreach.outcome',{id:r.id,version:r.version,status,provider,providerReference},undefined,now)}catch{}
  }
 }

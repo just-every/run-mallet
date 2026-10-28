@@ -1,5 +1,7 @@
+import {declinedOutreachPanel} from './declined-outreach'
 import {box,e,field,area,form,hidden,rows,when} from './common'
 export function outreachPanel(s:any,kind:string,subject:any,extra:any={}){
+ if(kind==='declined')return declinedOutreachPanel(s,subject,extra)
  const schedules=rows(s,'outreach').filter(r=>r.kind===kind&&r.subjectId===subject.id)
  const history=schedules.map(r=>`<li class="plain"><strong>${e(r.status)}</strong><p>Due ${when(r.dueAt)} · expires ${when(r.expiresAt)}</p><p>Allowed ${r.allowedStart}:00–${r.allowedEnd}:00 · ${e(r.timeZone)}</p><p>${e(r.stopReason??'')}${r.status==='accepted'?'Handed to the mail provider; delivery is not confirmed.':r.status==='development'?'Development outbox; not sent.':r.status==='failed'||r.status==='uncertain'?'Staff review required; no automatic retry.':''}</p>${['pending','claimed'].includes(r.status)&&!r.stoppedAt?form('outreach.stop',field('Stop reason','reason','text','','required'),'Stop follow-up',{id:r.id,version:r.version,...extra}):''}</li>`).join('')
  const quote=kind==='declined'?subject.proposals.map((p:any)=>rows(s,'estimate').find(q=>q.id===p.estimateId)).find((q:any)=>q?.status==='approved'&&!q.authorisation):null
