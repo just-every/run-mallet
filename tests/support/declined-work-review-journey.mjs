@@ -25,6 +25,7 @@ export async function declinedReviewJourney(){
    for(const options of [{as:'',status:401},{as:member.cookie,status:403},{...agent,status:403},{headers:{origin:'https://elsewhere.test'},status:403}])await h.command(command,input,options)
   }
   assert.deepEqual((await h.state()).records,beforeDenied)
+  for(const options of [{as:member.cookie},{...agent}])assert.equal((await h.request('/app/jobs/'+f.job.id+'/declined-review',options)).status,403)
   let r=await h.command('declineReview.refresh',input,{as:admin.cookie}),rev=r.revisions[0]
   assert.deepEqual(rev.decision.customer,f.item.decision)
   assert.equal(rev.reading.id,f.reading.id);assert.equal(rev.threshold.distance,true)
