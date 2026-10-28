@@ -584,7 +584,7 @@
       "executable": false
     },
     "base-copies.json": {
-      "sha256": "f8762677221ba53b3f98bd289499f03f14feb6a31f1b37d034eac443df0a9478",
+      "sha256": "d9668302cbf93415be4999bfb91c466e61afd8fa4f9d9a2ffd4af70675a56ee0",
       "executable": false
     },
     "CONTRACT.md": {
@@ -608,7 +608,7 @@
       "executable": false
     },
     "docs/agent-door.md": {
-      "sha256": "22afcf7aeb78fb466513081a4edc3219bd186c3d5b57aa32620f38fa39240a37",
+      "sha256": "45d22724561e7a409f2bae1a5ca1d1825d4dc250ecdead3db8c97ae489e7fce9",
       "executable": false
     },
     "docs/background-jobs.md": {

@@ -77,3 +77,13 @@ through native workshop commands. It does not write fixture SQL or call the
 signed owner-claim endpoint with a raw setup token. Preparation tools reach no
 outbound provider, so this declaration has no network-edge module. The existing
 native providers and scoped assistant sends are outside this adopted subset.
+
+The complete declared journey is currently blocked at independent quality
+clearance for its invoice fixture. The native technician's own quality decision
+is correctly refused; a real independent admin invitation remains `invited`.
+The pinned initializer receives only same-origin requests, while the isolated
+mail edge exposes neither captured invitation delivery to that initializer nor
+an authenticated mailbox continuation. The invitation therefore cannot be
+consumed through the supplied lifecycle hooks. The normal verification command
+fails rather than inventing a reviewer session, inserting an identity or
+weakening the two-person safety requirement.
