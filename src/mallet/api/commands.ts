@@ -9,7 +9,7 @@ function canonical(value:any):string {
  return JSON.stringify(value)
 }
 export async function preparation(db:D1Database,auth:Identity,request:Request,data:any){
- const command=String(data.command??''),scope=preparationScopes[command]
+ const command=String(data.command??''),scope=Object.hasOwn(preparationScopes,command)?preparationScopes[command]:undefined
  if(!scope||!auth.apiClient)throw new HttpError(403,'api_preparation_required')
  const authority=scopedAuthority(auth,scope),key=request.headers.get('idempotency-key')??''
  if(!/^[A-Za-z0-9._:-]{1,128}$/.test(key))throw new HttpError(400,'idempotency_key_required')

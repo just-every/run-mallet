@@ -10,6 +10,10 @@ const latest=(row:Row)=>row.revisions.at(-1)
 const list=(value:unknown,label:string,max=100):any[]=>{if(!Array.isArray(value)||value.length>max)fail('INPUT',`${label} must be an array of at most ${max} entries.`,null,400);return value}
 const manager=(c:Context)=>{if(!['owner','admin','system'].includes(c.actor.role))fail('FORBIDDEN','Use the existing owner or admin routing door.',null,403)}
 export const routingCase=(s:State,jobId:string)=>rows(s,'routingCase').find(r=>r.jobId===jobId)
+export function currentRoutingHandler(s:State,jobId:string,people:any[]){
+ const id=routingCase(s,jobId)?.assignment?.handler?.id
+ return people.find(person=>person.id===id)
+}
 function savedCase(c:Context,row:Row,changes:any,kind:string,data:any){const next=bump(c.s,'routingCase',row,changes);event(c,kind,row.jobId,row.id,data);return next}
 
 /** Count real UTC minutes whose shop-local wall time is open. DST repetitions count twice; gaps count zero. */

@@ -7,6 +7,8 @@ import {assistantCommand,scopedAssistantView} from './assistant-door'
 import {clientCommand} from './api/clients'
 import {resourceRead} from './api/resources'
 import {preparation} from './api/commands'
+import {readRepairBlockers,repairBlockerCommand} from './repair-blocker-door'
+import {repairBlockersPage} from './ui/repair-blockers'
 import {statusNoticeCommand,statusNoticeState} from './status-notice-door'
 import {internalStatusCommands} from './status-notices'
 import {statusNoticePage} from './ui/status-notices'
@@ -185,6 +187,7 @@ function visible(s:State,actor:Actor):State {
  if(!human(actor))s={...s,records:Object.fromEntries(Object.entries(s.records).filter(([kind])=>kind!=='declinedReview').map(([kind,values])=>[kind,kind==='event'?values.filter(r=>!r.kind.startsWith('declineReview.')):values]))}
  if(actor.role!=='owner')s={...s,records:Object.fromEntries(Object.entries(s.records).filter(([kind])=>!kind.startsWith('coverage')).map(([kind,values])=>[kind,kind==='event'?values.filter(x=>!x.kind.startsWith('coverage.')):values]))}
  if(actor.role!=='owner')s={...s,records:Object.fromEntries(Object.entries(s.records).filter(([kind])=>!kind.startsWith('webhook')&&!kind.startsWith('assistant')).map(([kind,values])=>[kind,kind==='event'?values.filter(x=>!x.kind.startsWith('assistant.')):values]))}
+ if(!human(actor)){const {repairBlockerPacket:_packet,repairBlockerTask:_task,...records}=s.records;s={...s,records:{...records,event:rows(s,'event').filter(e=>!e.kind.startsWith('blocker.'))}}}
  s={...s,records:{...s.records,reportDelivery:rows(s,'reportDelivery').filter(r=>r.ownerId===actor.id),reportFilter:rows(s,'reportFilter').filter(r=>r.ownerId===actor.id)}}
  if(actor.role!=='owner'){s={...s,records:{...Object.fromEntries(Object.entries(s.records).filter(([kind])=>!kind.startsWith('stripe'))),event:rows(s,'event').filter(r=>!r.kind.startsWith('stripe.'))}};s=withoutFleetApproval(s)}
  if(actor.role==='owner')s={...s,records:{...s.records,deposit:rows(s,'deposit').map(d=>({...d,balance:depositBalance(s,d)}))}}
@@ -230,7 +233,7 @@ function formInput(data:FormData) {
  assetNativeInput(input)
  if(['staff.grant','staff.revoke'].includes(input.command)){for(const key of ['discountBps','spendCents','refundCents','version'])input[key]=Number(input[key]??0);if(input.discountPercent!==undefined)input.discountBps=Math.round(Number(input.discountPercent)*100);if(input.spendUsd!==undefined)input.spendCents=Math.round(Number(input.spendUsd)*100);if(input.refundUsd!==undefined)input.refundCents=Math.round(Number(input.refundUsd)*100)}
  if(retentionCommands.includes(input.command)){input.consent=input.consent==='yes';if(['retention.preview','customer.erase','retention.run'].includes(input.command))input.categories=data.getAll('categories');for(const key of ['mediaDays','personalDays','auditMinimumDays'])if(key in input)input[key]=input[key]===''?null:Number(input[key])}
- for(const name of ['accountVersion','flowVersion','version','itemVersion','revision','quantity','value','dueValue'])if(input[name]!==undefined&&input[name]!=='')input[name]=Number(input[name])
+ for(const name of ['packetVersion','taskVersion','accountVersion','flowVersion','version','itemVersion','revision','quantity','value','dueValue'])if(input[name]!==undefined&&input[name]!=='')input[name]=Number(input[name])
  if(data.has('lineIds') || input.command==='estimate.authorise')input.lineIds=data.getAll('lineIds')
  if(['estimate.prepare','estimate.revise'].includes(input.command)) {
   input.lines=['part','labor'].map(kind=>({kind,description:input[`${kind}Description`],quantity:Number(input[`${kind}Quantity`]),unitCents:Math.round(Number(input[`${kind}Price`])*100),...(input[`${kind}Discount`]?{unitDiscountCents:Math.round(Number(input[`${kind}Discount`])*100)}:{}),...(kind==='part'&&input.partCost?{costCents:Math.round(Number(input.partCost)*100)}:{})}))
@@ -333,6 +336,12 @@ async function workshopResponse(request:Request,original:Bindings,execution:Pick
    return json(report)
   }
   if(path==='/api/mallet/board-revision'&&request.method==='GET'){if(actor.role==='agent')throw new HttpError(403,'staff_required');const row=await env.DB.prepare(`SELECT version FROM mallet_meta WHERE id=1 AND (${auth.authority.sql})`).bind(...auth.authority.params).first();if(!row)throw new HttpError(403,'staff_required');return json(row)}
+  const blockersPath=path.match(/^\/(api\/mallet\/repairs|app\/jobs)\/([^/]+)\/blockers$/)
+  if(blockersPath){
+   if(!['GET','HEAD'].includes(request.method))throw new HttpError(405,'method_not_allowed')
+   const {view,people}=await readRepairBlockers(env.DB,actor,auth.authority,blockersPath[2])
+   return isApi?json(view):page('Repair blockers',repairBlockersPage(view,people,actor),actor,200,{section:'jobs',subtitle:e(view.job.title)+' · '+e(view.job.asset.label)})
+  }
   const coreRepair=path.match(/^\/api\/mallet\/repairs\/([^/]+)$/)
   if(coreRepair&&['GET','HEAD'].includes(request.method))return json({actor,...visible(await loadRepairState(env.DB,actor,auth.authority,coreRepair[1]),actor)})
   if(path==='/api/mallet/accounts'&&['GET','HEAD'].includes(request.method))return json(await searchAccounts(env.DB,actor,auth.authority,url.searchParams.get('q')??'',url.searchParams.get('cursor')??undefined))
@@ -378,7 +387,7 @@ async function workshopResponse(request:Request,original:Bindings,execution:Pick
    if(internalOutreachCommands.includes(command))throw new HttpError(404,'unknown_command')
    if(command.startsWith('stripe.'))throw new HttpError(404,'unknown_command')
    if(command.startsWith('reportDelivery.'))throw new HttpError(404,'unknown_command')
-   if(['ar.reminderClaim','ar.reminderOutcome'].includes(command)||internalSupplierCommands.includes(command)||internalDocumentCommands.includes(command)||internalWaitlistCommands.includes(command)||internalReportCommands.includes(command)||internalBookingCommands.includes(command)||internalCheckInCommands.includes(command)||internalRefundCommands.includes(command)||internalIntakeFormCommands.includes(command)||command==='payment.verified'||command==='routing.sweep'||internalPromiseCommands.includes(command)||internalApprovalCommands.includes(command)||internalChaseCommands.includes(command))throw new HttpError(404,'unknown_command')
+   if(['ar.reminderClaim','ar.reminderOutcome'].includes(command)||internalSupplierCommands.includes(command)||internalDocumentCommands.includes(command)||internalWaitlistCommands.includes(command)||internalReportCommands.includes(command)||internalBookingCommands.includes(command)||internalCheckInCommands.includes(command)||internalRefundCommands.includes(command)||internalIntakeFormCommands.includes(command)||command==='payment.verified'||['routing.sweep','blocker.sweep'].includes(command)||internalPromiseCommands.includes(command)||internalApprovalCommands.includes(command)||internalChaseCommands.includes(command))throw new HttpError(404,'unknown_command')
    if(command.startsWith('assistant.')){if(['assistant.grant','assistant.revoke','assistant.review'].includes(command)&&actor.role==='owner')auth.authority=requireStepUp(auth);result=await assistantCommand(env,auth,command,input)}
    else if(actor.staff){if(command==='job.book')auth.authority=await calendarAuthority(env,command,input,auth.authority);if(['payment.record','credit.issue','refund.record'].includes(command))auth.authority=requireStepUp(auth);result=await staffCommand(env.DB,actor,auth.authority,command,input)}
    else if(['staff.grant','staff.revoke'].includes(command)){auth.authority=requireStepUp(auth);result=await grantStaff(env.DB,actor,auth.authority,command,input)}
@@ -405,6 +414,7 @@ async function workshopResponse(request:Request,original:Bindings,execution:Pick
    else if(command.startsWith('review.'))result=await reviewCommand(env,actor,auth.authority,command,input)
    else if(command.startsWith('coverage.'))result=await coverageCommand(env,actor,auth.authority,command,input)
    else if(command.startsWith('outreach.'))result=await outreachCommand(env,actor,auth.authority,command,input)
+   else if(command.startsWith('blocker.'))result=await repairBlockerCommand(env.DB,actor,auth.authority,command,input)
    else if(command.startsWith('routing.'))result=await routingCommand(env.DB,actor as any,auth.authority,command,input)
    else if(command==='promise.approveAndNotify')result=await sendPromiseNotice(env,actor,auth.authority,input)
    else if(command==='approvalLink.create'){if(!human(actor))throw new HttpError(403,'manager_required');result=await sendApprovalLink(env,actor,auth.authority,input)}
@@ -440,6 +450,7 @@ async function workshopResponse(request:Request,original:Bindings,execution:Pick
    if(command==='promise.timeZone'&&input.calendarReturn)return redirect('/app/calendar')
    if(command==='booking.attendance')return redirect('/app/reports/turnaround?'+new URLSearchParams({from:String(input.from??''),to:String(input.to??'')}))
    if(command==='decline.inapplicable')return redirect('/app/jobs/'+encodeURIComponent(String(input.jobId)))
+   if(command.startsWith('blocker.'))return redirect('/app/jobs/'+encodeURIComponent(String(input.jobId))+'/blockers')
    if(command.startsWith('statusNotice.'))return redirect('/app/jobs/'+encodeURIComponent(String(result.jobId??input.jobId))+'/notifications')
    if(command.startsWith('review.'))return redirect('/app/jobs/'+encodeURIComponent(String(result.jobId??input.jobId))+'/reviews')
    if(command.startsWith('outreach.'))return redirect(input.returnTo==='receivables'?'/app/receivables?accountId='+encodeURIComponent(String(input.accountId)):input.returnTo==='declined'?'/app/jobs/'+encodeURIComponent(String(input.jobId)):'/app/bookings')

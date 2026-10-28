@@ -12,7 +12,11 @@ export async function declinedReviewFixture(h){
  const record=async(outcome,value)=>inspection=await h.command('inspection.record',{jobId:f.job.id,version:(await job()).version,inspectionId:inspection.id,inspectionVersion:inspection.version,itemId:'pads',outcome,measurementValue:value,measurementUnit:'mm',photoUploadId:photo.id,reason:'Later measured pad evidence '+value})
  await record('red',2.5);const originalResult=inspection.results.at(-1)
  await record('yellow',3.5)
- return {...f,reading,inspection,originalResult,record,jobNow:job,findingKey:inspection.id+':pads'}
+ const replace=async(outcome,value)=>{
+  inspection=await h.command('inspection.assign',{jobId:f.job.id,version:(await job()).version,templateId:template.id,templateVersion:template.version,templateRevision:1,technicianId:(await job()).technicianId,reason:'Replacement checklist for the same brake-pad point'})
+  return record(outcome,value)
+ }
+ return {...f,reading,inspection,originalResult,record,replace,jobNow:job,findingKey:inspection.id+':pads'}
 }
 export async function declinedReviewJourney(){
  const h=await installation()
@@ -71,8 +75,14 @@ export async function declinedReviewJourney(){
    assert.deepEqual((await fresh.state()).records.declinedReview,before.declinedReview)
    assert.equal(fresh.messages.length,0,'Recovered advisory history never sends')
   }finally{await fresh.close()}
-  await f.record('green',9);await refresh()
+  const replacement=await f.replace('green',9)
+  assert.notEqual(replacement.id,f.inspection.id)
+  await stale()
+  assert.equal(r.revisions.at(-1).findingKey,f.findingKey,'The old yellow selection cannot bypass its replacement')
+  assert.equal(r.revisions.at(-1).suppressed,'Replacement inspection records this finding as green')
+  const suppressed=(await h.state()).records
   assert.equal((await prepare({status:409})).error,'REVIEW_SUPPRESSED')
+  assert.deepEqual((await h.state()).records,suppressed,'Suppressed preparation appends no offer and changes no decision')
   await f.record('yellow',3);await refresh()
   // Exact later authorized work is completed, then cannot be offered again.
   const approved=await h.command('estimate.approve',{estimateId:q.id,version:q.version,revision:2})
@@ -84,6 +94,41 @@ export async function declinedReviewJourney(){
   await h.command('decline.inapplicable',{declinedWorkId:itemId,version:currentItem.version,evidence:'Owner recorded no further applicable work'})
   r=await h.command('declineReview.refresh',{...input,itemVersion:currentItem.version+1,version:(await packet()).version})
   assert.equal(r.revisions.at(-1).suppressed,'Finding no longer applies')
+  // Media-only erasure cleans every retained packet without erasing decisions
+  // or observations, and an explicit hold still protects its exact metadata.
+  const photo=f.inspection.results.at(-1).photo,beforeMedia=await packet()
+  assert.ok(beforeMedia.revisions.length>1)
+  assert.ok(beforeMedia.revisions.every(rev=>rev.inspections.some(i=>i.result?.photo?.id===photo.id)))
+  const hold=await h.command('retention.hold',{customerId:account.id,jobId:f.job.id,scope:'media',reason:'Retain this inspection while the request is reviewed',caseReference:'synthetic-mallet-815'})
+  const eraseMedia=async(consent=true,status=200)=>{
+   const preview=await h.command('retention.preview',{customerId:account.id,categories:['media']})
+   return h.command('customer.erase',{customerId:account.id,categories:['media'],fingerprint:preview.fingerprint,consent,confirm:'ERASE',reason:'Verified request for eligible inspection media erasure',consentEvidence:'synthetic-mallet-816'},{status})
+  }
+  await eraseMedia()
+  assert.deepEqual(await packet(),beforeMedia,'A held photo remains exact in all packet revisions')
+  assert.equal((await h.request('/api/mallet/media/uploads/'+photo.id+'/content')).status,200)
+  await h.command('retention.release',{holdId:hold.id,version:hold.version,consent:true,reason:'Reviewed request now permits media erasure'})
+  assert.equal((await eraseMedia(false,400)).error,'RETENTION_CONSENT')
+  assert.deepEqual(await packet(),beforeMedia,'Refused erasure leaves review history unchanged')
+  const receipt=await eraseMedia(),mediaErased=await packet()
+  assert.equal(receipt.phase,'complete')
+  assert.equal((await h.request('/api/mallet/media/uploads/'+photo.id+'/content')).status,404)
+  assert.equal(mediaErased.revisions.length,beforeMedia.revisions.length)
+  assert.deepEqual(mediaErased.offers,beforeMedia.offers)
+  for(const [n,rev] of mediaErased.revisions.entries()){
+   assert.ok(rev.inspections.every(i=>!i.result?.photo),'Every retained packet drops eligible photo metadata')
+   assert.deepEqual(rev.decision,beforeMedia.revisions[n].decision)
+   assert.deepEqual(rev.inspections.map(i=>i.result?.measurement),beforeMedia.revisions[n].inspections.map(i=>i.result?.measurement))
+  }
+  r=await h.command('declineReview.refresh',{...input,itemVersion:currentItem.version+1,version:mediaErased.version})
+  assert.ok(r.revisions.at(-1).inspections.every(i=>!i.result?.photo),'Refreshing cannot copy erased metadata back')
+  const mediaBackup=await archive(h),mediaFresh=await installation()
+  try{
+   await restore(mediaFresh,mediaBackup)
+   assert.deepEqual((await mediaFresh.state()).records.declinedReview.find(p=>p.id===r.id),r)
+   assert.equal((await mediaFresh.request('/api/mallet/media/uploads/'+photo.id+'/content')).status,404)
+   assert.equal((await restore(mediaFresh,backup,{status:400})).error,'erasure_epoch','An old packet archive cannot replay erased media')
+  }finally{await mediaFresh.close()}
   await h.command('agent.revoke',{id:key.id});await h.command('declineReview.refresh',input,{...agent,status:401})
   assert.equal((await h.state({as:member.cookie})).records.declinedReview,undefined)
   await h.api('/auth/operator/status',{operatorId:admin.id,status:'inactive'})
