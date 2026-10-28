@@ -584,7 +584,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "4d4209ba2a7f95bf68963ec9f988f7c47f3fae7b1fa58eaf41df7085b12d7140",
+      "sha256": "48caf3b293be05284ad9696c916a38c0e0da2974f7fec821c79613d78364554a",
       "executable": false
     },
     "deploy-demo.json": {
@@ -2340,7 +2340,7 @@
       "executable": false
     },
     "src/mallet/scheduled.ts": {
-      "sha256": "f3eace762b31ea4c8c752a3f6c350560ec2f2fec2e7e43807a17c9e2eaefade1",
+      "sha256": "699a371d35a1bf0a77283a6da93c04e142fe860001d615b120bf7b9d46d12881",
       "executable": false
     },
     "src/mallet/setup.ts": {
