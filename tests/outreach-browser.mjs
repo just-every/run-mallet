@@ -3,9 +3,9 @@ import {mkdir} from 'node:fs/promises'
 import {join} from 'node:path'
 import {chromium} from '@playwright/test'
 import {installation} from './harness.mjs'
-import {appointmentFixture,declinedFixture} from './support/outreach-journey.mjs'
+import {appointmentFixture,declinedFixture,outreachInstallation} from './support/outreach-journey.mjs'
 export async function outreachBrowser(){
- const h=await installation({network:true,secureNetwork:true,assets:true});let browser
+ const h=await outreachInstallation({network:true,secureNetwork:true,assets:true,mailService:async m=>m.subject==='Your appointment reminder'?Response.json({error:'synthetic-mallet-740'},{status:422}):Response.json({id:crypto.randomUUID()})});let browser
  try{
   const {appointment}=await appointmentFixture(h),declined=await declinedFixture(h)
   await h.stepUp()
@@ -15,7 +15,36 @@ export async function outreachBrowser(){
   const p=await context.newPage(),errors=[];p.on('pageerror',e=>errors.push(e.message))
   const directory=process.env.MALLET_OPS_PROOF_DIR??'.cache/outreach-browser';await mkdir(directory,{recursive:true})
   const shot=async name=>{for(const width of [1440,390]){await p.setViewportSize({width,height:1000});assert.ok(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));assert.equal(await p.locator('button,a').evaluateAll(nodes=>nodes.filter(n=>n.querySelector('svg,img')&&!n.textContent.trim()&&!n.getAttribute('data-tooltip')).length),0,'Icon-only controls have tooltips');await p.screenshot({path:join(directory,name+'-'+width+'.png'),fullPage:true})}}
-  for(const [kind,path,heading]of [['appointment','/app/bookings','Appointment email follow-up'],['declined','/app/jobs/'+declined.job.id,'Declined-work email follow-up']]){
+  await p.setViewportSize({width:1440,height:1000});await p.goto(h.origin+'/app/bookings')
+  const section=p.getByRole('heading',{name:'Appointment email follow-up',exact:true}).locator('..')
+  let f=section.locator('form').filter({has:p.locator('input[name="command"][value="outreach.consent"]')})
+  await f.getByLabel('Customer permission time with UTC offset').fill('2026-10-28T07:00:00-04:00')
+  await f.getByLabel('Permission capture channel').selectOption('telephone')
+  await f.getByLabel('Customer permission evidence reference').fill('synthetic-mallet-741 telephone permission for this appointment reminder and instructions')
+  await f.getByText('The customer affirmatively gave the displayed permission.').check()
+  await f.getByRole('button',{name:'Record customer permission',exact:true}).click();await p.waitForLoadState('domcontentloaded')
+  assert.equal((await h.state()).records.outreachConsent[0].captureChannel,'telephone')
+  const prepare=async()=>{
+   await p.setViewportSize({width:1440,height:1000})
+   const form=section.locator('form').filter({has:p.locator('input[name="command"][value="outreach.prepare"]')})
+   await form.getByLabel('Due time with UTC offset').fill('2026-11-01T09:00:00-05:00');await form.getByLabel('Expiry with UTC offset').fill('2026-11-01T18:00:00Z');await form.getByLabel('Pre-visit instructions',{exact:true}).fill('Bring the service record.')
+   await form.getByRole('button',{name:'Prepare email for review'}).click();await p.waitForLoadState('domcontentloaded')
+  }
+  const approve=async()=>{
+   const form=section.locator('form').filter({has:p.locator('input[name="command"][value="outreach.approve"]')})
+   await form.getByText('I approve this exact recipient, email, consent, schedule, hours and expiry.').check();await form.getByRole('button',{name:'Approve one email'}).click();await p.waitForLoadState('domcontentloaded')
+  }
+  await prepare();assert.equal((await h.state()).records.outreach[0].status,'draft');assert.match(await section.innerText(),/Bring the service record/);assert.match(await section.innerText(),/private appointment management link/);await shot('appointment-exact-review')
+  await p.setViewportSize({width:1440,height:1000});await approve();assert.equal((await h.state()).records.outreach[0].status,'pending')
+  await h.cron('2026-11-01T14:00:00Z');await p.reload();assert.equal((await h.state()).records.outreach[0].status,'failed');assert.match(await section.innerText(),/Staff review required; no automatic retry/)
+  const resolve=section.locator('form').filter({has:p.locator('input[name="command"][value="outreach.resolve"]')})
+  await resolve.getByLabel('Staff resolution evidence').fill('synthetic-mallet-742 owner checked the failed provider handoff and confirmed current customer permission')
+  await resolve.getByRole('button',{name:'Record resolution'}).click();await p.waitForLoadState('domcontentloaded');assert.equal((await h.state()).records.outreach[0].resolution.by.role,'owner');await shot('appointment-failure-resolved')
+  await prepare();const retry=(await h.state()).records.outreach.find(r=>r.status==='draft');await approve();assert.equal((await h.state()).records.outreach.find(r=>r.id===retry.id).status,'pending')
+  const withdraw=section.locator('form').filter({has:p.locator('input[name="command"][value="outreach.withdraw"]')})
+  await withdraw.getByLabel('Customer withdrawal evidence').fill('synthetic-mallet-743 customer withdrew future reminders by telephone');await withdraw.getByRole('button',{name:'Record customer withdrawal'}).click();await p.waitForLoadState('domcontentloaded')
+  assert.equal((await h.state()).records.outreach.find(r=>r.id===retry.id).status,'stopped');assert.ok((await h.state()).records.outreachConsent[0].withdrawnAt);await shot('appointment-withdrawn')
+  for(const [kind,path,heading]of [['declined','/app/jobs/'+declined.job.id,'Declined-work email follow-up']]){
    await p.goto(h.origin+path);await shot(kind+'-before')
    const section=p.getByRole('heading',{name:heading,exact:true}).locator('..'),f=section.locator('form').filter({has:p.locator('input[name="command"][value="outreach.schedule"]')})
    await f.getByLabel('Due time with UTC offset').fill('2026-11-01T09:00:00-05:00')

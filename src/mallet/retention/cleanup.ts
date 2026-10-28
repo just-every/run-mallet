@@ -1,3 +1,4 @@
+import {eraseOutreachContent} from './outreach'
 import {eraseCoverageContent} from './coverage'
 import {eraseReviewFeedback} from './reviews'
 import type {Row,State} from '../model'
@@ -21,7 +22,7 @@ export function personalCleanup(state:State,scope:CustomerScope,at:string){
  // Exact customer-merge consent receipts are authorization history. Their
  // historical snapshots remain with other signed decisions, not mutable data.
  queries.push({sql:'DELETE FROM mallet_portal_tokens WHERE account_id IN (SELECT value FROM json_each(?))',params:[JSON.stringify([...scope.accountIds])]})
- queries.push(...eraseCoverageContent(state,scope,at),...eraseReviewFeedback(state,scope,at))
+ queries.push(...eraseOutreachContent(state,scope,at),...eraseCoverageContent(state,scope,at),...eraseReviewFeedback(state,scope,at))
  return {queries,counts}
 }
 

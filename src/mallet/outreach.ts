@@ -1,9 +1,10 @@
+import {APPOINTMENT_TEMPLATE,appointmentApprovalStop,appointmentContent,currentAppointmentConsent,recordAppointmentConsent,withdrawAppointmentConsent} from './outreach-consent'
 import {optedOut} from './approval-chasing'
 import {balanceReminderReview,balanceReminderContent} from './receivables'
 import {bump,event,expectVersion,fail,find,integer,put,rows,text,who,type Handler,type State} from './model'
 import {instant} from './workshop'
 import {readings} from './mileage'
-export const outreachCommands=['outreach.schedule','outreach.stop','outreach.claim','outreach.outcome']
+export const outreachCommands=['outreach.consent','outreach.withdraw','outreach.prepare','outreach.approve','outreach.resolve','outreach.schedule','outreach.stop','outreach.claim','outreach.outcome']
 export const internalOutreachCommands=['outreach.claim','outreach.outcome']
 export function allowedHour(at:string,zone:string,start:number,end:number){
  let hour:number;try{hour=Number(new Intl.DateTimeFormat('en-US',{timeZone:zone,hour:'numeric',hourCycle:'h23'}).format(new Date(at)))}catch{return false}
@@ -14,6 +15,7 @@ export function outreachStop(s:State,r:any,now:string):string{
  if(r.stoppedAt)return r.stopReason
  if(now>=r.expiresAt)return 'Expired'
  if(r.kind==='appointment'){
+  const approvalStop=appointmentApprovalStop(s,r);if(approvalStop)return approvalStop
   const a=rows(s,'appointment').find(a=>a.id===r.subjectId)
   if(!a||a.status!=='confirmed'||a.startAt!==r.startAt||a.email!==r.to||a.service.timeZone!==r.shopZone)return 'Appointment canceled or replaced'
   if(now>=a.startAt)return 'Appointment already started'
@@ -41,8 +43,31 @@ export function outreachDue(s:State,r:any,now:string){
 }
 export const outreach:Handler=(c,command,p)=>{
  if(!outreachCommands.includes(command))return
+ if(!internalOutreachCommands.includes(command)&&c.actor.role!=='owner')fail('FORBIDDEN','Only the current owner manages customer outreach.',null,403)
+ if(command==='outreach.consent')return recordAppointmentConsent(c,p)
+ if(command==='outreach.withdraw')return withdrawAppointmentConsent(c,p)
+ if(command==='outreach.prepare'){
+  const {consent,a,source}=currentAppointmentConsent(c.s,p.consentId,p.subjectId);expectVersion(a,p.version);expectVersion(consent,p.consentVersion)
+  if(rows(c.s,'outreach').some(r=>r.kind==='appointment'&&r.subjectId===a.id&&(r.status==='claimed'||['draft','pending'].includes(r.status)&&!r.stoppedAt||['failed','uncertain'].includes(r.status)&&!r.resolution)))fail('OUTREACH_RECOVERY','Stop the active email or record a human resolution before preparing another attempt.')
+  const dueAt=instant(p.dueAt,'due time'),expiresAt=instant(p.expiresAt,'expiry'),timeZone=text(p.timeZone,'recipient IANA timezone',100),allowedStart=integer(p.allowedStart,'first allowed hour',0,23),allowedEnd=integer(p.allowedEnd,'last allowed hour',0,23)
+  try{new Intl.DateTimeFormat('en-US',{timeZone}).format()}catch{fail('INPUT','Choose a valid IANA timezone.',null,400)}
+  if(allowedStart===allowedEnd||expiresAt<=dueAt||expiresAt<=c.now||expiresAt>a.startAt||dueAt>=a.startAt||Date.parse(expiresAt)-Date.parse(c.now)>31*86400000)fail('INPUT','Choose a nonempty window and expiry before the appointment, within 31 elapsed days.',null,400)
+  const instructions=text(p.instructions,'pre-visit instructions',2000)
+  const row=put(c.s,'outreach',{kind:'appointment',subjectId:a.id,startAt:a.startAt,shopZone:a.service.timeZone,to:a.email,source,consentId:consent.id,consentVersion:consent.version,consentEvidence:consent.sourceEvidence,content:appointmentContent(a,instructions),instructions,templateVersion:APPOINTMENT_TEMPLATE,dueAt,expiresAt,timeZone,allowedStart,allowedEnd,by:who(c),at:c.now,status:'draft',policy:'one-approved-appointment-email-v2'})
+  event(c,command,null,row.id,{subjectId:a.id,consentId:consent.id});return row
+ }
+ if(command==='outreach.approve'){
+  const row=find(c.s,'outreach',p.id);expectVersion(row,p.version)
+  if(row.kind!=='appointment'||row.status!=='draft'||p.confirm!==true)fail('OUTREACH_APPROVAL','Explicitly approve the exact prepared email revision.',null,422)
+  const approval={by:who(c),at:c.now,preparedVersion:row.version,policy:row.policy}
+  const stop=outreachStop(c.s,{...row,approval},c.now)
+  if(stop)fail('OUTREACH_CHANGED',stop)
+  const next=bump(c.s,'outreach',row,{approval,status:'pending'})
+  event(c,command,null,row.id,{preparedVersion:row.version,consentId:row.consentId});return next
+ }
  if(command==='outreach.schedule'){
   if(c.actor.role!=='owner')fail('FORBIDDEN','Only the owner approves customer outreach.',null,403)
+  if(p.kind==='appointment')fail('OUTREACH_APPROVAL','Record purpose-specific consent, prepare the exact email, then explicitly approve it.',null,422)
   if(p.consent!==true)fail('OUTREACH_CONSENT','Record explicit customer email consent.',null,422)
   const kind=p.kind;if(!['appointment','declined','balance'].includes(kind))fail('INPUT','Choose appointment or declined work.',null,400)
   const timeZone=text(p.timeZone,'recipient IANA timezone',100)
@@ -74,9 +99,14 @@ export const outreach:Handler=(c,command,p)=>{
   event(c,command,null,row.id,{kind,subjectId:row.subjectId});return row
  }
  const row=find(c.s,'outreach',p.id);expectVersion(row,p.version)
+ if(command==='outreach.resolve'){
+  if(!['failed','uncertain'].includes(row.status)||row.resolution)fail('OUTREACH_RESOLUTION','Only an unresolved failed or uncertain handoff needs resolution.')
+  const next=bump(c.s,'outreach',row,{resolution:{reason:text(p.reason,'staff resolution evidence',2000),by:who(c),at:c.now}})
+  event(c,command,null,row.id,{status:row.status});return next
+ }
  if(command==='outreach.stop'){
   if(c.actor.role!=='owner')fail('FORBIDDEN','Only the owner stops outreach.',null,403)
-  const reason=text(p.reason,'stop reason',2000),next=bump(c.s,'outreach',row,{stoppedAt:c.now,stopReason:reason,status:row.status==='pending'?'stopped':row.status})
+  const reason=text(p.reason,'stop reason',2000),next=bump(c.s,'outreach',row,{stoppedAt:c.now,stopReason:reason,stoppedBy:who(c),status:['draft','pending'].includes(row.status)?'stopped':row.status})
   event(c,command,null,row.id,{reason});return next
  }
  if(command==='outreach.claim'){
@@ -84,9 +114,9 @@ export const outreach:Handler=(c,command,p)=>{
   const stop=outreachStop(c.s,row,c.now)
   if(stop)return bump(c.s,'outreach',row,{status:'stopped',stopReason:stop,stoppedAt:c.now})
   if(!outreachDue(c.s,row,c.now))fail('OUTREACH_NOT_DUE','Not yet eligible.')
-  return bump(c.s,'outreach',row,{status:'claimed',claimedAt:c.now})
+  const next=bump(c.s,'outreach',row,{status:'claimed',claimedAt:c.now});event(c,command,null,row.id,{approvalVersion:row.approval?.preparedVersion??null});return next
  }
  if(row.status!=='claimed')fail('OUTREACH_OUTCOME','Already recorded.')
  if(!['accepted','development','failed','uncertain','skipped'].includes(p.status))fail('INPUT','Invalid delivery outcome.',null,400)
- return bump(c.s,'outreach',row,{status:p.status,provider:text(p.provider,'provider',100),outcomeAt:c.now})
+ const next=bump(c.s,'outreach',row,{status:p.status,provider:text(p.provider,'provider',100),providerReference:text(p.providerReference,'provider reference',1024,true),outcomeAt:c.now});event(c,command,null,row.id,{status:p.status});return next
 }
