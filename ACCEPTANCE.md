@@ -412,9 +412,9 @@ Evidence: No implementation evidence yet.
 
 Evidence: `tests/mallet.test.mjs`; `tests/support/report-journey.mjs`; `tests/support/report-xlsx.mjs`; `tests/support/flow-journey.mjs`; `tests/report-browser.mjs`.
 
-**SHOP-001 — Multiple shops and location controls.** Status: **missing**. [Target, acceptance and remaining work](./CONTRACT.md#reporting-and-multi-shop-management).
+**SHOP-001 — Multiple shops and location controls.** Status: **partial**. [Target, acceptance and remaining work](./CONTRACT.md#reporting-and-multi-shop-management).
 
-Evidence: No implementation evidence yet.
+Evidence: `tests/mallet.test.mjs`; `tests/support/locations-journey.mjs`; `tests/locations-browser.mjs`.
 
 ## Connected tools and mobility
 

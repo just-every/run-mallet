@@ -256,6 +256,66 @@
       "name": "core-0110_mallet_outreach.sql",
       "sha256": "df179aab1fd4621e7179695acf3d32f13b1b169a3db8d3619de2144383299c4e",
       "sql": "-- Installation-local approval is deliberately excluded from owner archives.\nCREATE TABLE mallet_outreach_authority (\n outreach_id TEXT PRIMARY KEY,\n owner_id TEXT NOT NULL,\n owner_version INTEGER NOT NULL\n);\nCREATE TABLE mallet_booking_reminder_tokens (\n token_hash TEXT PRIMARY KEY,\n appointment_id TEXT NOT NULL\n);\n"
+    },
+    {
+      "binding": "DB",
+      "name": "core-0111_mallet_enterprise.sql",
+      "sha256": "f47473bdf243fc0ca7cf6bd0e30a4e4fc9b9c1c0028b1d66264350ebbab18a0c",
+      "sql": "-- Local identity authority is excluded from product archives.\nCREATE TABLE mallet_enterprise_connections (\n provider TEXT PRIMARY KEY, issuer TEXT NOT NULL, client_id TEXT NOT NULL,\n enabled INTEGER NOT NULL CHECK(enabled IN (0,1)), revision INTEGER NOT NULL,\n token_hash TEXT, owner_id TEXT NOT NULL, owner_version INTEGER NOT NULL,\n role TEXT NOT NULL CHECK(role='technician'), location TEXT NOT NULL CHECK(location='shop'),\n reason TEXT NOT NULL, approved_at INTEGER NOT NULL\n);\nCREATE TABLE mallet_enterprise_users (\n id TEXT PRIMARY KEY REFERENCES oa_operators(id), provider TEXT NOT NULL REFERENCES mallet_enterprise_connections(provider),\n external_id TEXT NOT NULL, email TEXT NOT NULL UNIQUE, display_name TEXT NOT NULL,\n active INTEGER NOT NULL CHECK(active IN (0,1)), revision INTEGER NOT NULL,\n role TEXT NOT NULL CHECK(role='technician'), location TEXT NOT NULL CHECK(location='shop'),\n UNIQUE(provider,external_id)\n);\nCREATE TRIGGER mallet_enterprise_disable AFTER UPDATE OF active ON mallet_enterprise_users WHEN NEW.active=0 BEGIN\n UPDATE oa_operators SET status='inactive' WHERE id=NEW.id;\n UPDATE oa_sessions SET revoked_at=COALESCE(revoked_at,CAST(unixepoch('subsec')*1000 AS INTEGER)) WHERE operator_id=NEW.id;\n UPDATE oa_credentials SET revoked_at=COALESCE(revoked_at,CAST(unixepoch('subsec')*1000 AS INTEGER)) WHERE operator_id=NEW.id;\n UPDATE mallet_agent_keys SET revoked_at=COALESCE(revoked_at,CAST(unixepoch('subsec')*1000 AS INTEGER)) WHERE created_by=NEW.id;\n UPDATE mallet_staff_grants SET revoked_at=COALESCE(revoked_at,CAST(unixepoch('subsec')*1000 AS INTEGER)) WHERE operator_id=NEW.id;\nEND;\n"
+    },
+    {
+      "binding": "DB",
+      "name": "core-0112_mallet_saml.sql",
+      "sha256": "0cb3be5c7724ffbdcd260dc24bea1b7d4a2b7f570362a1724d7357db49e090e2",
+      "sql": "CREATE TABLE mallet_saml_transactions (\n request_id TEXT PRIMARY KEY, provider TEXT NOT NULL, binding_hash TEXT NOT NULL,\n return_to TEXT NOT NULL, expires_at INTEGER NOT NULL\n);\nCREATE TABLE mallet_saml_sessions (\n session_id TEXT PRIMARY KEY, provider TEXT NOT NULL, issuer TEXT NOT NULL,\n subject TEXT NOT NULL, connection_revision INTEGER NOT NULL, certificate_hash TEXT NOT NULL\n);\nALTER TABLE mallet_enterprise_connections ADD COLUMN protocol TEXT NOT NULL DEFAULT 'oidc' CHECK(protocol IN ('oidc','saml'));\nALTER TABLE mallet_enterprise_connections ADD COLUMN certificate_hash TEXT;\n"
+    },
+    {
+      "binding": "DB",
+      "name": "core-0113_mallet_audit_coverage.sql",
+      "sha256": "942e166a68d7292ea5ccf836f3c613095c42ab5ff68915c96fc1699611025248",
+      "sql": "-- Session creation retains an attributable login reference, never its token hash.\nCREATE TRIGGER mallet_login_audit AFTER INSERT ON oa_sessions WHEN EXISTS(SELECT 1 FROM mallet_records WHERE kind<>'audit') BEGIN\n INSERT INTO mallet_records(kind,id,revision,value)\n VALUES('audit','login:'||NEW.id,1,json_object('id','login:'||NEW.id,'version',1,\n 'action','auth.session.created','at',strftime('%Y-%m-%dT%H:%M:%fZ',NEW.created_at / 1000.0,'unixepoch'),\n 'actor',json_object('id',NEW.operator_id,'name',COALESCE((SELECT display_name FROM oa_operators WHERE id=NEW.operator_id),'Former operator'),'role',COALESCE((SELECT role FROM oa_operators WHERE id=NEW.operator_id),'former')),\n 'policy','native-login-v1','changes',json('[]'),'evidence',json('[]')));\nEND;\n-- Provider jobs retain identifiers and states. Payloads and provider replies stay private.\nCREATE TRIGGER mallet_job_audit_insert AFTER INSERT ON mallet_jobs BEGIN\n INSERT INTO mallet_records(kind,id,revision,value)\n VALUES('audit','job:'||NEW.id||':0',1,json_object('id','job:'||NEW.id||':0','version',1,\n 'action','job.created','at',strftime('%Y-%m-%dT%H:%M:%fZ',NEW.created_at / 1000.0,'unixepoch'),\n 'actor',json_object('id',COALESCE(json_extract(NEW.payload,'$.requestedBy.id'),'mallet-scheduler'),'name',COALESCE(json_extract(NEW.payload,'$.requestedBy.name'),'Scheduled jobs'),'role',CASE WHEN json_extract(NEW.payload,'$.requestedBy.id') IS NULL THEN 'system' ELSE 'owner' END),\n 'policy','job-state-v1','changes',json('[]'),'evidence',json_array('job:'||NEW.id,'state:'||NEW.status)));\nEND;\nCREATE TRIGGER mallet_job_audit_update AFTER UPDATE ON mallet_jobs WHEN NEW.status<>OLD.status BEGIN\n INSERT OR IGNORE INTO mallet_records(kind,id,revision,value)\n SELECT 'audit','job-change:'||NEW.id||':'||NEW.updated_at||':'||NEW.status||':'||NEW.attempts,1,json_object('id','job-change:'||NEW.id||':'||NEW.updated_at||':'||NEW.status||':'||NEW.attempts,'version',1,\n 'action','job.state','at',strftime('%Y-%m-%dT%H:%M:%fZ',NEW.updated_at / 1000.0,'unixepoch'),\n 'actor',json_object('id','mallet-scheduler','name','Scheduled jobs','role','system'),\n 'policy','job-state-v1','changes',json('[]'),'evidence',json_array('job:'||NEW.id,'previous-state:'||OLD.status,'state:'||NEW.status));\nEND;\n"
+    },
+    {
+      "binding": "DB",
+      "name": "core-0114_mallet_reviews.sql",
+      "sha256": "0cf1c50074111eb0d2ffc49f4f011f70ab92792f6bc968bace8307dd57a54d5a",
+      "sql": "-- Installation-local link and send authority never travel with product archives.\nCREATE TABLE mallet_review_tokens (\n request_id TEXT PRIMARY KEY,\n token_hash TEXT NOT NULL UNIQUE,\n job_id TEXT NOT NULL\n);\nCREATE TABLE mallet_review_authority (\n consent_id TEXT PRIMARY KEY,\n owner_id TEXT NOT NULL,\n owner_version INTEGER NOT NULL\n);\n"
+    },
+    {
+      "binding": "DB",
+      "name": "core-0117_mallet_status_authority.sql",
+      "sha256": "c1701c046b57515654dd21ae897791164b2a33f72883d46a69eef05475df9462",
+      "sql": "CREATE TABLE mallet_status_authority (\n consent_id TEXT PRIMARY KEY,\n owner_id TEXT NOT NULL,\n owner_version INTEGER NOT NULL\n);\n"
+    },
+    {
+      "binding": "DB",
+      "name": "core-0118_mallet_assistant_keys.sql",
+      "sha256": "aa3cae7afc3809f17243f5ad4474150af750e071b98b51f32ba4e40c9b9d7d41",
+      "sql": "-- Destination-local expanded authority never travels with historical grant records.\nCREATE TABLE mallet_assistant_keys (\n grant_id TEXT PRIMARY KEY,\n token_hash TEXT NOT NULL UNIQUE,\n owner_id TEXT NOT NULL,\n owner_version INTEGER NOT NULL\n);\n"
+    },
+    {
+      "binding": "DB",
+      "name": "core-0118_mallet_locations.sql",
+      "sha256": "0c0f26a1ef6d75fdf77dfd21c872b3499270febfe8f38c1fe4142a446d120156",
+      "sql": "-- Keep delegation installation-local while allowing one explicit location.\nCREATE TABLE mallet_location_staff_grants (\n operator_id TEXT PRIMARY KEY, operator_version INTEGER NOT NULL, revision INTEGER NOT NULL,\n role TEXT NOT NULL CHECK(role IN ('advisor','manager','purchaser','cashier','accountant')),\n location TEXT NOT NULL CHECK(length(trim(location))>0), discount_bps INTEGER NOT NULL CHECK(discount_bps BETWEEN 0 AND 10000),\n spend_cents INTEGER NOT NULL CHECK(spend_cents>=0), refund_cents INTEGER NOT NULL CHECK(refund_cents>=0),\n cost_right INTEGER NOT NULL CHECK(cost_right IN (0,1)), granted_by TEXT NOT NULL, owner_version INTEGER NOT NULL,\n revoked_at INTEGER\n);\nINSERT INTO mallet_location_staff_grants SELECT * FROM mallet_staff_grants;\n-- A source rollback must not revive an obsolete standing grant.\nDELETE FROM mallet_staff_grants;\n"
+    },
+    {
+      "binding": "DB",
+      "name": "core-0118_mallet_media_revisions.sql",
+      "sha256": "193dd9a710153db9408b2787ba0ee14eaeed4afbd388a7ad7ac145c7ea99430f",
+      "sql": "-- Existing custody stays intact; these counters start here without inventing\n-- earlier audit history. Defaulted columns preserve additive archive recovery.\nALTER TABLE mallet_media_findings ADD COLUMN revision INTEGER NOT NULL DEFAULT 1 CHECK(revision>0);\nALTER TABLE mallet_media_uploads ADD COLUMN revision INTEGER NOT NULL DEFAULT 1 CHECK(revision>0);\n"
+    },
+    {
+      "binding": "DB",
+      "name": "core-0118_mallet_shop_api.sql",
+      "sha256": "14371801ffc73128ab59c2597ac4c239d3ee631786f21d279de4cd882072b69b",
+      "sql": "-- Installation-local authority and retry receipts never travel in product archives.\nCREATE TABLE mallet_api_clients (\n id TEXT PRIMARY KEY,\n token_hash TEXT NOT NULL UNIQUE,\n label TEXT NOT NULL,\n scopes TEXT NOT NULL CHECK(json_valid(scopes) AND json_type(scopes)='array'),\n created_by TEXT NOT NULL,\n creator_version INTEGER NOT NULL,\n expires_at INTEGER NOT NULL,\n revoked_at INTEGER,\n created_at INTEGER NOT NULL\n);\nCREATE TABLE mallet_api_requests (\n client_id TEXT NOT NULL,\n request_key TEXT NOT NULL,\n request_hash TEXT NOT NULL,\n response TEXT NOT NULL CHECK(json_valid(response)),\n created_at INTEGER NOT NULL,\n PRIMARY KEY(client_id,request_key)\n);\n"
+    },
+    {
+      "binding": "DB",
+      "name": "core-0118_mallet_webhooks.sql",
+      "sha256": "c492b2e580ac03c3144f6fdafbaf4592a9bdec1fb17121fb5c7900a2bbd538b8",
+      "sql": "-- Installation-local endpoint and signing authority never enters a portable archive.\nCREATE TABLE mallet_webhook_authority (\n id TEXT PRIMARY KEY,\n endpoint TEXT NOT NULL,\n sealed TEXT NOT NULL,\n key_version INTEGER NOT NULL,\n owner_id TEXT NOT NULL,\n owner_version INTEGER NOT NULL\n);\n"
     }
   ],
   "compatibilityDate": "2026-09-08",
