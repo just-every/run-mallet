@@ -48,12 +48,16 @@ export function recordAppointmentConsent(c:Context,p:any){
  const row=put(c.s,'outreachConsent',{subjectId:a.id,customerName:a.name,to:a.email,channel:'email',purpose:p.purpose,wording:appointmentWording[p.purpose as keyof typeof appointmentWording],wordingVersion:APPOINTMENT_WORDING_VERSION,consentedAt,consentedTime:p.consentedAt,captureChannel,sourceEvidence:text(p.sourceEvidence,'permission evidence reference',2000),by:who(c),at:c.now,policy:'appointment-consent-v1'})
  event(c,'outreach.consent',null,row.id,{subjectId:a.id});return row
 }
+export function withdrawAppointmentOutreach(c:Context,a:any,reason:string){
+ if(appointmentSuppressed(c.s,a.email))return {suppressed:true,subjectId:a.id}
+ for(const consent of rows(c.s,'outreachConsent').filter(r=>r.to===a.email&&!r.withdrawnAt))bump(c.s,'outreachConsent',consent,{withdrawnAt:c.now,withdrawal:{reason,by:who(c),at:c.now}})
+ const suppression=put(c.s,'outreachSuppression',{recipientHash:recipientHash(a.email),subjectId:a.id,by:who(c),at:c.now,reason,policy:'appointment-withdrawal-v1'})
+ for(const r of rows(c.s,'outreach').filter(r=>r.kind==='appointment'&&r.to===a.email&&['draft','pending','claimed'].includes(r.status)&&!r.stoppedAt))bump(c.s,'outreach',r,{status:r.status==='claimed'?'claimed':'stopped',stoppedAt:c.now,stopReason:'Customer withdrew appointment email permission',stoppedBy:who(c)})
+ event(c,'outreach.withdraw',null,suppression.id,{subjectId:a.id});return {suppressed:true,subjectId:a.id}
+}
 export function withdrawAppointmentConsent(c:Context,p:any){
  const consent=find(c.s,'outreachConsent',p.consentId);expectVersion(consent,p.version)
  if(consent.withdrawnAt)return consent
- const reason=text(p.reason,'customer withdrawal evidence',2000)
- const row=bump(c.s,'outreachConsent',consent,{withdrawnAt:c.now,withdrawal:{reason,by:who(c),at:c.now}})
- put(c.s,'outreachSuppression',{recipientHash:recipientHash(consent.to),subjectId:consent.subjectId,consentId:consent.id,by:who(c),at:c.now,reason,policy:'appointment-withdrawal-v1'})
- for(const r of rows(c.s,'outreach').filter(r=>r.kind==='appointment'&&r.to===consent.to&&['draft','pending','claimed'].includes(r.status)&&!r.stoppedAt))bump(c.s,'outreach',r,{status:r.status==='claimed'?'claimed':'stopped',stoppedAt:c.now,stopReason:'Customer withdrew appointment email permission',stoppedBy:who(c)})
- event(c,'outreach.withdraw',null,row.id,{subjectId:consent.subjectId});return row
+ withdrawAppointmentOutreach(c,find(c.s,'appointment',consent.subjectId),text(p.reason,'customer withdrawal evidence',2000))
+ return find(c.s,'outreachConsent',consent.id)
 }

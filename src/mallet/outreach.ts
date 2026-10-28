@@ -1,10 +1,10 @@
-import {APPOINTMENT_TEMPLATE,appointmentApprovalStop,appointmentContent,currentAppointmentConsent,recordAppointmentConsent,withdrawAppointmentConsent} from './outreach-consent'
+import {APPOINTMENT_TEMPLATE,appointmentApprovalStop,appointmentContent,currentAppointmentConsent,recordAppointmentConsent,withdrawAppointmentConsent,withdrawAppointmentOutreach} from './outreach-consent'
 import {optedOut} from './approval-chasing'
 import {balanceReminderReview,balanceReminderContent} from './receivables'
 import {bump,event,expectVersion,fail,find,integer,put,rows,text,who,type Handler,type State} from './model'
 import {instant} from './workshop'
 import {readings} from './mileage'
-export const outreachCommands=['outreach.consent','outreach.withdraw','outreach.prepare','outreach.approve','outreach.resolve','outreach.schedule','outreach.stop','outreach.claim','outreach.outcome']
+export const outreachCommands=['outreach.customerConsent','outreach.customerWithdraw','outreach.consent','outreach.withdraw','outreach.prepare','outreach.approve','outreach.resolve','outreach.schedule','outreach.stop','outreach.claim','outreach.outcome']
 export const internalOutreachCommands=['outreach.claim','outreach.outcome']
 export function allowedHour(at:string,zone:string,start:number,end:number){
  let hour:number;try{hour=Number(new Intl.DateTimeFormat('en-US',{timeZone:zone,hour:'numeric',hourCycle:'h23'}).format(new Date(at)))}catch{return false}
@@ -43,6 +43,15 @@ export function outreachDue(s:State,r:any,now:string){
 }
 export const outreach:Handler=(c,command,p)=>{
  if(!outreachCommands.includes(command))return
+ if(command==='outreach.customerConsent'){
+  const a=find(c.s,'appointment',p.subjectId)
+  return recordAppointmentConsent(c,{subjectId:a.id,version:p.version,to:a.email,purpose:'appointment-reminder',wordingVersion:p.wordingVersion,consent:p.consent,consentedAt:c.now,captureChannel:'customer-form',sourceEvidence:'Private appointment form '+a.id})
+ }
+ if(command==='outreach.customerWithdraw'){
+  const a=find(c.s,'appointment',p.subjectId);expectVersion(a,p.version)
+  if(a.privacyErasedAt)fail('OUTREACH_ERASED','Customer erasure prevents outreach.')
+  return withdrawAppointmentOutreach(c,a,'Customer withdrew through the private appointment form')
+ }
  if(!internalOutreachCommands.includes(command)&&c.actor.role!=='owner')fail('FORBIDDEN','Only the current owner manages customer outreach.',null,403)
  if(command==='outreach.consent')return recordAppointmentConsent(c,p)
  if(command==='outreach.withdraw')return withdrawAppointmentConsent(c,p)

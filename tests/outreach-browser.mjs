@@ -3,7 +3,7 @@ import {mkdir} from 'node:fs/promises'
 import {join} from 'node:path'
 import {chromium} from '@playwright/test'
 import {installation} from './harness.mjs'
-import {appointmentFixture,declinedFixture,outreachInstallation} from './support/outreach-journey.mjs'
+import {appointmentFixture,declinedFixture,outreachInstallation,approveAppointment} from './support/outreach-journey.mjs'
 export async function outreachBrowser(){
  const h=await outreachInstallation({network:true,secureNetwork:true,assets:true,mailService:async m=>m.subject==='Your appointment reminder'?Response.json({error:'synthetic-mallet-740'},{status:422}):Response.json({id:crypto.randomUUID()})});let browser
  try{
@@ -67,6 +67,34 @@ export async function outreachBrowser(){
   await inapplicable.getByLabel('Current finding review evidence').fill('Owner inspected the vehicle; this finding no longer applies')
   await shot('declined-inapplicable-review');await inapplicable.getByRole('button',{name:'Finding no longer applies'}).click();await p.waitForLoadState('domcontentloaded');await shot('declined-inapplicable-stopped')
   assert.match(await p.locator('main').innerText(),/Finding no longer applies: Owner inspected the vehicle/);assert.ok((await h.state()).records.declinedWork[0].inapplicable);assert.equal(await p.getByRole('heading',{name:'Declined-work email follow-up',exact:true}).locator('..').getByRole('button',{name:'Schedule email'}).count(),0)
+  await appointmentPreferenceBrowser(browser,directory)
   assert.deepEqual(errors,[])
  }finally{await browser?.close();await h.close()}
+}
+
+
+async function appointmentPreferenceBrowser(browser,directory){
+ const h=await outreachInstallation({network:true,secureNetwork:true,assets:true})
+ const context=await browser.newContext({ignoreHTTPSErrors:true,viewport:{width:1440,height:1000}})
+ try{
+  const {appointment,path}=await appointmentFixture(h),p=await context.newPage()
+  const shot=async name=>{for(const width of [1440,390]){await p.setViewportSize({width,height:1000});assert.ok(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));await p.screenshot({path:join(directory,name+'-'+width+'.png'),fullPage:true})}await p.setViewportSize({width:1440,height:1000})}
+  await p.goto(h.origin+path)
+  const choice=p.getByRole('checkbox',{name:'I choose email and give this reminder permission.'})
+  assert.equal(await choice.isChecked(),false)
+  await choice.check();await p.getByRole('button',{name:'Request one email reminder',exact:true}).click();await p.waitForLoadState('domcontentloaded')
+  const consent=(await h.state()).records.outreachConsent[0]
+  assert.equal(consent.by.role,'customer');assert.equal(consent.purpose,'appointment-reminder')
+  assert.equal(consent.to,appointment.email);assert.match(await p.locator('main').innerText(),/recorded permission/)
+  await shot('customer-reminder-permission')
+  await approveAppointment(h,appointment,{},consent);await h.cron('2026-11-01T14:00:00Z')
+  assert.equal(h.messages.filter(m=>m.subject==='Your appointment reminder').length,1)
+  const pending=await approveAppointment(h,appointment),calls=h.messages.length
+  await p.getByRole('button',{name:'Stop appointment reminder email',exact:true}).click();await p.waitForLoadState('domcontentloaded')
+  assert.match(await p.locator('main').innerText(),/Appointment reminder email is stopped/)
+  assert.equal((await h.state()).records.outreach.find(r=>r.id===pending.id).status,'stopped')
+  assert.equal((await h.state()).records.appointment[0].status,'confirmed')
+  await h.cron('2026-11-01T14:15:00Z');assert.equal(h.messages.length,calls)
+  await shot('customer-reminder-stopped')
+ }finally{await context.close();await h.close()}
 }

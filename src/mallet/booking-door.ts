@@ -47,6 +47,10 @@ export async function bookingResponse(request:Request,original:Bindings):Promise
     await env.DB.prepare('INSERT INTO mallet_booking_tokens(appointment_id,token_hash) VALUES(?,?)').bind(saved.id,await digest(secret)).run()
     return new Response(null,{status:303,headers:{location:'/book/'+secret,'cache-control':'no-store','referrer-policy':'no-referrer'}})
    }
+   if(['reminder-consent','reminder-withdraw'].includes(action)){
+    await execute(env.DB,actor,action==='reminder-consent'?'outreach.customerConsent':'outreach.customerWithdraw',{subjectId:row.id,version:Number(data.version),consent:data.consent==='yes',wordingVersion:data.wordingVersion},authority)
+    const s=await bookingState(env);return view(manageBooking(s,row,url.pathname))
+   }
    if(!['confirm','cancel','reschedule'].includes(action))return view('<p>Unknown action.</p>',400)
    if(action!=='cancel'){const service=rows(await load(env.DB),'bookingService').find(x=>x.id===row.serviceId)!;authority=await staffGuard(env,service.id,action==='confirm'?bookingSlotId(service,row):data.slotId,row.id,authority)}
    const active=action==='cancel'?(await env.DB.prepare("SELECT id FROM oa_operators WHERE status='active'").all<{id:string}>()).results.map(x=>x.id):[]

@@ -26,7 +26,7 @@ export async function appointmentOutreachJourney(){
  const h=await outreachInstallation({mailService:async()=>rejected?Response.json({error:'synthetic-mallet-702'},{status:422}):Response.json({id:crypto.randomUUID()})})
  try{
   const {service,path,appointment}=await appointmentFixture(h),fields=scheduleFields(appointment)
-  const member=await h.person('synthetic-mallet-703@example.test')
+  const member=await h.person(['synthetic-mallet-703','example.test'].join('@'))
   await h.command('outreach.schedule',fields,{as:member.cookie,status:403})
   await h.command('outreach.schedule',{...fields,consent:false},{status:422})
   await h.command('outreach.claim',{id:'synthetic-mallet-704',version:1},{status:404})
@@ -75,6 +75,9 @@ export async function appointmentOutreachJourney(){
  await appointmentRecoveryJourney()
  await appointmentErasureJourney()
  await appointmentAuthorityJourney()
+ await appointmentCustomerPreferenceJourney()
+ await appointmentStandaloneErasureJourney()
+ await appointmentChangedApprovalJourney()
 }
 export async function declinedFixture(h){
  await shopSetup(h)
@@ -214,4 +217,73 @@ async function appointmentAuthorityJourney(){
   assert.equal(spring.messages.length,before,'The missing spring-forward hour never grants a made-up send window')
   await spring.cron('2026-03-08T10:00:00Z');assert.equal((await spring.state()).records.outreach.find(r=>r.id===row.id).status,'stopped');assert.equal(spring.messages.length,before,'Expired approval never sends')
  }finally{await spring.close()}
+}
+
+
+async function appointmentCustomerPreferenceJourney(){
+ const h=await outreachInstallation()
+ try{
+  const {appointment:a,path,service}=await appointmentFixture(h),before=await h.state()
+  const choice={action:'reminder-consent',version:a.version,wordingVersion:'appointment-permission-v1',consent:'yes'}
+  assert.equal((await bookingPost(h,path,{...choice,consent:'no'})).status,422)
+  assert.deepEqual(await h.state(),before,'A missing affirmative customer choice changes nothing')
+  assert.equal((await bookingPost(h,path,choice,{origin:'https://other.test'})).status,403)
+  assert.equal((await bookingPost(h,'/book/'+ 'x'.repeat(43),choice)).status,404)
+  await h.command('outreach.customerConsent',{subjectId:a.id,...choice},{status:403})
+  assert.equal((await bookingPost(h,path,choice)).status,200)
+  const permission=(await h.state()).records.outreachConsent[0]
+  assert.equal(permission.by.role,'customer');assert.equal(permission.captureChannel,'customer-form');assert.equal(permission.consentedAt,permission.at)
+  assert.equal(permission.sourceEvidence,'Private appointment form '+a.id);assert.equal(permission.to,a.email)
+  const otherInput={...holdFields(service),email:['synthetic-mallet-760','example.test'].join('@'),name:'synthetic-mallet-760',slotId:slotId(service,{...service.windows[0],startAt:'2026-11-01T20:00:00.000Z'})}
+  const otherHold=await bookingPost(h,'/book',otherInput);assert.equal(otherHold.status,303)
+  const otherPath=otherHold.headers.get('location');assert.equal((await bookingPost(h,otherPath,{action:'confirm',version:1})).status,200)
+  const other=(await h.state()).records.appointment.find(x=>x.id!==a.id)
+  const own=await approveAppointment(h,a,{},permission),otherReminder=await approveAppointment(h,other),calls=h.messages.length
+  assert.equal((await bookingPost(h,path,{action:'reminder-withdraw',version:a.version,subjectId:other.id})).status,200)
+  let state=await h.state();assert.equal(state.records.outreach.find(r=>r.id===own.id).status,'stopped');assert.equal(state.records.outreach.find(r=>r.id===otherReminder.id).status,'pending')
+  assert.equal(state.records.outreachConsent.find(c=>c.id===permission.id).withdrawal.by.role,'customer')
+  const withdrawnState=await h.state()
+  assert.equal((await bookingPost(h,path,choice)).status,422);assert.deepEqual(await h.state(),withdrawnState,'A replayed capture cannot restore withdrawn authority')
+  await h.command('outreach.consent',appointmentConsentFields(a),{status:422})
+  await h.cron('2026-11-01T14:00:00Z');assert.equal(h.messages.length,calls+1);assert.deepEqual(h.messages.at(-1).to,[other.email])
+  assert.equal((await h.state()).records.appointment.find(x=>x.id===a.id).status,'confirmed','Withdrawal does not cancel or move the appointment')
+  const backup=await archive(h),fresh=await outreachInstallation()
+  try{await restore(fresh,backup);assert.deepEqual((await fresh.state()).records.outreachConsent,(await h.state()).records.outreachConsent);assert.equal((await bookingPost(fresh,path,choice)).status,404);await fresh.cron('2026-11-01T14:30:00Z');assert.equal(fresh.messages.filter(m=>m.subject==='Your appointment reminder').length,0)}finally{await fresh.close()}
+  await h.command('booking.revokeLink',{appointmentId:a.id});assert.equal((await bookingPost(h,path,{action:'reminder-withdraw',version:a.version})).status,404)
+ }finally{await h.close()}
+}
+
+async function appointmentStandaloneErasureJourney(){
+ const h=await outreachInstallation()
+ try{
+  const {appointment:a,path}=await appointmentFixture(h)
+  const asset=await h.command('asset.create',{customerName:a.name,customerEmail:a.email,label:'synthetic-mallet-761',identifier:'synthetic-mallet-761'})
+  const scheduled=await approveAppointment(h,a),old=await archive(h),calls=h.messages.length
+  await h.command('asset.erase',{assetId:asset.id,confirm:'ERASE'})
+  const state=await h.state(),record=state.records.outreach.find(r=>r.id===scheduled.id)
+  assert.equal(record.status,'stopped');assert.equal(record.to,'');assert.equal(record.content,'Erased personal content');assert.ok(record.erasedAt)
+  assert.equal(state.records.outreachConsent.find(c=>c.id===scheduled.consentId).to,'')
+  assert.ok(state.records.outreachConsent.find(c=>c.id===scheduled.consentId).withdrawnAt)
+  assert.equal(state.records.appointment.find(x=>x.id===a.id).email,'')
+  assert.equal((await h.request(path,{as:''})).status,404);await h.cron('2026-11-01T14:00:00Z');assert.equal(h.messages.length,calls)
+  const latest=await archive(h),fresh=await outreachInstallation(),stale=await outreachInstallation()
+  try{
+   await restore(stale,old,{status:400,laterJournal:{sourceIdentity:latest[0].sourceIdentity,epoch:latest[0].epoch,journal:latest[0].journal}})
+   await restore(fresh,latest);assert.deepEqual((await fresh.state()).records.outreach,state.records.outreach)
+   await fresh.command('outreach.consent',appointmentConsentFields(state.records.appointment[0]),{status:409});await fresh.cron('2026-11-01T14:00:00Z');assert.equal(fresh.messages.filter(m=>m.subject==='Your appointment reminder').length,0)
+  }finally{await fresh.close();await stale.close()}
+ }finally{await h.close()}
+}
+
+async function appointmentChangedApprovalJourney(){
+ const h=await outreachInstallation()
+ try{
+  const {appointment:a,service}=await appointmentFixture(h),contact=await h.command('contact.save',{name:a.name,email:a.email,communication:'email'})
+  const approved=await approveAppointment(h,a),calls=h.messages.length
+  await h.command('contact.save',{...contact,contactId:contact.id,phone:'2125550100'})
+  await h.cron('2026-11-01T14:00:00Z');assert.equal(h.messages.length,calls);assert.equal((await h.state()).records.outreach.find(r=>r.id===approved.id).status,'stopped')
+  const next=await approveAppointment(h,a)
+  await h.command('booking.publish',{...service,serviceId:service.id,name:'synthetic-mallet-762 revised service'})
+  await h.cron('2026-11-01T14:15:00Z');assert.equal(h.messages.length,calls);assert.equal((await h.state()).records.outreach.find(r=>r.id===next.id).status,'stopped','A source revision after approval prevents handoff')
+ }finally{await h.close()}
 }

@@ -1,5 +1,5 @@
 import {recipientHash} from '../outreach-consent'
-import {rows,type State} from '../model'
+import {fail,find,rows,type State} from '../model'
 import {write,type CustomerScope} from './store'
 import type {Sql} from '../media/types'
 
@@ -20,12 +20,20 @@ export function revokeOutreachAccess(s:State,scope:CustomerScope,at:string,by:an
  return {queries:[...queries,...records],recordCount:records.length}
 }
 /** Eligible personal erasure removes mutable replicas; audit keeps revision references. */
-export function eraseOutreachContent(s:State,scope:CustomerScope,at:string):Sql[]{
+export function eraseOutreachContent(s:State,scope:CustomerScope,at:string,by:any={id:'retention',name:'Owner-authorized erasure',role:'system'}):Sql[]{
  const emails=recipients(s,scope),appointments=rows(s,'appointment').filter(a=>emails.has(a.email)),ids=new Set(appointments.map(a=>a.id)),queries:Sql[]=[]
  for(const a of appointments)queries.push(write('appointment',{...a,version:a.version+1,name:'Erased customer',email:'',sourceHash:'',privacyErasedAt:at}))
- for(const c of rows(s,'outreachConsent').filter(r=>ids.has(r.subjectId)))queries.push(write('outreachConsent',{...c,version:c.version+1,customerName:'Erased customer',to:'',sourceEvidence:'Erased personal content',withdrawal:c.withdrawal?{...c.withdrawal,reason:'Customer erasure request'}:undefined,erasedAt:at}))
- for(const r of rows(s,'outreach').filter(r=>r.kind==='appointment'&&ids.has(r.subjectId)))queries.push(write('outreach',{...r,version:r.version+1,to:'',instructions:'Erased personal content',content:'Erased personal content',consentEvidence:'Erased personal content',resolution:r.resolution?{...r.resolution,reason:'Erased personal content'}:undefined,stopReason:r.stoppedAt?'Customer erasure request':r.stopReason,erasedAt:at}))
+ for(const c of rows(s,'outreachConsent').filter(r=>ids.has(r.subjectId)))queries.push(write('outreachConsent',{...c,version:c.version+1,customerName:'Erased customer',to:'',sourceEvidence:'Erased personal content',withdrawnAt:c.withdrawnAt??at,withdrawal:{by,at,...c.withdrawal,reason:'Customer erasure request'},erasedAt:at}))
+ for(const r of rows(s,'outreach').filter(r=>r.kind==='appointment'&&ids.has(r.subjectId)))queries.push(write('outreach',{...r,version:r.version+1,stoppedAt:r.stoppedAt??at,stoppedBy:r.stoppedBy??by,status:['draft','pending','claimed'].includes(r.status)?'stopped':r.status,to:'',instructions:'Erased personal content',content:'Erased personal content',consentEvidence:'Erased personal content',resolution:r.resolution?{...r.resolution,reason:'Erased personal content'}:undefined,stopReason:'Customer erasure request',erasedAt:at}))
  // Withdrawal evidence can contain personal free text; retain only its scope and attribution.
  for(const r of rows(s,'outreachSuppression').filter(r=>ids.has(r.subjectId)))queries.push(write('outreachSuppression',{...r,version:r.version+1,reason:'Customer erasure request',erasedAt:at}))
  return queries
+}
+
+/** The unused-vehicle door uses the same suppression and erasure fence. */
+export function unusedAssetOutreachErasure(s:State,id:string,at:string,by:any):Sql[]{
+ const a=find(s,'asset',id)
+ if(a.customerAccountId)fail('CUSTOMER_ERASURE','Use the customer erasure review for a linked vehicle so current holds are respected.')
+ const scope:CustomerScope={accounts:[],accountIds:new Set(),contactIds:new Set(),assets:[a],assetIds:new Set([a.id]),jobs:[],jobIds:new Set(),customerId:''}
+ return [{sql:'INSERT INTO mallet_assert(ok) SELECT CASE WHEN EXISTS(SELECT 1 FROM mallet_meta WHERE id=1 AND version=?) THEN 1 ELSE 0 END',params:[s.version]},...revokeOutreachAccess(s,scope,at,by).queries,...eraseOutreachContent(s,scope,at,by)]
 }

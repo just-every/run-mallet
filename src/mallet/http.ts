@@ -17,6 +17,7 @@ import {internalReviewCommands} from './reviews'
 import {reviewPanel} from './ui/reviews'
 import {internalOutreachCommands} from './outreach'
 import {outreachCommand} from './outreach-door'
+import {unusedAssetOutreachErasure} from './retention/outreach'
 import {stripeResponse} from './stripe/door'
 import {staffCommand,grantStaff,staffSettings,staffState,staffPage} from './staff'
 import {auditReport,auditPage,auditCsv} from './audit'
@@ -414,7 +415,7 @@ async function workshopResponse(request:Request,original:Bindings,execution:Pick
     if(actor.role!=='owner')throw new HttpError(403,'owner_required')
     if(input.confirm!=='ERASE')throw new HttpError(400,'confirmation_required')
     const checkpoint=await imports.portabilityCheckpoint(env.DB)
-    result=await imports.erase(env.DB,actor,input.assetId,auth.authority,{nativeStatements:[{sql:"DELETE FROM mallet_records WHERE kind='event' AND json_extract(value,'$.assetId')=? AND json_extract(value,'$.jobId') IS NULL",params:[input.assetId]}],checkpoint})
+    result=await imports.erase(env.DB,actor,input.assetId,auth.authority,{nativeStatements:[...unusedAssetOutreachErasure(await load(env.DB),input.assetId,new Date().toISOString(),actor),{sql:"DELETE FROM mallet_records WHERE kind='event' AND json_extract(value,'$.assetId')=? AND json_extract(value,'$.jobId') IS NULL",params:[input.assetId]}],checkpoint})
    } else if(command==='diagnosisLink.create'){if(!human(actor))throw new HttpError(403,'manager_required');result=await createLink(env.DB,actor,auth.authority,input,env.AUTH_ORIGIN)}
    else if(['diagnosis.record','intake.record'].includes(command)&&actor.role!=='agent'){if(command==='intake.record'&&!human(actor))throw new HttpError(403,'manager_required');const checked=await diagnosisInput(env.DB,actor,auth.authority,input);result=await execute(env.DB,actor as any,command,checked.input,checked.authority)}
    else if(['crew.add','handoff.propose','note.add'].includes(command)&&actor.role!=='agent'){
