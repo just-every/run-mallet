@@ -1,4 +1,6 @@
 import {declinedReviewPage} from './ui/declined-work-review'
+import {conversationCommand,readConversation} from './conversation-door'
+import {conversationPage,conversationFormInput} from './ui/conversation-drafts'
 import {coverageCommand,coverageState} from './coverage-door'
 import {coveragePage} from './ui/coverage-follow-up'
 import {webhookResponse} from './webhook-door'
@@ -185,6 +187,7 @@ function withoutFleetApproval(value:any):any {
 }
 function visible(s:State,actor:Actor):State {
  if(!human(actor))s={...s,records:Object.fromEntries(Object.entries(s.records).filter(([kind])=>kind!=='declinedReview').map(([kind,values])=>[kind,kind==='event'?values.filter(r=>!r.kind.startsWith('declineReview.')):values]))}
+ if(actor.role!=='owner')s={...s,records:Object.fromEntries(Object.entries(s.records).filter(([kind])=>kind!=='conversationDraft').map(([kind,values])=>[kind,kind==='event'?values.filter(x=>!x.kind.startsWith('conversation.')):values]))}
  if(actor.role!=='owner')s={...s,records:Object.fromEntries(Object.entries(s.records).filter(([kind])=>!kind.startsWith('coverage')).map(([kind,values])=>[kind,kind==='event'?values.filter(x=>!x.kind.startsWith('coverage.')):values]))}
  if(actor.role!=='owner')s={...s,records:Object.fromEntries(Object.entries(s.records).filter(([kind])=>!kind.startsWith('webhook')&&!kind.startsWith('assistant')).map(([kind,values])=>[kind,kind==='event'?values.filter(x=>!x.kind.startsWith('assistant.')):values]))}
  if(!human(actor)){const {repairBlockerPacket:_packet,repairBlockerTask:_task,...records}=s.records;s={...s,records:{...records,event:rows(s,'event').filter(e=>!e.kind.startsWith('blocker.'))}}}
@@ -260,6 +263,7 @@ function formInput(data:FormData) {
  if(input.command==='chasePolicy.save'){input.linkDays=Number(input.linkDays);input.reminderDays=String(input.reminderDays??'').split(',').map(d=>d.trim()).filter(Boolean).map(Number)}
  if(input.command.startsWith('specialPart.')){if(input.partVersion!==undefined)input.partVersion=Number(input.partVersion);if(input.source){let source:any;try{source=JSON.parse(input.source)}catch{throw new HttpError(400,'invalid_source')};input.estimateId=source.estimateId;input.revision=source.revision;input.lineId=source.lineId}}
  if(['payRate.set','costRate.set'].includes(input.command)){input.centsPerHour=Math.round(Number(input.rate)*100);delete input.rate}
+ conversationFormInput(data,input)
  reportFormInput(data,input)
  calendarFormInput(data,input);waitlistFormInput(data,input)
  bookingFormInput(data,input)
@@ -336,6 +340,12 @@ async function workshopResponse(request:Request,original:Bindings,execution:Pick
    return json(report)
   }
   if(path==='/api/mallet/board-revision'&&request.method==='GET'){if(actor.role==='agent')throw new HttpError(403,'staff_required');const row=await env.DB.prepare(`SELECT version FROM mallet_meta WHERE id=1 AND (${auth.authority.sql})`).bind(...auth.authority.params).first();if(!row)throw new HttpError(403,'staff_required');return json(row)}
+  const conversationPath=path.match(/^\/(api\/mallet\/repairs|app\/jobs)\/([^/]+)\/conversation$/)
+  if(conversationPath){
+   if(!['GET','HEAD'].includes(request.method))throw new HttpError(405,'method_not_allowed')
+   const view=await readConversation(env.DB,actor,auth.authority,conversationPath[2])
+   return isApi?json(view):page('Private conversation drafts',conversationPage(view),actor,200,{section:'jobs',subtitle:e(view.job.title)})
+  }
   const blockersPath=path.match(/^\/(api\/mallet\/repairs|app\/jobs)\/([^/]+)\/blockers$/)
   if(blockersPath){
    if(!['GET','HEAD'].includes(request.method))throw new HttpError(405,'method_not_allowed')
@@ -412,6 +422,7 @@ async function workshopResponse(request:Request,original:Bindings,execution:Pick
    else if(['intake.secretStore','intake.secretReveal','intake.secretEnd','intake.secretEraseCustomer'].includes(command))result=await intakeSecret(env,actor,auth.authority,command,input)
    else if(command.startsWith('statusNotice.'))result=await statusNoticeCommand(env,actor,auth.authority,command,input)
    else if(command.startsWith('review.'))result=await reviewCommand(env,actor,auth.authority,command,input)
+   else if(command.startsWith('conversation.'))result=await conversationCommand(env.DB,actor,auth.authority,command,input)
    else if(command.startsWith('coverage.'))result=await coverageCommand(env,actor,auth.authority,command,input)
    else if(command.startsWith('outreach.'))result=await outreachCommand(env,actor,auth.authority,command,input)
    else if(command.startsWith('blocker.'))result=await repairBlockerCommand(env.DB,actor,auth.authority,command,input)
@@ -450,6 +461,7 @@ async function workshopResponse(request:Request,original:Bindings,execution:Pick
    if(command==='promise.timeZone'&&input.calendarReturn)return redirect('/app/calendar')
    if(command==='booking.attendance')return redirect('/app/reports/turnaround?'+new URLSearchParams({from:String(input.from??''),to:String(input.to??'')}))
    if(command==='decline.inapplicable')return redirect('/app/jobs/'+encodeURIComponent(String(input.jobId)))
+   if(command.startsWith('conversation.'))return redirect('/app/jobs/'+encodeURIComponent(String(input.jobId))+'/conversation')
    if(command.startsWith('blocker.'))return redirect('/app/jobs/'+encodeURIComponent(String(input.jobId))+'/blockers')
    if(command.startsWith('statusNotice.'))return redirect('/app/jobs/'+encodeURIComponent(String(result.jobId??input.jobId))+'/notifications')
    if(command.startsWith('review.'))return redirect('/app/jobs/'+encodeURIComponent(String(result.jobId??input.jobId))+'/reviews')

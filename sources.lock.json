@@ -1687,6 +1687,14 @@
       "sha256": "fa1721abc5e5d051627736567cac42dd96870188d5fa5dc92d2739f9b9efa2e0",
       "executable": false
     },
+    "src/mallet/conversation-door.ts": {
+      "sha256": "f45cd7ab1ffc2b168ac254ec7eb1f4c941e7eabed0ee6132363f98ffbb23458c",
+      "executable": false
+    },
+    "src/mallet/conversation-drafts.ts": {
+      "sha256": "828d21db74d92f2521230190e41bf9c890dfc5dc2f799cbbdd558a4d658c7ef8",
+      "executable": false
+    },
     "src/mallet/cores.ts": {
       "sha256": "fc4b941262fbdb7a41d51ba1dbd0b551f8182614828648665d7abae86c12292a",
       "executable": false
@@ -1828,7 +1836,7 @@
       "executable": false
     },
     "src/mallet/http.ts": {
-      "sha256": "c0553f04c927f6fac68a387f4a9731400d0a3bfdfa73a791231ea67d829678e8",
+      "sha256": "214985917d550726580811e56fa65059ec865ffdbf45dee41ec6947a909ed280",
       "executable": false
     },
     "src/mallet/imports/context.ts": {
@@ -2020,7 +2028,7 @@
       "executable": false
     },
     "src/mallet/model.ts": {
-      "sha256": "30ce4d347372a3c55164846208fc2b8bd0f84f876882b4b686f4f1f175a0548d",
+      "sha256": "98235a0be135bd6548b83651f75c969835cc6c55abdf9e12c3c64aee5fd7bc5e",
       "executable": false
     },
     "src/mallet/money.ts": {
@@ -2223,6 +2231,10 @@
       "sha256": "0ddd5cde75495e547b34b37096b08291ffebbf3fa7d2141bbe75c79166758349",
       "executable": false
     },
+    "src/mallet/restore/validate-conversations.mjs": {
+      "sha256": "fd729f7523f18b330df7bf9d8fad84fe607364cf144891aa3bd3433bfe4348fa",
+      "executable": false
+    },
     "src/mallet/restore/validate-cost-rates.mjs": {
       "sha256": "87171cee9243c25293391ffbeb33697ebaa640f6ec4438b6a05496a90d1c5f8e",
       "executable": false
@@ -2248,7 +2260,7 @@
       "executable": false
     },
     "src/mallet/restore/validate-records.mjs": {
-      "sha256": "d07e23e7105c91a141cb24320174e8475e9555f15883a76d7568dcd9382036c4",
+      "sha256": "0b73e3629e4eec6bdc19c01312c39561b110ccc98319d1be5b3d3b7cdd9e22bb",
       "executable": false
     },
     "src/mallet/restore/validate-reviews.mjs": {
@@ -2276,11 +2288,15 @@
       "executable": false
     },
     "src/mallet/retention/cleanup.ts": {
-      "sha256": "f264163267363eca7edbf3e6991daa469c8b4965465ff8f0771c3a8206459422",
+      "sha256": "da26d31ff98bf5f115ad80668fd7c3bb395dd6c097db5464196ce1c8b4818960",
       "executable": false
     },
     "src/mallet/retention/consent.ts": {
       "sha256": "9eb62b2c327b1f3f966bebe6a68dd21cacc1f10f5df86ffc1376faa080ba7f94",
+      "executable": false
+    },
+    "src/mallet/retention/conversations.ts": {
+      "sha256": "be330bcb861a42f4b5a7566fbe60b4daa4620dbed6d5e286964a7bfc250b1e77",
       "executable": false
     },
     "src/mallet/retention/coverage.ts": {
@@ -2563,6 +2579,10 @@
       "sha256": "16fd24f18c7188d48a52182890e2127565a6835de7224d7d2be59130e2c75760",
       "executable": false
     },
+    "src/mallet/ui/conversation-drafts.ts": {
+      "sha256": "7780b5517938c0a2eb087656b58342558042d340cee0630ec1c5eeaa1b11f074",
+      "executable": false
+    },
     "src/mallet/ui/cores.ts": {
       "sha256": "9f5bdb91e13b02058ed6092874f3fbdd55e72e736931a96b69b5a21c6397896b",
       "executable": false
@@ -2644,7 +2664,7 @@
       "executable": false
     },
     "src/mallet/ui/job.ts": {
-      "sha256": "9412f7d875aea01e2c6b73fa42d6e5db1c8736f6c14def3171856488f56db88d",
+      "sha256": "17ba237a03f5972a297cb70c24eadaf4d2f1a64707988266189c74805368d893",
       "executable": false
     },
     "src/mallet/ui/jobs.ts": {
