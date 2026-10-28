@@ -1,3 +1,4 @@
+import {custodyInput} from './intake-journey.mjs'
 import {handoverInput} from './handover-input.mjs'
 import assert from 'node:assert/strict'
 import {booking,authorise,archive,restore,installation} from '../harness.mjs'
@@ -7,7 +8,7 @@ export async function receivablesFixture(h){
  await shopSetup(h);await h.command('tax.configure',{ratePercent:10,partsTaxable:true,laborTaxable:true})
  const driver=await h.command('contact.save',{name:'Van driver',email:'driver@example.test',phone:'',communication:'none'}),manager=await h.command('contact.save',{name:'Fleet manager',email:'manager@example.test',phone:'',communication:'email'})
  let account=await h.command('customer.save',{name:'Synthetic fleet',kind:'fleet',contactIds:[driver.id,manager.id],payerId:manager.id,billingContactId:manager.id,driverId:driver.id,authorizerId:manager.id,taxStatus:'standard'})
- async function invoice(n){let asset=await h.command('asset.create',{customerName:account.name,customerEmail:manager.email,label:'Fleet van '+n,identifier:'synthetic-mallet-ar-'+n});asset=await h.command('customer.linkAsset',{assetId:asset.id,version:asset.version,customerId:account.id,customerVersion:account.version,reason:'Explicit fleet vehicle and payer review'});let {job}=await booking(h,{asset,bayId:'Fleet '+n,startAt:`2026-10-0${n}T09:00:00Z`,endAt:`2026-10-0${n}T10:00:00Z`});const q=await authorise(h,await h.command('estimate.prepare',{jobId:job.id,version:job.version,lines:[{kind:'part',description:'Van repair part',quantity:1,unitCents:10000}]}));job=(await h.state()).records.job.find(j=>j.id===job.id);job=await h.command('work.record',{jobId:job.id,version:job.version,lineId:q.revisions[0].lines[0].id,quantity:1});await qualityReady(h,job);job=await h.command('job.complete',{jobId:job.id,version:job.version});const i=await h.command('invoice.prepare',{jobId:job.id,version:job.version});return h.command('invoice.approve',{invoiceId:i.id,version:i.version})}
+ async function invoice(n,asset){if(!asset){asset=await h.command('asset.create',{customerName:account.name,customerEmail:manager.email,label:'Fleet van '+n,identifier:'synthetic-mallet-ar-'+n});asset=await h.command('customer.linkAsset',{assetId:asset.id,version:asset.version,customerId:account.id,customerVersion:account.version,reason:'Explicit fleet vehicle and payer review'})}let {job}=await booking(h,{asset,bayId:'Fleet '+n,startAt:`2026-10-0${n}T09:00:00Z`,endAt:`2026-10-0${n}T10:00:00Z`});const q=await authorise(h,await h.command('estimate.prepare',{jobId:job.id,version:job.version,lines:[{kind:'part',description:'Van repair part',quantity:1,unitCents:10000}]}));job=(await h.state()).records.job.find(j=>j.id===job.id);job=await h.command('work.record',{jobId:job.id,version:job.version,lineId:q.revisions[0].lines[0].id,quantity:1});await qualityReady(h,job);job=await h.command('job.complete',{jobId:job.id,version:job.version});const i=await h.command('invoice.prepare',{jobId:job.id,version:job.version});return h.command('invoice.approve',{invoiceId:i.id,version:i.version})}
  let controlAsset=await h.command('asset.create',{customerName:account.name,customerEmail:manager.email,label:'Fleet authority control',identifier:'synthetic-mallet-fleet-control'})
  controlAsset=await h.command('customer.linkAsset',{assetId:controlAsset.id,version:controlAsset.version,customerId:account.id,customerVersion:account.version,reason:'Owner reviewed fleet control vehicle'})
  const control=await booking(h,{asset:controlAsset,bayId:'Fleet control'});let quote=await h.command('estimate.prepare',{jobId:control.job.id,version:control.job.version,lines:[{kind:'labor',description:'Fleet control repair',quantity:1,unitCents:100}]})
@@ -101,7 +102,20 @@ export async function receivablesJourney(h){
  assert.equal(reminder.status,'accepted');assert.equal(h.messages.length,messages+termMessages+1);assert.deepEqual(h.messages.at(-1).to,[manager.email]);assert.match(h.messages.at(-1).text,/USD 110.00/);assert.ok(h.messages.at(-1).text.includes(a1.dueOn));assert.doesNotMatch(h.messages.at(-1).text,/overdue/i)
  await h.command('ar.remind',reminderInput,{status:409});assert.equal(h.messages.length,messages+termMessages+1,'Replay never sends twice')
  await h.command('ar.reminderClaim',reminderInput,{status:404});await h.command('ar.reminderOutcome',{reminderId:reminder.id,status:'accepted'},{status:404})
- const releaseInput=await handoverInput(h,i2.jobId,account.name);delete releaseInput.overrideId;releaseInput.termsAssignmentId=a2.id
+ const statement=async(asOf)=>h.api('/api/mallet/receivables?'+new URLSearchParams({accountId:account.id,asOf}))
+ const custody=async invoiceId=>(await statement('2099-01-02')).invoices.find(i=>i.invoiceId===invoiceId).recordedCustody
+ assert.equal((await custody(i1.id)).status,'unknown','Booking and completion do not invent a custody endpoint')
+ assert.equal((await custody(i1.id)).durationMs,null)
+ let custodyJob=(await h.state()).records.job.find(j=>j.id===i2.jobId)
+ const firstIntake=await h.command('intake.record',{...custodyInput(custodyJob),capturedAt:'2026-09-29T07:00:00Z',signedBy:driver.name})
+ const open=await custody(i2.id)
+ assert.equal(open.status,'open');assert.equal(open.from,'2026-09-29T07:00:00.000Z');assert.equal(open.to,null);assert.equal(open.durationMs,null)
+ assert.deepEqual(open.intake,{id:firstIntake.id,revision:firstIntake.version,sequence:firstIntake.n,observedAt:firstIntake.capturedAt,recordedAt:firstIntake.at})
+ custodyJob=(await h.state()).records.job.find(j=>j.id===i2.jobId)
+ const intake=await h.command('intake.record',{...custodyInput(custodyJob),capturedAt:'2026-09-30T07:15:00Z',signedBy:driver.name})
+ const ambiguous=await custody(i2.id)
+ assert.equal(ambiguous.status,'unknown','Competing intakes without a selecting handover remain unknown');assert.equal(ambiguous.from,null);assert.equal(ambiguous.durationMs,null)
+ const releaseInput=await handoverInput(h,i2.jobId,account.name,{intake});delete releaseInput.overrideId;releaseInput.termsAssignmentId=a2.id
  const releaseBefore=JSON.stringify((await h.state()).records)
  await h.command('flow.collect',{...releaseInput,termsAssignmentId:a1.id},{status:409})
  await h.command('flow.collect',releaseInput,{as:admin.cookie,status:403})
@@ -117,9 +131,27 @@ export async function receivablesJourney(h){
  const collected=await h.command('flow.collect',releaseInput),receipt=(await h.state()).records.handover.find(r=>r.id===collected.collection.handoverId)
  assert.equal(receipt.settlement.label,'Released on account terms; balance due '+a2.dueOn);assert.equal(receipt.settlement.accountTerms.assignment.id,a2.id);assert.equal(receipt.settlement.accountTerms.outstandingCents,11000);assert.equal(receipt.settlement.verifiedCents,0);assert.equal(receipt.settlement.override,null)
  assert.equal((await h.state()).records.payment?.length??0,0,'Release on terms creates no payment')
+ const mailBeforeRead=h.messages.length,closed=await custody(i2.id)
+ assert.equal(closed.status,'recorded');assert.equal(closed.from,'2026-09-30T07:15:00.000Z');assert.equal(closed.to,receipt.at)
+ assert.equal(closed.durationMs,Date.parse(receipt.at)-Date.parse('2026-09-30T07:15:00Z'))
+ assert.deepEqual(closed.intake,{id:intake.id,revision:intake.version,sequence:intake.n,observedAt:intake.capturedAt,recordedAt:intake.at})
+ assert.deepEqual(closed.comparison,{id:receipt.comparison.id,revision:receipt.comparison.version,recordedAt:receipt.comparison.at})
+ assert.deepEqual(closed.handover,{id:receipt.id,revision:receipt.version,recordedAt:receipt.at})
+ assert.deepEqual(closed.invoice,{id:i2.id,revision:i2.revision,number:i2.number,chargeCents:11000})
+ const projected=(await statement('2099-01-02')).invoices.find(i=>i.invoiceId===i2.id)
+ assert.equal(projected.downtime.from,'2026-10-02T09:00:00.000Z');assert.notEqual(projected.downtime.from,closed.from);assert.notEqual(projected.downtime.to,closed.to)
+ assert.match(closed.label,/not verified off-road downtime/)
+ assert.equal((await custody(i1.id)).status,'unknown','Another vehicle cannot borrow this custody evidence')
+ const releasedJob=(await h.state()).records.job.find(j=>j.id===i2.jobId)
+ await h.command('intake.record',{...custodyInput(releasedJob),capturedAt:'2026-09-30T08:30:00Z',signedBy:driver.name})
+ assert.deepEqual(await custody(i2.id),closed,'A later unpaired intake cannot replace the source frozen into the handover')
+ const savedBeforeRead=await h.state()
+
+ await h.command('flow.collect',releaseInput,{status:409})
+ assert.deepEqual(await h.state(),savedBeforeRead,'Statement reads and replay do not change approvals, balances or custody');assert.equal(h.messages.length,mailBeforeRead)
+
  assert.equal(a1.dueOn,new Date(Date.parse(a1.at.slice(0,10))+30*86400000).toISOString().slice(0,10));assert.equal(a1.authorizerId,manager.id)
  await h.command('ar.invoice',assign(i1),{status:409})
- const statement=async(asOf)=>h.api('/api/mallet/receivables?'+new URLSearchParams({accountId:account.id,asOf}))
  const aged=new Date(Date.parse(a1.dueOn)+31*86400000).toISOString().slice(0,10)
  let report=await statement(aged);assert.equal(report.outstandingCents,22000);assert.equal(report.ageing['31–60'],22000);assert.ok(report.invoices.every(i=>i.chaseEligible));assert.equal(report.invoices[0].downtime.label,'Booked start to recorded completion; actual off-road time is not verified.')
  const check=await h.command('deposit.record',{accountId:account.id,amountCents:5000,method:'check',reference:'synthetic-mallet-ar-check',evidence:'Fleet instructed partial check allocation; check not cleared'})
@@ -138,8 +170,10 @@ export async function receivablesJourney(h){
  await h.cron(partialAt('15:15'));assert.equal((await h.state()).records.outreach.find(r=>r.id===promisedPending.id).status,'stopped','An unexpired promise suppresses scheduled email')
  assert.ok((await statement(promise.promisedOn)).invoices.every(i=>!i.chaseEligible));assert.ok((await statement('2099-01-02')).invoices.find(i=>i.invoiceId===i1.id).chaseEligible)
  await h.command('ar.promise',{invoiceId:i1.id,version:i1.version,promisedOn:'2099-01-01',amountCents:6001,evidence},{status:409})
- const low=await h.command('ar.terms',{...termsInput,limitCents:1000}),third=await f.invoice(3)
+ const low=await h.command('ar.terms',{...termsInput,limitCents:1000}),third=await f.invoice(3,(await h.state()).records.asset.find(a=>a.id===receipt.assetId))
  await h.command('ar.invoice',{...assign(third),termsId:low.id},{status:409})
+ assert.equal((await custody(third.id)).status,'unknown','A later visit of the same van cannot inherit the prior handover');assert.equal((await custody(third.id)).from,null)
+ assert.deepEqual(await custody(i2.id),closed,'A later visit leaves the original frozen custody pairing unchanged')
  await h.command('ar.dispute',{invoiceId:i2.id,version:i2.version,status:'resolved',evidence:'Fleet accepted work after reviewed evidence'})
  assert.equal((await statement(aged)).invoices.find(i=>i.invoiceId===i2.id).dispute.status,'resolved')
  for(const outsider of [{as:admin.cookie},{as:member.cookie},agent]){const s=await h.state(outsider);for(const kind of ['arTerms','arInvoice','arDispute','arPromise','arReminder'])assert.equal(s.records[kind],undefined);assert.ok(!JSON.stringify(s).includes(termsInput.evidence))}

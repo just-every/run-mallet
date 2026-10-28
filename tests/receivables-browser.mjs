@@ -4,14 +4,15 @@ import {randomBytes} from 'node:crypto'
 import {mkdir} from 'node:fs/promises'
 import {join} from 'node:path'
 import {chromium} from '@playwright/test'
-import {installation} from './harness.mjs'
+import {installation,archive,restore} from './harness.mjs'
 import {publicDoor} from './support/portable-repair.mjs'
 import {receivablesFixture} from './support/receivables-journey.mjs'
+import {shopSetup} from './support/diagnosis-journey.mjs'
 export async function receivablesBrowser(){
  const h=await installation({entry:'tests/dev-worker.ts',network:true,assets:true,bindings:{AUTH_LOCAL:'true',RER_DEV_KEY:randomBytes(32).toString('base64url')}});let browser
  try{
   h.person=publicDoor(h.origin,h.owner).person
-  const {account,manager,control,i1,i2,invoice:makeInvoice}=await receivablesFixture(h)
+  const {account,driver,manager,control,i1,i2,invoice:makeInvoice}=await receivablesFixture(h)
   await h.stepUp()
   browser=await chromium.launch({headless:true,...(process.env.MALLET_CHROMIUM?{executablePath:process.env.MALLET_CHROMIUM}:{}),args:['--no-sandbox','--use-mock-keychain','--password-store=basic']})
   const context=await browser.newContext(),p=await context.newPage(),errors=[];p.on('pageerror',error=>errors.push(error.message))
@@ -63,10 +64,38 @@ export async function receivablesBrowser(){
    await p.goto(h.origin+'/app/tax/filing?from=2000-01-01&to=2099-01-01');assert.match(await p.locator('main').innerText(),/Filing-period preview/);await shot('07-filing-review',width)
    if(index===0){await submit('tender.clearance',{observedOn:check.at.slice(0,10),reference:'synthetic-mallet-bank-native',evidence:'Owner inspected bank clearance of the recorded fleet check'})}
    await p.goto(h.origin+'/app/tax/filing?from=2000-01-01&to=2099-01-01');assert.match(await p.locator('main').innerText(),/collected tax \$4.55/);assert.equal(await form('tender.clearance').count(),0);await shot('08-observed-clearance-preview',width)
-   const input=await handoverInput(h,invoice.jobId,account.name),assignment=(await h.state()).records.arInvoice.find(r=>r.invoiceId===invoice.id)
+   await p.goto(ledger)
+   assert.equal(await p.locator('#ar-'+invoice.id+' [data-recorded-custody]').getAttribute('data-recorded-custody'),'unknown','A booked interval is not a custody receipt')
+   for(const [n,capturedAt]of ['2026-09-29T07:00:00Z','2026-09-30T07:15:00Z'].entries()){
+    await p.goto(h.origin+'/app/jobs/'+invoice.jobId+'/intake')
+    await submit('intake.record',{capturedAt,damage:'Fleet driver documented the left door condition before this visit',itemLines:'key | Fleet van key | 1',lockHandling:'Driver retains unlock material',signedBy:driver.name},{checks:['consent'],selects:{phase:'before'}})
+    await p.goto(ledger)
+    assert.equal(await p.locator('#ar-'+invoice.id+' [data-recorded-custody]').getAttribute('data-recorded-custody'),n===0?'open':'unknown','Open or competing custody sources stay honest')
+   }
+   const intake=(await h.state()).records.intake.filter(r=>r.jobId===invoice.jobId).sort((a,b)=>a.n-b.n).at(-1)
+   const input=await handoverInput(h,invoice.jobId,account.name,{intake}),assignment=(await h.state()).records.arInvoice.find(r=>r.invoiceId===invoice.id)
    await p.goto(h.origin+'/app/jobs/'+invoice.jobId+'/return');await shot('09-open-terms-handover',width)
    await submit('flow.collect',{collectorName:account.name,identityEvidence:input.identityEvidence,warrantyAdvice:input.warrantyAdvice},{selects:{termsAssignmentId:assignment.id,comparisonId:input.comparisonId,readingId:input.readingId}})
    assert.match(await p.locator('#handover-receipt').innerText(),/Released on account terms; balance due/);assert.match(await p.locator('#handover-receipt').innerText(),/No payment is recorded by release/);await shot('10-account-terms-receipt',width)
+   const beforeRead=await h.state(),mailBeforeRead=h.messages.length,receipt=beforeRead.records.handover.find(r=>r.invoiceId===invoice.id)
+   await p.goto(ledger)
+   const evidence=p.locator('#ar-'+invoice.id+' [data-recorded-custody]')
+   assert.equal(await evidence.getAttribute('data-recorded-custody'),'recorded');assert.match(await evidence.innerText(),/not verified off-road downtime/)
+   await evidence.getByText('Inspect custody and invoice sources',{exact:true}).click()
+   const text=await evidence.innerText();for(const id of [intake.id,receipt.id,receipt.comparison.id,invoice.id])assert.ok(text.includes(id),'Statement exposes exact source '+id)
+   assert.match(text,/Frozen invoice charge \$110.00/);assert.match(text,/revision 1/)
+   assert.deepEqual(await evidence.locator('time').evaluateAll(nodes=>nodes.map(n=>n.dateTime)),[intake.capturedAt,receipt.at,intake.capturedAt,intake.at,receipt.comparison.at,receipt.at])
+   await shot('10a-recorded-custody-sources',width)
+   await evidence.getByRole('link',{name:'Signed before-condition intake',exact:true}).click()
+   assert.equal(new URL(p.url()).hash,'#intake-'+intake.id);assert.match(await p.locator('#intake-'+intake.id).innerText(),/Fleet van key/);await shot('10b-exact-intake-source',width)
+   await p.goto(ledger);await evidence.getByText('Inspect custody and invoice sources',{exact:true}).click()
+   await evidence.getByRole('link',{name:'Signed checklist comparison',exact:true}).click();assert.equal(new URL(p.url()).hash,'#comparison-'+receipt.comparison.id);assert.match(await p.locator('#comparison-'+receipt.comparison.id).innerText(),/Fleet van key: 1 of 1 returned/)
+   await p.goto(ledger);await evidence.getByText('Inspect custody and invoice sources',{exact:true}).click()
+   await evidence.getByRole('link',{name:'Documented handover',exact:true}).click();assert.match(await p.locator('#handover-receipt').innerText(),new RegExp(assignment.dueOn))
+   await p.goto(ledger);await evidence.getByText('Inspect custody and invoice sources',{exact:true}).click()
+   await evidence.getByRole('link',{name:'Frozen invoice charge $110.00',exact:true}).click();assert.equal(new URL(p.url()).pathname,'/app/invoices/'+invoice.id);assert.match(await p.locator('main').innerText(),/Van repair part/)
+   assert.deepEqual(await h.state(),beforeRead,'Source drill-through changes no approval, payment or balance');assert.equal(h.messages.length,mailBeforeRead)
+
   }
   const replacement=await makeInvoice(3)
   for(const [invoice,jurisdiction]of [[i1,'Native source jurisdiction'],[replacement,'Native replacement jurisdiction']])await h.command('tax.assignJurisdiction',{invoiceId:invoice.id,version:invoice.version,jurisdiction,evidence:'Owner reviewed the invoice jurisdiction for credit attribution'})
@@ -81,6 +110,18 @@ export async function receivablesBrowser(){
    const pending=p.waitForResponse(r=>new URL(r.url()).pathname==='/app/actions'&&r.request().method()==='POST');await f.getByRole('button',{name:'Record reviewed original tender'}).click();assert.equal((await pending).status(),303);await p.waitForLoadState('domcontentloaded')
    assert.match(await p.locator('main').innerText(),/credit tax adjustment/);assert.equal(await f.count(),0);await shot('12-attributed-credit-adjustment',width)
   }
+  const query='/api/mallet/receivables?'+new URLSearchParams({accountId:account.id,asOf:'2099-01-02'}),expected=await h.api(query),fresh=await installation({entry:'tests/dev-worker.ts',network:true,assets:true,bindings:{AUTH_LOCAL:'true',RER_DEV_KEY:randomBytes(32).toString('base64url')}})
+  try{
+   await restore(fresh,await archive(h));await shopSetup(fresh);assert.deepEqual(await fresh.api(query),expected,'Fresh-owner recovery retains identical custody and frozen invoice projections')
+   await context.addCookies(fresh.owner.split('; ').map(pair=>({name:pair.slice(0,pair.indexOf('=')),value:pair.slice(pair.indexOf('=')+1),url:fresh.origin})))
+   for(const width of [1440,390]){
+    await p.setViewportSize({width,height:1000});await p.goto(fresh.origin+'/app/receivables?'+new URLSearchParams({accountId:account.id,asOf:'2099-01-02'}))
+    const evidence=p.locator('#ar-'+i2.id+' [data-recorded-custody]');assert.equal(await evidence.getAttribute('data-recorded-custody'),'recorded');await evidence.getByText('Inspect custody and invoice sources',{exact:true}).click()
+    const source=expected.invoices.find(i=>i.invoiceId===i2.id).recordedCustody
+    for(const id of [source.intake.id,source.comparison.id,source.handover.id,i2.id])assert.ok((await evidence.innerText()).includes(id))
+    await shot('13-recovered-custody-sources',width)
+   }
+  }finally{await fresh.close()}
   assert.deepEqual(errors,[])
  }finally{await browser?.close();await h.close()}
 }

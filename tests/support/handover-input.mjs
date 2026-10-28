@@ -1,10 +1,10 @@
 import {custodyInput} from './intake-journey.mjs'
 // Public native prerequisites for an explicit owner-approved unpaid handover.
 // The fixture never asserts a cash entry or screenshot is processor settlement.
-export async function handoverInput(h,jobId,collectorName){
+export async function handoverInput(h,jobId,collectorName,{intake:recordedIntake}={}){
  let state=await h.state(),job=state.records.job.find(j=>j.id===jobId),delegateId=''
  if(collectorName.toLowerCase()!==job.asset.customerName.toLowerCase())delegateId=(await h.command('return.delegate',{jobId,version:job.version,customerName:job.asset.customerName,delegateName:collectorName,evidence:'Customer explicitly authorized this named collector for the fixture repair',consent:true})).id
- const intake=await h.command('intake.record',{...custodyInput(job),items:[{kind:'key',label:'Vehicle key',quantity:1}],signedBy:job.asset.customerName})
+ const intake=recordedIntake??await h.command('intake.record',{...custodyInput(job),items:[{kind:'key',label:'Vehicle key',quantity:1}],signedBy:job.asset.customerName})
  job=(await h.state()).records.job.find(j=>j.id===jobId)
  const comparison=await h.command('intake.compare',{jobId,version:job.version,intakeId:intake.id,returned:intake.items.map(i=>({itemId:i.id,quantity:i.quantity})),signedBy:collectorName,consent:true})
  job=(await h.state()).records.job.find(j=>j.id===jobId)
