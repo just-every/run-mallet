@@ -46,5 +46,9 @@ export async function preparationAlias(request: Request, original: Bindings): Pr
   const rpc = await response.json() as any
   const refusal = rpc.result?._meta?.['com.runeditrun/error']
   if (!response.ok || refusal || rpc.error || rpc.result?.isError) return Response.json(refusal ?? rpc.error?.data ?? { code: 'agent_refused' }, { status: response.ok ? 403 : response.status, headers: { 'cache-control': 'no-store' } })
-  return Response.json(rpc.result?.structuredContent ?? rpc.result, { headers: { 'cache-control': 'no-store' } })
+  const value = rpc.result?.structuredContent ?? rpc.result
+  const state = ['mallet.repairs.list', 'mallet.repairs.read'].includes(name) && rpc.result?.structuredContent
+    ? { actor: { id: credential.agent.id.slice('mallet-key:'.length), name: credential.agent.name, role: 'agent' }, ...value }
+    : value
+  return Response.json(state, { headers: { 'cache-control': 'no-store' } })
 }

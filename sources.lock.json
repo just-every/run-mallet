@@ -1620,7 +1620,7 @@
       "executable": false
     },
     "src/mallet/agent-door/legacy.ts": {
-      "sha256": "a19632dd8c177ccd9be0d5dc08e5b820b4a40de472928d1f43524c8f3860817c",
+      "sha256": "dc69cb07313c78d114b94f24bf3ace9640505673f4d1ee60cb3cbb0412f5b8ed",
       "executable": false
     },
     "src/mallet/agent-door/people.ts": {
