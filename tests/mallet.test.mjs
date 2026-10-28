@@ -1,3 +1,5 @@
+import {blockerJourney} from './support/blocker-journey.mjs'
+import {blockerBrowser} from './blocker-browser.mjs'
 import {enterpriseBrowser} from './enterprise-browser.mjs'
 import {enterpriseJourney} from './support/enterprise-journey.mjs'
 import {randomBytes} from 'node:crypto'
@@ -44,6 +46,8 @@ import {run,installation,assetInput,booking,estimate,authorise,archive,restore,s
 
 test('POS-001: cash receipts, exact replay, partial returns, stock custody, authority and fresh-owner recovery',()=>run(retailJourney))
 test('POS-001: native cash checkout and return forms at 1440 and 390',retailBrowser)
+test('ADV-003: source-cited blockers require actual evidence, exact consent and physical receipt, preserve handlers and recover privately',()=>run(blockerJourney))
+test('ADV-003: native blocker packet, handlers and proposal review at 1440 and 390',blockerBrowser)
 
 test('native sign-in, CSRF, member isolation and immediate session revocation',()=>run(async h=>{
  await h.state({as:'',status:401})
