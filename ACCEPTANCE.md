@@ -184,9 +184,9 @@ Evidence: `tests/mallet.test.mjs`; `tests/warranty-browser.mjs`.
 
 Evidence: `tests/mallet.test.mjs`; `tests/return-browser.mjs`; `tests/support/return-revision.mjs`.
 
-**RETURN-002 — Storage, abandoned property and repair liens.** Status: **missing**. [Target, acceptance and remaining work](./CONTRACT.md#workshop-execution-and-technician-work).
+**RETURN-002 — Storage, abandoned property and repair liens.** Status: **partial**. [Target, acceptance and remaining work](./CONTRACT.md#workshop-execution-and-technician-work).
 
-Evidence: No implementation evidence yet.
+Evidence: `tests/mallet.test.mjs`; `tests/support/storage-journey.mjs`; `tests/storage-browser.mjs`.
 
 **FLEET-001 — Fleet and commercial repair workflows.** Status: **partial**. [Target, acceptance and remaining work](./CONTRACT.md#workshop-execution-and-technician-work).
 

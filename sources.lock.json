@@ -572,11 +572,11 @@
       "executable": false
     },
     "ACCEPTANCE.md": {
-      "sha256": "1db054c7e2f3b05286416a377ab0486df5356ca02c04060cc29bcfa786210479",
+      "sha256": "06a94683fdb629bd5cc1b42f5cc9901df275e3d7cbe4999b821bc0176910f7f1",
       "executable": false
     },
     "AGENTS.md": {
-      "sha256": "b8625b86d864607ae97b3655003b4b6aafa1255461c9df65a9646be4f7a99208",
+      "sha256": "3fb87354c090e79fcaa69a6f067527771d5ad53985bc53cbc29368fc998eafa0",
       "executable": false
     },
     "base-copies.json": {
@@ -584,7 +584,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "d376a0b282b22de535309b0f0d57759bae3235a5780fd20d9a440946f17324e3",
+      "sha256": "9101e8b7a12cb5447fd70d3494855705d6bd947d7204363e01e7e8c28dea2517",
       "executable": false
     },
     "deploy-demo.json": {
@@ -1824,7 +1824,7 @@
       "executable": false
     },
     "src/mallet/http.ts": {
-      "sha256": "ac6f07307e53d58e9f7594ebf36c2366fe317e1568ca3adebfe7b17bb91878da",
+      "sha256": "71196b3044e8f6eb09ed2045cd4777a43dc29945efaf284a58b11b803873e9d7",
       "executable": false
     },
     "src/mallet/imports/context.ts": {
@@ -2016,7 +2016,7 @@
       "executable": false
     },
     "src/mallet/model.ts": {
-      "sha256": "6dcf766e4b80a630e2c0fddfcaaac6c3ff5805acf83539133b598920ba51001a",
+      "sha256": "809b763b47863110e412564cc81bdfaaedf09c97b9998a99eb2324b8d2ae1645",
       "executable": false
     },
     "src/mallet/money.ts": {
@@ -2220,7 +2220,7 @@
       "executable": false
     },
     "src/mallet/restore/validate-records.mjs": {
-      "sha256": "3711c28428da501e3ef50c91bcbddc7c6f14f6e70f22112a729658417fad3019",
+      "sha256": "8608e89d1ed5829cdfc6610e409bab3f871680a9ad080eb2686a214ad2d47ac1",
       "executable": false
     },
     "src/mallet/restore/validate-reviews.mjs": {
@@ -2288,7 +2288,7 @@
       "executable": false
     },
     "src/mallet/returns.ts": {
-      "sha256": "8d7ee2cd15a475ba2565bdb0058b21e82f4058dd128570ff2fe2ee3e4ad4e1b8",
+      "sha256": "71fc214985ac0fdb4174f3cb4cefe30d119d2d22a8a8b64c90ce016637f3f090",
       "executable": false
     },
     "src/mallet/review-customer-door.ts": {
@@ -2345,6 +2345,10 @@
     },
     "src/mallet/stock-transfers.ts": {
       "sha256": "cb723da1dd9464bc3b66b4f5f2178025d0aa7810d45fbd8c67f2e1e5fe00aa28",
+      "executable": false
+    },
+    "src/mallet/storage.ts": {
+      "sha256": "367b3d760db8a38486238bdb1233b588b4c1b4c2e06914b710ac6b5ccb66d8a3",
       "executable": false
     },
     "src/mallet/stripe/balance-guard.ts": {
@@ -2404,7 +2408,7 @@
       "executable": false
     },
     "src/mallet/strong-auth/gate.ts": {
-      "sha256": "1dd985a6acb3283afd0cb466b8c63e02bfc95026f7d58eff4467cd5562d6e7a7",
+      "sha256": "1ed42e70dde2b48d47ccb80dc77c0eef44bd3968723201e6f8a65698cc481511",
       "executable": false
     },
     "src/mallet/strong-auth/link-guard.ts": {
@@ -2684,7 +2688,7 @@
       "executable": false
     },
     "src/mallet/ui/returns.ts": {
-      "sha256": "b55d1363dcce5a4baadced97daef5f0d5b0aec66367a0398d3d1cf61dff7a0ad",
+      "sha256": "2c1e4466d9839fe38c9e74a51b18e1faf36fd43344f6789731d09862a44d5e92",
       "executable": false
     },
     "src/mallet/ui/reviews.ts": {
@@ -2717,6 +2721,10 @@
     },
     "src/mallet/ui/stock-transfers.ts": {
       "sha256": "3d2cc2f5425996db3869027e5ecbd764c5163e9e8f37c37386772cc8c7a7759a",
+      "executable": false
+    },
+    "src/mallet/ui/storage.ts": {
+      "sha256": "9961e49a783b832b5f3dc8915f32d93e480d76b7f8720e8ce31c3f621f713097",
       "executable": false
     },
     "src/mallet/ui/sublet.ts": {
@@ -4780,7 +4788,7 @@
       "executable": false
     },
     "tests/mallet.test.mjs": {
-      "sha256": "132d16ecb2180fe1c16987fd97a6bca6811ca3db91d88ff934f09b311136e347",
+      "sha256": "4c32720050ce015f9a7fadb7715445f59d1b87d4219b23b50a861bed1eac5982",
       "executable": false
     },
     "tests/media-browser.mjs": {
@@ -4844,7 +4852,7 @@
       "executable": false
     },
     "tests/return-browser.mjs": {
-      "sha256": "e76a9ad0a720d14400959648a7439924983f2ef7a285d67aa7ddf334d43e2852",
+      "sha256": "ee8d3d160cae1b5ecc1118ad7c465d0e1e7f1e8fd37b2fc4038a20a1cac5d0d3",
       "executable": false
     },
     "tests/reviews-browser.mjs": {
@@ -4881,6 +4889,10 @@
     },
     "tests/stock-trace-browser.mjs": {
       "sha256": "dae32202dc4097d285f52c49823cec566edd3c14178ed815a50eba986ba3f541",
+      "executable": false
+    },
+    "tests/storage-browser.mjs": {
+      "sha256": "a87b0cf397d68883af5676d2843f4c53784c81057084af93082d0651f49a1484",
       "executable": false
     },
     "tests/stripe-ach-sandbox.mjs": {
@@ -5201,6 +5213,10 @@
     },
     "tests/support/stock-trace-journey.mjs": {
       "sha256": "10c48c703b49ba8ea78ef083cc5d527139fd315136ab88b59418da7d4c96dde6",
+      "executable": false
+    },
+    "tests/support/storage-journey.mjs": {
+      "sha256": "c5b9d0de5d87fc3f6417df2426fbdbf62d96bcf0241e57fb2915f782ee555334",
       "executable": false
     },
     "tests/support/stripe-journey.mjs": {
