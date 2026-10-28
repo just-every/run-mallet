@@ -2324,7 +2324,7 @@
       "executable": false
     },
     "src/mallet/staff.ts": {
-      "sha256": "2ebdb5374485288373b271f4681c5fa6ebfc858bd0c97eba55489ee572a836b8",
+      "sha256": "aedd1830f15198c4b95e1c6e7d4a3881f0e97379192cce4b298097ad74ebed58",
       "executable": false
     },
     "src/mallet/status-notice-door.ts": {
@@ -2644,7 +2644,7 @@
       "executable": false
     },
     "src/mallet/ui/purchasing.ts": {
-      "sha256": "48be784def7c2fa7cb0fcef15f19416e5c39fdcab3f0c78cb033863f420de69d",
+      "sha256": "58e5d09fe7ad1cd92ced753b6b981beaf0999db0e852f67a4a8c49b9dbfa20d5",
       "executable": false
     },
     "src/mallet/ui/quality.ts": {
@@ -4740,7 +4740,7 @@
       "executable": false
     },
     "tests/governance-browser.mjs": {
-      "sha256": "a903b2ec8c21ee553f21c3d0e4b93143f7b6d8f2a75e0384485c5864bffa92f7",
+      "sha256": "5575f9b9ca98899ca40be18fe833e5f368a16df691bccad8477f8e9e65a8bf6c",
       "executable": false
     },
     "tests/harness.mjs": {
@@ -5012,7 +5012,7 @@
       "executable": false
     },
     "tests/support/governance-journey.mjs": {
-      "sha256": "8b5d1276e2a08149db1bc0e74a98e81525d28b263b5ee1e0f71830b069711a0c",
+      "sha256": "6165a4d930b6fe518b675212d84bcef85c3d015081b01035907fd392a325346c",
       "executable": false
     },
     "tests/support/handover-input.mjs": {
