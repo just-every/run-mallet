@@ -131,4 +131,5 @@ export async function coverageJourney(h,f){
  await h.command('coverage.schedule',{...contract,reference:'synthetic-mallet-612'},{status:409})
  const recovered=await installation()
  try{const backup=await archive(h);assert.equal(JSON.stringify(backup).includes(report.reference),false);await restore(recovered,backup);const restored=await recovered.state(),r=restored.records.coverageReview.find(r=>r.id===check.id);assert.deepEqual(r,erased);assert.deepEqual(restored.records.event.filter(e=>e.kind==='coverage.symptom'&&e.subjectId===check.id),erasedEvents);assert.equal(JSON.stringify(await recovered.command('customer.export',{customerId})).includes(report.reference),false);await recovered.cron('2027-02-01T00:00:00Z');assert.equal((await recovered.state()).records.coverageReview.find(r=>r.id===check.id).status,'erased')}finally{await recovered.close()}
+ const {coverageMailJourney}=await import('./coverage-mail-journey.mjs');await coverageMailJourney()
 }

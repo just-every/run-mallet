@@ -2,7 +2,10 @@ import {rows,type State} from '../model'
 import {write,type CustomerScope} from './store'
 import type {Sql} from '../media/types'
 export function revokeCoverageAccess(scope:CustomerScope):Sql[]{
- return [{sql:"DELETE FROM mallet_coverage_authority WHERE review_id IN (SELECT id FROM mallet_records WHERE kind='coverageReview' AND json_extract(value,'$.jobId') IN (SELECT value FROM json_each(?)))",params:[JSON.stringify([...scope.jobIds])]}]
+ return [
+  {sql:'DELETE FROM mallet_coverage_reply_tokens WHERE job_id IN (SELECT value FROM json_each(?))',params:[JSON.stringify([...scope.jobIds])]},
+  ...['mallet_coverage_consent_authority','mallet_coverage_mail_authority'].map((table,i)=>({sql:'DELETE FROM '+table+' WHERE '+(i?'notice_id':'consent_id')+" IN (SELECT id FROM mallet_records WHERE kind='"+(i?'coverageNotice':'coverageConsent')+"' AND json_extract(value,'$.jobId') IN (SELECT value FROM json_each(?)))",params:[JSON.stringify([...scope.jobIds])]})),
+  {sql:"DELETE FROM mallet_coverage_authority WHERE review_id IN (SELECT id FROM mallet_records WHERE kind='coverageReview' AND json_extract(value,'$.jobId') IN (SELECT value FROM json_each(?)))",params:[JSON.stringify([...scope.jobIds])]}]
 }
 export function eraseCoverageContent(s:State,scope:CustomerScope,at:string):Sql[]{
  const changes:Sql[]=[]
@@ -13,6 +16,10 @@ export function eraseCoverageContent(s:State,scope:CustomerScope,at:string):Sql[
   changes.push(write('coverageReview',next))
   const task=rows(s,'coverageTask').find(t=>t.coverageId===r.id)
   if(task)changes.push(write('coverageTask',{...task,version:task.version+1,status:task.status==='open'?'suppressed':task.status,resolution:{action:'erased',reason:'Erased personal content',at,by:next.history.at(-1)!.by}}))
+ }
+ for(const kind of ['coverageRenewal','coverageConsent','coverageNotice','coverageCase'])for(const r of rows(s,kind).filter(r=>scope.jobIds.has(r.jobId))){
+  const erased=kind==='coverageRenewal'?{reason:'Erased personal content'}:kind==='coverageConsent'?{to:'erased',sourceEvidence:'Erased personal content',consentedTime:r.consentedAt,withdrawal:r.withdrawal?{...r.withdrawal,reason:'Erased personal content'}:undefined}:kind==='coverageNotice'?{to:'erased',content:'Erased personal content',sourceBasis:'',providerReference:'',status:r.status==='pending'?'stopped':r.status}: {symptom:undefined,status:'erased'}
+  changes.push(write(kind,{...r,...erased,version:r.version+1,erasedAt:at,...(r.resolution?{resolution:{...r.resolution,reason:'Erased personal content'}}:{})}))
  }
  for(const row of rows(s,'event').filter(r=>scope.jobIds.has(r.jobId)&&r.kind==='coverage.symptom'&&'reference' in r.data)){
   const {reference:_reference,...data}=row.data

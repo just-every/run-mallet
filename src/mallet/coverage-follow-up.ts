@@ -2,7 +2,7 @@ import {createHash} from 'node:crypto'
 import {bump,choice,event,expectVersion,fail,find,put,rows,text,who,type Context,type Handler,type Row,type State} from './model'
 import {instant} from './workshop'
 
-export const coverageCommands=['coverage.schedule','coverage.cancel','coverage.transfer','coverage.symptom','coverage.resolve','coverage.activate','coverage.sweep'] as const
+export const coverageCommands=['coverage.schedule','coverage.recordRenewal','coverage.cancel','coverage.transfer','coverage.symptom','coverage.resolve','coverage.activate','coverage.sweep'] as const
 const ownershipIdentity=(asset:Row)=>[asset.customerAccountId??null,asset.driverContactId??null,asset.customerName,asset.customerEmail]
 const ownershipHash=(identity:unknown[])=>createHash('sha256').update(JSON.stringify(identity)).digest('hex')
 export const coverageOwnership=(_s:State,asset:Row)=>ownershipHash(ownershipIdentity(asset))
@@ -89,6 +89,19 @@ export const coverageFollowUp:Handler=(c,command,p)=>{
  }
  const stop=coverageStop(c.s,r)
  if(stop||!['scheduled','due'].includes(r.status))fail('COVERAGE_STOPPED','This review is stopped or its ownership or erasure record changed.')
+ if(command==='coverage.recordRenewal'){
+  if(r.kind!=='service-contract'||p.confirm!=='record-evidenced-renewal')fail('COVERAGE_RENEWAL','Explicitly confirm a separately executed service-contract renewal.',null,422)
+  if(p.documentReference===r.source.documentReference)fail('COVERAGE_RENEWAL','Retain the distinct signed renewal document or revision reference.')
+  const reason=text(p.reason,'signed renewal and customer decision evidence',2000)
+  const replacement=coverageFollowUp(c,'coverage.schedule',{...p,kind:'service-contract',jobId:r.jobId,version:find(c.s,'job',r.jobId).version})
+  const resolution={action:'renewal-recorded',reason,by:who(c),at:c.now}
+  const task=rows(c.s,'coverageTask').find(t=>t.coverageId===r.id)
+  if(task?.status==='open')bump(c.s,'coverageTask',task,{status:'completed',resolution})
+  bump(c.s,'coverageReview',r,{status:'completed',history:[...r.history,resolution]})
+  const row=put(c.s,'coverageRenewal',{coverageId:r.id,replacementCoverageId:replacement.id,jobId:r.jobId,assetId:r.assetId,reason,authority:'owner-recorded external renewal; no billing or provider execution',by:who(c),at:c.now})
+  event(c,command,r.jobId,row.id,{coverageId:r.id,replacementCoverageId:replacement.id});return row
+ }
+
  if(command==='coverage.activate'){
   const entry={action:'activated',reason:text(p.reason,'fresh owner review evidence',2000),by:who(c),at:c.now}
   const next=bump(c.s,'coverageReview',r,{history:[...r.history,entry]});event(c,command,r.jobId,r.id,{});return next

@@ -1,3 +1,5 @@
+import {coverageReplyResponse} from './coverage-reply-door'
+import {internalCoverageCommands} from './coverage-mail'
 import {coverageCommand,coverageState} from './coverage-door'
 import {coveragePage} from './ui/coverage-follow-up'
 import {webhookResponse} from './webhook-door'
@@ -220,6 +222,8 @@ function formInput(data:FormData) {
 
  if(input.command==='statusNotice.consent')input.consent=data.has('consent')
  if(input.command==='statusNotice.approve'){input.confirm=data.has('confirm');for(const key of ['allowedStart','allowedEnd','jobVersion'])input[key]=Number(input[key])}
+ if(input.command==='coverage.consent')input.consent=data.has('consent')
+ if(input.command==='coverage.approve'){input.confirm=data.has('confirm');for(const key of ['allowedStart','allowedEnd'])input[key]=Number(input[key])}
  if(input.command==='review.consent')input.consent=data.has('consent')
  if(input.command==='review.send')input.confirm=data.has('confirm')
  if(input.command==='outreach.schedule'){input.consent=data.has('consent');input.availabilityConfirmed=data.has('availabilityConfirmed');for(const key of ['allowedStart','allowedEnd','quoteVersion','outstandingCents'])if(input[key]!==undefined)input[key]=Number(input[key])}
@@ -287,6 +291,7 @@ async function workshopResponse(request:Request,original:Bindings,execution:Pick
  const stripe=await stripeResponse(request,original);if(stripe)return stripe
  const deliveryEvent=await inspectionReportEventResponse(request,original);if(deliveryEvent)return deliveryEvent
  const customerDoor=await guardLinks(request,original,async()=>{
+  const coverageReply=await coverageReplyResponse(request,original);if(coverageReply)return coverageReply
   const review=await reviewResponse(request,original);if(review)return review
   const booking=await bookingResponse(request,original);if(booking)return booking
   const checkIn=await checkInResponse(request,original);if(checkIn)return checkIn
@@ -370,7 +375,7 @@ async function workshopResponse(request:Request,original:Bindings,execution:Pick
    if(['connector.save','connector.revoke'].includes(command)&&actor.role==='owner'&&!auth.gate?.enrolled)throw new HttpError(403,'step_up_required','Enrol your own second factor before opening the credential door.')
    if(command.startsWith('apiClient.')&&actor.role==='owner')auth.authority=requireStepUp(auth)
    if(needsStepUp(command,actor.role))auth.authority=requireStepUp(auth,command.startsWith('deposit.'))
-   if(command==='coverage.sweep')throw new HttpError(404,'unknown_command')
+   if(internalCoverageCommands.includes(command))throw new HttpError(404,'unknown_command')
    if(internalStatusCommands.includes(command))throw new HttpError(404,'unknown_command')
    if(internalReviewCommands.includes(command))throw new HttpError(404,'unknown_command')
    if(internalOutreachCommands.includes(command))throw new HttpError(404,'unknown_command')
@@ -401,7 +406,7 @@ async function workshopResponse(request:Request,original:Bindings,execution:Pick
    else if(['intake.secretStore','intake.secretReveal','intake.secretEnd','intake.secretEraseCustomer'].includes(command))result=await intakeSecret(env,actor,auth.authority,command,input)
    else if(command.startsWith('statusNotice.'))result=await statusNoticeCommand(env,actor,auth.authority,command,input)
    else if(command.startsWith('review.'))result=await reviewCommand(env,actor,auth.authority,command,input)
-   else if(command.startsWith('coverage.'))result=await coverageCommand(env,actor,auth.authority,command,input)
+   else if(command.startsWith('coverage.')){if(['coverage.consent','coverage.approve'].includes(command))auth.authority=requireStepUp(auth);result=await coverageCommand(env,actor,auth.authority,command,input)}
    else if(command.startsWith('outreach.'))result=await outreachCommand(env,actor,auth.authority,command,input)
    else if(command.startsWith('routing.'))result=await routingCommand(env.DB,actor as any,auth.authority,command,input)
    else if(command==='promise.approveAndNotify')result=await sendPromiseNotice(env,actor,auth.authority,input)
