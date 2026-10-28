@@ -9,7 +9,7 @@ export const form=(command:string,content:string,button:string,values:Record<str
 export const box=(title:string,content:string,{pill='',step='',extra='',id=''}:{pill?:string,step?:string|number,extra?:string,id?:string}={})=>`<section${id?` id="${e(id)}"`:''} class="card${extra?` ${extra}`:''}">${pill?'<div class="card-head">':''}<h2>${step!==''?`<span class="step">${e(step)}</span>`:''}${e(title)}</h2>${pill}${pill?'</div>':''}${content}</section>`
 // Technicians are stored as operator IDs; show the operator's name (free text from older bookings is shown as typed, and an operator who is gone is not shown as an ID).
 export type Names=Record<string,string>
-export const person=(names:Names,id:unknown)=>names[String(id)]??(/^[0-9a-f]{8}-[0-9a-f]{4}-/i.test(String(id))?'Former team member':String(id??''))
+export const person=(names:Names,id:unknown)=>(Object.hasOwn(names,String(id))?names[String(id)]:undefined)??(/^[0-9a-f]{8}-[0-9a-f]{4}-/i.test(String(id))?'Former team member':String(id??''))
 // A text whose hyphenated words (CR-V, F-150, 45,000-mile) never break at the hyphen.
 export const nobr=(value:unknown)=>e(value).replace(/\S*-\S*/g,word=>`<span class="nobr">${word}</span>`)
 // How a person's role reads on screen.

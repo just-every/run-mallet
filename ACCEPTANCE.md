@@ -13,7 +13,7 @@ The primary journey: check in the customer and asset, diagnose and inspect, pric
 | Later | 0 | 0 | 0 | 0 |
 | Full target | 22 | 75 | 60 | 157 |
 
-Judged from the code and tests at commit `33a1e50a4250c55a1ca3fb8184f1372a68757364` (27 October 2026). Field proof register: 12 rows; 0 passed, 0 failed, 12 not run.
+Judged from the code and tests at commit `0c4b8e0be86462c713e63dc7875074220be9e636` (28 October 2026). Field proof register: 12 rows; 0 passed, 0 failed, 12 not run.
 
 ## Core
 
@@ -41,7 +41,7 @@ Core · published · **partial** · Rules D-1, D-2, D-3
 1. Register an asset through the counter form, book repeat visits and try overlapping bay and technician bookings through the command API; inspect the conflict and complete service history.
 
 **Evidence.** `src/mallet/workshop.ts`; `tests/mallet.test.mjs`; `tests/browser-journey.mjs`
-**Gap.** Not asserted in the old cited evidence: Counter registration creates the asset; Technician collision outcome is read back. Asserted: Repeated visits remain in history; Bay collision is read back; History download names the second visit.
+**Gap.** Not asserted in the old cited evidence: Counter registration creates the asset; Technician collision outcome is read back; History download names the second visit. Asserted: Repeated visits remain in history; Bay collision is read back.
 
 #### ESTIMATE-001 — Exact decision
 
@@ -77,7 +77,7 @@ Core · published · **partial** · Rules D-1, D-2, D-3
 1. Complete authorized work, prepare and approve the invoice through the app, export twice with current and preceding versions, and compare saved identity, lines, totals and approval history.
 
 **Evidence.** `src/mallet/invoices.ts`; `tests/mallet.test.mjs`; `tests/browser-journey.mjs`
-**Gap.** Not asserted in the old cited evidence: Approval history retains exact deciding actor and revision; Retry using the preceding version returns the same saved export. Asserted: Actual-work invoice has the expected lines; Exact invoice cent total; Repeated export identity is equal; Exactly one saved export; Exact approval history count.
+**Gap.** Not asserted in the old cited evidence: Approval history retains exact deciding actor and revision; Retry using the preceding version returns the same saved export; Actual-work invoice has the expected lines. Asserted: Exact invoice cent total; Repeated export identity is equal; Exactly one saved export; Exact approval history count.
 
 #### AGENT-001 — Scoped preparation keys
 
@@ -103,7 +103,7 @@ Core · published · **partial** · Cites BASE-INPUT-003, BASE-OPS-003, BASE-OPS
 1. Upload customers and customer-assets API snapshots, preview and apply the fingerprint, replay, resume and undo; inspect originals and journal, and prove an asset used by a new visit survives undo.
 
 **Evidence.** `src/mallet/imports/service.ts`; `src/mallet/imports/snapshots.ts`; `tests/mallet.test.mjs`
-**Gap.** Not asserted in the old cited evidence: An asset with a native visit itself survives undo. Asserted: Preview leaves the asset population absent; Exact reviewed import population; Apply replay has one job identity; Journal retains originals; Journal retains resumed batches; Undo removes untouched assets.
+**Gap.** Not asserted in the old cited evidence: An asset with a native visit itself survives undo; Journal retains resumed batches. Asserted: Preview leaves the asset population absent; Exact reviewed import population; Apply replay has one job identity; Journal retains originals; Undo removes untouched assets.
 
 #### DATA-001 — Custody and erasure
 
@@ -1862,8 +1862,8 @@ Core · push-further · **partial** · Cites BASE-AGENT-006, BASE-AGENT-007, BAS
 **Acceptance.**
 1. Under the held company policy, stall three repairs on evidence, consent and a backorder; inspect distinct cited blockers, approve actions and follow their actual outcomes through to cleared work without falsely marking completion.
 
-**Evidence.** `src/mallet/workshop.ts`; `src/mallet/estimates.ts`; `tests/mallet.test.mjs`
-**Gap.** Estimate and dispatch preparations are asserted under the held company policy. Continuous blocker analysis, ownership and action follow-through remain unbuilt or unproved.
+**Evidence.** `tests/mallet.test.mjs`; `tests/support/blocker-journey.mjs`; `tests/support/blocker-parts.mjs`; `tests/support/blocker-follow-through.mjs`; `tests/support/blocker-archive.mjs`; `tests/blocker-browser.mjs`; `tests/support/blocker-browser-follow-through.mjs`
+**Gap.** Native source-cited blockers, current handlers, prepared steps and evidence, consent, receiving, work and quality follow-through are asserted. Evaluation of agent actions under the held company class policy, including commitment, money and external decisions, is not asserted by the cited evidence.
 
 #### ADV-004 — Source parts and keep promise times current
 

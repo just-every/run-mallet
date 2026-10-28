@@ -1,9 +1,5 @@
-import {runCoverageReviews} from './mallet/coverage-door'
-import {runWebhooks} from './mallet/webhook-door'
-import {runReportSchedules} from './mallet/reports/schedules'
-import {expireIntakeSecrets} from './mallet/intake-secrets'
+import {runMalletScheduled} from './mallet/scheduled'
 import {salesReportResponse} from './mallet/sales-report-door'
-import {runRouting} from './mallet/routing-door'
 import { withDemo } from './modules/demo/index.mjs'
 import { seedDemo } from './demo'
 import { rejectedResponse } from './base/rejected-response'
@@ -17,7 +13,6 @@ import { setupStateResponse } from './base/setup-state'
 import { authResponse, runtimeBindings, type Bindings } from './auth.server'
 import { identity } from './identity'
 import { malletResponse } from './mallet/http'
-import { runApprovalChase } from './mallet/approval-door'
 
 const api = new Hono<{ Bindings: Bindings }>()
 api.get('/health', (context) => context.json({ status: 'ok', ...deploymentHealth(context.env) }))
@@ -49,6 +44,6 @@ export default withDemo<Bindings, ExportedHandler<Bindings>>({
   },
   // EST-006: the cron trigger in wrangler.jsonc sends due estimate reminders.
   async scheduled(controller, env, execution) {
-    execution.waitUntil((async()=>{await runCoverageReviews(env,controller.scheduledTime);await runWebhooks(env,controller.scheduledTime);await runReportSchedules(env,controller.scheduledTime);await runApprovalChase(env, controller.scheduledTime);await runRouting(env, controller.scheduledTime);await expireIntakeSecrets(env,new Date(controller.scheduledTime).toISOString())})())
+    execution.waitUntil(runMalletScheduled(env,controller.scheduledTime))
   },
 } satisfies ExportedHandler<Bindings>, { seed: seedDemo })

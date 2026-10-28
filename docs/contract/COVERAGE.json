@@ -2,7 +2,7 @@
   "schema": 1,
   "seed": "mallet-product",
   "old": {
-    "commit": "726d6b96318e4b0cdae55d6e86e23f6d585180ac",
+    "commit": "f75e662e9acd8125e571f87f7b34a5cdd5433023",
     "files": [
       "CONTRACT.md",
       "ACCEPTANCE.md",
@@ -11411,7 +11411,7 @@
     {
       "file": "CONTRACT.md",
       "line": 483,
-      "text": "| 37 | 07 Board | Agent \"Next blocker\" | ADV-003 | partial |",
+      "text": "| 37 | 07 Board | Agent \"Next blocker\" | ADV-003 | done |",
       "to": "section",
       "section": "Homepage claims"
     },
@@ -11572,9 +11572,15 @@
     {
       "file": "CONTRACT.md",
       "line": 509,
+      "text": "Judged from the code and tests at commit `0c4b8e0be86462c713e63dc7875074220be9e636` (28 October 2026).",
       "to": "section",
-      "section": "Status",
-      "text": "Judged from the code and tests at commit `33a1e50a4250c55a1ca3fb8184f1372a68757364` (27 October 2026)."
+      "section": "Status"
+    },
+    {
+      "file": "CONTRACT.md",
+      "line": 509,
+      "text": "The candidate changes only the generated status documents and source lock after that tested code commit. ADV-003 is newly completed; other clauses retain their existing judgments.",
+      "to": "changelog"
     },
     {
       "file": "CONTRACT.md",
@@ -12253,6 +12259,16 @@
     },
     {
       "file": "CONTRACT.md",
+      "line": 617,
+      "cell": "gap",
+      "text": "Owner-managed internal review register only. Retained shop warranty terms and owner-evidenced service-contract dates are assertions, never independently verified coverage. Adopted conservative default: current owner only, attributable customer permission for internal review, no repair, billing, sending or renewal authority; cancellation and recorded ownership changes stop affected reviews, and restored scheduling needs fresh owner activation. ct approval of this default and scoped delegation remain pending. Outbound renewal messages, customer reply-channel integration, complete consented automated follow-through and renewal execution remain unbuilt or unproved. BILL-001 recurring merchant charging still requires unavailable cloud Stripe credentials; existing payment and books holds and GOV-006 retention and eligibility approval remain unchanged. AUTO-006 remains PARTIAL.",
+      "to": "gap",
+      "ids": [
+        "AUTO-006"
+      ]
+    },
+    {
+      "file": "CONTRACT.md",
       "line": 618,
       "cell": "gap",
       "text": "No repair communication templates, transcript export, language preferences or shared send-policy enforcement.",
@@ -12594,6 +12610,16 @@
     },
     {
       "file": "CONTRACT.md",
+      "line": 653,
+      "cell": "gap",
+      "text": "Advisor, manager, purchaser, cashier and accountant roles with complete limits and location and cost rights remain a named Gap. Native purchaser forms now cover PO preparation and approval, partial barcode receiving, visible physical stock and reservations, bill exception and matching history, and closure within the existing spend and separate cost rights. Linked bins and PO records from other named locations are refused and excluded from permitted downloads. Native grants still cover this installation\u2019s shop and an explicit subset of commands; full intake and communication delegation, accountant reconciliation, delegated destructive rights and multi-shop operation under SHOP-001 remain unbuilt or unproved. ct approved the PARTIAL local-grant slice on 25 Oct 2026 at 18:25Z: only the current owner with fresh confirmation grants or revokes local version-bound rights; zero default limits (a grant with no limit allows no delegated door or command), separate cost right, deny unlisted doors and other locations, no delegated outbound provider submission, and no restored grants. Refunds remain native recorded outcomes with fresh confirmation and bounded authority; connected submissions and redirection stay owner-only. No acceptance point is removed.",
+      "to": "gap",
+      "ids": [
+        "GOV-001"
+      ]
+    },
+    {
+      "file": "CONTRACT.md",
       "line": 654,
       "cell": "gap",
       "text": "Complete historical backfill remains unbuilt or unproved, including initial empty-installation login history; other specialist direct-write revision coverage remains unbuilt or unproved. Owner-configured minimum audit retention is a label only, with no timer or deletion and preserved owner export; the ct 25 October private-custody and no-deletion ruling is retained. Ordinary email-link login, exact media finding and upload transition revisions and durable provider-job state references are now asserted. Delegated auditor access stays with GOV-001. GOV-002 remains PARTIAL; no acceptance point is removed.",
@@ -12718,16 +12744,6 @@
       "to": "gap",
       "ids": [
         "ADV-002"
-      ]
-    },
-    {
-      "file": "CONTRACT.md",
-      "line": 664,
-      "cell": "gap",
-      "text": "Agent-prepared dispatch/estimate proposals with human approval ship; no continuous blocker analysis, ownership or action follow-through.",
-      "to": "gap",
-      "ids": [
-        "ADV-003"
       ]
     },
     {
@@ -14045,6 +14061,20 @@
     },
     {
       "file": "ACCEPTANCE.md",
+      "line": 381,
+      "text": "**AUTO-006 \u2014 Warranty and contract renewal follow-up.** Status: **partial**. [Target, acceptance and remaining work](./CONTRACT.md#customer-communication-and-follow-up).",
+      "to": "generated",
+      "note": "The contract generator writes this status or count."
+    },
+    {
+      "file": "ACCEPTANCE.md",
+      "line": 383,
+      "text": "Evidence: `tests/mallet.test.mjs`; `tests/support/coverage-follow-up-journey.mjs`; `tests/warranty-browser.mjs`; `tests/coverage-follow-up-browser.mjs`.",
+      "to": "generated",
+      "note": "The contract generator writes this status or count."
+    },
+    {
+      "file": "ACCEPTANCE.md",
       "line": 385,
       "text": "**MSG-004 \u2014 Communication controls and searchable history.** Status: **missing**. [Target, acceptance and remaining work](./CONTRACT.md#customer-communication-and-follow-up).",
       "to": "generated",
@@ -14690,16 +14720,18 @@
     {
       "file": "ACCEPTANCE.md",
       "line": 583,
-      "text": "**ADV-003 \u2014 Resolve the next repair blocker.** Status: **partial**. [Target, acceptance and remaining work](./CONTRACT.md#push-further-with-a-service-advisor-agent).",
+      "text": "**ADV-003 \u2014 Resolve the next repair blocker.** Status: **done**. [Target, acceptance and remaining work](./CONTRACT.md#push-further-with-a-service-advisor-agent).",
       "to": "generated",
-      "note": "The contract generator writes this status or count."
+      "note": "Legacy ADV-003 status/index line; the generated acceptance entry carries the current audited status."
     },
     {
       "file": "ACCEPTANCE.md",
       "line": 585,
-      "text": "Evidence: `src/mallet/workshop.ts`; `src/mallet/estimates.ts`; `tests/mallet.test.mjs`.",
-      "to": "generated",
-      "note": "The contract generator writes this status or count."
+      "text": "Evidence: `tests/mallet.test.mjs`; `tests/support/blocker-journey.mjs`; `tests/support/blocker-parts.mjs`; `tests/support/blocker-follow-through.mjs`; `tests/support/blocker-archive.mjs`; `tests/blocker-browser.mjs`; `tests/support/blocker-browser-follow-through.mjs`.",
+      "to": "clause",
+      "ids": [
+        "ADV-003"
+      ]
     },
     {
       "file": "ACCEPTANCE.md",
@@ -15002,8 +15034,9 @@
     {
       "file": "docs/CLAIMS.md",
       "line": 43,
-      "text": "| 37 | ADV-003 | partial |",
-      "to": "changelog"
+      "text": "| 37 | ADV-003 | done |",
+      "to": "section",
+      "section": "Homepage claims"
     },
     {
       "file": "docs/CLAIMS.md",
@@ -15136,40 +15169,6 @@
       "line": 65,
       "text": "| 59 | OPEN-001 | done |",
       "to": "changelog"
-    },
-    {
-      "file": "CONTRACT.md",
-      "line": 617,
-      "cell": "gap",
-      "text": "Owner-managed internal review register only. Retained shop warranty terms and owner-evidenced service-contract dates are assertions, never independently verified coverage. Adopted conservative default: current owner only, attributable customer permission for internal review, no repair, billing, sending or renewal authority; cancellation and recorded ownership changes stop affected reviews, and restored scheduling needs fresh owner activation. ct approval of this default and scoped delegation remain pending. Outbound renewal messages, customer reply-channel integration, complete consented automated follow-through and renewal execution remain unbuilt or unproved. BILL-001 recurring merchant charging still requires unavailable cloud Stripe credentials; existing payment and books holds and GOV-006 retention and eligibility approval remain unchanged. AUTO-006 remains PARTIAL.",
-      "to": "gap",
-      "ids": [
-        "AUTO-006"
-      ]
-    },
-    {
-      "file": "ACCEPTANCE.md",
-      "line": 381,
-      "text": "**AUTO-006 \u2014 Warranty and contract renewal follow-up.** Status: **partial**. [Target, acceptance and remaining work](./CONTRACT.md#customer-communication-and-follow-up).",
-      "to": "generated",
-      "note": "The contract generator writes this status or count."
-    },
-    {
-      "file": "ACCEPTANCE.md",
-      "line": 383,
-      "text": "Evidence: `tests/mallet.test.mjs`; `tests/support/coverage-follow-up-journey.mjs`; `tests/warranty-browser.mjs`; `tests/coverage-follow-up-browser.mjs`.",
-      "to": "generated",
-      "note": "The contract generator writes this status or count."
-    },
-    {
-      "file": "CONTRACT.md",
-      "line": 653,
-      "cell": "gap",
-      "text": "Advisor, manager, purchaser, cashier and accountant roles with complete limits and location and cost rights remain a named Gap. Native purchaser forms now cover PO preparation and approval, partial barcode receiving, visible physical stock and reservations, bill exception and matching history, and closure within the existing spend and separate cost rights. Linked bins and PO records from other named locations are refused and excluded from permitted downloads. Native grants still cover this installation\u2019s shop and an explicit subset of commands; full intake and communication delegation, accountant reconciliation, delegated destructive rights and multi-shop operation under SHOP-001 remain unbuilt or unproved. ct approved the PARTIAL local-grant slice on 25 Oct 2026 at 18:25Z: only the current owner with fresh confirmation grants or revokes local version-bound rights; zero default limits (a grant with no limit allows no delegated door or command), separate cost right, deny unlisted doors and other locations, no delegated outbound provider submission, and no restored grants. Refunds remain native recorded outcomes with fresh confirmation and bounded authority; connected submissions and redirection stay owner-only. No acceptance point is removed.",
-      "to": "gap",
-      "ids": [
-        "GOV-001"
-      ]
     }
   ]
 }
