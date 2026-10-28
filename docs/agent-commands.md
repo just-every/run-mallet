@@ -1,3 +1,5 @@
+The company MCP door, supported preparation tools and current adoption limits are documented in [Company agents in Mallet](/docs/agent-door). Original preparation-key REST calls enter that same policy pipeline and require an answered policy.
+
 Use the real app origin. `GET /api/mallet/state` returns `{actor,version,records}`. The top-level `version` is the store version; commands below use the relevant **record's** `version`. Read current records after each write: commands can update related records too. A version conflict requires a refresh and review of the changed record.
 
 Send commands as JSON:

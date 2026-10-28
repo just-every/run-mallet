@@ -504,6 +504,21 @@ Every capability claim on the approved homepage (`src/site/landing/`, checked ag
 | 58 | 13 Closing | "100% free and open source. MIT licensed." | OPEN-001 | done |
 | 59 | Footer | "Free, open source shop management" | OPEN-001 | done |
 
+### Shared preparation door
+
+The copied Base agent door is the single MCP and company-policy receiver for
+Mallet's current AGENT-001 preparation surface. It inherits BASE-AGENT-001,
+BASE-AGENT-002, BASE-AGENT-003, BASE-AGENT-004, BASE-AGENT-005,
+BASE-AGENT-006, BASE-AGENT-007, BASE-AGENT-008, BASE-AGENT-009,
+BASE-AGENT-010, BASE-AGENT-011, BASE-AGENT-012 and BASE-AGENT-013.
+`agent-surface.json` declares the adopted registry and public-door journey.
+Native human decisions, customer consent, physical evidence and provider outcomes
+remain separate from preparation. This adoption does not assert the pending ct
+service-advisor surface or change the native owner-confirmation riders.
+Queued agent execution remains unadopted: the pinned Base tool context does not
+carry the authenticated consent into native queued work. See
+[the agent door's supported scope](docs/agent-door.md).
+
 ## Status
 
 Judged from the code and tests at commit `33a1e50a4250c55a1ca3fb8184f1372a68757364` (27 October 2026).

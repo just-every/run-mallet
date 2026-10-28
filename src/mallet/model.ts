@@ -62,7 +62,7 @@ import {inspectionReports,reportCommands} from './inspection-reports'
 import {bookings,bookingCommands} from './bookings'
 
 export type Row = { id: string; version: number; [key: string]: any }
-export type Actor = { id: string; name: string; role: 'owner' | 'admin' | 'member' | 'agent' | 'customer' | 'system'; staffRole?:string; assistantGrantId?:string }
+export type Actor = { id: string; name: string; role: 'owner' | 'admin' | 'member' | 'agent' | 'customer' | 'system'; staffRole?:string; assistantGrantId?:string;attribution?:{agent:{id:string;name:string};for:{id:string;name:string};label:string};policyApprovers?:{id:string;name:string}[] }
 export type State = { version: number; records: Record<string, Row[]> }
 export type Context = { s: State; actor: Actor; now: string }
 export type Handler = (c: Context, command: string, p: any) => any
@@ -99,7 +99,7 @@ export function expectVersion(row: Row, version: unknown) {
   integer(version, 'version', 1, Number.MAX_SAFE_INTEGER)
   if (row.version !== version) fail('VERSION', 'This record changed. Refresh before continuing.', { id: row.id, current: row.version })
 }
-export const who = (c: Context) => ({ id: c.actor.id, name: c.actor.name, role: c.actor.role,...(c.actor.staffRole?{staffRole:c.actor.staffRole}:{}) })
+export const who = (c: Context) => ({ id: c.actor.id, name: c.actor.name, role: c.actor.role,...(c.actor.staffRole?{staffRole:c.actor.staffRole}:{}),...(c.actor.attribution?{attribution:c.actor.attribution,policyApprovers:c.actor.policyApprovers??[]}:{}) })
 export function put(s: State, kind: string, value: Record<string, any>): Row {
   const row = { ...value, id: crypto.randomUUID(), version: 1 } as Row
   rows(s, kind).push(row)

@@ -1,3 +1,5 @@
+The company MCP door, supported preparation tools and current adoption limits are documented in [Company agents in Mallet](/docs/agent-door). Original preparation-key REST calls enter that same policy pipeline and require an answered policy.
+
 Mallet has three base roles for people, preparation keys and separate scoped assistant grants. People decide; each assistant receives only its explicitly granted work.
 
 ## Roles

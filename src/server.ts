@@ -18,6 +18,9 @@ import { authResponse, runtimeBindings, type Bindings } from './auth.server'
 import { identity } from './identity'
 import { malletResponse } from './mallet/http'
 import { runApprovalChase } from './mallet/approval-door'
+import { agentResponse } from './mallet/agent-door/index.ts'
+import { businessSettings } from './mallet/business.ts'
+import { preparationAlias } from './mallet/agent-door/legacy.ts'
 
 const api = new Hono<{ Bindings: Bindings }>()
 api.get('/health', (context) => context.json({ status: 'ok', ...deploymentHealth(context.env) }))
@@ -35,6 +38,12 @@ export default withDemo<Bindings, ExportedHandler<Bindings>>({
   async fetch(request, env, execution) {
     const asset = await staticAssetResponse(request, env)
     if (asset) return asset
+    const business = await (await businessSettings(runtimeBindings(env))).handle(request)
+    if (business) return rejectedResponse(request, business)
+    const agent = await agentResponse(request, env)
+    if (agent) return rejectedResponse(request, agent)
+    const preparation = await preparationAlias(request, env)
+    if (preparation) return rejectedResponse(request, preparation)
     const auth = await authResponse(request, env)
     if (auth) return auth
     const workshop = await salesReportResponse(request, env) ?? await malletResponse(request, env, execution)
