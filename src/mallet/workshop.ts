@@ -56,7 +56,7 @@ export const workshop: Handler = (c, command, p) => {
       expectVersion(asset, p.version)
       const fields = assetFields(p,asset)
       if (rows(c.s, 'asset').some(a => a.id !== asset.id && a.identifier.toLowerCase() === fields.identifier.toLowerCase())) fail('DUPLICATE', 'An asset with that identifier is already on file.')
-      const row = bump(c.s, 'asset', asset, fields)
+      const row = bump(c.s, 'asset', asset, {...fields,customerEmailAccountId:fields.customerEmail!==asset.customerEmail?(asset.customerAccountId??null):(asset.customerEmailAccountId??asset.customerAccountId??null)})
       event(c, command, null, row.id, { before: assetFields(asset), after: fields })
       return row
     }

@@ -376,7 +376,7 @@ test('GOV-004: stolen, revoked and expired customer links look unknown on every 
 test('GOV-004 / GOV-005: authenticator app, passkey, sign-in confirmation, step-up and sealed connector credentials through native forms at 1440/390',securityBrowser)
 test('GOV-005: sealed provider secrets rotate and revoke behind a fresh proof, webhooks prove their origin, and no secret reaches a response, archive, audit row or log',connectorJourney)
 
- test('GOV-006: explicit holds, customer erasure, import custody and manual retention survive fresh-owner recovery without resurrecting media',async()=>{const {retentionJourney}=await import('./support/retention-journey.mjs');const {mailboxErasureJourney}=await import('./support/mailbox-erasure-journey.mjs');await run(async h=>{await retentionJourney(h);await mailboxErasureJourney(h)})})
+ test('GOV-006: explicit holds, customer erasure, import custody and manual retention survive fresh-owner recovery without resurrecting media',async()=>{const {retentionJourney}=await import('./support/retention-journey.mjs');const {mailboxErasureJourney,transferredMailboxJourney}=await import('./support/mailbox-erasure-journey.mjs');await run(async h=>{await retentionJourney(h);await mailboxErasureJourney(h)});await run(h=>transferredMailboxJourney(h))})
 
 test('GOV-006: owner reviews financial and media holds, erases eligible photos and releases a hold for manual retention at 1440/390',async()=>{const {retentionBrowser}=await import('./retention-browser.mjs');await retentionBrowser()})
 

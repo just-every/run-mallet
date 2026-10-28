@@ -108,3 +108,56 @@ export async function mailboxErasureJourney(h,{observe=async()=>{}}={}){
  assert.equal((await h.state()).records.appointment.find(a=>a.startAt===startAt&&a.serviceId===service.id).email,'')
  assert.equal((await h.request(paths[2],{as:''})).status,200)
 }
+
+/** A vehicle and a reused address never transfer another person's booking history. */
+export async function transferredMailboxJourney(h,{observe=async()=>{}}={}){
+ await shopSetup(h)
+ const a=await identity(h,110),b=await identity(h,120)
+ const start=new Date(Date.now()+3*86400000).toISOString().slice(0,10)+'T09:00:00.000Z'
+ const service=await bookingService(h,{windows:[{startAt:start,endAt:start.replace('09:','17:'),bayId:reason,technicianId:(await h.state()).actor.id,skills:['inspection']}]})
+ const paths=[],appointments=[]
+ for(const n of [110,111,120,121]){
+  const input=holdFields(service),startAt=new Date(Date.parse(start)+paths.length*3600000).toISOString()
+  const response=await bookingPost(h,'/book',{...input,email:mailbox(n),slotId:slotId(service,{...input,startAt})})
+  assert.equal(response.status,303);const path=response.headers.get('location');paths.push(path)
+  assert.equal((await bookingPost(h,path,{action:'confirm',version:1})).status,200)
+  appointments.push((await h.state()).records.appointment.find(r=>r.serviceId===service.id&&r.startAt===startAt))
+ }
+ const now=Date.now(),hour=new Date(now).getUTCHours(),reminders=[]
+ for(const appointment of appointments){
+  reminders.push(await h.command('outreach.schedule',{kind:'appointment',subjectId:appointment.id,version:appointment.version,dueAt:new Date(now-1000).toISOString(),expiresAt:new Date(now+3600000).toISOString(),timeZone:'UTC',allowedStart:hour,allowedEnd:(hour+2)%24,instructions:reason,consent:true,consentEvidence:reason}))
+ }
+ await h.cron(now)
+ const reminderPaths=appointments.map(a=>{const m=h.messages.findLast(m=>m.subject==='Your appointment reminder'&&m.to.includes(a.email));assert.ok(m);return new URL(m.text.match(/https?:\S+\/book\/\S+/)[0]).pathname})
+ assert.equal(reminderPaths.length,4)
+ const pending=[]
+ for(const appointment of appointments){
+  const latest=(await h.state()).records.appointment.find(r=>r.id===appointment.id)
+  pending.push(await h.command('outreach.schedule',{kind:'appointment',subjectId:latest.id,version:latest.version,dueAt:new Date(now+600000).toISOString(),expiresAt:new Date(now+3600000).toISOString(),timeZone:'UTC',allowedStart:hour,allowedEnd:(hour+2)%24,instructions:reason,consent:true,consentEvidence:reason}))
+ }
+ a.asset=await h.command('customer.linkAsset',{assetId:a.asset.id,version:a.asset.version,customerId:b.account.id,customerVersion:b.account.version,reason})
+ a.asset=await h.command('asset.update',{...a.asset,assetId:a.asset.id,customerEmail:mailbox(122)})
+ await correct(h,b,124)
+ // Reusing A's address on B's contact must not turn A's existing rows into B's.
+ b.contact=await h.command('contact.save',{...b.contact,contactId:b.contact.id,email:mailbox(110)})
+ const before=await h.state(),aIds=new Set(appointments.slice(0,2).map(r=>r.id)),aReminderIds=new Set([...reminders.slice(0,2),...pending.slice(0,2)].map(r=>r.id))
+ await observe('before',{paths,person:b})
+ await erase(h,b.account)
+ const after=await h.state()
+ assert.deepEqual(after.records.appointment.filter(r=>aIds.has(r.id)),before.records.appointment.filter(r=>aIds.has(r.id)),'A appointments survive vehicle transfer and B erasure')
+ assert.deepEqual(after.records.outreach.filter(r=>aReminderIds.has(r.id)),before.records.outreach.filter(r=>aReminderIds.has(r.id)),'A sent and pending reminders are untouched')
+ for(const path of [...paths.slice(0,2),...reminderPaths.slice(0,2)])assert.equal((await h.request(path,{as:''})).status,200,'A keeps booking and reminder access')
+ const unknown=await h.request('/book/'+'x'.repeat(43),{as:''}),body=await unknown.text()
+ for(const path of [...paths.slice(2),...reminderPaths.slice(2)]){
+  const response=await h.request(path,{as:''});assert.equal(response.status,unknown.status);assert.equal(await response.text(),body)
+  assert.equal((await bookingPost(h,path,{action:'confirm',version:1})).status,404)
+ }
+ for(const appointment of appointments.slice(2))assert.equal(after.records.appointment.find(r=>r.id===appointment.id).email,'','B earlier-mailbox appointment is erased')
+ for(const reminder of [...reminders.slice(2),...pending.slice(2)])assert.equal(after.records.outreach.find(r=>r.id===reminder.id).to,'Erased customer','B earlier-mailbox email is erased')
+ const bMailCount=h.messages.filter(m=>appointments.slice(2).some(a=>m.to.includes(a.email))).length
+ const aMailCount=h.messages.filter(m=>appointments.slice(0,2).some(a=>m.to.includes(a.email))).length
+ await h.cron(now+900000)
+ assert.equal(h.messages.filter(m=>appointments.slice(2).some(a=>m.to.includes(a.email))).length,bMailCount,'B pending email authority stays revoked')
+ assert.equal(h.messages.filter(m=>appointments.slice(0,2).some(a=>m.to.includes(a.email))).length,aMailCount+2,'A pending reminders still send normally')
+ await observe('after',{paths,person:b})
+}

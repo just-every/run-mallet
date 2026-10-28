@@ -26,3 +26,7 @@ CT assigned this new clause from the pre-existing appointment-link erasure findi
 > Erasure follows the person's earlier mailboxes. After a linked customer's contact or vehicle email was corrected, customer.erase also revokes the old private appointment and booking links, and redacts or erases the appointment, email and booking records keyed by any prior mailbox, with the retention-cleanup path and the archive and restore fences unchanged; allowed erasure completes, an old link then returns the same refusal as any erased link.
 
 The four numbered acceptance points in CONTRACT.md split only this ruling.
+
+## ERASE-001 — 28 October 2026, 18:26 UTC
+
+CT's ownership clarification: erasure follows a person's earlier mailboxes only for records keyed to that person, never another owner's record of the same vehicle or address. The public-door journey transfers A's vehicle to B, corrects its email, then erases B: A's appointments, reminders and booking links remain exact; B's earlier-mailbox records are erased and old links refuse. This clarifies the existing four outcomes without adding an acceptance point.

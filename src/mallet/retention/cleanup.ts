@@ -1,4 +1,4 @@
-import {eraseMailboxRecords} from './mailboxes'
+import {eraseMailboxRecords,type MailboxRecords} from './mailboxes'
 import {privateBlockerRecord} from '../repair-blocker-privacy'
 import {eraseCoverageContent} from './coverage'
 import {eraseReviewFeedback} from './reviews'
@@ -11,7 +11,7 @@ import type {Sql} from '../media/types'
 export function erasedAsset(asset:Row,at:string):Row{
  return {id:asset.id,version:asset.version+1,label:asset.label,identifier:asset.identifier,visits:asset.visits??[],createdAt:asset.createdAt,customerAccountId:asset.customerAccountId,customerName:'Erased customer',customerEmail:'',driverContactId:null,privacyErasedAt:at,updatedAt:at}
 }
-export function personalCleanup(state:State,scope:CustomerScope,at:string,mailboxes:Set<string>){
+export function personalCleanup(state:State,scope:CustomerScope,at:string,mailboxes:MailboxRecords){
  const queries:Sql[]=[],counts={accounts:0,contacts:0,sharedContactsRetained:0}
  for(const a of scope.accounts){
   queries.push(write('customerAccount',{id:a.id,version:a.version+1,name:'Erased customer',kind:a.kind,contactIds:a.contactIds??[],payerId:a.payerId,billingContactId:a.billingContactId,driverId:null,authorizerId:null,taxStatus:a.taxStatus,mergedInto:a.mergedInto??null,history:[],notes:'',payerRevision:(a.payerRevision??1)+1,privacyErasedAt:at,at}));counts.accounts++

@@ -1,3 +1,4 @@
+import {mailboxOwnerIds} from './mailbox-identity'
 import {bookings,bookingSlots,bookingSlotId} from './bookings'
 import {instant} from './workshop'
 import {bump,event,expectVersion,fail,find,put,rows,text,who,type Context,type Handler,type Row} from './model'
@@ -25,7 +26,7 @@ export function offerCanceledAppointment(c:Context,canceled:Row,advance=false,ve
  // Reuse the ordinary reservation reducer, including its capacity and abuse limits.
  const appointment=bookings(c,'booking.hold',{serviceId:service.id,slotId:bookingSlotId(service,plan),name:entry.name,email:entry.email,sourceHash:entry.sourceHash,consent:true})
  const offer=put(c.s,'waitlistOffer',{entryId:entry.id,triggerAppointmentId:canceled.id,appointmentId:appointment.id,createdAt:c.now,expiresAt:appointment.expiresAt,delivery:{id:crypto.randomUUID(),status:'pending'},by:who(c)})
- bump(c.s,'appointment',appointment,{waitlistEntryId:entry.id,waitlistOfferId:offer.id})
+ bump(c.s,'appointment',appointment,{waitlistEntryId:entry.id,waitlistOfferId:offer.id,mailboxOwnerIds:entry.mailboxOwnerIds??appointment.mailboxOwnerIds})
  bump(c.s,'bookingWaitlist',entry,{status:'offered',offerId:offer.id,offeredAt:c.now})
  event(c,'waitlist.offered',null,entry.id,{offerId:offer.id,appointmentId:appointment.id,expiresAt:appointment.expiresAt})
  return offer
@@ -42,7 +43,7 @@ export const bookingWaitlist:Handler=(c,command,p)=>{
   if(p.consent!==true)fail('WAITLIST_CONSENT','Record the customer’s explicit request for a cancellation offer email.',null,422)
   if(rows(c.s,'bookingWaitlist').some(x=>x.serviceId===service.id&&x.email===email&&x.status==='waiting'))fail('WAITLIST_DUPLICATE','This customer is already waiting for this service.')
   const sequence=Math.max(0,...rows(c.s,'bookingWaitlist').map(x=>x.sequence))+1
-  const row=put(c.s,'bookingWaitlist',{serviceId:service.id,name:text(p.name,'customer name'),email,earliestAt,latestAt,timeZone:service.timeZone,sourceHash:text(p.sourceHash,'request source',64),sequence,status:'waiting',createdAt:c.now,by:who(c),consent:{at:c.now,recordedBy:who(c),evidence:text(p.evidence,'customer request evidence',1000),text:'The customer requests a cancellation offer email for this service and date interval. No repair work or payment is authorized.'}})
+  const row=put(c.s,'bookingWaitlist',{serviceId:service.id,name:text(p.name,'customer name'),email,mailboxOwnerIds:mailboxOwnerIds(c.s,email),earliestAt,latestAt,timeZone:service.timeZone,sourceHash:text(p.sourceHash,'request source',64),sequence,status:'waiting',createdAt:c.now,by:who(c),consent:{at:c.now,recordedBy:who(c),evidence:text(p.evidence,'customer request evidence',1000),text:'The customer requests a cancellation offer email for this service and date interval. No repair work or payment is authorized.'}})
   event(c,command,null,row.id,{serviceId:service.id,sequence});return row
  }
  if(command==='waitlist.withdraw'){

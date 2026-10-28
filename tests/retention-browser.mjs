@@ -1,4 +1,4 @@
-import {mailboxErasureJourney} from './support/mailbox-erasure-journey.mjs'
+import {mailboxErasureJourney,transferredMailboxJourney} from './support/mailbox-erasure-journey.mjs'
 import assert from 'node:assert/strict'
 import {mkdir} from 'node:fs/promises'
 import {join} from 'node:path'
@@ -47,6 +47,12 @@ export async function retentionBrowser(){
    await p.goto(h.origin+'/app/bookings');await shot('mailbox-'+stage+'-staff-bookings',p.getByRole('heading',{name:'Customer appointments'}).locator('..'))
    await p.goto(h.origin+'/app/retention?customerId='+person.account.id);await shot('mailbox-'+stage+'-retention')
   }})
+  const transferred=await installation({network:true,secureNetwork:true,assets:true})
+  try{await transferredMailboxJourney(transferred,{observe:async(stage,{paths})=>{
+   for(const [owner,index] of [['a',0],['b',2]]){
+    await p.goto(transferred.origin+paths[index]);await shot('transfer-'+stage+'-'+owner+'-private-appointment')
+   }
+  }})}finally{await transferred.close()}
   assert.deepEqual(errors,[])
  }finally{await browser?.close();await h.close()}
 }

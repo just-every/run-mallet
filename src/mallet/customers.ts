@@ -69,6 +69,6 @@ export const customers:Handler=(c,command,p)=>{
  const driverId=p.driverId?text(p.driverId,'driver'):account.driverId
  if(driverId&&!account.contactIds.includes(driverId))fail('CONTACT_SCOPE','The driver must be one of this account’s contacts.')
  if(command==='customer.linkAsset'&&asset.customerAccountId!==account.id&&(account.kind==='fleet'||rows(c.s,'customerAccount').some(a=>a.id===asset.customerAccountId&&a.kind==='fleet')))voidFleetApprovals(c,new Set([asset.id]),'The vehicle fleet account changed; review the account and authorize a new revision.')
- const saved=bump(c.s,'asset',asset,{customerAccountId:account.id,customerName:account.name,driverContactId:driverId,updatedAt:c.now})
+ const saved=bump(c.s,'asset',asset,{customerEmailAccountId:asset.customerEmailAccountId??asset.customerAccountId??account.id,customerAccountId:account.id,customerName:account.name,driverContactId:driverId,updatedAt:c.now})
  event(c,command,null,asset.id,{accountId:account.id,driverId,reason:text(p.reason,'relationship change reason',2000)});return saved
 }

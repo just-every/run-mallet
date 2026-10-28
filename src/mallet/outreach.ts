@@ -1,3 +1,4 @@
+import {mailboxOwnerIds} from './mailbox-identity'
 import {optedOut} from './approval-chasing'
 import {balanceReminderReview,balanceReminderContent} from './receivables'
 import {bump,event,expectVersion,fail,find,integer,put,rows,text,who,type Handler,type State} from './model'
@@ -70,7 +71,7 @@ export const outreach:Handler=(c,command,p)=>{
   }
   if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(source.to??''))fail('INPUT','A current customer email is required.',null,400)
   if(rows(c.s,'outreach').some(r=>r.subjectId===source.subjectId&&['pending','claimed'].includes(r.status)&&!r.stoppedAt))fail('OUTREACH_ACTIVE','Stop the existing follow-up before scheduling another.')
-  const row=put(c.s,'outreach',{...source,kind,dueAt,expiresAt,timeZone,allowedStart,allowedEnd,instructions:text(p.instructions,'pre-visit or follow-up instructions',2000),consentEvidence:text(p.consentEvidence,'customer email consent evidence',2000),by:who(c),at:c.now,status:'pending'})
+  const row=put(c.s,'outreach',{...source,mailboxOwnerIds:mailboxOwnerIds(c.s,source.to),kind,dueAt,expiresAt,timeZone,allowedStart,allowedEnd,instructions:text(p.instructions,'pre-visit or follow-up instructions',2000),consentEvidence:text(p.consentEvidence,'customer email consent evidence',2000),by:who(c),at:c.now,status:'pending'})
   event(c,command,null,row.id,{kind,subjectId:row.subjectId});return row
  }
  const row=find(c.s,'outreach',p.id);expectVersion(row,p.version)

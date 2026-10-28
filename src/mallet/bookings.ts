@@ -1,3 +1,4 @@
+import {mailboxOwnerIds} from './mailbox-identity'
 import {resourceFields} from './calendar-capacity'
 import {recordAttendance} from './booking-attendance'
 import {offerCanceledAppointment} from './booking-waitlist'
@@ -49,7 +50,7 @@ export const bookings:Handler=(c,command,p)=>{
   if(held.filter(a=>a.sourceHash===sourceHash).length>=3)fail('BOOKING_SOURCE_LIMIT','Too many tentative appointments from this connection. Confirm or cancel an existing hold, or wait for it to expire.',null,429)
   const service=find(c.s,'bookingService',p.serviceId),plan=available(c.s,service,p,c.now)
   if(p.consent!==true)fail('BOOKING_CONSENT','Explicitly request this appointment and its confirmation email.',null,422)
-  const row=put(c.s,'appointment',{...plan,serviceId:service.id,serviceVersion:service.version,service:{name:service.name,location:service.location,timeZone:service.timeZone,skill:service.skill,durationMinutes:service.durationMinutes},name:text(p.name,'your name'),email,sourceHash,status:'held',expiresAt:new Date(Date.parse(c.now)+service.holdSeconds*1000).toISOString(),createdAt:c.now,consent:{text:'I request this appointment and its confirmation email. This does not authorize repair work or payment.',at:c.now},history:[],delivery:null})
+  const row=put(c.s,'appointment',{...plan,serviceId:service.id,serviceVersion:service.version,service:{name:service.name,location:service.location,timeZone:service.timeZone,skill:service.skill,durationMinutes:service.durationMinutes},name:text(p.name,'your name'),email,mailboxOwnerIds:mailboxOwnerIds(c.s,email),sourceHash,status:'held',expiresAt:new Date(Date.parse(c.now)+service.holdSeconds*1000).toISOString(),createdAt:c.now,consent:{text:'I request this appointment and its confirmation email. This does not authorize repair work or payment.',at:c.now},history:[],delivery:null})
   event(c,command,null,row.id,{status:'held',expiresAt:row.expiresAt});return row
  }
  const row=find(c.s,'appointment',p.appointmentId);expectVersion(row,p.version)
