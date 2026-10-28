@@ -62,7 +62,8 @@ export async function declinedFixture(h){
  const quote=await h.command('estimate.approve',{estimateId:repriced.estimate.id,version:repriced.estimate.version,revision:1})
  return {item:repriced.item,quote,job:later.job,asset,stock,bin,bay}
 }
-export const declinedConsentInput=(fixture,overrides={})=>({subjectId:fixture.item.id,version:fixture.item.version,to:fixture.asset.customerEmail,purpose:'declined-work',wordingVersion:'declined-permission-v1',consent:true,consentedAt:'2026-10-01T09:00:00-04:00',captureChannel:'telephone',sourceEvidence:'Recorded customer telephone permission for this exact declined item; synthetic-mallet-806',...overrides})
+let permissionCapture=0
+export const declinedConsentInput=(fixture,overrides={})=>({subjectId:fixture.item.id,version:fixture.item.version,to:fixture.asset.customerEmail,purpose:'declined-work',wordingVersion:'declined-permission-v1',consent:true,consentedAt:'2026-10-01T09:00:00-04:00',captureChannel:'telephone',sourceEvidence:'Recorded customer telephone permission for this exact declined item; synthetic-mallet-806-'+(++permissionCapture),...overrides})
 export const declinedAvailabilityInput=(fixture,overrides={})=>({subjectId:fixture.item.id,version:fixture.item.version,estimateId:fixture.quote.id,quoteVersion:fixture.quote.version,mappings:fixture.quote.revisions.at(-1).lines.filter(l=>l.kind==='part').map(l=>({lineId:l.id,itemId:fixture.stock.id,binId:fixture.bin.id})),expiresAt:'2026-11-01T18:00:00Z',evidence:'Inspected native receiving and booked repair sources; synthetic-mallet-807',...overrides})
 export async function declinedScheduleFields(h,fixture,overrides={}){
  const consent=await h.command('outreach.consent',declinedConsentInput(fixture)),availability=await h.command('outreach.availability',declinedAvailabilityInput(fixture))

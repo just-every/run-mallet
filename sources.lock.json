@@ -584,7 +584,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "840b22d5d223ab247488ae93e399e3601c2bb877316dd5d73a1b967a8bd83c01",
+      "sha256": "a7a1fef096571cfa5c9d8b629f0eee2f84752df8a9fd8d64ba11c3ba311939ce",
       "executable": false
     },
     "deploy-demo.json": {
@@ -1708,7 +1708,7 @@
       "executable": false
     },
     "src/mallet/declined-outreach.ts": {
-      "sha256": "90a7dce8d50551ee81082f5c4f50523507fffbd48432a85ee6defc39a14e4b5c",
+      "sha256": "cc48401f479dfab7320d0087e1002a66c91056c19fa27b4de084254a1b3d3abb",
       "executable": false
     },
     "src/mallet/declined-work.ts": {
@@ -5044,7 +5044,7 @@
       "executable": false
     },
     "tests/support/declined-outreach-journey.mjs": {
-      "sha256": "f4db4f24ee89c58303d86e42491cc2a610e39aee431ff8f0a142c51c7306df5b",
+      "sha256": "9f2f865b1f27cbf85bcc84a7c33dfd76e28c36e39e8841b35923a2cab490e966",
       "executable": false
     },
     "tests/support/deposits-journey.mjs": {
@@ -5136,7 +5136,7 @@
       "executable": false
     },
     "tests/support/outreach-journey.mjs": {
-      "sha256": "a6f1a2e1c8c5006775d8a4a6f3ecaab7e3251935da54724e6dcb3e3e71008353",
+      "sha256": "9bda79f858efbbb24ca3cb5ac4df3bdb82a5e0cba9743946dd517e6d4c8fe12b",
       "executable": false
     },
     "tests/support/parts-browser.mjs": {

@@ -14,6 +14,9 @@ export async function declinedEligibilityJourney(){
   const sent=()=>h.messages.filter(m=>m.subject==='Your declined-work follow-up').length
   const approve=async(overrides={})=>h.command('outreach.schedule',await declinedScheduleFields(h,fixture,overrides))
   const stopped=async(row,pattern)=>{const count=sent();await h.cron('2026-11-01T14:00:00Z');assert.equal(sent(),count,'Invalidated approval never reaches the controlled mail edge');assert.match((await latest('outreach',row.id)).stopReason,pattern);assert.equal((await latest('outreach',row.id)).status,'stopped')}
+  const capture=declinedConsentInput(fixture),permission=await h.command('outreach.consent',capture),captured=(await h.state()).records.declinedConsent.length
+  assert.deepEqual(await h.command('outreach.consent',capture),permission)
+  assert.equal((await h.state()).records.declinedConsent.length,captured,'Replaying one customer statement cannot create a second permission')
   // A changed stock ledger invalidates even when plenty of the part remains.
   let row=await approve(),fields=await declinedScheduleFields(h,fixture)
   await h.command('stock.receive',{itemBarcode:stock.barcode,binBarcode:bin.barcode,quantity:1,expectedQuantity:1,reference:'synthetic-mallet-822',reason:'A new native receipt after approval'})
@@ -53,7 +56,11 @@ export async function declinedEligibilityJourney(){
   assert.equal(row.status,'failed');assert.equal(row.resolution.by.id,(await h.state()).actor.id);const resolvedId=row.id
   reject=false;const accepted=await approve();await Promise.all([h.cron('2026-11-01T14:20:00Z'),h.cron('2026-11-01T14:20:00Z')]);await h.restart();await h.cron('2026-11-01T14:25:00Z');assert.equal(sent(),count+2)
   row=await latest('outreach',accepted.id);assert.equal(row.status,'accepted');assert.equal(row.providerReference,'synthetic-mallet-821');assert.equal(h.messages.at(-1).text,row.content);assert.deepEqual(h.messages.at(-1).to,[row.to])
-  await h.command('outreach.schedule',{...afterFailure,consentId:row.consentId,consentVersion:row.consentVersion},{status:409})
+  const used=await latest('declinedConsent',row.consentId)
+  const replayed=await h.command('outreach.consent',declinedConsentInput(fixture,{to:used.to,consentedAt:used.consentedTime,captureChannel:used.captureChannel,sourceEvidence:used.sourceEvidence}))
+  assert.equal(replayed.id,used.id,'A used one-email permission stays used when its capture is replayed')
+  await h.command('outreach.schedule',{...afterFailure,consentId:replayed.id,consentVersion:replayed.version},{status:409})
+  assert.equal(sent(),count+2)
   const pending=await approve(),backup=await archive(h),fresh=await installation({clock:OUTREACH_CLOCK,bindings:{OWNER_EMAIL:'synthetic-mallet-826'+String.fromCharCode(64)+'example.test'}})
   try{
    await restore(fresh,backup)

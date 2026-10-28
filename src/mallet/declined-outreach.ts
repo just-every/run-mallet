@@ -74,7 +74,11 @@ export function declinedOutreachCommand(c:Context,command:string,p:any):any{
   if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)||to!==declinedRecipient(asset))fail('OUTREACH_RECIPIENT','Use this customer’s current recipient.',null,400)
   const consentedAt=instant(p.consentedAt,'customer permission time with UTC offset')
   if(consentedAt>c.now)fail('INPUT','Customer permission time cannot be in the future.',null,400)
-  const row=put(c.s,'declinedConsent',{subjectId:item.id,assetId:asset.id,jobId:item.jobId,customer:declinedCustomer(asset,c.s),to,channel:'email',purpose:'declined-work',wording:declinedWording(item),wordingVersion:DECLINED_WORDING_VERSION,consentedTime:text(p.consentedAt,'original customer permission time',40),consentedAt,captureChannel:choice(p.captureChannel,['customer-form','customer-email','telephone','in-person'],'customer permission source'),sourceEvidence:text(p.sourceEvidence,'customer permission evidence reference',2000),by:who(c),at:c.now,policy:DECLINED_POLICY})
+  const captureChannel=choice(p.captureChannel,['customer-form','customer-email','telephone','in-person'],'customer permission source'),sourceEvidence=text(p.sourceEvidence,'customer permission evidence reference',2000)
+  // Replaying the same customer statement must not mint another one-email permission.
+  const existing=rows(c.s,'declinedConsent').find(r=>r.subjectId===item.id&&r.to===to&&r.purpose==='declined-work'&&r.wordingVersion===DECLINED_WORDING_VERSION&&r.consentedAt===consentedAt&&r.captureChannel===captureChannel&&r.sourceEvidence===sourceEvidence)
+  if(existing)return existing
+  const row=put(c.s,'declinedConsent',{subjectId:item.id,assetId:asset.id,jobId:item.jobId,customer:declinedCustomer(asset,c.s),to,channel:'email',purpose:'declined-work',wording:declinedWording(item),wordingVersion:DECLINED_WORDING_VERSION,consentedTime:text(p.consentedAt,'original customer permission time',40),consentedAt,captureChannel,sourceEvidence,by:who(c),at:c.now,policy:DECLINED_POLICY})
   event(c,command,item.jobId,row.id,{});return row
  }
  const q=find(c.s,'estimate',p.estimateId);expectVersion(q,p.quoteVersion)
