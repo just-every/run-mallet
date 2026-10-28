@@ -33,7 +33,7 @@ import {payments,paymentCommands} from './payments'
 import {intake,intakeCommands} from './intake'
 import {stockTrace,traceCommands} from './stock-trace'
 import {customers,accountCommands} from './customers'
-import {purchasing,purchasingCommands} from './purchasing'
+import {purchasing,purchasingCommands,purchaseInShop} from './purchasing'
 import {inventory,inventoryCommands} from './inventory'
 import {sublets,subletCommands} from './sublet'
 import {retainStageChanges} from './reports/turnaround'
@@ -161,10 +161,11 @@ export async function execute(db: Database, actor: Actor, command: string, paylo
   const at=now??new Date().toISOString()
   if(limits){
     for(const [kind,field] of [['job','jobId'],['estimate','estimateId'],['invoice','invoiceId'],['purchaseOrder','purchaseId'],['stockBin','binId'],['stockCount','countId'],['refund','refundId']]){
-      if(!payload[field])continue;const row=find(s,kind,payload[field]);if((row.location??row.locationId??'shop')!=='shop')fail('LOCATION_SCOPE','This record belongs to another location.',null,403)
+      if(!payload[field])continue;const row=find(s,kind,payload[field]);if((row.location??row.locationId??'shop')!=='shop')fail('LOCATION_SCOPE','This record belongs to another location.',null,403);if(row.binId&&(find(s,'stockBin',row.binId).location??'shop')!=='shop')fail('LOCATION_SCOPE','This record belongs to a bin at another location.',null,403)
     }
     if(payload.binBarcode){const bin=rows(s,'stockBin').find(b=>b.barcode===payload.binBarcode);if(bin?.location&&bin.location!=='shop')fail('LOCATION_SCOPE','This bin belongs to another location.',null,403)}
   }
+  if(limits&&(command==='purchase.create'||command.startsWith('purchase.')&&payload.purchaseId)&&!purchaseInShop(s,payload.purchaseId?find(s,'purchaseOrder',payload.purchaseId):payload))fail('LOCATION_SCOPE','This purchase includes stock or repair demand outside your shop.',null,403)
   if(limits&&command.startsWith('purchase.')&&payload.purchaseId){const purchase=find(s,'purchaseOrder',payload.purchaseId);if(purchase.totalCents>limits.spendCents)fail('SPEND_LIMIT','This purchase exceeds your delegated spend limit.',null,403)}
   let result:any
   try{result=reduce(s,actor,command,payload,at)}catch(error){const saved=await replay();if(saved)return saved.value;throw error}
