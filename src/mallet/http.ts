@@ -18,6 +18,7 @@ import {reviewPanel} from './ui/reviews'
 import {internalOutreachCommands} from './outreach'
 import {outreachCommand} from './outreach-door'
 import {stripeResponse} from './stripe/door'
+import {staffFinanceCsv,staffFinanceInput,staffCreditPreview} from './staff-finance'
 import {staffCommand,grantStaff,staffSettings,staffState,staffPage} from './staff'
 import {auditReport,auditPage,auditCsv} from './audit'
 import {receivablesPage,receivablesInput,filingPage} from './ui/receivables'
@@ -216,6 +217,8 @@ async function operators(db:D1Database) {
 const bookingFields=['title','bayId','technicianId','startAt','endAt']
 function formInput(data:FormData) {
  const input:any=Object.fromEntries(data)
+ staffFinanceInput(input)
+ if(input.command==='job.book'&&input.staffAsset){let source:any;try{source=JSON.parse(input.staffAsset)}catch{throw new HttpError(400,'invalid_staff_asset')};input.assetId=source.assetId;input.version=Number(source.version)}
  if(input.command?.startsWith('assistant.')){input.confirm=data.has('confirm');if(input.version!==undefined)input.version=Number(input.version);if(input.assistantSubject){const subject=JSON.parse(input.assistantSubject);input.kind=subject.kind;input.subjectId=subject.subjectId;input.channel=subject.kind==='send'?'email':'none';input.spendCents=0}}
 
  if(input.command==='statusNotice.consent')input.consent=data.has('consent')
@@ -318,8 +321,9 @@ async function workshopResponse(request:Request,original:Bindings,execution:Pick
    throw new HttpError(403,'api_transport_scope')
   }
   if(path==='/app'&&actor.staff)return redirect('/app/staff')
-  if(['/app/staff','/api/mallet/staff/state'].includes(path)){if(!actor.staff)throw new HttpError(403,'staff_grant_required');const view=staffState(await load(env.DB),actor);if(!await env.DB.prepare(`SELECT 1 AS ok WHERE (${auth.authority.sql})`).bind(...auth.authority.params).first())throw new HttpError(403,'staff_grant_required');return path==='/app/staff'?page('Staff workspace',staffPage(view),actor,200,{section:'data'}):url.searchParams.has('download')?new Response(JSON.stringify(view,null,2),{headers:{...headers,'content-type':'application/json','content-disposition':'attachment; filename="mallet-staff.json"'}}):json(view)}
+  if(['/app/staff','/api/mallet/staff/state'].includes(path)){if(!actor.staff)throw new HttpError(403,'staff_grant_required');const people=['advisor','manager'].includes(actor.staff.role)?(await operators(env.DB)).list.filter(o=>o.status==='active').map(o=>({id:o.id,name:o.name})):[];const view=staffState(await load(env.DB),actor,people);if(!await env.DB.prepare(`SELECT 1 AS ok WHERE (${auth.authority.sql})`).bind(...auth.authority.params).first())throw new HttpError(403,'staff_grant_required');return path==='/app/staff'?page('Staff workspace',staffPage(view),actor,200,{section:'data'}):url.searchParams.has('download')?new Response(JSON.stringify(view,null,2),{headers:{...headers,'content-type':'application/json','content-disposition':'attachment; filename="mallet-staff.json"'}}):json(view)}
   if(path==='/app/settings/assistants'){if(actor.role!=='owner')throw new HttpError(403,'owner_required');return page('Assistant settings',assistantsPage(await load(env.DB),new Set((await env.DB.prepare('SELECT grant_id FROM mallet_assistant_keys').all<{grant_id:string}>()).results.map(k=>k.grant_id))),actor,200,{section:'data'})}
+  if(path==='/api/mallet/staff/finance'){if(!actor.staff||!['accountant','cashier','manager'].includes(actor.staff.role))throw new HttpError(403,'staff_finance_required');const view=staffState(await load(env.DB),actor);if(!await env.DB.prepare(`SELECT 1 AS ok WHERE (${auth.authority.sql})`).bind(...auth.authority.params).first())throw new HttpError(403,'staff_grant_required');const format=url.searchParams.get('format')??'json';if(!['json','csv'].includes(format))throw new HttpError(400,'invalid_finance_format');return new Response(format==='csv'?staffFinanceCsv(view.finance!):JSON.stringify(view.finance,null,2),{headers:{...headers,'content-type':format==='csv'?'text/csv':'application/json','content-disposition':'attachment; filename="mallet-reconciliation.'+format+'"'}})}
   if(path==='/app/staff-access'){if(actor.role!=='owner')throw new HttpError(403,'owner_required');return page('Staff roles & limits',await staffSettings(env.DB),actor,200,{section:'data'})}
   if(['/app/audit','/api/mallet/audit'].includes(path)){
    if(!['GET','HEAD'].includes(request.method))throw new HttpError(405,'method_not_allowed')
@@ -424,7 +428,7 @@ async function workshopResponse(request:Request,original:Bindings,execution:Pick
    else if(command==='inspection.record'&&actor.role!=='agent'){const checked=await inspectionRecordInput(env.DB,actor,auth.authority,input);result=await execute(env.DB,actor as any,command,checked.input,checked.authority)}
    else result=await execute(env.DB,actor as any,command,input,auth.authority)
    if(actor.role!=='owner')result=withoutFleetApproval(result)
-   if(actor.staff){if(isApi)return json(result);return redirect('/app/staff')}
+   if(actor.staff){if(isApi)return json(result);if(command==='credit.preview')return page('Review staff credit',staffCreditPreview(result,input),actor,200,{section:'data'});return redirect('/app/staff')}
    if(command.startsWith('staff.')){if(isApi)return json(result);return redirect('/app/staff-access')}
    if(isApi){if(!human(actor)&&result&&typeof result==='object'&&'billing' in result){const {billing,...rest}=result;result=rest}return json(actor.role==='agent'?withoutSubletCosts(withoutInspectionSource(result)):result)}
    if(retentionCommands.includes(command)){if(command==='customer.export')return new Response(JSON.stringify(result,null,2),{headers:{...headers,'content-type':'application/json','content-disposition':'attachment; filename="customer-data.json"'}});return page('Retention & erasure',retentionPage(await load(env.DB),input.customerId??'',command==='retention.preview'?result:undefined,input,['customer.erase','retention.run'].includes(command)?result:undefined),actor,200,{section:'data'})}

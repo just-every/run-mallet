@@ -160,8 +160,8 @@ export async function execute(db: Database, actor: Actor, command: string, paylo
   for (const [kind, values] of Object.entries(s.records)) for (const row of values) before.set(`${kind}:${row.id}`, JSON.stringify(row))
   const at=now??new Date().toISOString()
   if(limits){
-    for(const [kind,field] of [['job','jobId'],['estimate','estimateId'],['invoice','invoiceId'],['purchaseOrder','purchaseId'],['stockBin','binId'],['stockCount','countId'],['refund','refundId']]){
-      if(!payload[field])continue;const row=find(s,kind,payload[field]);if((row.location??row.locationId??'shop')!=='shop')fail('LOCATION_SCOPE','This record belongs to another location.',null,403);if(row.binId&&(find(s,'stockBin',row.binId).location??'shop')!=='shop')fail('LOCATION_SCOPE','This record belongs to a bin at another location.',null,403)
+    for(const [kind,field] of [['asset','assetId'],['job','jobId'],['estimate','estimateId'],['invoice','invoiceId'],['purchaseOrder','purchaseId'],['stockBin','binId'],['stockCount','countId'],['refund','refundId']]){
+      if(!payload[field])continue;const row=find(s,kind,payload[field]);if((row.location??row.locationId??'shop')!=='shop')fail('LOCATION_SCOPE','This record belongs to another location.',null,403);if(row.jobId&&(find(s,'job',row.jobId).location??'shop')!=='shop')fail('LOCATION_SCOPE','This record belongs to a repair at another location.',null,403);if(row.binId&&(find(s,'stockBin',row.binId).location??'shop')!=='shop')fail('LOCATION_SCOPE','This record belongs to a bin at another location.',null,403)
     }
     if(payload.binBarcode){const bin=rows(s,'stockBin').find(b=>b.barcode===payload.binBarcode);if(bin?.location&&bin.location!=='shop')fail('LOCATION_SCOPE','This bin belongs to another location.',null,403)}
   }

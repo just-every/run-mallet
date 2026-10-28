@@ -27,6 +27,7 @@ export async function governanceBrowser(){
   for(const role of ['manager','purchaser','cashier','accountant'])await h.command('staff.grant',grantInput(people[role].id,role))
   const {job}=await booking(h),item=await h.command('stock.item',{sku:'synthetic-mallet-browser',name:'Browser part',unit:'each',barcode:'synthetic-mallet-browser-item'}),bin=await h.command('stock.bin',{code:'Browser bin',barcode:'synthetic-mallet-browser-bin'})
   await use(people.advisor.cookie);await p.goto(h.origin+'/app');await p.waitForURL('**/app/staff');await shot('staff-02-advisor')
+  await advisorIntakeBrowser(h,p,{shot,person:people.advisor,technician:people.manager})
   const fill=async discount=>{await p.locator('select[name="staffJob"]').selectOption({label:job.title});await p.getByLabel('Part description',{exact:true}).fill('Discounted repair part');await p.getByLabel('Part price in USD',{exact:true}).fill('10');await p.getByLabel('Part discount in USD',{exact:true}).fill(discount);await p.getByLabel('Labor description',{exact:true}).fill('Repair labor');await p.getByLabel('Labor price in USD',{exact:true}).fill('1')}
   await fill('0.51');const before=(await h.state()).records;await p.getByRole('button',{name:'Prepare estimate',exact:true}).click();assert.match(await p.locator('main').innerText(),/could not be completed/);assert.deepEqual((await h.state()).records,before);await shot('staff-03-discount-refused')
   await p.goto(h.origin+'/app/staff');await fill('0.50');await p.getByRole('button',{name:'Prepare estimate',exact:true}).click();await p.waitForURL('**/app/staff');const quote=(await h.state()).records.estimate.find(q=>q.jobId===job.id);assert.equal(quote.revisions[0].preparedBy.staffRole,'advisor')
@@ -35,7 +36,12 @@ export async function governanceBrowser(){
   const purchase=await purchaserBrowser(h,p,{use,shot,person:people.purchaser,item,bin,job})
   const {account}=await creditAccountFixture(h),{invoice}=await creditInvoice(h,account,'7');await h.stepUp(people.cashier.cookie)
   await use(people.cashier.cookie);await p.goto(h.origin+'/app/staff');await p.locator('select[name="staffInvoice"]').selectOption({label:invoice.number});await p.getByLabel('Amount (USD)').fill('5.41');await p.getByLabel('Tender reference').fill('synthetic-mallet-browser-tender');await p.getByLabel('Staff evidence').fill('Cash counted by cashier');await shot('staff-06-cashier-tender');await p.getByRole('button',{name:'Record tender'}).click();await p.waitForURL('**/app/staff');assert.equal((await h.state()).records.payment.at(-1).by.staffRole,'cashier')
+  await cashierFinanceBrowser(h,p,{use,shot,person:people.cashier,invoice})
   await use(people.accountant.cookie);await p.goto(h.origin+'/app/staff');await shot('staff-07-accountant-read');const [download]=await Promise.all([p.waitForEvent('download'),p.getByRole('link',{name:'Download permitted records'}).click()]);assert.equal(download.suggestedFilename(),'mallet-staff.json');await download.cancel();assert.equal(await p.getByRole('button').count(),0)
+  await p.locator('#finance-'+invoice.id+' summary').click();const financeText=await p.locator('#finance-'+invoice.id).innerText();assert.ok(financeText.includes('$1.09'));assert.ok(financeText.includes('$4.32'));assert.ok(financeText.includes('Staff-recorded manual refund'));await shot('staff-finance-05-accountant-reconciliation')
+  const report=await h.api('/api/mallet/staff/finance',undefined,{as:people.accountant.cookie});assert.deepEqual(report.invoices.find(i=>i.invoiceId===invoice.id).refunds[0].history.map(r=>r.status),['refunded'])
+  for(const format of ['JSON','CSV']){const [file]=await Promise.all([p.waitForEvent('download'),p.getByRole('link',{name:'Download reconciliation '+format}).click()]);const content=await readFile(await file.path(),'utf8');assert.equal(file.suggestedFilename(),'mallet-reconciliation.'+format.toLowerCase());if(format==='JSON')assert.deepEqual(JSON.parse(content),report);else assert.ok(content.includes('541","109","432","541","109","0","432","0","0","0'));await file.delete()}
+  await h.command('staff.revoke',grantInput(people.accountant.id,'accountant',1));const financeDenied=await p.request.get(h.origin+'/api/mallet/staff/finance?format=csv');assert.equal(financeDenied.status(),403)
   await use(h.owner);await p.goto(h.origin+'/app/audit');await shot('audit-01-history');await p.getByLabel('Exact action').fill('estimate.prepare');await p.getByRole('button',{name:'Search audit'}).click();await p.locator('summary').first().click();await shot('audit-02-filtered-revisions');assert.match(await p.locator('main').innerText(),/advisor/)
   for(const format of ['JSON','CSV']){const [file]=await Promise.all([p.waitForEvent('download'),p.getByRole('link',{name:'Download '+format+' page'}).click()]);assert.equal(file.suggestedFilename(),'mallet-audit.'+format.toLowerCase());await file.cancel()}
   await h.command('staff.revoke',grantInput(people.advisor.id,'advisor',1));await use(people.advisor.cookie);const denied=await p.goto(h.origin+'/app/staff');assert.equal(denied.status(),403);await shot('staff-08-revoked')
@@ -162,4 +168,68 @@ async function purchaserBrowser(h,p,{use,shot,person,item,bin,job}){
  const privateResponse=await h.request('/api/mallet/staff/state?download=1',{as:person.cookie});assert.deepEqual(await privateResponse.json(),hidden)
  const retained=(await h.state()).records;await h.command('purchase.bill',{purchaseId:po.id,version:po.version},{as:person.cookie,status:403});assert.deepEqual((await h.state()).records,retained)
  return {captured}
+}
+
+async function cashierFinanceBrowser(h,p,{use,shot,person,invoice}){
+ const form=command=>p.locator('form').filter({has:p.locator('input[name="command"][value="'+command+'"]')})
+ const source=()=>form('credit.preview').filter({has:p.locator('input[name="invoiceId"][value="'+invoice.id+'"]')})
+ const request=async quantity=>{
+  await p.goto(h.origin+'/app/staff')
+  await source().locator('..').locator('summary').click()
+  await source().getByLabel('Return quantity',{exact:true}).fill(String(quantity))
+  await source().getByLabel('Unique credit reference',{exact:true}).fill('synthetic-mallet-native-credit')
+  await source().getByLabel('Return reason',{exact:true}).fill('Customer returned original accessory')
+  await source().getByLabel('Customer credit instruction',{exact:true}).fill('Private customer request to return original cash')
+  await source().getByRole('button',{name:'Preview staff credit',exact:true}).click();await p.waitForLoadState('domcontentloaded')
+ }
+ let before=(await h.state()).records
+ await request(2);assert.match(await p.locator('main').innerText(),/exceeds your delegated refund limit/);assert.deepEqual((await h.state()).records,before,'Over-limit native credit is refused without writes');await shot('staff-finance-01-limit-refused')
+ await request(1);assert.ok((await p.locator('main').innerText()).includes('$1.09'));assert.ok((await p.locator('main').innerText()).includes('original-tender'));assert.deepEqual((await h.state()).records,before,'Preview changes no finance records')
+ await form('credit.issue').getByLabel('I approve this exact credit and original destination.').check()
+ const captured=await form('credit.issue').evaluate(f=>Object.fromEntries(new FormData(f)))
+ await h.command('stock.bin',{code:'Native stale credit fence',barcode:'synthetic-mallet-stale-credit'})
+ before=(await h.state()).records
+ const stale=await p.request.post(h.origin+'/app/actions',{form:captured,headers:{origin:h.origin}});assert.equal(stale.status(),409);assert.deepEqual((await h.state()).records,before,'A changed state invalidates the exact native review')
+ await request(1);await shot('staff-finance-02-exact-review')
+ await form('credit.issue').getByLabel('I approve this exact credit and original destination.').check();await form('credit.issue').getByRole('button',{name:'Issue reviewed credit',exact:true}).click();await p.waitForURL('**/app/staff')
+ const note=(await h.state()).records.creditNote.find(n=>n.reference==='synthetic-mallet-native-credit');assert.equal(note.totals.totalCents,109);assert.equal(note.by.staffRole,'cashier')
+ let refund=(await h.state()).records.refund.find(r=>r.creditNoteId===note.id)
+ await form('refund.record').locator('..').locator('summary').click();await form('refund.record').getByLabel('Refund observation reference',{exact:true}).fill('synthetic-mallet-native-refund');await form('refund.record').getByLabel('Observed original-tender evidence',{exact:true}).fill('Private staff counted original cash returned');await form('refund.record').getByLabel('I confirm this original-tender observation.').check()
+ const observed=await form('refund.record').evaluate(f=>Object.fromEntries(new FormData(f)))
+ await shot('staff-finance-03-original-tender-observation');await form('refund.record').getByRole('button',{name:'Record manual refund',exact:true}).click();await p.waitForURL('**/app/staff')
+ refund=(await h.state()).records.refund.find(r=>r.id===refund.id);assert.equal(refund.status,'refunded');assert.equal(refund.history[0].by.id,person.id)
+ before=(await h.state()).records
+ const replay=await p.request.post(h.origin+'/app/actions',{form:observed,headers:{origin:h.origin},maxRedirects:0});assert.equal(replay.status(),303);assert.deepEqual((await h.state()).records,before,'Observation replay cannot record another refund')
+ assert.equal(await form('refund.record').count(),0,'A completed original-tender refund offers no second payment')
+ await shot('staff-finance-04-completed')
+ await h.command('staff.revoke',grantInput(person.id,'cashier',1));before=(await h.state()).records
+ const revoked=await p.request.post(h.origin+'/app/actions',{form:observed,headers:{origin:h.origin}});assert.equal(revoked.status(),403)
+ await h.command('refund.record',{refundId:refund.id,version:refund.version,status:'refunded',reference:'synthetic-mallet-revoked-refund',evidence:'Revoked',confirm:'record-refund'},{as:person.cookie,status:403})
+ assert.deepEqual((await h.state()).records,before,'A revoked form and API cannot write another observation')
+ for(const format of ['json','csv'])assert.equal((await p.request.get(h.origin+'/api/mallet/staff/finance?format='+format)).status(),403)
+}
+
+async function advisorIntakeBrowser(h,p,{shot,person,technician}){
+ const form=command=>p.locator('form').filter({has:p.locator('input[name="command"][value="'+command+'"]')})
+ await p.getByText('Register a customer vehicle',{exact:true}).click()
+ await form('asset.create').getByLabel('Customer name',{exact:true}).fill('Native advisor customer')
+ await form('asset.create').getByLabel('Vehicle',{exact:true}).fill('Native intake vehicle')
+ await form('asset.create').getByLabel('Plate or VIN',{exact:true}).fill('synthetic-mallet-native-intake')
+ await form('asset.create').getByRole('button',{name:'Register vehicle',exact:true}).click();await p.waitForURL('**/app/staff')
+ const asset=(await h.state()).records.asset.find(a=>a.identifier==='synthetic-mallet-native-intake')
+ await p.getByText('Book a repair visit',{exact:true}).click()
+ assert.equal(await form('job.book').count(),1,await p.locator('main').innerText())
+ await form('job.book').locator('select[name="staffAsset"]').selectOption({label:'Native intake vehicle · synthetic-mallet-native-intake'})
+ await form('job.book').getByLabel('Repair request',{exact:true}).fill('Advisor native intake')
+ await form('job.book').getByLabel('Repair bay',{exact:true}).fill('Native intake bay')
+ await form('job.book').locator('select[name="technicianId"]').selectOption(technician.id)
+ await form('job.book').getByLabel('Visit starts (with timezone)',{exact:true}).fill('2031-06-02T09:00:00Z')
+ await form('job.book').getByLabel('Visit ends (with timezone)',{exact:true}).fill('2031-06-02T10:00:00Z')
+ const captured=await form('job.book').evaluate(f=>Object.fromEntries(new FormData(f)))
+ await shot('staff-intake-01-booking');await form('job.book').getByRole('button',{name:'Book repair visit',exact:true}).click();await p.waitForURL('**/app/staff')
+ const records=(await h.state()).records,job=records.job.find(j=>j.assetId===asset.id)
+ assert.equal(job.bookedBy.id,person.id);assert.equal(job.bookedBy.staffRole,'advisor');assert.equal(job.technicianId,technician.id)
+ const stale=await p.request.post(h.origin+'/app/actions',{form:captured,headers:{origin:h.origin}});assert.equal(stale.status(),409);assert.deepEqual((await h.state()).records,records,'Captured intake form cannot create another visit')
+ const download=await p.request.get(h.origin+'/api/mallet/staff/state?download=1'),view=await download.json();assert.ok(view.records.job.some(j=>j.id===job.id));assert.ok(view.technicians.every(t=>Object.keys(t).sort().join(',')==='id,name'))
+ await shot('staff-intake-02-booked')
 }

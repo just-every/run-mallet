@@ -5,6 +5,8 @@ import {stockBalance} from './inventory'
 import {purchaseInShop} from './purchasing'
 import {e,field,select,form,box,rows,money} from './ui/common'
 import {purchasingPage} from './ui/purchasing'
+import {staffFinance,staffFinancePage,staffRefundForms} from './staff-finance'
+import {staffIntakeForms} from './ui/staff-intake'
 export type StaffGrant={revision:number;role:'advisor'|'manager'|'purchaser'|'cashier'|'accountant';location:string;discount_bps:number;spend_cents:number;refund_cents:number;cost_right:number}
 export async function staffGrant(db:D1Database,id:string) {
  return db.prepare(`SELECT g.* FROM mallet_staff_grants g JOIN oa_operators o ON o.id=g.operator_id JOIN oa_operators owner ON owner.id=g.granted_by WHERE g.operator_id=? AND g.revoked_at IS NULL AND o.status='active' AND o.role='member' AND o.version=g.operator_version AND owner.status='active' AND owner.role='owner' AND owner.version=g.owner_version`).bind(id).first<StaffGrant>()
@@ -14,7 +16,7 @@ export function staffRoute(request:Request,actor:Actor) {
  const path=new URL(request.url).pathname
  if(!actor.staff.discount_bps&&!actor.staff.spend_cents&&!actor.staff.refund_cents&&path!=='/app/security'&&!path.startsWith('/api/mallet/security/')&&!path.startsWith('/auth/'))throw new HttpError(403,'staff_limits_required')
  if(path==='/app'&&['GET','HEAD'].includes(request.method))return
- if(['/app/staff','/api/mallet/staff/state'].includes(path)&&['GET','HEAD'].includes(request.method))return
+ if(['/app/staff','/api/mallet/staff/state','/api/mallet/staff/finance'].includes(path)&&['GET','HEAD'].includes(request.method))return
  if(['/app/actions','/api/mallet/commands'].includes(path)&&request.method==='POST')return
  // The person's own authentication door stays available; its existing owner-only gates still apply.
  if(path==='/app/security'||path.startsWith('/api/mallet/security/')||path.startsWith('/auth/'))return
@@ -65,15 +67,23 @@ function redact(value:any,cost=false):any {
  if(!value||typeof value!=='object')return value
  return Object.fromEntries(Object.entries(value).filter(([key])=>!['billing','receipt','evidence','consentEvidence','raw','token','secret','payRate','pricingProvenance'].includes(key)&&(cost||!['costCents','unitCostCents','loadedCostCents'].includes(key))).map(([k,v])=>[k,redact(v,cost)]))
 }
-export function staffState(state:State,actor:Actor){
+export function staffState(state:State,actor:Actor,people:{id:string;name:string}[]=[]){
  const g=actor.staff!,records:Record<string,any[]>={}
  const bins=new Set(rows(state,'stockBin').filter(b=>(b.location??b.locationId??'shop')==='shop').map(b=>b.id)),purchases=new Set(rows(state,'purchaseOrder').filter(po=>purchaseInShop(state,po)).map(po=>po.id))
- const permitted=(kind:string,r:any)=>(r.location??r.locationId??'shop')==='shop'&&(!['stockCount','stockMovement','stockReservation','purchaseReceipt'].includes(kind)||bins.has(r.binId))&&(kind!=='purchaseOrder'||purchases.has(r.id))&&(!['purchaseBill','purchaseReceipt'].includes(kind)||purchases.has(r.purchaseId))
- const kinds=g.role==='accountant'||g.role==='cashier'?['invoice','payment','creditNote','refund']:g.role==='purchaser'?['stockItem','stockBin','stockCount','stockMovement','stockReservation','purchaseOrder','purchaseReceipt','purchaseBill']:['asset','job','estimate',...(g.role==='manager'?['stockItem','stockBin','stockCount','stockMovement','stockReservation','purchaseOrder','purchaseReceipt','purchaseBill','invoice','payment']:[])]
+ const inShop=(kind:string,r:any):boolean=>{
+  if(!r||(r.location??r.locationId??'shop')!=='shop')return false
+  if(kind==='job')return true
+  if(r.jobId&&!inShop('job',rows(state,'job').find(j=>j.id===r.jobId)))return false
+  return kind==='invoice'||!r.invoiceId||inShop('invoice',rows(state,'invoice').find(i=>i.id===r.invoiceId))
+ }
+ const permitted=(kind:string,r:any)=>inShop(kind,r)&&(!['stockCount','stockMovement','stockReservation','purchaseReceipt'].includes(kind)||bins.has(r.binId))&&(kind!=='purchaseOrder'||purchases.has(r.id))&&(!['purchaseBill','purchaseReceipt'].includes(kind)||purchases.has(r.purchaseId))
+ const kinds=g.role==='accountant'||g.role==='cashier'?['invoice','payment','creditNote','refund']:g.role==='purchaser'?['stockItem','stockBin','stockCount','stockMovement','stockReservation','purchaseOrder','purchaseReceipt','purchaseBill']:['asset','job','estimate',...(g.role==='manager'?['stockItem','stockBin','stockCount','stockMovement','stockReservation','purchaseOrder','purchaseReceipt','purchaseBill','invoice','payment','creditNote','refund']:[])]
  for(const kind of kinds){if(['purchaseOrder','purchaseBill'].includes(kind)&&!g.cost_right)continue;records[kind]=rows(state,kind).filter(r=>permitted(kind,r)).map(r=>redact(r,!!g.cost_right))}
  // Purchasing demand needs only the open repair's identity and title, never customer or diagnostic payloads.
  if(g.role==='purchaser'&&g.cost_right)records.job=rows(state,'job').filter(j=>(j.location??j.locationId??'shop')==='shop'&&['booked','working'].includes(j.status)).map(j=>({id:j.id,title:j.title,status:j.status,version:j.version}))
- return {actor:{id:actor.id,name:actor.name,role:g.role},location:'shop',limits:{discountBps:g.discount_bps,spendCents:g.spend_cents,refundCents:g.refund_cents,costRight:!!g.cost_right},records,stockBalances:['purchaser','manager'].includes(g.role)?(records.stockItem??[]).flatMap(item=>(records.stockBin??[]).map(bin=>({...stockBalance({records} as State,item.id,bin.id),item:item.name,bin:bin.code}))):[],balances:['accountant','cashier','manager'].includes(g.role)?rows(state,'invoice').filter(i=>i.status!=='draft').map(i=>({invoiceId:i.id,number:i.number,...redact(invoiceBalance(state,i))})):[]}
+ const financeState={version:state.version,records:{...records,stripeReturn:rows(state,'stripeReturn').filter(r=>permitted('payment',rows(state,'payment').find(p=>p.id===r.paymentId)))}} as State
+ const finance=['accountant','cashier','manager'].includes(g.role)?staffFinance(financeState):undefined
+ return {actor:{id:actor.id,name:actor.name,role:g.role},location:'shop',technicians:['advisor','manager'].includes(g.role)?people:[],limits:{discountBps:g.discount_bps,spendCents:g.spend_cents,refundCents:g.refund_cents,costRight:!!g.cost_right},records,finance,stockBalances:['purchaser','manager'].includes(g.role)?(records.stockItem??[]).flatMap(item=>(records.stockBin??[]).map(bin=>({...stockBalance({records} as State,item.id,bin.id),item:item.name,bin:bin.code}))):[],balances:['accountant','cashier','manager'].includes(g.role)?(records.invoice??[]).filter(i=>i.status!=='draft').map(i=>({invoiceId:i.id,number:i.number,...redact(invoiceBalance(financeState,i))})):[]}
 }
 export function staffPage(view:ReturnType<typeof staffState>) {
  const download='<p><a href="/api/mallet/staff/state?download=1">Download permitted records</a></p>',g=view.limits
@@ -87,5 +97,5 @@ export function staffPage(view:ReturnType<typeof staffState>) {
  const estimates=['advisor','manager'].includes(view.actor.role)?box('Prepare an estimate',form('estimate.prepare',select('Repair order','staffJob',(view.records.job??[]).filter(j=>j.status==='booked').map(j=>[JSON.stringify({jobId:j.id,version:j.version}),j.title]))+field('Part description','partDescription','text','','required')+field('Part quantity','partQuantity','number',1,'required min="0.001" step="0.001"')+field('Part price in USD','partPrice','number',0,'required min="0" step="0.01"')+field('Part discount in USD','partDiscount','number',0,'min="0" step="0.01"')+field('Labor description','laborDescription','text','','required')+field('Labor quantity','laborQuantity','number',1,'required min="0.001" step="0.001"')+field('Labor price in USD','laborPrice','number',0,'required min="0" step="0.01"'),'Prepare estimate')):''
  const tender=['cashier','manager'].includes(view.actor.role)?box('Record staff tender',form('payment.record',select('Invoice','staffInvoice',(view.records.invoice??[]).filter(i=>['approved','exported'].includes(i.status)).map(i=>[JSON.stringify({invoiceId:i.id,version:i.version}),i.number]))+field('Amount (USD)','amountUsd','number',0,'required min="0.01" step="0.01"')+select('Tender method','method',[['cash','Cash'],['check','Check'],['other','Other']])+field('Tender reference','reference','text','','required')+field('Staff evidence','evidence','text','','required'),'Record tender')):''
  const approvals=['advisor','manager'].includes(view.actor.role)?box('Estimate handoff',`<ul class="list">${(view.records.estimate??[]).filter(q=>q.status==='draft').map(q=>`<li class="plain">${e(jobName(q.jobId))} · ${money(q.revisions.at(-1).totals.totalCents)}${form('estimate.approve','','Approve exact estimate',{estimateId:q.id,version:q.version,revision:q.revisions.at(-1).n})}</li>`).join('')}</ul>`):''
- return box('Your delegated workspace',`<p>${e(view.actor.role)} · ${e(view.location)} · Discount ${g.discountBps/100}% · Spend ${money(g.spendCents)} · Refund ${money(g.refundCents)}</p>${download}`)+purchasing+stockBalances+stock+estimates+approvals+tender+box('Permitted records',`<ul class="list">${Object.entries(view.records).flatMap(([kind,items])=>items.map(r=>`<li class="plain"><strong>${e(names[kind]??kind)} · ${e(title(kind,r))}</strong><p>${e(r.status??'')}${r.totals?' · '+money(r.totals.totalCents):''}${r.countedMilli!==undefined?' · Count '+e(r.countedMilli/1000):''}</p></li>`)).join('')}</ul>`)
+ return box('Your delegated workspace',`<p>${e(view.actor.role)} · ${e(view.location)} · Discount ${g.discountBps/100}% · Spend ${money(g.spendCents)} · Refund ${money(g.refundCents)}</p>${download}`)+(['advisor','manager'].includes(view.actor.role)?staffIntakeForms(view.records,view.technicians):'')+purchasing+stockBalances+stock+estimates+approvals+tender+(['cashier','manager'].includes(view.actor.role)?staffRefundForms(view.records):'')+(view.finance?staffFinancePage(view.finance):'')+box('Permitted records',`<ul class="list">${Object.entries(view.records).flatMap(([kind,items])=>items.map(r=>`<li class="plain"><strong>${e(names[kind]??kind)} · ${e(title(kind,r))}</strong><p>${e(r.status??'')}${r.totals?' · '+money(r.totals.totalCents):''}${r.countedMilli!==undefined?' · Count '+e(r.countedMilli/1000):''}</p></li>`)).join('')}</ul>`)
 }
