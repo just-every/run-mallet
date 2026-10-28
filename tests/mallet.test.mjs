@@ -489,3 +489,6 @@ test('ADV-008: failed or uncertain appointment email survives restart without an
 test('API-001: versioned resource pages, retained repair history and stable identities recover without credentials',()=>run(async h=>{const {shopApiReadJourney}=await import('./support/shop-api-journey.mjs');await shopApiReadJourney(h)}))
 test('API-001: scoped preparation retries are atomic across transports and preserve each existing person decision',()=>run(async h=>{const {shopApiRetryJourney}=await import('./support/shop-api-journey.mjs');await shopApiRetryJourney(h)}))
 test('API-001: missing scopes, alternate transports and expired or revoked authority fail closed',()=>run(async h=>{const {shopApiAuthorityJourney}=await import('./support/shop-api-journey.mjs');await shopApiAuthorityJourney(h)}))
+
+test('RETURN-002: reviewed CA and TX storage versions, notice clocks, disposal refusal, payment release and private recovery',()=>run(async h=>{const {storageJourney}=await import('./support/storage-journey.mjs');await storageJourney(h)}))
+test('RETURN-002: native storage rules, notices, legal refusal and released ledger at 1440 and 390',async()=>{const {storageBrowser}=await import('./storage-browser.mjs');await storageBrowser()})

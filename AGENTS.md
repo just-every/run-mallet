@@ -141,3 +141,8 @@ Lander-Regenerate: after editing CONTRACT.md, run
 `node scripts/contract-docs.mjs write` then `node scripts/contract-docs.mjs check`.
 This uses the existing pinned contract parser and generates ACCEPTANCE.md,
 docs/CLAIMS.md and the Status summary. Regenerate the edition source lock last.
+
+Lander-Regenerate-Lock: after the final source, test or documentation edit, stage
+all intended files, run `node scripts/edition-authoring/cli.mjs lock`, then run
+`node scripts/edition-authoring/cli.mjs check`. Keep the generated source lock
+with the source changes. This retains the current Base pin.
