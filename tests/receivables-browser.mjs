@@ -154,7 +154,7 @@ async function balanceRecoveryBrowser(browser,directory){
   const resolved=p.locator('#balance-review-'+failed.id),remaining=p.locator('#balance-review-'+interrupted.id)
   assert.match(await resolved.innerText(),/Review recorded/);assert.match(await resolved.innerText(),/Original outcome: failed/);assert.ok((await resolved.innerText()).includes(evidence));assert.equal(await resolved.locator('form').count(),0);assert.match(await remaining.innerText(),/Original outcome: uncertain/)
   const reviews=await h.api(reviewsPath),receipt=reviews.find(r=>r.scheduleId===failed.id).resolution
-  assert.equal(receipt.by.id,before.actor.id);assert.equal(receipt.evidence,evidence)
+  assert.equal(receipt.by.id,before.actor.id);assert.equal(receipt.evidence,evidence);assert.ok((await resolved.innerText()).includes(receipt.id),'The native review exposes its immutable receipt reference')
   assert.match(await p.locator('#ar-'+failed.subjectId).innerText(),/Human review recorded; original outcome and uncertainty retained/);assert.doesNotMatch(await p.locator('#ar-'+failed.subjectId).innerText(),/Staff review required/)
   assert.deepEqual((await h.state()).records.outreach,before.records.outreach);assert.deepEqual(await h.api('/api/mallet/receivables?accountId='+account.id+'&asOf=2099-01-02'),statement)
   for(const width of [1440,390]){await p.setViewportSize({width,height:1000});await shot('15-balance-resolution-recorded')}

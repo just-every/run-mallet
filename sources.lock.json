@@ -2716,7 +2716,7 @@
       "executable": false
     },
     "src/mallet/ui/receivables.ts": {
-      "sha256": "3e1767f55c275918fa43a2d52a573603e617d51419bb8349bad96ceb09eda10d",
+      "sha256": "8c157fed0bf7d30dbdf7af6d678902526747496c2c2aa2d0c7567f039bcf17da",
       "executable": false
     },
     "src/mallet/ui/repair-blockers.ts": {
@@ -4896,7 +4896,7 @@
       "executable": false
     },
     "tests/receivables-browser.mjs": {
-      "sha256": "710035056e4467ceeefbc91493b395b9ca9b5cca0806ee7f486665fa9f6b502c",
+      "sha256": "b6ebfb6ec6292646576681172e8668180f97df966b68d37464564eea82978bfb",
       "executable": false
     },
     "tests/replenishment-browser.mjs": {
