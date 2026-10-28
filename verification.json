@@ -111,7 +111,7 @@
       "browser": true,
       "hosted": false,
       "commands": [
-        "node --test --test-concurrency=1 --test-name-pattern='^OPS-002:.*(?:1440|390)' tests/mallet.test.mjs"
+        "node --test --test-concurrency=1 --test-name-pattern='^OPS-002(?: / OPS-003)?:.*(?:1440|390)' tests/mallet.test.mjs"
       ]
     },
     {

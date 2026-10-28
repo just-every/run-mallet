@@ -65,7 +65,7 @@ Core · published · **partial** · Cites BASE-ROLE-001 · Rules D-1, D-2, D-3
 1. As an assigned member record an authorized line; refuse another job, an unapproved line and excess quantity, then complete and inspect actor and revision evidence.
 
 **Evidence.** `src/mallet/workshop.ts`; `src/mallet/model.ts`; `tests/mallet.test.mjs`
-**Gap.** Not asserted in the old cited evidence: Assigned member actual is read back; Another-job refusal has unchanged actuals; Unapproved-line refusal has unchanged actuals; Excess-quantity refusal has unchanged actuals; Completed job retains actual actor; Completed job retains exact source revision. The existing native journeys exercise the workflow, but their title, performed step or uncited helper is not a point-level assertion here.
+**Gap.** Not asserted in the old cited evidence: Assigned member actual is read back; Another-job refusal has unchanged actuals; Unapproved-line refusal has unchanged actuals; Excess-quantity refusal has unchanged actuals; Completed job retains actual actor; Completed job retains exact source revision. The native journeys exercise the workflow, but their title, performed step or uncited helper is not a point-level assertion here.
 
 #### INVOICE-001 — One saved export
 
@@ -77,7 +77,7 @@ Core · published · **partial** · Rules D-1, D-2, D-3
 1. Complete authorized work, prepare and approve the invoice through the app, export twice with current and preceding versions, and compare saved identity, lines, totals and approval history.
 
 **Evidence.** `src/mallet/invoices.ts`; `tests/mallet.test.mjs`; `tests/browser-journey.mjs`
-**Gap.** Not asserted in the old cited evidence: Retry using the preceding version returns the same saved export. Asserted: Actual-work invoice has the expected lines; Exact invoice cent total; Repeated export identity is equal; Exactly one saved export; Exact approval history count.
+**Gap.** Not asserted in the old cited evidence: Approval history retains exact deciding actor and revision; Retry using the preceding version returns the same saved export. Asserted: Actual-work invoice has the expected lines; Exact invoice cent total; Repeated export identity is equal; Exactly one saved export; Exact approval history count.
 
 #### AGENT-001 — Scoped preparation keys
 
@@ -91,7 +91,7 @@ Core · published · **partial** · Cites BASE-AGENT-004, BASE-AGENT-005, BASE-A
 3. Record a person’s exact decision, revoke the preparation key, and verify both the old key and a concurrent revoked write are refused.
 
 **Evidence.** `src/mallet/auth.ts`; `src/mallet/model.ts`; `tests/mallet.test.mjs`
-**Gap.** Not asserted in the old cited evidence: Native issuance returns a key (assertion is in uncited tests/browser-journey.mjs); Preparation succeeds with exact draft content; Preparation scope refuses approval; Preparation scope refuses sharing; Preparation scope refuses customer authorization; Preparation scope refuses invoice export; Preparation scope refuses erasure; Preparation scope refuses access management; Person decision is retained with attribution; Revoked key cannot write; Concurrent revoked write changes nothing. The existing native journeys exercise the workflow, but their title, performed step or uncited helper is not a point-level assertion here.
+**Gap.** Not asserted in the old cited evidence: Native issuance returns a key (assertion is in uncited tests/browser-journey.mjs); Preparation succeeds with exact draft content; Preparation scope refuses approval; Preparation scope refuses sharing; Preparation scope refuses customer authorization; Preparation scope refuses invoice export; Preparation scope refuses erasure; Preparation scope refuses access management; Person decision is retained with attribution; Revoked key cannot write; Concurrent revoked write changes nothing. The native journeys exercise the workflow, but their title, performed step or uncited helper is not a point-level assertion here.
 
 #### IMPORT-001 — Reviewed register move
 
@@ -246,7 +246,7 @@ Core · target · **partial** · Cites BASE-MAIL-001, BASE-DATA-003, BASE-DATA-0
 1. Embed a booking form, choose a service on a phone and contend for the last available bay; one confirmed appointment is sent and cancellation frees capacity.
 
 **Evidence.** `tests/mallet.test.mjs`
-**Gap.** Not asserted in the old cited evidence: Embedded booking form; Phone service selection; Last-bay contention result; Exactly one confirmed appointment is sent; Cancellation frees the claimed capacity. The existing native journeys exercise the workflow, but their title, performed step or uncited helper is not a point-level assertion here.
+**Gap.** Not asserted in the old cited evidence: Embedded booking form; Phone service selection; Last-bay contention result; Exactly one confirmed appointment is sent; Cancellation frees the claimed capacity. The native journeys exercise the workflow, but their title, performed step or uncited helper is not a point-level assertion here.
 
 #### BOOK-002 — Resource calendars and waitlist
 
@@ -358,7 +358,7 @@ Core · target · **partial** · Cites BASE-ROLE-001, BASE-AUDIT-001, BASE-DATA-
 1. Fail the post-repair brake check, try ready status, record corrective work and obtain a second sign-off; inspect the failed result and any manager override.
 
 **Evidence.** `src/mallet/quality.ts`; `src/mallet/ui/quality.ts`; `src/mallet/workshop.ts`; `tests/mallet.test.mjs`; `tests/support/quality-journey.mjs`; `tests/quality-browser.mjs`; `tests/support/portable-repair.mjs`
-**Gap.** Not asserted in the old cited evidence: Second qualified sign-off is read back with its exact actor. Asserted: Failed/incomplete quality blocks ready; Failed result is retained; Corrective actual work is retained; Manager override is retained.
+**Gap.** The native physical-quality sequence and independent sign-off are asserted. The agent’s own commitment decision under the company’s policy remains unasserted.
 
 #### DIAG-002 — Specialist diagnostics connections
 
@@ -604,7 +604,7 @@ Core · target · **partial** · Cites BASE-ROLE-001, BASE-AGENT-005, BASE-AGENT
 1. Try collection with a failed test and unpaid invoice, then settle through the processor and hand keys to an authorized delegate; inspect receipt and any override.
 
 **Evidence.** `tests/mallet.test.mjs`; `tests/return-browser.mjs`; `tests/support/return-revision.mjs`
-**Gap.** Not asserted in the old cited evidence: Failed quality result prevents collection; Actual delegate authorization and identity are read back; Override scope and exact entered reason are read back. Asserted: Unpaid collection is visibly refused; Processor captured funds are read back; Printable receipt retains returned key count.
+**Gap.** Not asserted in the old cited evidence: Failed quality result prevents collection; Actual delegate authorization and identity are read back. Asserted: Unpaid collection is visibly refused; Processor captured funds are read back; Printable receipt retains returned key count; Override reason remains visible in the final handover receipt.
 
 #### RETURN-002 — Storage, abandoned property and repair liens
 
@@ -1906,7 +1906,7 @@ Core · push-further · **partial** · Cites BASE-AGENT-006, BASE-AGENT-007, BAS
 8. Review history and claim citations inherit the existing warranty archive, audit and erasure boundaries under OPS-001, DATA-001 and GOV-006; citations copy record identifiers and revisions, not customer or media snapshots.
 
 **Evidence.** `tests/mallet.test.mjs`; `tests/support/warranty-pattern-journey.mjs`; `tests/support/warranty-journey.mjs`; `tests/support/supplier-returns-journey.mjs`; `tests/warranty-browser.mjs`
-**Gap.** Not asserted in the old cited evidence: Held company policy decides the agent claim; Policy class decides the agent commitment; No external provider submission after review and claim. Asserted: Detected cluster has exact members; Unrelated symptom is not a match; False association rejection is read back; Prepared claim retains exact source citations; Review leaves diagnosis unchanged; Review leaves safety clearance unchanged; One original repair cannot make a repeat cluster; Two original repairs make a repeat cluster; Catalog item filter excludes mismatch; Supplier filter excludes mismatch; Marked-lot filter excludes mismatch; Serial and lot provenance is exact; Prior measurements are exact; Actual labor quantities are exact; Warranty decision is exact; Claim outcome is retained; Linked RMA and credit history is exact; Rejected and retained associations append; Review retains reason; Rejection changes repeat eligibility; Source decisions remain unchanged; Authorized admin reviews the exact packet; Changed source makes captured review stale; Changed source makes captured claim stale; No diagnosis from detection/review; No safety clearance from detection/review; No financial posting from review; No provider outcome is inferred; Citation schema has only record kind, id and revision; Review history remains after recovery; Claim citations remain after erasure and recovery.
+**Gap.** Not asserted in the old cited evidence: Held company policy decides the agent claim; Policy class decides the agent commitment. Asserted: Detected cluster has exact members; Unrelated symptom is not a match; False association rejection is read back; Prepared claim retains exact source citations; Review leaves diagnosis unchanged; Review leaves safety clearance unchanged; One original repair cannot make a repeat cluster; Two original repairs make a repeat cluster; Catalog item filter excludes mismatch; Supplier filter excludes mismatch; Marked-lot filter excludes mismatch; Serial provenance is exact; Lot provenance is exact; Prior measurements are exact; Actual labor quantities are exact; Warranty decision is exact; Claim outcome is retained; Linked RMA and credit history is exact; Rejected and retained associations append; Review retains reason; Rejection changes repeat eligibility; Source decisions remain unchanged; Authorized admin reviews the exact packet; Changed source makes captured review stale; Changed source makes captured claim stale; No diagnosis from detection/review; No safety clearance from detection/review; No external provider submission after review and claim; No financial posting from review; No provider outcome is inferred; Citation schema has only record kind, id and revision; Review history remains after recovery; Claim citations remain after erasure and recovery.
 
 #### ADV-007 — Reconcile repair pickup payment and profit
 
