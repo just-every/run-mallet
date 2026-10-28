@@ -584,7 +584,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "41e6850f1818b7cf95963658fb705276d831a63c6ee3cc2e345a0c2f7ac8cb36",
+      "sha256": "070239849378061f416821755726fe8731b2fdda5887bfb28ef16a6bcb29d626",
       "executable": false
     },
     "deploy-demo.json": {
@@ -684,7 +684,7 @@
       "executable": false
     },
     "docs/receivables.md": {
-      "sha256": "7c35dcf8565b715c3001f4c5162c9f6e2fb24a3ef12dd4c1e333e04fbdc1029d",
+      "sha256": "c5d976fb7cba41ef9bc7f94469280fe6d08c026c3034f7139ac658dd9744eea4",
       "executable": false
     },
     "docs/refunds.md": {
@@ -1236,7 +1236,7 @@
       "executable": false
     },
     "RULINGS.md": {
-      "sha256": "4e1847915e322d3cb3593ac2c5690a39f29737b33285337ed46fbccb9dcec6e4",
+      "sha256": "e4530376c3025e626506b21fec4f8950ec3fdb330c7375b25c6c241adbd5af99",
       "executable": false
     },
     "RUN-LOCALLY.md": {
@@ -1639,6 +1639,10 @@
       "sha256": "090cd6bff5257d61b2a606e999860264db4a830b5c0022f28b397004d8088dd6",
       "executable": false
     },
+    "src/mallet/balance-reminder-recovery.ts": {
+      "sha256": "6c396dee1829525ec3c60abba08921b42560acf2f80306ec50d301396deed70d",
+      "executable": false
+    },
     "src/mallet/booking-attendance.ts": {
       "sha256": "f149c5c5251609145cf058e01e97eb2cb88457beaab255eb7a7c62b044d1f3a2",
       "executable": false
@@ -1828,7 +1832,7 @@
       "executable": false
     },
     "src/mallet/http.ts": {
-      "sha256": "c0553f04c927f6fac68a387f4a9731400d0a3bfdfa73a791231ea67d829678e8",
+      "sha256": "bf4bd1802d8781dfa33bc1dfd9d16be7f0afa0246f503daad67c2014397d1f40",
       "executable": false
     },
     "src/mallet/imports/context.ts": {
@@ -2020,7 +2024,7 @@
       "executable": false
     },
     "src/mallet/model.ts": {
-      "sha256": "30ce4d347372a3c55164846208fc2b8bd0f84f876882b4b686f4f1f175a0548d",
+      "sha256": "40b923132ebc56104b649abb2529b71a0ce7fbaf769ad1a18bb29f08b5362ff9",
       "executable": false
     },
     "src/mallet/money.ts": {
@@ -2244,11 +2248,11 @@
       "executable": false
     },
     "src/mallet/restore/validate-receivables.mjs": {
-      "sha256": "bcdf7dd1829e8e39c6a9d08048901654e8527458779cd75bc068860c9e8902ad",
+      "sha256": "959665313f95188ea4d58611fad97bbaa7d79a3b5e91e5c9c98b2773bd99571c",
       "executable": false
     },
     "src/mallet/restore/validate-records.mjs": {
-      "sha256": "d07e23e7105c91a141cb24320174e8475e9555f15883a76d7568dcd9382036c4",
+      "sha256": "b21fb828219eb158b86ffd5127517a964e7d8cab0eb9795ac5c18372e9349830",
       "executable": false
     },
     "src/mallet/restore/validate-reviews.mjs": {
@@ -2436,7 +2440,7 @@
       "executable": false
     },
     "src/mallet/strong-auth/gate.ts": {
-      "sha256": "1dd985a6acb3283afd0cb466b8c63e02bfc95026f7d58eff4467cd5562d6e7a7",
+      "sha256": "6460b6c48a39cab0242d9f406ee882a5f0b7a5d068512ffff5cfff416edef1d3",
       "executable": false
     },
     "src/mallet/strong-auth/link-guard.ts": {
@@ -2660,7 +2664,7 @@
       "executable": false
     },
     "src/mallet/ui/outreach.ts": {
-      "sha256": "5bd2ac52d12ba39cd0cf81b3e8d031cea6377df1c466993f0c0ca887efb16ad3",
+      "sha256": "8b9d5924fa738394a5f255ae1c4f0f930ecca81ab0e7af5c77536c1d97374d7d",
       "executable": false
     },
     "src/mallet/ui/portal.ts": {
@@ -2692,7 +2696,7 @@
       "executable": false
     },
     "src/mallet/ui/receivables.ts": {
-      "sha256": "90a8eb86d0065b24944108ae0b6e56eff2480341ca9f91ddd72ea28c71932bde",
+      "sha256": "3e1767f55c275918fa43a2d52a573603e617d51419bb8349bad96ceb09eda10d",
       "executable": false
     },
     "src/mallet/ui/repair-blockers.ts": {
@@ -4872,7 +4876,7 @@
       "executable": false
     },
     "tests/receivables-browser.mjs": {
-      "sha256": "a08c8acf557bfa33f5c84c5e11ace6c67c33bc274c5f69cff75127e709219866",
+      "sha256": "710035056e4467ceeefbc91493b395b9ca9b5cca0806ee7f486665fa9f6b502c",
       "executable": false
     },
     "tests/replenishment-browser.mjs": {
@@ -5192,7 +5196,7 @@
       "executable": false
     },
     "tests/support/receivables-journey.mjs": {
-      "sha256": "0a1ff8cbc09f435d0237fa88f34050cf268b3519066785f9a1edd380ebd3dfa9",
+      "sha256": "dde1a635d550bdcafb81a95bcf2244e2d88fe3a5c4f2c95343c16c744a9ae7ca",
       "executable": false
     },
     "tests/support/refunds-journey.mjs": {

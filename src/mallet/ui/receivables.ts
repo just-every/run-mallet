@@ -1,3 +1,4 @@
+import {balanceReminderReviews} from '../balance-reminder-recovery'
 import {outreachPanel} from './outreach'
 import {balanceReminderContent,accountStatement,latestLedger} from '../receivables'
 import {filingTax} from '../filing-tax'
@@ -14,12 +15,15 @@ export function receivablesInput(input:any){
  if(input.command==='ar.terms'){input.days=Number(input.days);cents(input,'limitUsd','limitCents');input.active=input.active==='yes';input.consent=input.consent==='yes'}
  if(input.command==='tax.creditBasis'){input.allocations=[];for(const name of Object.keys(input).filter(n=>n.startsWith('basisUsd_')&&String(input[n]).trim()!=='')){cents(input,name,'_basisCents');if(input._basisCents>0)input.allocations.push({paymentId:name.slice(9),amountCents:input._basisCents})}}
  if(input.command==='ar.remind'){input.outstandingCents=Number(input.outstandingCents);input.consent=input.consent==='yes'}
+ if(input.command==='ar.resolveBalanceReminder')input.invoiceVersion=Number(input.invoiceVersion)
  if(input.command==='ar.promise')cents(input,'amountUsd','amountCents')
 }
-export function receivablesPage(s:any,accountId:string,asOf:string){
+export function receivablesPage(s:any,accountId:string,asOf:string,reviewBalanceEmails=false){
  const accounts=rows(s,'customerAccount').filter(a=>!a.mergedInto&&['fleet','business'].includes(a.kind)),account=accounts.find(a=>a.id===accountId)
  let body='<p><a href="/app/accounts?manage=all">Customer accounts</a> · <a href="/app/deposits">Deposits & customer credit</a></p><p>Owner-reviewed commercial terms and current account balances. Terms changes never record payment or send a reminder. The current owner separately selects account terms at handover or explicitly consents to a balance email. Checks remain staff-recorded tender until clearance evidence is separately recorded.</p>'
  body+='<form method="get" action="/app/receivables">'+select('Commercial account','accountId',[['','Choose an account'],...accounts.map(a=>[a.id,a.name] as [string,string])],accountId)+field('Age balances at UTC date','asOf','date',asOf,'required')+'<button>Review statement</button></form>'
+ body+='<p><a href="/app/receivables?'+e(new URLSearchParams({...(account?{accountId:account.id}:{}),asOf,recovery:'balance'}).toString())+'#balance-email-review">Review failed balance emails</a></p>'
+ if(reviewBalanceEmails)body+=balanceRecoveryPanel(s,accountId)
  if(!account)return '<div class="narrow">'+body+'</div>'
  const statement=accountStatement(s,account.id,asOf),terms=latestLedger(s,'arTerms',t=>t.accountId===account.id)
  body+=box('Commercial terms for '+account.name,(terms?`<p>Net ${e(terms.days)} days · limit ${money(terms.limitCents)} · ${terms.active?'Active':'Suspended'} · approved ${when(terms.at)}</p>`:'<p>No approved commercial terms.</p>')+form('ar.terms',field('Net days','days','number',terms?.days??30,'required min="1" max="365" step="1"')+field('Credit limit (USD)','limitUsd','number',(terms?.limitCents??100000)/100,'required min="0.01" step="0.01"')+`<label><input name="active" type="checkbox" value="yes"${!terms||terms.active?' checked':''}> Terms are active</label><label><input name="consent" type="checkbox" value="yes" required> Account explicitly consented to these terms</label>`+evidence(),'Save reviewed terms',{accountId:account.id,version:account.version}))
@@ -52,4 +56,12 @@ export function filingPage(s:any,from:string,to:string){
  body+=box('Excluded amounts requiring review' ,report.excluded.map(r=>`<p>${e(rows(s,'invoice').find(i=>i.id===r.invoiceId)?.number)} · ${r.amountCents===undefined?'':money(r.amountCents)} · ${e(r.reason)}</p>`).join('')||'<p>No excluded amounts.</p>')
  for(const kind of ['deposit','payment'])for(const source of rows(s,kind).filter(r=>['check','other'].includes(r.method)&&!r.depositId&&!rows(s,'tenderClearance').some(c=>c.sourceId===r.id&&c.sourceKind===kind)))body+=box('Record observed clearance',`<p>${e(source.reference)} · ${money(source.amountCents)} · ${e(source.method)}. This records observed bank evidence; it never verifies funds or moves money.</p>`+form('tender.clearance',field('Observed clearance UTC date','observedOn','date','','required')+field('Bank evidence reference','reference','text','','required')+area('Owner-observed bank clearance evidence','evidence','','required'),'Record observed clearance',{sourceId:source.id,sourceKind:kind}))
  return '<div class="narrow">'+body+'</div>'
+}
+
+function balanceRecoveryPanel(s:any,accountId:string){
+ const reviews=balanceReminderReviews(s,accountId)
+ return box('Balance email review','<p>Review failed or uncertain handoffs on demand. A human resolution preserves the original provider outcome and uncertainty. It records no payment, changes no schedule and grants no retry or sending authority.</p>'+ (reviews.length?'<ul class="list">'+reviews.map(r=>{
+  const outcome=r.originalOutcome,resolution=r.resolution
+  return `<li class="plain" id="balance-review-${e(r.scheduleId)}"><strong>${e(r.number)} · ${money(r.outstandingCents)} · ${resolution?'Review recorded':'Needs owner review'}</strong><p>Original outcome: ${e(outcome.status)} · provider ${e(outcome.provider)} · ${when(outcome.outcomeAt)}. Delivery is not verified; no automatic retry.</p><details><summary>Inspect exact balance email references</summary><p>Schedule <span class="invoice-hash">${e(r.scheduleId)}</span> · version ${resolution?.scheduleVersion??r.scheduleVersion} · claimed ${when(outcome.claimedAt)}</p><p><a href="/app/invoices/${e(r.invoiceId)}">${e(r.number)}</a> · retained invoice version ${r.invoiceVersion} · revision ${r.invoiceRevision} · <span class="invoice-hash">${e(r.invoiceId)}</span></p><p>Terms assignment <span class="invoice-hash">${e(r.assignmentId)}</span> · owner approval <span class="invoice-hash">${e(r.termsId)}</span></p></details>${resolution?`<p>Reviewed by ${e(resolution.by.name)} · ${when(resolution.at)}</p><p>${e(resolution.evidence)}</p>`:form('ar.resolveBalanceReminder',area('Human resolution and evidence reference','evidence','','required maxlength="2000"')+'<label><input type="checkbox" name="confirm" value="record-balance-review" required> I reviewed this exact outcome. This records no payment and authorizes no retry or email.</label>','Record human resolution',{id:r.scheduleId,version:r.scheduleVersion,invoiceId:r.invoiceId,invoiceVersion:r.invoiceVersion,assignmentId:r.assignmentId,termsId:r.termsId,accountId:r.accountId})}</li>`
+ }).join('')+'</ul>':'<p>No failed or uncertain balance emails.</p>'),{id:'balance-email-review'})
 }

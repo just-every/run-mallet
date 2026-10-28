@@ -192,6 +192,7 @@ export async function receivablesJourney(h){
   assert.equal(uncertain.status,'uncertain');await failed.command('ar.remind',input,{status:409});assert.equal(failed.messages.filter(m=>m.subject.startsWith('Balance reminder:')).length,1,'An uncertain submission is never retried')
   const recovered=await installation();try{await restore(recovered,await archive(failed));assert.deepEqual((await recovered.state()).records.arReminder,(await failed.state()).records.arReminder);assert.equal(recovered.messages.filter(m=>m.subject.startsWith('Balance reminder:')).length,0,'Restore sends no historical reminder')}finally{await recovered.close()}
  }finally{await failed.close()}
+ await balanceRecoveryJourney()
  return {...f,a1,a2,check}
 }
 
@@ -209,4 +210,97 @@ async function scheduledBalances(h,{account,manager,i1,i2}){
  const inert=await h.command('outreach.schedule',fields(i2)),fresh=await installation()
  try{await restore(fresh,await archive(h));await fresh.cron(at('10:00'));assert.equal(fresh.messages.filter(m=>m.subject==='Your invoice balance reminder').length,0,'Archived schedules cannot send')}finally{await fresh.close()}
  await h.command('outreach.stop',{id:inert.id,version:inert.version,reason:'Owner canceled the one-email approval'})
+}
+
+// Reject the first scheduled handoff at the controlled mail edge; accept the
+// next one before the injected persistence interruption below.
+export function balanceRecoveryMail(){
+ let scheduled=0
+ return message=>message.subject==='Your invoice balance reminder'&&++scheduled===1?Response.json({error:'synthetic-mallet-900'},{status:422}):Response.json({id:'synthetic-mallet-901'})
+}
+export async function balanceFailureFixture(h){
+ const f=await receivablesFixture(h),{account,manager,i1,i2}=f
+ const terms=await h.command('ar.terms',{accountId:account.id,version:account.version,days:30,limitCents:50000,active:true,consent:true,evidence:'Owner reviewed fleet instructions and the current balances'})
+ for(const invoice of [i1,i2])await h.command('ar.invoice',{invoiceId:invoice.id,version:invoice.version,termsId:terms.id,authorizerId:manager.id,po:'synthetic-mallet-902-'+invoice.number,evidence:'Fleet manager requested these exact invoice terms'})
+ const day=new Date(Date.now()+3*86400000).toISOString().slice(0,10),at=time=>day+'T'+time+':00Z'
+ const fields=i=>({kind:'balance',subjectId:i.id,version:i.version,to:manager.email,outstandingCents:11000,consent:true,consentEvidence:'Billing contact requested this exact one-email reminder',instructions:'Exact approved balance',timeZone:'UTC',allowedStart:9,allowedEnd:18,dueAt:at('15:00'),expiresAt:at('18:00')})
+ const first=await h.command('outreach.schedule',fields(i1)),before=h.messages.length
+ await h.cron(at('15:00'));assert.equal(h.messages.length,before+1)
+ assert.equal((await h.state()).records.outreach.find(r=>r.id===first.id).status,'failed')
+ const second=await h.command('outreach.schedule',fields(i2)),db=await h.mf.getD1Database('DB')
+ // Simulate a storage outage after the provider accepted the email. The cron
+ // entered through its public scheduled door, persisted its real claim and
+ // performed the handoff; its outcome write is the only interrupted operation.
+ await db.prepare(`CREATE TRIGGER synthetic_balance_interrupt BEFORE UPDATE ON mallet_records WHEN OLD.kind='outreach' AND OLD.id='${second.id}' AND json_extract(NEW.value,'$.status')<>'claimed' BEGIN SELECT RAISE(ABORT,'synthetic-mallet-903'); END`).run()
+ try{await h.cron(at('15:00'))}finally{await db.prepare('DROP TRIGGER synthetic_balance_interrupt').run()}
+ assert.equal(h.messages.length,before+2)
+ assert.equal((await h.state()).records.outreach.find(r=>r.id===second.id).status,'claimed','An interrupted outcome retains the durable claim')
+ await h.restart();await h.cron(at('15:02'))
+ const schedules=(await h.state()).records.outreach,failed=schedules.find(r=>r.id===first.id),interrupted=schedules.find(r=>r.id===second.id)
+ assert.equal(interrupted.status,'uncertain');assert.equal(interrupted.provider,'interrupted');assert.equal(h.messages.length,before+2,'Restart never repeats an uncertain handoff')
+ return {...f,failed,interrupted,at,fields}
+}
+export const balanceResolutionInput=r=>({id:r.scheduleId,version:r.scheduleVersion,invoiceId:r.invoiceId,invoiceVersion:r.invoiceVersion,assignmentId:r.assignmentId,termsId:r.termsId,confirm:'record-balance-review',evidence:'Owner contacted accounts personally; synthetic-mallet-904; provider delivery remains unverified'})
+
+async function balanceRecoveryJourney(){
+ const h=await installation({mailService:balanceRecoveryMail()})
+ try{
+  const {account,i1,i2,failed,interrupted,at,fields}=await balanceFailureFixture(h),path='/api/mallet/receivables/recovery?accountId='+account.id
+  const reviews=await h.api(path);assert.equal(reviews.length,2);assert.ok(reviews.every(r=>r.resolution===null));assert.deepEqual(new Set(reviews.map(r=>r.originalOutcome.status)),new Set(['failed','uncertain']))
+  const first=reviews.find(r=>r.scheduleId===failed.id),input=balanceResolutionInput(first)
+  let second=reviews.find(r=>r.scheduleId===interrupted.id)
+  for(const [r,schedule]of [[first,failed],[second,interrupted]]){
+   assert.deepEqual(r.originalOutcome,{status:schedule.status,provider:schedule.provider,claimedAt:schedule.claimedAt,outcomeAt:schedule.outcomeAt})
+   assert.equal(r.invoiceId,schedule.subjectId);assert.equal(r.invoiceVersion,schedule.invoiceVersion);assert.equal(r.assignmentId,schedule.assignmentId);assert.equal(r.termsId,schedule.termsId)
+  }
+  await h.command('outreach.stop',{id:second.scheduleId,version:second.scheduleVersion,reason:'Retain uncertain handoff; no further sending authority'})
+  await h.command('ar.resolveBalanceReminder',balanceResolutionInput(second),{status:409})
+  second=(await h.api(path)).find(r=>r.scheduleId===interrupted.id)
+  const admin=await h.person(['synthetic-mallet-905','example.test'].join('@'),'admin'),member=await h.person(['synthetic-mallet-906','example.test'].join('@')),key=await h.command('agent.create',{label:'No balance review rights'}),agent={as:'',headers:{authorization:'Bearer '+key.token}}
+  const revoked=await h.signInAs((await h.api('/auth/session')).operator.email)
+  assert.equal((await h.request('/auth/signout',{method:'POST',body:{},as:revoked})).status,204)
+  const before=await h.state(),mail=h.messages.length
+  for(const outsider of [{as:admin.cookie},{as:member.cookie},agent,{as:revoked},{as:''}]){
+   const status=outsider.as===revoked||outsider.as===''&&!outsider.headers?401:403
+   assert.equal((await h.request(path,outsider)).status,status)
+   assert.equal((await h.request('/app/receivables?recovery=balance',outsider)).status,status===401?303:403)
+   await h.command('ar.resolveBalanceReminder',input,{...outsider,status})
+   const form=new URLSearchParams({command:'ar.resolveBalanceReminder',...input})
+   const response=await h.mf.dispatchFetch(h.origin+'/app/actions',{method:'POST',redirect:'manual',headers:{origin:h.origin,'content-type':'application/x-www-form-urlencoded',...(outsider.as?{cookie:outsider.as}:{}),...outsider.headers},body:form.toString()})
+   assert.equal(response.status,status===401?303:403)
+  }
+  assert.deepEqual(await h.state(),before);assert.equal(h.messages.length,mail)
+  await (await h.mf.getD1Database('DB')).prepare('UPDATE mallet_session_proofs SET step_up_until=0').run()
+  const stale=await h.command('ar.resolveBalanceReminder',input,{status:403});assert.equal(stale.error,'step_up_required');assert.deepEqual(await h.state(),before)
+  await h.stepUp()
+  for(const wrong of [{version:first.scheduleVersion-1},{invoiceId:i2.id},{invoiceVersion:first.invoiceVersion+1},{assignmentId:second.assignmentId},{termsId:'synthetic-mallet-907'}])await h.command('ar.resolveBalanceReminder',{...input,...wrong},{status:409})
+  await h.command('ar.resolveBalanceReminder',{...input,confirm:''},{status:400});await h.command('ar.resolveBalanceReminder',{...input,evidence:''},{status:400})
+  assert.deepEqual(await h.state(),before,'Wrong source references, stale proof and missing confirmation write nothing')
+  const attempts=await Promise.all([0,1].map(()=>h.request('/api/mallet/commands',{method:'POST',body:{command:'ar.resolveBalanceReminder',input}})))
+  assert.deepEqual(attempts.map(r=>r.status).sort(),[200,409],'Concurrent closure appends one receipt')
+  const receipt=(await h.api(path)).find(r=>r.scheduleId===failed.id).resolution
+  assert.equal(receipt.by.id,before.actor.id);assert.equal(receipt.by.role,'owner');assert.ok(Number.isFinite(Date.parse(receipt.at)));assert.equal(receipt.evidence,input.evidence);assert.deepEqual(receipt.originalOutcome,first.originalOutcome)
+  await h.command('ar.resolveBalanceReminder',input,{status:409})
+  const audit=await h.api('/api/mallet/audit?action=ar.resolveBalanceReminder');assert.equal(audit.entries.length,1);assert.equal(audit.entries[0].actor.id,receipt.by.id);assert.ok(audit.entries[0].changes.some(c=>c.kind==='balanceReminderResolution'&&c.id===receipt.id&&c.beforeRevision===null&&c.afterRevision===1))
+  const after=await h.state()
+  for(const kind of ['outreach','invoice','arInvoice','arTerms','payment','deposit','arPromise','arDispute'])assert.deepEqual(after.records[kind],before.records[kind],'Human review does not change '+kind)
+  const statementPath='/api/mallet/receivables?accountId='+account.id+'&asOf=2099-01-02',statement=await h.api(statementPath)
+  assert.equal(statement.outstandingCents,22000)
+  for(const outsider of [{as:admin.cookie},{as:member.cookie},agent])assert.equal((await h.state(outsider)).records.balanceReminderResolution,undefined,'Private recovery evidence is owner-only in state projections too')
+  await h.restart();await h.cron(at('15:15'));assert.equal(h.messages.length,mail);assert.deepEqual((await h.state()).records.outreach,before.records.outreach)
+  const pending=await h.command('outreach.schedule',fields(i1))
+  await h.command('ar.resolveBalanceReminder',{...input,id:pending.id,version:pending.version},{status:409})
+  const saved=await h.state(),fresh=await installation({mailService:balanceRecoveryMail()})
+  try{
+   await restore(fresh,await archive(h))
+   for(const kind of ['outreach','balanceReminderResolution','invoice','arInvoice','arTerms'])assert.deepEqual((await fresh.state()).records[kind],saved.records[kind],'Exact recovered '+kind)
+   assert.deepEqual(await fresh.api(path),await h.api(path));assert.deepEqual(await fresh.api(statementPath),statement)
+   const authority=await (await fresh.mf.getD1Database('DB')).prepare('SELECT count(*) AS n FROM mallet_outreach_authority').first();assert.equal(authority.n,0)
+   await fresh.cron(at('15:30'));assert.equal(fresh.messages.length,0,'A restored pending schedule and a resolution grant no sending authority')
+   const resolved=await fresh.command('ar.resolveBalanceReminder',balanceResolutionInput(second))
+   assert.equal(resolved.by.id,(await fresh.state()).actor.id);assert.notEqual(resolved.by.id,receipt.by.id);assert.deepEqual(resolved.originalOutcome,second.originalOutcome)
+   const recoveredBefore=await fresh.state();await fresh.restart();await fresh.cron(at('15:45'));assert.equal(fresh.messages.length,0);assert.deepEqual((await fresh.state()).records.balanceReminderResolution,recoveredBefore.records.balanceReminderResolution);assert.deepEqual(await fresh.api(statementPath),statement)
+   assert.equal((await fresh.request(path,{as:h.owner})).status,401,'Source owner credentials confer no destination review authority')
+  }finally{await fresh.close()}
+ }finally{await h.close()}
 }
