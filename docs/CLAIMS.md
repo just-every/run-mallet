@@ -40,7 +40,7 @@ Generated from CONTRACT.md by `node scripts/contract-docs.mjs write`. [Exact cla
 | 34 | FLOW-001, FLOW-002, TIME-001 | done |
 | 35 | WORK-001, TIME-001 | done |
 | 36 | PART-006, FLOW-002 | done |
-| 37 | ADV-003 | partial |
+| 37 | ADV-003 | done |
 | 38 | TIME-001 | done |
 | 39 | QUALITY-001 | done |
 | 40 | PAY-003, MSG-001 | missing |
