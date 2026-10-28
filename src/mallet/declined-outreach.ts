@@ -7,13 +7,13 @@ export const DECLINED_POLICY='declined-email-v1'
 export const DECLINED_WORDING_VERSION='declined-permission-v1'
 export const declinedWording=(item:any)=>`Please send me one email about the declined work “${item.line.description}” identified by ${item.id}. This permission is for that item only, not appointment messages or other marketing. I may withdraw it before sending.`
 export const declinedRecipient=(asset:any)=>String(asset.customerEmail??'').trim().toLowerCase()
-export const declinedCustomer=(asset:any)=>({assetId:asset.id,accountId:asset.customerAccountId??null,name:asset.customerName,to:declinedRecipient(asset)})
+export const declinedCustomer=(asset:any,s:State)=>({assetId:asset.id,assetVersion:asset.version,accountId:asset.customerAccountId??null,accountVersion:rows(s,'customerAccount').find(a=>a.id===asset.customerAccountId)?.version??null,contactVersions:rows(s,'contact').filter(r=>rows(s,'customerAccount').some(a=>a.id===asset.customerAccountId&&a.contactIds?.includes(r.id))).map(r=>({id:r.id,version:r.version})).sort((a,b)=>a.id.localeCompare(b.id)),name:asset.customerName,to:declinedRecipient(asset)})
 export function declinedSuppressed(s:State,asset:any){
- return !!asset.privacyErasedAt||!!rows(s,'customerAccount').find(a=>a.id===asset.customerAccountId)?.privacyErasedAt||!!optedOut(s,declinedRecipient(asset))||rows(s,'declinedConsent').some(r=>(r.assetId===asset.id||r.to===declinedRecipient(asset))&&r.withdrawnAt)
+ return !!asset.privacyErasedAt||!!rows(s,'customerAccount').find(a=>a.id===asset.customerAccountId)?.privacyErasedAt||!!optedOut(s,declinedRecipient(asset))||rows(s,'declinedConsent').some(r=>(r.assetId===asset.id||r.to===declinedRecipient(asset))&&(r.withdrawnAt||r.erasureSuppressedAt))
 }
 export function currentDeclinedConsent(s:State,consent:any,item:any){
  const asset=find(s,'asset',item.assetId)
- if(!consent||consent.subjectId!==item.id||consent.purpose!=='declined-work'||consent.channel!=='email'||consent.withdrawnAt||declinedSuppressed(s,asset)||JSON.stringify(consent.customer)!==JSON.stringify(declinedCustomer(asset)))fail('OUTREACH_CONSENT','Current separate permission for this declined item and recipient is required.')
+ if(!consent||consent.subjectId!==item.id||consent.purpose!=='declined-work'||consent.channel!=='email'||consent.withdrawnAt||declinedSuppressed(s,asset)||JSON.stringify(consent.customer)!==JSON.stringify(declinedCustomer(asset,s)))fail('OUTREACH_CONSENT','Current separate permission for this declined item and recipient is required.')
  return asset
 }
 /** Evidence is limited to native stock and this quote's booked repair. It reserves nothing. */
@@ -74,7 +74,7 @@ export function declinedOutreachCommand(c:Context,command:string,p:any):any{
   if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)||to!==declinedRecipient(asset))fail('OUTREACH_RECIPIENT','Use this customer’s current recipient.',null,400)
   const consentedAt=instant(p.consentedAt,'customer permission time with UTC offset')
   if(consentedAt>c.now)fail('INPUT','Customer permission time cannot be in the future.',null,400)
-  const row=put(c.s,'declinedConsent',{subjectId:item.id,assetId:asset.id,jobId:item.jobId,customer:declinedCustomer(asset),to,channel:'email',purpose:'declined-work',wording:declinedWording(item),wordingVersion:DECLINED_WORDING_VERSION,consentedTime:text(p.consentedAt,'original customer permission time',40),consentedAt,captureChannel:choice(p.captureChannel,['customer-form','customer-email','telephone','in-person'],'customer permission source'),sourceEvidence:text(p.sourceEvidence,'customer permission evidence reference',2000),by:who(c),at:c.now,policy:DECLINED_POLICY})
+  const row=put(c.s,'declinedConsent',{subjectId:item.id,assetId:asset.id,jobId:item.jobId,customer:declinedCustomer(asset,c.s),to,channel:'email',purpose:'declined-work',wording:declinedWording(item),wordingVersion:DECLINED_WORDING_VERSION,consentedTime:text(p.consentedAt,'original customer permission time',40),consentedAt,captureChannel:choice(p.captureChannel,['customer-form','customer-email','telephone','in-person'],'customer permission source'),sourceEvidence:text(p.sourceEvidence,'customer permission evidence reference',2000),by:who(c),at:c.now,policy:DECLINED_POLICY})
   event(c,command,item.jobId,row.id,{});return row
  }
  const q=find(c.s,'estimate',p.estimateId);expectVersion(q,p.quoteVersion)
@@ -82,6 +82,6 @@ export function declinedOutreachCommand(c:Context,command:string,p:any):any{
  const expiresAt=instant(p.expiresAt,'availability review expiry')
  if(expiresAt<=c.now||Date.parse(expiresAt)-Date.parse(c.now)>31*86400000)fail('INPUT','Availability review needs a future expiry within 31 days.',null,400)
  const snapshot=nativeDeclinedAvailability(c.s,item,q,p.mappings,c.now)
- const row=put(c.s,'declinedAvailability',{subjectId:item.id,assetId:asset.id,jobId:q.jobId,estimateId:q.id,quoteVersion:q.version,mappings:snapshot.sources.map(r=>({lineId:r.lineId,itemId:r.itemId,binId:r.binId})),snapshot,expiresAt,evidence:text(p.evidence,'availability review evidence',2000),by:who(c),at:c.now,policy:DECLINED_POLICY})
+ const row=put(c.s,'declinedAvailability',{subjectId:item.id,assetId:asset.id,jobId:q.jobId,estimateId:q.id,quoteVersion:q.version,nativeTechnician:p.nativeTechnician,mappings:snapshot.sources.map(r=>({lineId:r.lineId,itemId:r.itemId,binId:r.binId})),snapshot,expiresAt,evidence:text(p.evidence,'availability review evidence',2000),by:who(c),at:c.now,policy:DECLINED_POLICY})
  event(c,command,q.jobId,row.id,{});return row
 }

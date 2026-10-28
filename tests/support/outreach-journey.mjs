@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import {installation,archive,restore,booking,estimate,authorise} from '../harness.mjs'
 import {shopSetup} from './diagnosis-journey.mjs'
 import {bookingService,bookingPost,holdFields,slotId} from './booking-journey.mjs'
+export const OUTREACH_CLOCK='2026-10-28T12:00:00Z'
 export const scheduleFields=(source,overrides={})=>({kind:'appointment',subjectId:source.id,version:source.version,dueAt:'2026-11-01T05:30:00Z',expiresAt:'2026-11-01T18:00:00Z',timeZone:'America/New_York',allowedStart:9,allowedEnd:18,instructions:'Bring the service record.',consent:true,consentEvidence:'Customer requested one reminder in New York daytime hours.',...overrides})
 export async function appointmentFixture(h){
  await shopSetup(h)
@@ -13,7 +14,7 @@ export async function appointmentFixture(h){
 }
 export async function appointmentOutreachJourney(){
  let rejected=false
- const h=await installation({mailService:async()=>rejected?Response.json({error:'synthetic-mallet-702'},{status:422}):Response.json({id:crypto.randomUUID()})})
+ const h=await installation({clock:OUTREACH_CLOCK,mailService:async()=>rejected?Response.json({error:'synthetic-mallet-702'},{status:422}):Response.json({id:crypto.randomUUID()})})
  try{
   const {service,path,appointment}=await appointmentFixture(h),fields=scheduleFields(appointment)
   const member=await h.person('synthetic-mallet-703@example.test')
@@ -36,7 +37,7 @@ export async function appointmentOutreachJourney(){
   await h.cron('2026-11-01T14:30:00Z');assert.equal((await h.state()).records.outreach.find(r=>r.id===third.id).status,'failed')
   const calls=h.messages.length;await h.cron('2026-11-01T14:45:00Z');assert.equal(h.messages.length,calls)
   rejected=false
-  const pending=await h.command('outreach.schedule',scheduleFields(current,{instructions:'Bring the service record. '.repeat(20)})),backup=await archive(h),fresh=await installation({bindings:{OWNER_EMAIL:'synthetic-mallet-705@example.test'}})
+  const pending=await h.command('outreach.schedule',scheduleFields(current,{instructions:'Bring the service record. '.repeat(20)})),backup=await archive(h),fresh=await installation({clock:OUTREACH_CLOCK,bindings:{OWNER_EMAIL:'synthetic-mallet-705'+String.fromCharCode(64)+'example.test'}})
   try{await restore(fresh,backup);assert.deepEqual((await fresh.state()).records.outreach,(await h.state()).records.outreach);await fresh.cron('2026-11-01T15:00:00Z');assert.equal(fresh.messages.filter(m=>m.subject==='Your appointment reminder').length,0)}finally{await fresh.close()}
   assert.equal((await bookingPost(h,path,{action:'cancel',version:current.version})).status,200)
   await h.cron('2026-11-01T15:00:00Z');assert.equal((await h.state()).records.outreach.find(r=>r.id===pending.id).status,'stopped')
@@ -68,7 +69,7 @@ export async function declinedScheduleFields(h,fixture,overrides={}){
  return scheduleFields(fixture.item,{kind:'declined',estimateId:fixture.quote.id,quoteVersion:fixture.quote.version,urgency:'Review soon',approved:true,consentId:consent.id,consentVersion:consent.version,availabilityId:availability.id,availabilityVersion:availability.version,...overrides})
 }
 export async function declinedOutreachJourney(){
- const h=await installation()
+ const h=await installation({clock:OUTREACH_CLOCK})
  try{
   const fixture=await declinedFixture(h),{item,quote,job}=fixture
   const member=await h.person('synthetic-mallet-808'+String.fromCharCode(64)+'example.test')
@@ -77,6 +78,7 @@ export async function declinedOutreachJourney(){
   await h.command('outreach.consent',declinedConsentInput(fixture,{consent:false}),{status:422})
   await h.command('outreach.consent',declinedConsentInput(fixture,{sourceEvidence:''}),{status:400})
   await h.command('outreach.availability',declinedAvailabilityInput(fixture,{mappings:[]}),{status:409})
+  await h.command('outreach.schedule',scheduleFields(item,{kind:'declined',estimateId:quote.id,quoteVersion:quote.version,approved:true,availabilityConfirmed:true,availabilityEvidence:'Owner assertion alone'}),{status:409})
   const fields=await declinedScheduleFields(h,fixture)
   await h.command('outreach.schedule',{...fields,approved:false},{status:422})
   await h.command('outreach.schedule',fields,{as:member.cookie,status:403})
@@ -97,7 +99,9 @@ export async function declinedOutreachJourney(){
   const reviewed=await h.command('decline.inapplicable',{declinedWorkId:item.id,version:item.version,evidence:'Owner inspected the vehicle and the finding no longer applies'});assert.equal(reviewed.inapplicable.evidence,'Owner inspected the vehicle and the finding no longer applies');assert.deepEqual(reviewed.decision,item.decision)
   await h.command('outreach.schedule',{...fields,version:reviewed.version},{status:409})
   assert.deepEqual((await h.state()).records.declinedWork.find(r=>r.id===item.id).decision,item.decision,'Original decision remains immutable')
-  const backup=await archive(h),fresh=await installation({bindings:{OWNER_EMAIL:'synthetic-mallet-809'+String.fromCharCode(64)+'example.test'}})
+  const backup=await archive(h),fresh=await installation({clock:OUTREACH_CLOCK,bindings:{OWNER_EMAIL:'synthetic-mallet-809'+String.fromCharCode(64)+'example.test'}})
   try{await restore(fresh,backup);for(const kind of ['outreach','declinedConsent','declinedAvailability'])assert.deepEqual((await fresh.state()).records[kind],(await h.state()).records[kind]);await fresh.cron('2026-11-01T15:00:00Z');assert.equal(fresh.messages.filter(m=>m.subject==='Your declined-work follow-up').length,0)}finally{await fresh.close()}
  }finally{await h.close()}
 }
+
+export {declinedEligibilityJourney,declinedErasureJourney} from './declined-outreach-journey.mjs'

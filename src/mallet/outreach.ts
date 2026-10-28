@@ -28,7 +28,7 @@ export function outreachStop(s:State,r:any,now:string):string{
   if(!item||item.version!==r.itemVersion||!q||q.version!==r.quoteVersion||q.status!=='approved'||q.authorisation)return 'Declined work or refreshed quote changed'
   if(item.proposals.some((p:any)=>{const quote=rows(s,'estimate').find(q=>q.id===p.estimateId);return !!quote?.authorisation}))return 'Accepted or declined again'
   const asset=rows(s,'asset').find(a=>a.id===item.assetId)
-  if(!asset||JSON.stringify(declinedCustomer(asset))!==JSON.stringify(r.customer))return 'Customer contact changed'
+  if(!asset||JSON.stringify(declinedCustomer(asset,s))!==JSON.stringify(r.customer))return 'Customer contact changed'
   try{const consent=rows(s,'declinedConsent').find(x=>x.id===r.consentId);currentDeclinedConsent(s,consent,item);if(consent?.version!==r.consentVersion)return 'Customer permission changed'}catch{return 'Customer permission missing or withdrawn'}
   const availability=declinedAvailabilityStop(s,r,now);if(availability)return availability
  }
@@ -75,7 +75,7 @@ export const outreach:Handler=(c,command,p)=>{
    const stop=declinedAvailabilityStop(c.s,{subjectId:item.id,estimateId:q.id,availabilityId:review.id,availabilityVersion:review.version},c.now)
    if(stop||expiresAt>review.expiresAt)fail('OUTREACH_AVAILABILITY',stop||'Email authority must expire by the availability evidence expiry.')
    if(rows(c.s,'outreach').some(r=>r.kind==='declined'&&r.subjectId===item.id&&['failed','uncertain'].includes(r.status)&&!r.resolution))fail('OUTREACH_RESOLUTION','Record human resolution before a fresh approval after a failed or uncertain handoff.')
-   source={knownJobIds:rows(c.s,'job').filter(j=>j.assetId===item.assetId).map(j=>j.id),subjectId:item.id,assetId:asset.id,jobId:q.jobId,customer:declinedCustomer(asset),itemVersion:item.version,estimateId:q.id,quoteVersion:q.version,quote:structuredClone(q.revisions.at(-1)),to:consent.to,totalCents:q.revisions.at(-1).totals.totalCents,urgency:text(p.urgency,'urgency',200),consentId:consent.id,consentVersion:consent.version,consentSnapshot:structuredClone(consent),availabilityId:review.id,availabilityVersion:review.version,availabilitySnapshot:structuredClone(review),consentEvidence:consent.sourceEvidence,templateVersion:'declined-follow-up-v1',policy:DECLINED_POLICY,content:declinedContent(text(p.instructions,'follow-up instructions',2000),q.revisions.at(-1).totals.totalCents)}
+   source={knownJobIds:rows(c.s,'job').filter(j=>j.assetId===item.assetId).map(j=>j.id),subjectId:item.id,assetId:asset.id,jobId:q.jobId,customer:declinedCustomer(asset,c.s),itemVersion:item.version,estimateId:q.id,quoteVersion:q.version,quote:structuredClone(q.revisions.at(-1)),to:consent.to,totalCents:q.revisions.at(-1).totals.totalCents,urgency:text(p.urgency,'urgency',200),consentId:consent.id,consentVersion:consent.version,consentSnapshot:structuredClone(consent),availabilityId:review.id,availabilityVersion:review.version,availabilitySnapshot:structuredClone(review),consentEvidence:consent.sourceEvidence,templateVersion:'declined-follow-up-v1',policy:DECLINED_POLICY,content:declinedContent(text(p.instructions,'follow-up instructions',2000),q.revisions.at(-1).totals.totalCents)}
   }
   if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(source.to??''))fail('INPUT','A current customer email is required.',null,400)
   if(rows(c.s,'outreach').some(r=>r.subjectId===source.subjectId&&['pending','claimed'].includes(r.status)&&!r.stoppedAt))fail('OUTREACH_ACTIVE','Stop the existing follow-up before scheduling another.')
@@ -98,5 +98,5 @@ export const outreach:Handler=(c,command,p)=>{
  }
  if(row.status!=='claimed')fail('OUTREACH_OUTCOME','Already recorded.')
  if(!['accepted','development','failed','uncertain','skipped'].includes(p.status))fail('INPUT','Invalid delivery outcome.',null,400)
- const next=bump(c.s,'outreach',row,{status:p.status,provider:text(p.provider,'provider',100),providerReference:text(p.providerReference,'provider reference',1024,true),outcomeAt:c.now});event(c,command,row.jobId??null,row.id,{status:p.status});return next
+ const next=bump(c.s,'outreach',row,{status:p.status,provider:text(p.provider,'provider',100),providerReference:text(p.providerReference,'provider reference',1024,true),outcomeReason:text(p.reason,'handoff stop reason',2000,true),outcomeAt:c.now});event(c,command,row.jobId??null,row.id,{status:p.status});return next
 }

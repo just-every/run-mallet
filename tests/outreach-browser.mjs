@@ -2,10 +2,12 @@ import assert from 'node:assert/strict'
 import {mkdir} from 'node:fs/promises'
 import {join} from 'node:path'
 import {chromium} from '@playwright/test'
-import {installation} from './harness.mjs'
-import {appointmentFixture,declinedFixture} from './support/outreach-journey.mjs'
+import {installation,archive,restore} from './harness.mjs'
+import {shopSetup} from './support/diagnosis-journey.mjs'
+import {appointmentFixture,declinedFixture,declinedScheduleFields,OUTREACH_CLOCK} from './support/outreach-journey.mjs'
 export async function outreachBrowser(){
- const h=await installation({network:true,secureNetwork:true,assets:true});let browser
+ let reject=false
+ const h=await installation({clock:OUTREACH_CLOCK,network:true,secureNetwork:true,assets:true,mailService:async()=>reject?Response.json({error:'synthetic-mallet-840'},{status:422}):Response.json({id:'synthetic-mallet-841'})});let browser
  try{
   const {appointment}=await appointmentFixture(h),declined=await declinedFixture(h)
   await h.stepUp()
@@ -14,7 +16,7 @@ export async function outreachBrowser(){
   await context.addCookies(h.owner.split('; ').map(pair=>({name:pair.slice(0,pair.indexOf('=')),value:pair.slice(pair.indexOf('=')+1),url:h.origin})))
   const p=await context.newPage(),errors=[];p.on('pageerror',e=>errors.push(e.message))
   const directory=process.env.MALLET_OPS_PROOF_DIR??'.cache/outreach-browser';await mkdir(directory,{recursive:true})
-  const shot=async name=>{for(const width of [1440,390]){await p.setViewportSize({width,height:1000});assert.ok(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));assert.equal(await p.locator('button,a').evaluateAll(nodes=>nodes.filter(n=>n.querySelector('svg,img')&&!n.textContent.trim()&&!n.getAttribute('data-tooltip')).length),0,'Icon-only controls have tooltips');await p.screenshot({path:join(directory,name+'-'+width+'.png'),fullPage:true})}}
+  const shot=async (name,target=p)=>{for(const width of [1440,390]){await target.setViewportSize({width,height:1000});assert.ok(await target.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));assert.equal(await target.locator('button,a').evaluateAll(nodes=>nodes.filter(n=>n.querySelector('svg,img')&&!n.textContent.trim()&&!n.getAttribute('data-tooltip')).length),0,'Icon-only controls have tooltips');await target.screenshot({path:join(directory,name+'-'+width+'.png'),fullPage:true});if(name.startsWith('declined'))await target.getByRole('heading',{name:'Declined-work email follow-up',exact:true}).locator('..').screenshot({path:join(directory,name+'-panel-'+width+'.png')})}}
   for(const [kind,path,heading]of [['appointment','/app/bookings','Appointment email follow-up'],['declined','/app/jobs/'+declined.job.id,'Declined-work email follow-up']]){
    await p.goto(h.origin+path);await shot(kind+'-before')
    let section=p.getByRole('heading',{name:heading,exact:true}).locator('..')
@@ -52,6 +54,34 @@ export async function outreachBrowser(){
    await stop.getByRole('button',{name:'Stop follow-up',exact:true}).click();await p.waitForLoadState('domcontentloaded');await shot(kind+'-stopped')
    assert.equal((await h.state()).records.outreach.find(r=>r.kind===kind).status,'stopped')
   }
+  // The screen shows source invalidation and exact failed-handoff recovery.
+  const noMail=h.messages.filter(m=>m.subject==='Your declined-work follow-up').length
+  const stale=await h.command('outreach.schedule',await declinedScheduleFields(h,declined))
+  await h.command('stock.receive',{itemBarcode:declined.stock.barcode,binBarcode:declined.bin.barcode,quantity:1,expectedQuantity:1,reference:'synthetic-mallet-842',reason:'Native stock changed after email approval'})
+  await h.cron('2026-11-01T14:00:00Z')
+  assert.equal(h.messages.filter(m=>m.subject==='Your declined-work follow-up').length,noMail)
+  assert.equal((await h.state()).records.outreach.find(r=>r.id===stale.id).status,'stopped')
+  await p.goto(h.origin+'/app/jobs/'+declined.job.id);assert.match(await p.locator('main').innerText(),/Native availability sources changed/);await shot('declined-stock-invalidated')
+  await h.command('reading.record',{jobId:declined.job.id,version:(await h.state()).records.job.find(j=>j.id===declined.job.id).version,unit:'miles',stage:'intake',value:1300,observedAt:'2026-10-02T09:00:00Z'})
+  const failed=await h.command('outreach.schedule',await declinedScheduleFields(h,declined));reject=true;await h.cron('2026-11-01T14:10:00Z')
+  assert.equal((await h.state()).records.outreach.find(r=>r.id===failed.id).status,'failed')
+  await p.goto(h.origin+'/app/jobs/'+declined.job.id)
+  const resolution=p.locator('form').filter({has:p.locator('input[name="command"][value="outreach.resolve"]')})
+  await resolution.getByLabel('Human resolution evidence').fill('Owner inspected the failed handoff; fresh permission and approval required; synthetic-mallet-843')
+  await shot('declined-failed-review');await resolution.getByRole('button',{name:'Record resolution',exact:true}).click();await p.waitForLoadState('domcontentloaded')
+  assert.equal((await h.state()).records.outreach.find(r=>r.id===failed.id).resolution.evidence,'Owner inspected the failed handoff; fresh permission and approval required; synthetic-mallet-843')
+  assert.match(await p.locator('main').innerText(),/Staff resolution recorded; no automatic retry/)
+  await p.getByText('Exact email and evidence',{exact:true}).last().click();assert.match(await p.locator('main').innerText(),/USD 64.50/);assert.match(await p.locator('main').innerText(),/declined-permission-v1/);await shot('declined-resolved-history')
+  reject=false
+  await h.command('outreach.schedule',await declinedScheduleFields(h,declined))
+  const backup=await archive(h),fresh=await installation({clock:OUTREACH_CLOCK,network:true,secureNetwork:true,assets:true,bindings:{OWNER_EMAIL:'synthetic-mallet-844'+String.fromCharCode(64)+'example.test'}})
+  try{
+   await restore(fresh,backup);for(const kind of ['outreach','declinedConsent','declinedAvailability'])assert.deepEqual((await fresh.state()).records[kind],(await h.state()).records[kind])
+   await shopSetup(fresh)
+   await fresh.cron('2026-11-01T14:20:00Z');assert.equal(fresh.messages.filter(m=>m.subject==='Your declined-work follow-up').length,0)
+   const recovered=await browser.newContext({ignoreHTTPSErrors:true})
+   try{await recovered.addCookies(fresh.owner.split('; ').map(pair=>({name:pair.slice(0,pair.indexOf('=')),value:pair.slice(pair.indexOf('=')+1),url:fresh.origin})));const restored=await recovered.newPage();await restored.goto(fresh.origin+'/app/jobs/'+declined.job.id);assert.match(await restored.locator('main').innerText(),/authority unavailable/);await shot('declined-inert-recovery',restored)}finally{await recovered.close()}
+  }finally{await fresh.close()}
   await p.goto(h.origin+'/app/jobs/'+declined.job.id)
   const inapplicable=p.locator('form').filter({has:p.locator('input[name="command"][value="decline.inapplicable"]')})
   await inapplicable.getByLabel('Current finding review evidence').fill('Owner inspected the vehicle; this finding no longer applies')
