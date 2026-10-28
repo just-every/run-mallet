@@ -27,6 +27,7 @@ export async function coverageJourney(h,f){
  await h.command('coverage.schedule',{...warranty,dueAt:'2026-11-02T12:00:00Z'},{status:409})
  const canceled=await h.command('coverage.schedule',{...contract,reference:'synthetic-mallet-605',documentReference:'synthetic-mallet-605-document'})
  await h.command('coverage.cancel',{id:canceled.id,version:canceled.version,reason:'Customer canceled the agreement; retained source synthetic-mallet-606'})
+ await h.command('coverage.schedule',{...contract,reference:'synthetic-mallet-605-replay',documentReference:'synthetic-mallet-605-document'},{status:409})
  const renewalAt=Date.parse(coverageDates.dueAt),messages=h.messages.length
  await h.cron(renewalAt-1);assert.equal((await h.state()).records.coverageTask?.length??0,0)
  await h.cron(renewalAt);await h.restart();await h.cron(renewalAt)
@@ -67,6 +68,17 @@ export async function coverageJourney(h,f){
  await h.cron('2027-01-01T00:00:00Z')
  s=await h.state();assert.equal(s.records.coverageReview.find(r=>r.id===pending.id).status,'transferred');assert.equal(s.records.coverageTask.some(t=>t.coverageId===pending.id),false)
  assert.equal(s.records.coverageTask.find(t=>t.coverageId===renewal.id).status,'suppressed')
+ await h.command('coverage.schedule',{...contract,reference:'synthetic-mallet-610-replay'},{status:409})
+ // A real update of the ownership record also suppresses an outstanding task without a manual stop.
+ const currentAsset=(await h.state()).records.asset.find(a=>a.id===asset.id)
+ let changed=await h.command('asset.update',{assetId:asset.id,version:currentAsset.version,customerName:'New recorded owner',customerEmail:'',label:asset.label,identifier:asset.identifier})
+ const changedInput={...contract,reference:'synthetic-mallet-613',documentReference:'synthetic-mallet-613-document'}
+ const changedReview=await h.command('coverage.schedule',changedInput)
+ changed=await h.command('asset.update',{assetId:changed.id,version:changed.version,customerName:'Later recorded owner',customerEmail:'',label:changed.label,identifier:changed.identifier})
+ await h.cron('2027-01-01T00:00:00Z')
+ assert.equal((await h.state()).records.coverageReview.find(r=>r.id===changedReview.id).status,'transferred')
+ await h.command('coverage.transfer',{assetId:changed.id,version:changed.version,reason:'Owner records a further sale with no outstanding reviews.'})
+ await h.command('coverage.schedule',{...contract,reference:'synthetic-mallet-614',documentReference:'synthetic-mallet-614-document'},{status:409})
  await h.command('coverage.activate',{id:pending.id,version:s.records.coverageReview.find(r=>r.id===pending.id).version,reason:'Cannot undo recorded transfer'},{status:409})
  assert.equal(h.messages.length,messages,'No task, symptom, cancellation or transfer sends renewal mail')
  assert.deepEqual(s.records.invoice.find(i=>i.id===f.invoice.id),f.invoice,'Review tasks never reprice or renew the original invoice')
@@ -79,7 +91,7 @@ export async function coverageJourney(h,f){
  const preview=await h.command('retention.preview',{customerId,categories:['personal','import']})
  await h.command('customer.erase',{customerId,categories:['personal','import'],fingerprint:preview.fingerprint,consent:true,confirm:'ERASE',reason:'Customer requested removal of eligible personal records.',consentEvidence:'Verified customer erasure request synthetic-mallet-611'})
  s=await h.state();const erased=s.records.coverageReview.find(r=>r.id===check.id)
- assert.equal(erased.status,'erased');assert.equal(erased.symptoms[0].text,undefined);assert.equal(erased.basis,null)
+ assert.equal(erased.status,'erased');assert.equal(erased.symptoms[0].text,undefined);assert.equal(erased.basis,null);assert.equal(erased.reference,'erased-'+erased.id);assert.equal(erased.ownership,'0'.repeat(64))
  await h.command('coverage.schedule',{...contract,reference:'synthetic-mallet-612'},{status:409})
  const recovered=await installation()
  try{await restore(recovered,await archive(h));const r=(await recovered.state()).records.coverageReview.find(r=>r.id===check.id);assert.deepEqual(r,erased);await recovered.cron('2027-02-01T00:00:00Z');assert.equal((await recovered.state()).records.coverageReview.find(r=>r.id===check.id).status,'erased')}finally{await recovered.close()}

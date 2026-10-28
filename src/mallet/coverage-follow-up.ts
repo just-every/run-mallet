@@ -55,7 +55,7 @@ export const coverageFollowUp:Handler=(c,command,p)=>{
    if(JSON.stringify(old.basis)!==JSON.stringify(basis))fail('COVERAGE_REPLAY','This review reference already identifies different coverage or permission.')
    return old
   }
-  if(rows(c.s,'coverageReview').some(r=>r.assetId===asset.id&&r.status==='transferred'&&r.ownership===coverageOwnership(c.s,asset)))fail('COVERAGE_TRANSFERRED','Record the new vehicle ownership before scheduling another review.')
+  if((asset.coverageTransfers??[]).some((t:any)=>t.ownership===coverageOwnership(c.s,asset))||rows(c.s,'coverageReview').some(r=>r.assetId===asset.id&&r.status==='transferred'&&r.ownership===coverageOwnership(c.s,asset)))fail('COVERAGE_TRANSFERRED','Record the new vehicle ownership before scheduling another review.')
   if(kind==='service-contract'&&rows(c.s,'coverageReview').some(r=>r.assetId===asset.id&&r.status==='canceled'&&r.source.documentReference===source.documentReference))fail('COVERAGE_CANCELED','This retained agreement was canceled; a different review reference cannot revive it.')
   expectVersion(job,p.version)
   const row=put(c.s,'coverageReview',{...basis,basis,ownership:coverageOwnership(c.s,asset),assetRevision:asset.version,status:'scheduled',taskId:null,symptoms:[],history:[{action:'scheduled',by:who(c),at:c.now}],by:who(c),at:c.now})
@@ -64,6 +64,7 @@ export const coverageFollowUp:Handler=(c,command,p)=>{
  if(command==='coverage.transfer'){
   const asset=find(c.s,'asset',p.assetId);expectVersion(asset,p.version)
   const reason=text(p.reason,'recorded ownership-change evidence',2000)
+  bump(c.s,'asset',asset,{coverageTransfers:[...(asset.coverageTransfers??[]),{ownership:coverageOwnership(c.s,asset),reason,by:who(c),at:c.now}]})
   const affected=rows(c.s,'coverageReview').filter(r=>r.assetId===asset.id&&['scheduled','due'].includes(r.status)).map(r=>transition(c,r,'transferred',reason))
   event(c,command,null,asset.id,{assetId:asset.id,reviewIds:affected.map(r=>r.id)})
   return affected
