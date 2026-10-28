@@ -72,6 +72,10 @@ export async function blockerFollowThrough(h,f,agent){
  }
  assert.equal(work.current.nextAction.command,'quality.configure')
  job=await record(h,'job',job.id)
+ for(const line of consent.quote.revisions.at(-1).lines){
+  const quantity=job.actuals.filter(a=>a.estimateId===consent.quote.id&&a.lineId===line.id).reduce((sum,a)=>sum+a.quantity,0)
+  assert.equal(quantity,line.quantity,'Every exact authorized line is actually performed before the prepared quality step')
+ }
  await h.command('job.complete',{jobId:job.id,version:job.version},{status:409})
  let quality=await h.command('quality.configure',{...work.current.nextAction.input,reason:'Actual work needs both current quality signatures',items:[{label:'Pre-work condition',stage:'pre',required:true,critical:false},{label:'Post-work function',stage:'post',required:true,critical:true}]})
  work=await sweep(h,job);assert.equal(work.current.nextAction.command,'quality.record')
