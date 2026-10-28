@@ -572,7 +572,7 @@
       "executable": false
     },
     "ACCEPTANCE.md": {
-      "sha256": "3a2864df52908892c14818e6463fa001221975ec2515d4d56d4f077a99eb3049",
+      "sha256": "413dec9f5be1564f11fd86551d300ddefc6021cbb307422664ecce0010981272",
       "executable": false
     },
     "AGENTS.md": {
@@ -584,7 +584,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "7d353b24429a972fcb88abfa56478eb0179529c812736b3c709494e15480be59",
+      "sha256": "6a51681d16a209604d75c604065166d37badfe337826304af023d70070526648",
       "executable": false
     },
     "deploy-demo.json": {
@@ -616,7 +616,7 @@
       "executable": false
     },
     "docs/CLAIMS.md": {
-      "sha256": "063fef00a0bacfdf709524a8228cd7bfcea64b4f098d0f4c5e2a22c7413ea552",
+      "sha256": "31337d964d9b77bd48b36460e15976dfba6bc4d0113bc40ce40f4873b85e56ea",
       "executable": false
     },
     "docs/complete-a-repair.md": {

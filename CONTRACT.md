@@ -506,7 +506,7 @@ Every capability claim on the approved homepage (`src/site/landing/`, checked ag
 
 ## Status
 
-Judged from the code and tests at this candidate’s `HEAD` on `cloud/sx-mallet-c-f16` (28 October 2026). ADV-003 is the newly completed clause; other clauses retain their existing judgments.
+Judged from the code and tests at commit `e24eeebbaff613f7d8987af639bd8564c6c7e9b3` (28 October 2026). The candidate changes only the generated status documents and source lock after that tested code commit. ADV-003 is newly completed; other clauses retain their existing judgments.
 
 API-001 is updated by the three named shop API public-door journeys in this revision and remains PARTIAL; its complete target and acceptance sentence are unchanged. Earlier judged-at pins are historical baselines.
 
@@ -519,8 +519,8 @@ OPEN-001 was added on 18 October 2026. Its acceptance builds the candidate run s
 | Clauses | Done | Partial | Missing | Total |
 | --- | ---: | ---: | ---: | ---: |
 | Published | 9 | 0 | 0 | 9 |
-| Target and push further | 38 | 41 | 55 | 134 |
-| All | 47 | 41 | 55 | 143 |
+| Target and push further | 39 | 40 | 55 | 134 |
+| All | 48 | 40 | 55 | 143 |
 
 | Clause | Title | Kind | Status | Evidence | Gap |
 | --- | --- | --- | --- | --- | --- |
