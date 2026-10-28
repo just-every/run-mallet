@@ -1592,7 +1592,7 @@
       "executable": false
     },
     "src/mallet/api/commands.ts": {
-      "sha256": "5dfef98d603a9a644c08a45b7c3e0d138e1fad70a9b05a1291e5b725c9edaae2",
+      "sha256": "d8a25bcb4d1c29a51908dd52f6a4411ee5c010afda722d9d0142ca0467341be4",
       "executable": false
     },
     "src/mallet/api/resources.ts": {
@@ -2380,7 +2380,7 @@
       "executable": false
     },
     "src/mallet/stripe/door.ts": {
-      "sha256": "8c51bcac56f1f8a9629d7752a896ea510a3f0e34f306a8766a985cd5c59ff44a",
+      "sha256": "f75dfe4be0afb016c4d0a9021ab840831717afbe155a0f77ecdd14da41b1dc25",
       "executable": false
     },
     "src/mallet/stripe/provider.ts": {
@@ -2548,7 +2548,7 @@
       "executable": false
     },
     "src/mallet/ui/common.ts": {
-      "sha256": "3df318054b2791da5b7168b6ccfe58bfd2fcbb55468bfad472806cd3efb77e12",
+      "sha256": "e47fc3f64fe1e729c63800ec7c9cbffd5e2674ce4247ad8f0f1c6204a56d7e8a",
       "executable": false
     },
     "src/mallet/ui/conflict.ts": {
@@ -2728,7 +2728,7 @@
       "executable": false
     },
     "src/mallet/ui/security.ts": {
-      "sha256": "73e82d2e0cc35172bda7e126babd2a3b2f0cc1200f7616044974a5ae0a4ce5fe",
+      "sha256": "9edad1c2161ca376da3a3ab202ecafde0ab99496b5ea54669f7578aa05bfc042",
       "executable": false
     },
     "src/mallet/ui/shell.ts": {
@@ -4816,7 +4816,7 @@
       "executable": false
     },
     "tests/mallet.test.mjs": {
-      "sha256": "f4f3a0dd727d27e526340098d777c2f563a25eb35287016ffd9798fe49722f75",
+      "sha256": "8d269c4d1e332e20ced4979d5b9f91607b638c73ee8f04a9d07e6acaa255e0cd",
       "executable": false
     },
     "tests/media-browser.mjs": {
