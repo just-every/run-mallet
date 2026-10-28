@@ -1,6 +1,7 @@
 import {bump,event,expectVersion,fail,find,integer,put,rows,text,who,type Context,type Handler,type Row,type State} from './model'
 import {blockerProjection,blockerClearance} from './repair-blocker-sources'
 import {blockerNextAction} from './repair-blocker-actions'
+import {privateBlockerProjection} from './repair-blocker-privacy'
 import {currentRoutingHandler} from './routing'
 
 export const repairBlockerCommands=['blocker.refresh','blocker.assign','blocker.acknowledge','blocker.sweep'] as const
@@ -10,7 +11,7 @@ function currentProjection(s:State,job:Row,now?:string){
  // Keep missing source conditions visible rather than treating disappearance as success.
  for(const task of rows(s,'repairBlockerTask').filter(t=>t.jobId===job.id))if(!task.resolution&&!current.blockers.some(b=>b.key===task.key)&&!blockerClearance(s,job,task))current.blockers.push({key:task.key,kind:task.kind,title:'Retained blocker source needs review; fulfillment is unavailable.',source:task.source,action:{label:'Review original source',href:task.source.href}})
  current.nextAction=blockerNextAction(s,job,current.blockers)
- return current
+ return rows(s,'asset').some(a=>a.id===job.assetId&&a.privacyErasedAt)?privateBlockerProjection(current):current
 }
 export function repairBlockerView(s:State,jobId:string,people:any[],now?:string){
  const job=find(s,'job',jobId),current=currentProjection(s,job,now),packet=packetFor(s,job.id)

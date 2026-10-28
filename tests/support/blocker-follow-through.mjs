@@ -85,6 +85,22 @@ export async function blockerFollowThrough(h,f,agent){
  assert.equal((await record(h,'job',job.id)).status,'working','Even fully signed quality never infers completion')
  await h.command('job.complete',work.current.nextAction.input)
  work=await sweep(h,job);assert.equal(work.current.nextAction,null);assert.equal(work.current.progress.status,'completed')
+ // Erasure removes copied acknowledgments, not the cited authorization history.
+ const contact=await h.command('contact.save',{name:evidence.asset.customerName,email:evidence.asset.customerEmail,phone:'',communication:'none',notes:''})
+ const customer=await h.command('customer.save',{name:evidence.asset.customerName,kind:'person',contactIds:[contact.id],payerId:contact.id,billingContactId:contact.id,taxStatus:'unknown',notes:''})
+ asset=await record(h,'asset',evidence.asset.id)
+ await h.command('customer.linkAsset',{assetId:asset.id,version:asset.version,customerId:customer.id,customerVersion:customer.version,reason:'Link the real repair before reviewed customer erasure'})
+ v=await sweep(h,evidence.job)
+ const oldAcknowledgment=(await state(h)).records.repairBlockerTask.find(t=>t.jobId===evidence.job.id&&t.acknowledgments.length).acknowledgments[0].note
+ assert.ok(oldAcknowledgment)
+ const oldPacket=v.packet,preview=await h.command('retention.preview',{customerId:customer.id,categories:['personal','import']})
+ await h.command('customer.erase',{customerId:customer.id,categories:['personal','import'],fingerprint:preview.fingerprint,consent:true,confirm:'ERASE',reason:'Owner reviewed the explicit customer request',consentEvidence:'Verified customer request held by the current owner'})
+ v=await sweep(h,evidence.job)
+ const erased=(await state(h)).records
+ for(const kind of ['repairBlockerPacket','repairBlockerTask'])assert.ok(!JSON.stringify(erased[kind].filter(r=>r.jobId===evidence.job.id)).includes(oldAcknowledgment),'Erasure removes copied customer notes from private blocker history')
+ const captured={jobId:evidence.job.id,packetVersion:oldPacket.version,basis:oldPacket.revisions.at(-1).basis}
+ await h.command('blocker.refresh',captured,{status:409})
+ assert.deepEqual((await state(h)).records,erased,'A pre-erasure packet cannot replay copied detail into current history')
  // New automated attribution and prepared steps recover with exact product history, no credentials.
  const backup=await archive(h),fresh=await installation()
  try{

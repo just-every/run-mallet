@@ -5,6 +5,7 @@ import {chromium} from '@playwright/test'
 import {installation,archive,restore} from './harness.mjs'
 import {shopSetup} from './support/diagnosis-journey.mjs'
 import {publicDoor} from './support/portable-repair.mjs'
+import {blockerBrowserFollowThrough} from './support/blocker-browser-follow-through.mjs'
 import {blockerFixture} from './support/blocker-journey.mjs'
 
 const cookies=(cookie,origin)=>cookie.split('; ').map(pair=>({name:pair.slice(0,pair.indexOf('=')),value:pair.slice(pair.indexOf('=')+1),url:origin}))
@@ -169,6 +170,7 @@ export async function blockerBrowser(){
   assert.equal(backorder.current.blockers.length,0);assert.ok(backorder.tasks.length&&backorder.tasks.every(t=>t.resolution))
   assert.equal(backorder.current.progress.remainingHours,1);assert.equal(backorder.current.progress.recordedActuals,1)
   await shot('12-receipt-cleared-labor-still-open')
+  await blockerBrowserFollowThrough({h,p,advisor,job:f.consent.job,form,submit,shot})
   const saved=await archive(h)
   fresh=await installation({entry:'tests/dev-worker.ts',network:true,assets:true,bindings:{AUTH_LOCAL:'true',RER_DEV_KEY:randomBytes(32).toString('base64url'),OWNER_EMAIL:'synthetic-mallet-897@example.test'}})
   await restore(fresh,saved);await shopSetup(fresh)

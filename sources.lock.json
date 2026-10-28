@@ -2119,12 +2119,16 @@
       "sha256": "5d034977d8ddc7e3abbb0549faca6fad3dc3984a0910edb58e871253a3f110f2",
       "executable": false
     },
+    "src/mallet/repair-blocker-privacy.ts": {
+      "sha256": "dd50a8ff03560d328dcaf58bbbde2f96be7ee4a6781fd534d5d2055078526d3b",
+      "executable": false
+    },
     "src/mallet/repair-blocker-sources.ts": {
       "sha256": "c6ddd210480f1506ed3427cee22da3a02b0592524d2638a76c934b0f9b01bbd1",
       "executable": false
     },
     "src/mallet/repair-blockers.ts": {
-      "sha256": "4afd3996478d32eb3d85ac0ff12e0da47ede075a328f53b873e23c274d1f9f44",
+      "sha256": "0ed6442963d3b1fbcac4db575ca9e4e4260c30fcc02e3d4aff8ba39782038fb3",
       "executable": false
     },
     "src/mallet/reports/cost-rates.ts": {
@@ -2252,7 +2256,7 @@
       "executable": false
     },
     "src/mallet/retention/cleanup.ts": {
-      "sha256": "e712e053f0db4392e46f56ebcfe254d853951fb023745f3568caa717c06abc40",
+      "sha256": "039a0b86728393366db8bbb54d2d390a74f7c17c1a5b2563ca6af22823bf1b11",
       "executable": false
     },
     "src/mallet/retention/consent.ts": {
@@ -4640,7 +4644,7 @@
       "executable": false
     },
     "tests/blocker-browser.mjs": {
-      "sha256": "daf5dbe5adac26fdf3dba4b202ec0fb10660c2b315550917ab2fff822f28233e",
+      "sha256": "d73b14606b89ff38eeec1902780347b1114f0d08e34f813171d84b7679bc6c7e",
       "executable": false
     },
     "tests/bookings-browser.mjs": {
@@ -4935,8 +4939,12 @@
       "sha256": "a0c8a488503a775d53d3540c8668e2c069b137c10433207ac224e21faa79c751",
       "executable": false
     },
+    "tests/support/blocker-browser-follow-through.mjs": {
+      "sha256": "6f5d20ae1f52153880096581ee5300e773e6e50cb979c3dfd904bb59446d0980",
+      "executable": false
+    },
     "tests/support/blocker-follow-through.mjs": {
-      "sha256": "79e4b7090080699cef98703e2e4f317059b800d53db9e440a270d699e8d63822",
+      "sha256": "8069d7d19228ed7e4f60088be795c732f14689caeaf7b7f0d629ed7276fadae6",
       "executable": false
     },
     "tests/support/blocker-journey.mjs": {
