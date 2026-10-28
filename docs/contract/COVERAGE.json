@@ -2,7 +2,7 @@
   "schema": 1,
   "seed": "mallet-product",
   "old": {
-    "commit": "a6625ce80f910bd30456449dde0bdbe87b6b1ea6",
+    "commit": "726d6b96318e4b0cdae55d6e86e23f6d585180ac",
     "files": [
       "CONTRACT.md",
       "ACCEPTANCE.md",
@@ -12594,16 +12594,6 @@
     },
     {
       "file": "CONTRACT.md",
-      "line": 653,
-      "cell": "gap",
-      "text": "Advisor, manager, purchaser, cashier and accountant roles with complete limits and location and cost rights remain a named Gap. Native grants cover this installation\u2019s shop and an explicit subset of commands; full intake and communication delegation, accountant reconciliation, delegated destructive rights and multi-shop operation under SHOP-001 remain unbuilt or unproved. ct approved the PARTIAL local-grant slice on 25 Oct 2026 at 18:25Z: only the current owner with fresh confirmation grants or revokes local version-bound rights; zero default limits (a grant with no limit allows no delegated door or command), separate cost right, deny unlisted doors and other locations, no delegated outbound provider submission, and no restored grants. Refunds remain native recorded outcomes with fresh confirmation and bounded authority; connected submissions and redirection stay owner-only. No acceptance point is removed.",
-      "to": "gap",
-      "ids": [
-        "GOV-001"
-      ]
-    },
-    {
-      "file": "CONTRACT.md",
       "line": 654,
       "cell": "gap",
       "text": "Complete historical backfill remains unbuilt or unproved, including initial empty-installation login history; other specialist direct-write revision coverage remains unbuilt or unproved. Owner-configured minimum audit retention is a label only, with no timer or deletion and preserved owner export; the ct 25 October private-custody and no-deletion ruling is retained. Ordinary email-link login, exact media finding and upload transition revisions and durable provider-job state references are now asserted. Delegated auditor access stays with GOV-001. GOV-002 remains PARTIAL; no acceptance point is removed.",
@@ -15170,6 +15160,16 @@
       "text": "Evidence: `tests/mallet.test.mjs`; `tests/support/coverage-follow-up-journey.mjs`; `tests/warranty-browser.mjs`; `tests/coverage-follow-up-browser.mjs`.",
       "to": "generated",
       "note": "The contract generator writes this status or count."
+    },
+    {
+      "file": "CONTRACT.md",
+      "line": 653,
+      "cell": "gap",
+      "text": "Advisor, manager, purchaser, cashier and accountant roles with complete limits and location and cost rights remain a named Gap. Native purchaser forms now cover PO preparation and approval, partial barcode receiving, visible physical stock and reservations, bill exception and matching history, and closure within the existing spend and separate cost rights. Linked bins and PO records from other named locations are refused and excluded from permitted downloads. Native grants still cover this installation\u2019s shop and an explicit subset of commands; full intake and communication delegation, accountant reconciliation, delegated destructive rights and multi-shop operation under SHOP-001 remain unbuilt or unproved. ct approved the PARTIAL local-grant slice on 25 Oct 2026 at 18:25Z: only the current owner with fresh confirmation grants or revokes local version-bound rights; zero default limits (a grant with no limit allows no delegated door or command), separate cost right, deny unlisted doors and other locations, no delegated outbound provider submission, and no restored grants. Refunds remain native recorded outcomes with fresh confirmation and bounded authority; connected submissions and redirection stay owner-only. No acceptance point is removed.",
+      "to": "gap",
+      "ids": [
+        "GOV-001"
+      ]
     }
   ]
 }
