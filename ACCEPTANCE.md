@@ -576,9 +576,9 @@ Evidence: `LICENSE`; `rer-project.json`; `tests/clone-journey.mjs`; `tests/open-
 
 Evidence: `src/mallet/estimates.ts`; `src/mallet/model.ts`; `tests/mallet.test.mjs`.
 
-**ADV-002 — Approved customer conversations.** Status: **missing**. [Target, acceptance and remaining work](./CONTRACT.md#push-further-with-a-service-advisor-agent).
+**ADV-002 — Approved customer conversations.** Status: **partial**. [Target, acceptance and remaining work](./CONTRACT.md#push-further-with-a-service-advisor-agent).
 
-Evidence: No implementation evidence yet.
+Evidence: `tests/support/conversation-drafts-journey.mjs`; `tests/conversation-drafts-browser.mjs`; `docs/conversation-drafts.md`.
 
 **ADV-003 — Resolve the next repair blocker.** Status: **done**. [Target, acceptance and remaining work](./CONTRACT.md#push-further-with-a-service-advisor-agent).
 

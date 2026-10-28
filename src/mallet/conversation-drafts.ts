@@ -21,11 +21,14 @@ function proposal(c:Context,jobId:string,question:string,topic:string,selected:a
  const report=selected.reportId?find(c.s,'inspectionReport',selected.reportId):null
  const estimate=selected.estimateId?find(c.s,'estimate',selected.estimateId):null
  if(report&&report.jobId!==jobId||estimate&&estimate.jobId!==jobId)fail('CONVERSATION_SCOPE','Sources must belong to this exact repair and customer.',null,400)
- const sourceState:any={job:reference('job',job),asset:reference('asset',asset),account:account?reference('customerAccount',account):null,report:null,estimate:null,delivery:null,link:null,inspections:[]}
+ const contacts=account?(account.contactIds??[]).map((id:string)=>native(c.s,'contact',id)).filter(Boolean):[]
+ const recipient=contacts.find((r:Row)=>r.id===(asset.driverContactId??account?.driverId??account?.billingContactId))
+ const recipientAddress=recipient?.email??asset.customerEmail
+ const sourceState:any={contacts:contacts.map((r:Row)=>reference('contact',r)),job:reference('job',job),asset:reference('asset',asset),account:account?reference('customerAccount',account):null,report:null,estimate:null,delivery:null,link:null,inspections:[]}
  if(!report)reasons.push('Missing explicitly shared inspection report.')
  if(report){
   citations.push(reference('inspectionReport',report,{label:report.title,href:'/app/jobs/'+job.id+'#inspection-reports'}));sourceState.report=reference('inspectionReport',report)
-  const delivery=rows(c.s,'inspectionReportDelivery').findLast(d=>d.reportId===report.id&&d.to===asset.customerEmail&&d.status==='accepted')
+  const delivery=rows(c.s,'inspectionReportDelivery').findLast(d=>d.reportId===report.id&&d.to===recipientAddress&&d.status==='accepted')
   const link=delivery&&native(c.s,'diagnosisLink',delivery.linkId)
   if(!delivery||!link||link.revokedAt||link.expiresAt<=c.now||link.reportId!==report.id)reasons.push('No current shared-report handoff to the current customer; handoff is not receipt.')
   if(delivery){sourceState.delivery=reference('inspectionReportDelivery',delivery);citations.push(reference('inspectionReportDelivery',delivery,{label:'Recorded report handoff; receipt not established'}))}
@@ -70,7 +73,7 @@ export const conversationDrafts:Handler=(c,command,p)=>{
  if(c.actor.role!=='owner')fail('FORBIDDEN','Only the current owner reviews private conversation drafts.',null,403)
  const {job}=repair(c.s,text(p.jobId,'repair'))
  if(command==='conversation.capture'){
-  const captureReference=text(p.captureReference,'capture reference'),question=text(p.question,'entered customer question',4000),source=choice(p.source,['telephone','in-person','entered-email','entered-transcript'],'stated source'),evidence=text(p.evidence,'source evidence reference',2000),topic=text(p.topic,'question topic')
+  const captureReference=text(p.captureReference,'capture reference'),question=text(p.question,'entered customer question',4000),source=choice(p.source,['telephone','in-person','entered-email','entered-transcript'],'stated source'),evidence=text(p.evidence,'source evidence reference',2000),topic=choice(p.topic,['inspection','estimate','human'],'question topic')
   const enteredAt=text(p.enteredAt,'customer statement time',100)
   if(!Number.isFinite(Date.parse(enteredAt))||!/(Z|[+-]\d\d:\d\d)$/.test(enteredAt))fail('INPUT','Record the statement time with a timezone or UTC offset.',null,400)
   const fingerprint=hash({question,source,evidence,topic,enteredAt,reportId:p.reportId??null,estimateId:p.estimateId??null,revision:p.revision??null})
