@@ -7,7 +7,7 @@ export const declinedReviewCommands=['declineReview.refresh','declineReview.prep
 const hash=(value:any)=>createHash('sha256').update(JSON.stringify(value)).digest('hex')
 const ordered=(values:Row[])=>[...values].sort((a,b)=>a.id.localeCompare(b.id))
 const citation=(kind:string,row:Row)=>({kind,id:row.id,version:row.version})
-function quotedDeclinedLine(quote:Row|undefined,proposal:any){
+export function quotedDeclinedLine(quote:Row|undefined,proposal:any){
  const original=quote?.revisions.find((r:any)=>r.n===proposal.revision)?.lines.find((l:any)=>l.id===proposal.lineId)
  if(!original)return null
  // Price and quantity may be refreshed. Replacing the work itself does not

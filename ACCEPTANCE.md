@@ -372,7 +372,7 @@ Evidence: No implementation evidence yet.
 
 **AUTO-004 — Declined-work follow-up.** Status: **partial**. [Target, acceptance and remaining work](./CONTRACT.md#customer-communication-and-follow-up).
 
-Evidence: `tests/mallet.test.mjs`; `tests/support/outreach-journey.mjs`; `tests/outreach-browser.mjs`; `tests/support/outreach-journey.mjs`; `tests/outreach-browser.mjs`.
+Evidence: `tests/mallet.test.mjs`; `tests/support/outreach-journey.mjs`; `tests/outreach-browser.mjs`; `tests/support/outreach-journey.mjs`; `tests/outreach-browser.mjs`; `tests/support/declined-outreach-journey.mjs`.
 
 **AUTO-005 — Review and satisfaction requests.** Status: **partial**. [Target, acceptance and remaining work](./CONTRACT.md#customer-communication-and-follow-up).
 

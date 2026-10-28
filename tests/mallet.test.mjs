@@ -480,7 +480,7 @@ test('PAY-001: authenticated ACH returns and reinstatement preserve captured pay
 })
 
 test('AUTO-001: appointment email quiet hours across DST, replacement, cancellation, failure and inert recovery',async()=>{const {appointmentOutreachJourney}=await import('./support/outreach-journey.mjs');await appointmentOutreachJourney()})
-test('AUTO-004: approved refreshed quote, observed mileage, explicit stop and repeat decline preserve decisions',async()=>{const {declinedOutreachJourney}=await import('./support/outreach-journey.mjs');await declinedOutreachJourney()})
+test('AUTO-004: approved refreshed quote, observed mileage, explicit stop and repeat decline preserve decisions',async()=>{const {declinedOutreachJourney,declinedEligibilityJourney,declinedErasureJourney}=await import('./support/outreach-journey.mjs');await declinedOutreachJourney();await declinedEligibilityJourney();await declinedErasureJourney()})
 test('AUTO-001 and AUTO-004: owner schedules and stops email through native forms at 1440 and 390',async()=>{const {outreachBrowser}=await import('./outreach-browser.mjs');await outreachBrowser()})
 
 test('GOV-003: explicit provider sign-in, SCIM employment revocation and repair attribution survive recovery',enterpriseJourney)
