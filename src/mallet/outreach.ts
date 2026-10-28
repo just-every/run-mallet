@@ -1,3 +1,5 @@
+import {balancePermission,balancePermissionStop,retainBalanceStep,BALANCE_POLICY} from './balance-reminder-policy'
+import {openBalanceReminderTask} from './balance-reminder-recovery'
 import {declinedOutreachCommand,currentDeclinedConsent,declinedAvailabilityStop,declinedCustomer,DECLINED_POLICY,declinedContent} from './declined-outreach'
 import {optedOut} from './approval-chasing'
 import {balanceReminderReview,balanceReminderContent} from './receivables'
@@ -21,6 +23,7 @@ export function outreachStop(s:State,r:any,now:string):string{
   if(now>=a.startAt)return 'Appointment already started'
  }else if(r.kind==='balance'){
   if(optedOut(s,r.to))return 'Automatic reminders opted out'
+  const permissionStop=balancePermissionStop(s,r);if(permissionStop)return permissionStop
   try{const review=balanceReminderReview(s,{id:r.by.id},{...r.review,version:r.invoiceVersion},now);if(review.contact.version!==r.contactVersion||review.terms.id!==r.termsId||review.item.terms?.id!==r.assignmentId||balanceReminderContent(review.invoice,review.item)!==r.content)return 'Balance changed'}catch{return 'Balance, terms, consent preference, dispute or promise changed'}
  }else{
   const item=rows(s,'declinedWork').find(i=>i.id===r.subjectId),q=rows(s,'estimate').find(q=>q.id===r.estimateId)
@@ -65,7 +68,7 @@ export const outreach:Handler=(c,command,p)=>{
    const review={...p,invoiceId:p.subjectId,confirm:'send-balance-reminder',reference:crypto.randomUUID(),evidence:p.consentEvidence}
    if(optedOut(c.s,String(p.to)))fail('AR_SUPPRESSED','Automatic reminders are opted out.')
    const checked=balanceReminderReview(c.s,c.actor,review,c.now)
-   source={subjectId:checked.invoice.id,invoiceVersion:checked.invoice.version,contactVersion:checked.contact.version,termsId:checked.terms.id,assignmentId:checked.item.terms!.id,to:checked.contact.email,content:balanceReminderContent(checked.invoice,checked.item),review:{invoiceId:checked.invoice.id,to:checked.contact.email,outstandingCents:checked.item.balance.outstandingCents,consent:true,confirm:'send-balance-reminder'},policy:'one-approved-balance-email-v1'}
+   source={subjectId:checked.invoice.id,invoiceVersion:checked.invoice.version,contactVersion:checked.contact.version,termsId:checked.terms.id,assignmentId:checked.item.terms!.id,to:checked.contact.email,content:balanceReminderContent(checked.invoice,checked.item),review:{invoiceId:checked.invoice.id,to:checked.contact.email,outstandingCents:checked.item.balance.outstandingCents,consent:true,confirm:'send-balance-reminder'},permission:balancePermission(c,p,checked),policy:BALANCE_POLICY}
   }else{
    const item=find(c.s,'declinedWork',p.subjectId);expectVersion(item,p.version)
    if(rows(c.s,'appointment').some(a=>a.status==='confirmed'&&a.declinedWorkId===item.id))fail('OUTREACH_STOP','The customer has booked this declined work.')
@@ -84,6 +87,7 @@ export const outreach:Handler=(c,command,p)=>{
   if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(source.to??''))fail('INPUT','A current customer email is required.',null,400)
   if(rows(c.s,'outreach').some(r=>r.subjectId===source.subjectId&&['pending','claimed'].includes(r.status)&&!r.stoppedAt))fail('OUTREACH_ACTIVE','Stop the existing follow-up before scheduling another.')
   const row=put(c.s,'outreach',{...source,kind,dueAt,expiresAt,timeZone,allowedStart,allowedEnd,instructions:text(p.instructions,'pre-visit or follow-up instructions',2000),consentEvidence:source.consentEvidence??text(p.consentEvidence,'customer email consent evidence',2000),by:who(c),at:c.now,status:'pending'})
+  if(kind==='balance')retainBalanceStep(c,row)
   event(c,command,null,row.id,{kind,subjectId:row.subjectId});return row
  }
  const row=find(c.s,'outreach',p.id);expectVersion(row,p.version)
@@ -102,5 +106,6 @@ export const outreach:Handler=(c,command,p)=>{
  }
  if(row.status!=='claimed')fail('OUTREACH_OUTCOME','Already recorded.')
  if(!['accepted','development','failed','uncertain','skipped'].includes(p.status))fail('INPUT','Invalid delivery outcome.',null,400)
- const next=bump(c.s,'outreach',row,{status:p.status,provider:text(p.provider,'provider',100),providerReference:text(p.providerReference,'provider reference',1024,true),outcomeReason:text(p.reason,'handoff stop reason',2000,true),outcomeAt:c.now});event(c,command,row.jobId??null,row.id,{status:p.status});return next
+ const next=bump(c.s,'outreach',row,{status:p.status,provider:text(p.provider,'provider',100),providerReference:text(p.providerReference,'provider reference',1024,true),outcomeReason:text(p.reason,'handoff stop reason',2000,true),outcomeAt:c.now});if(next.kind==='balance'&&['failed','uncertain'].includes(next.status))openBalanceReminderTask(c,next)
+ event(c,command,row.jobId??null,row.id,{status:p.status});return next
 }

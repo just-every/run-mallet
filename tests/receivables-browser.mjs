@@ -6,7 +6,7 @@ import {join} from 'node:path'
 import {chromium} from '@playwright/test'
 import {installation,archive,restore} from './harness.mjs'
 import {publicDoor} from './support/portable-repair.mjs'
-import {receivablesFixture,balanceFailureFixture,balanceRecoveryMail} from './support/receivables-journey.mjs'
+import {receivablesFixture,balanceFailureFixture,balanceRecoveryMail,balancePermissionFields} from './support/receivables-journey.mjs'
 import {shopSetup} from './support/diagnosis-journey.mjs'
 export async function receivablesBrowser(){
  const h=await installation({entry:'tests/dev-worker.ts',network:true,assets:true,bindings:{AUTH_LOCAL:'true',RER_DEV_KEY:randomBytes(32).toString('base64url')}});let browser
@@ -52,7 +52,7 @@ export async function receivablesBrowser(){
    await submit('ar.remind',{evidence:'Owner reviewed the current balance and billing recipient',consentEvidence:'Billing contact explicitly requested this exact balance reminder by email'},{invoiceId:invoice.id,checks:['consent']})
    await p.goto(ledger);assert.match(await p.locator('#ar-'+invoice.id).innerText(),/Suppressed in development/);await shot('03b-consented-balance-reminder',width)
    const reminderDay=new Date(Date.now()+3*86400000).toISOString().slice(0,10)
-   await submit('outreach.schedule',{dueAt:reminderDay+'T15:00:00Z',expiresAt:reminderDay+'T18:00:00Z',timeZone:'UTC',allowedStart:9,allowedEnd:18,consentEvidence:'Billing contact requested one scheduled balance email'},{invoiceId:invoice.id,checks:['consent']})
+   await submit('outreach.schedule',{dueAt:reminderDay+'T15:00:00Z',expiresAt:reminderDay+'T18:00:00Z',timeZone:'UTC',allowedStart:9,allowedEnd:18,consentedAt:'2026-10-01T12:00:00Z',consentReference:'synthetic-mallet-native-balance-'+width,consentEvidence:'Billing contact requested one scheduled balance email'},{invoiceId:invoice.id,checks:['consent'],selects:{captureChannel:'telephone'}})
    await p.goto(ledger);assert.match(await p.locator('#ar-'+invoice.id).innerText(),/Scheduled balance reminder/);await shot('03c-scheduled-balance-reminder',width)
    await submit('outreach.stop',{reason:'Billing contact canceled this scheduled request'},{invoiceId:invoice.id})
 
@@ -141,10 +141,10 @@ async function balanceRecoveryBrowser(browser,directory){
   await p.getByRole('link',{name:'Review failed balance emails',exact:true}).click()
   for(const schedule of [failed,interrupted]){
    const row=p.locator('#balance-review-'+schedule.id)
-   assert.match(await row.innerText(),/Needs owner review/);assert.ok((await row.innerText()).includes('Original outcome: '+schedule.status))
+   assert.match(await row.innerText(),/Needs owner review/);assert.match(await row.innerText(),/Owner review task/);assert.match(await row.innerText(),/Open; no automatic retry/);assert.ok((await row.innerText()).includes('Original outcome: '+schedule.status))
    await row.getByText('Inspect exact balance email references',{exact:true}).click()
    const text=await row.innerText();for(const id of [schedule.id,schedule.subjectId,schedule.assignmentId,schedule.termsId])assert.ok(text.includes(id),'Native review cites '+id)
-   assert.ok(text.includes('version '+schedule.version));assert.ok(text.includes(schedule.provider));assert.match(text,/Delivery is not verified; no automatic retry/)
+   assert.ok(text.includes('version '+schedule.version));assert.ok(text.includes(schedule.provider));assert.ok(text.includes(schedule.permission.reference));assert.ok(text.includes(schedule.permission.wording));assert.match(text,/Delivery is not verified; no automatic retry/)
   }
   assert.deepEqual(await h.state(),before,'Opening a review changes no business records');assert.equal(h.messages.length,messages)
   for(const width of [1440,390]){await p.setViewportSize({width,height:1000});await shot('14-balance-failure-review')}
@@ -152,7 +152,7 @@ async function balanceRecoveryBrowser(browser,directory){
   const evidence='Owner reviewed rejected mail and contacted fleet accounts personally; synthetic-mallet-908; delivery remains unverified'
   await resolve(failed.id,evidence)
   const resolved=p.locator('#balance-review-'+failed.id),remaining=p.locator('#balance-review-'+interrupted.id)
-  assert.match(await resolved.innerText(),/Review recorded/);assert.match(await resolved.innerText(),/Original outcome: failed/);assert.ok((await resolved.innerText()).includes(evidence));assert.equal(await resolved.locator('form').count(),0);assert.match(await remaining.innerText(),/Original outcome: uncertain/)
+  assert.match(await resolved.innerText(),/Review recorded/);assert.match(await resolved.innerText(),/Closed by recorded human resolution/);assert.match(await resolved.innerText(),/Original outcome: failed/);assert.ok((await resolved.innerText()).includes(evidence));assert.equal(await resolved.locator('form').count(),0);assert.match(await remaining.innerText(),/Original outcome: uncertain/)
   const reviews=await h.api(reviewsPath),receipt=reviews.find(r=>r.scheduleId===failed.id).resolution
   assert.equal(receipt.by.id,before.actor.id);assert.equal(receipt.evidence,evidence);assert.ok((await resolved.innerText()).includes(receipt.id),'The native review exposes its immutable receipt reference')
   assert.match(await p.locator('#ar-'+failed.subjectId).innerText(),/Human review recorded; original outcome and uncertainty retained/);assert.doesNotMatch(await p.locator('#ar-'+failed.subjectId).innerText(),/Staff review required/)

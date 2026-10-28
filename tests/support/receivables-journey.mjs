@@ -1,9 +1,11 @@
+import {randomUUID} from 'node:crypto'
 import {custodyInput} from './intake-journey.mjs'
 import {handoverInput} from './handover-input.mjs'
 import assert from 'node:assert/strict'
 import {booking,authorise,archive,restore,installation} from '../harness.mjs'
 import {shopSetup} from './diagnosis-journey.mjs'
 import {qualityReady} from './quality-ready.mjs'
+export const balancePermissionFields=(reference=randomUUID())=>({consentPurpose:'balance-reminder',consentWordingVersion:'balance-permission-v1',consentedAt:'2026-10-01T12:00:00Z',captureChannel:'telephone',consentReference:reference})
 export async function receivablesFixture(h){
  await shopSetup(h);await h.command('tax.configure',{ratePercent:10,partsTaxable:true,laborTaxable:true})
  const driver=await h.command('contact.save',{name:'Van driver',email:'driver@example.test',phone:'',communication:'none'}),manager=await h.command('contact.save',{name:'Fleet manager',email:'manager@example.test',phone:'',communication:'email'})
@@ -160,11 +162,11 @@ export async function receivablesJourney(h){
  await h.command('ar.remind',{...reminderInput,invoiceId:i2.id,version:i2.version,reference:'synthetic-mallet-disputed'},{status:409})
  report=await statement(aged);assert.equal(report.outstandingCents,17000);assert.equal(report.ageing['31–60'],17000);assert.deepEqual(report.invoices.filter(i=>i.chaseEligible).map(i=>i.invoiceId),[i1.id]);assert.equal(report.invoices.find(i=>i.invoiceId===i1.id).balance.outstandingCents,6000)
  const partialDay=new Date(Date.now()+3*86400000).toISOString().slice(0,10),partialAt=time=>partialDay+'T'+time+':00Z'
- const partialFields={kind:'balance',subjectId:i1.id,version:i1.version,to:manager.email,outstandingCents:6000,consent:true,consentEvidence:'Billing contact requested one exact partial balance email',instructions:'Approved balance',timeZone:'UTC',allowedStart:9,allowedEnd:18,dueAt:partialAt('15:00'),expiresAt:partialAt('18:00')}
+ const partialFields={...balancePermissionFields(),kind:'balance',subjectId:i1.id,version:i1.version,to:manager.email,outstandingCents:6000,consent:true,consentEvidence:'Billing contact requested one exact partial balance email',instructions:'Approved balance',timeZone:'UTC',allowedStart:9,allowedEnd:18,dueAt:partialAt('15:00'),expiresAt:partialAt('18:00')}
  const partial=await h.command('outreach.schedule',partialFields),partialBefore=h.messages.length
  await h.cron(partialAt('15:00'));assert.equal(h.messages.length,partialBefore+1);assert.match(h.messages.at(-1).text,/USD 60.00/)
  await h.command('outreach.schedule',{...partialFields,subjectId:i2.id,version:i2.version,outstandingCents:11000},{status:409})
- const promisedPending=await h.command('outreach.schedule',partialFields)
+ const promisedPending=await h.command('outreach.schedule',{...partialFields,...balancePermissionFields()})
  const promise=await h.command('ar.promise',{invoiceId:i1.id,version:i1.version,promisedOn:'2099-01-01',amountCents:6000,evidence:'Fleet promised the exact remaining balance'})
  await h.command('ar.remind',{...reminderInput,outstandingCents:6000,reference:'synthetic-mallet-promised'},{status:409})
  await h.cron(partialAt('15:15'));assert.equal((await h.state()).records.outreach.find(r=>r.id===promisedPending.id).status,'stopped','An unexpired promise suppresses scheduled email')
@@ -198,7 +200,7 @@ export async function receivablesJourney(h){
 
 async function scheduledBalances(h,{account,manager,i1,i2}){
  const day=new Date(Date.now()+3*86400000).toISOString().slice(0,10),at=time=>day+'T'+time+':00Z'
- const fields=i=>({kind:'balance',subjectId:i.id,version:i.version,to:manager.email,outstandingCents:11000,consent:true,consentEvidence:'Billing contact explicitly requested this one scheduled balance email',instructions:'Exact approved balance',timeZone:'UTC',allowedStart:9,allowedEnd:18,dueAt:at('09:00'),expiresAt:at('18:00')})
+ const fields=i=>({...balancePermissionFields(),kind:'balance',subjectId:i.id,version:i.version,to:manager.email,outstandingCents:11000,consent:true,consentEvidence:'Billing contact explicitly requested this one scheduled balance email',instructions:'Exact approved balance',timeZone:'UTC',allowedStart:9,allowedEnd:18,dueAt:at('09:00'),expiresAt:at('18:00')})
  const first=await h.command('outreach.schedule',fields(i1)),second=await h.command('outreach.schedule',fields(i2)),before=h.messages.length
  await h.cron(at('08:59'));assert.equal(h.messages.length,before)
  await h.restart();await Promise.all([h.cron(at('09:00')),h.cron(at('09:00'))])
@@ -223,7 +225,7 @@ export async function balanceFailureFixture(h){
  const terms=await h.command('ar.terms',{accountId:account.id,version:account.version,days:30,limitCents:50000,active:true,consent:true,evidence:'Owner reviewed fleet instructions and the current balances'})
  for(const invoice of [i1,i2])await h.command('ar.invoice',{invoiceId:invoice.id,version:invoice.version,termsId:terms.id,authorizerId:manager.id,po:'synthetic-mallet-902-'+invoice.number,evidence:'Fleet manager requested these exact invoice terms'})
  const day=new Date(Date.now()+3*86400000).toISOString().slice(0,10),at=time=>day+'T'+time+':00Z'
- const fields=i=>({kind:'balance',subjectId:i.id,version:i.version,to:manager.email,outstandingCents:11000,consent:true,consentEvidence:'Billing contact requested this exact one-email reminder',instructions:'Exact approved balance',timeZone:'UTC',allowedStart:9,allowedEnd:18,dueAt:at('15:00'),expiresAt:at('18:00')})
+ const fields=i=>({...balancePermissionFields(),kind:'balance',subjectId:i.id,version:i.version,to:manager.email,outstandingCents:11000,consent:true,consentEvidence:'Billing contact requested this exact one-email reminder',instructions:'Exact approved balance',timeZone:'UTC',allowedStart:9,allowedEnd:18,dueAt:at('15:00'),expiresAt:at('18:00')})
  const first=await h.command('outreach.schedule',fields(i1)),before=h.messages.length
  await h.cron(at('15:00'));assert.equal(h.messages.length,before+1)
  assert.equal((await h.state()).records.outreach.find(r=>r.id===first.id).status,'failed')
@@ -250,8 +252,9 @@ async function balanceRecoveryJourney(){
   const first=reviews.find(r=>r.scheduleId===failed.id),input=balanceResolutionInput(first)
   let second=reviews.find(r=>r.scheduleId===interrupted.id)
   for(const [r,schedule]of [[first,failed],[second,interrupted]]){
-   assert.deepEqual(r.originalOutcome,{status:schedule.status,provider:schedule.provider,claimedAt:schedule.claimedAt,outcomeAt:schedule.outcomeAt})
+   assert.deepEqual(r.originalOutcome,{status:schedule.status,provider:schedule.provider,claimedAt:schedule.claimedAt,outcomeAt:schedule.outcomeAt,providerReference:schedule.providerReference??'',reason:schedule.outcomeReason??''})
    assert.equal(r.invoiceId,schedule.subjectId);assert.equal(r.invoiceVersion,schedule.invoiceVersion);assert.equal(r.assignmentId,schedule.assignmentId);assert.equal(r.termsId,schedule.termsId)
+   assert.ok(r.task.id);assert.equal(r.task.assignedRole,'owner');assert.deepEqual(r.task.originalOutcome,r.originalOutcome);assert.deepEqual(r.permission,schedule.permission);assert.equal(r.step.sequenceVersion,1)
   }
   await h.command('outreach.stop',{id:second.scheduleId,version:second.scheduleVersion,reason:'Retain uncertain handoff; no further sending authority'})
   await h.command('ar.resolveBalanceReminder',balanceResolutionInput(second),{status:409})
@@ -260,6 +263,7 @@ async function balanceRecoveryJourney(){
   const revoked=await h.signInAs((await h.api('/auth/session')).operator.email)
   assert.equal((await h.request('/auth/signout',{method:'POST',body:{},as:revoked})).status,204)
   const before=await h.state(),mail=h.messages.length
+  await h.command('outreach.schedule',fields(i1),{status:409});assert.deepEqual(await h.state(),before,'An unresolved failed handoff cannot authorize the next step')
   for(const outsider of [{as:admin.cookie},{as:member.cookie},agent,{as:revoked},{as:''}]){
    const status=outsider.as===revoked||outsider.as===''&&!outsider.headers?401:403
    assert.equal((await h.request(path,outsider)).status,status)
@@ -283,17 +287,24 @@ async function balanceRecoveryJourney(){
   await h.command('ar.resolveBalanceReminder',input,{status:409})
   const audit=await h.api('/api/mallet/audit?action=ar.resolveBalanceReminder');assert.equal(audit.entries.length,1);assert.equal(audit.entries[0].actor.id,receipt.by.id);assert.ok(audit.entries[0].changes.some(c=>c.kind==='balanceReminderResolution'&&c.id===receipt.id&&c.beforeRevision===null&&c.afterRevision===1))
   const after=await h.state()
-  for(const kind of ['outreach','invoice','arInvoice','arTerms','payment','deposit','arPromise','arDispute'])assert.deepEqual(after.records[kind],before.records[kind],'Human review does not change '+kind)
+  for(const kind of ['outreach','balanceReminderTask','balanceReminderStep','invoice','arInvoice','arTerms','payment','deposit','arPromise','arDispute'])assert.deepEqual(after.records[kind],before.records[kind],'Human review does not change '+kind)
   const statementPath='/api/mallet/receivables?accountId='+account.id+'&asOf=2099-01-02',statement=await h.api(statementPath)
   assert.equal(statement.outstandingCents,22000)
-  for(const outsider of [{as:admin.cookie},{as:member.cookie},agent])assert.equal((await h.state(outsider)).records.balanceReminderResolution,undefined,'Private recovery evidence is owner-only in state projections too')
+  for(const outsider of [{as:admin.cookie},{as:member.cookie},agent])for(const kind of ['balanceReminderResolution','balanceReminderTask','balanceReminderStep'])assert.equal((await h.state(outsider)).records[kind],undefined,'Private recovery evidence is owner-only in state projections too')
   await h.restart();await h.cron(at('15:15'));assert.equal(h.messages.length,mail);assert.deepEqual((await h.state()).records.outreach,before.records.outreach)
-  const pending=await h.command('outreach.schedule',fields(i1))
+  const used={...fields(i1),consentReference:failed.permission.reference}
+  await h.command('outreach.schedule',used,{status:409})
+  const nextFields=fields(i1),nextBefore=await h.state()
+  for(const wrong of [{consentPurpose:'appointment'},{consentWordingVersion:''},{consentedAt:'2099-01-01T12:00:00Z'},{captureChannel:'inferred'},{consentReference:''}])await h.command('outreach.schedule',{...nextFields,...wrong},{status:wrong.consentReference===''?400:409})
+  assert.deepEqual(await h.state(),nextBefore,'Missing or wrong-purpose permission creates no schedule or sequence step')
+  const pending=await h.command('outreach.schedule',nextFields)
+  const sequence=(await h.state()).records.balanceReminderStep.filter(r=>r.invoiceId===i1.id).sort((a,b)=>a.sequenceVersion-b.sequenceVersion)
+  assert.equal(sequence.length,2);assert.equal(sequence[1].previousId,sequence[0].id);assert.equal(sequence[1].sequenceVersion,2);assert.deepEqual(sequence[0].approval,first.step.approval);assert.deepEqual(sequence[1].permission,pending.permission);assert.equal(pending.permission.purpose,'balance-reminder');assert.equal(pending.permission.contactId,failed.permission.contactId);assert.equal(pending.permission.recordedBy.id,receipt.by.id);assert.ok(pending.permission.wording.includes('one email'))
   await h.command('ar.resolveBalanceReminder',{...input,id:pending.id,version:pending.version},{status:409})
   const saved=await h.state(),fresh=await installation({mailService:balanceRecoveryMail()})
   try{
    await restore(fresh,await archive(h))
-   for(const kind of ['outreach','balanceReminderResolution','invoice','arInvoice','arTerms'])assert.deepEqual((await fresh.state()).records[kind],saved.records[kind],'Exact recovered '+kind)
+   for(const kind of ['outreach','balanceReminderResolution','balanceReminderTask','balanceReminderStep','invoice','arInvoice','arTerms'])assert.deepEqual((await fresh.state()).records[kind],saved.records[kind],'Exact recovered '+kind)
    assert.deepEqual(await fresh.api(path),await h.api(path));assert.deepEqual(await fresh.api(statementPath),statement)
    const authority=await (await fresh.mf.getD1Database('DB')).prepare('SELECT count(*) AS n FROM mallet_outreach_authority').first();assert.equal(authority.n,0)
    await fresh.cron(at('15:30'));assert.equal(fresh.messages.length,0,'A restored pending schedule and a resolution grant no sending authority')
@@ -302,5 +313,16 @@ async function balanceRecoveryJourney(){
    const recoveredBefore=await fresh.state();await fresh.restart();await fresh.cron(at('15:45'));assert.equal(fresh.messages.length,0);assert.deepEqual((await fresh.state()).records.balanceReminderResolution,recoveredBefore.records.balanceReminderResolution);assert.deepEqual(await fresh.api(statementPath),statement)
    assert.equal((await fresh.request(path,{as:h.owner})).status,401,'Source owner credentials confer no destination review authority')
   }finally{await fresh.close()}
+  const old=await archive(h),preview=await h.command('retention.preview',{customerId:account.id,categories:['personal','import']})
+  const erased=await h.command('customer.erase',{customerId:account.id,categories:['personal','import'],fingerprint:preview.fingerprint,consent:true,confirm:'ERASE',reason:'Customer requested erasure and withdrawal of further balance email authority',consentEvidence:'Owner reviewed the exact customer request'})
+  assert.ok(erased.id)
+  assert.equal((await h.state()).records.outreach.find(r=>r.id===pending.id).status,'stopped')
+  await h.cron(at('16:00'));assert.equal(h.messages.length,mail,'Erasure cannot send a pending balance reminder')
+  await h.command('outreach.schedule',fields(i1),{status:409})
+  const db=await h.mf.getD1Database('DB'),authority=await db.prepare('SELECT count(*) AS n FROM mallet_outreach_authority WHERE outreach_id=?').bind(pending.id).first();assert.equal(authority.n,0,'Erasure removes the local sending capability')
+  const erasedBackup=await archive(h),destination=await installation()
+  try{await restore(destination,erasedBackup);await destination.cron(at('16:15'));assert.equal(destination.messages.length,0)}finally{await destination.close()}
+  const staleDestination=await installation()
+  try{const refused=await restore(staleDestination,old,{laterJournal:{sourceIdentity:erasedBackup[0].sourceIdentity,epoch:erasedBackup[0].epoch,journal:erasedBackup[0].journal},status:400});assert.equal(refused.error,'erasure_epoch');assert.equal((await staleDestination.state()).records.outreach?.length??0,0)}finally{await staleDestination.close()}
  }finally{await h.close()}
 }

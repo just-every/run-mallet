@@ -43,11 +43,35 @@ export async function validateReceivables({get,each}){
   const invoice=await get('invoice',reminder.invoiceId),assignment=await get('arInvoice',reminder.assignmentId),terms=await get('arTerms',reminder.termsId)
   insist(evidence(reminder)&&reminder.invoiceRevision===invoice.revision&&assignment.invoiceId===invoice.id&&assignment.accountId===reminder.accountId&&terms.accountId===reminder.accountId&&terms.by.id===reminder.by.id&&whole(reminder.outstandingCents,1)&&date(reminder.dueOn)&&reminder.dueOn===assignment.dueOn&&typeof reminder.to==='string'&&typeof reminder.content==='string'&&typeof reminder.consentEvidence==='string'&&reminder.consentEvidence.trim()&&typeof reminder.reference==='string'&&['unconfirmed','accepted','development','failed','uncertain'].includes(reminder.status),'ar_reminder')
  }
+ for await(const schedule of each('outreach')){
+  if(schedule.kind!=='balance'||schedule.policy!=='one-approved-balance-email-v2')continue
+  const permission=schedule.permission,invoice=await get('invoice',schedule.subjectId),contact=await get('contact',permission?.contactId),accountRow=await get('customerAccount',permission?.accountId)
+  insist(permission?.purpose==='balance-reminder'&&permission.channel==='email'&&permission.invoiceId===invoice.id&&permission.to===schedule.to&&whole(permission.contactVersion,1)&&permission.contactVersion<=contact.version&&whole(permission.accountVersion,1)&&permission.accountVersion<=accountRow.version&&actor(permission.recordedBy,['owner'])&&same(permission.recordedBy,schedule.by)&&permission.recordedAt===schedule.at&&Number.isFinite(Date.parse(permission.consentedAt))&&permission.consentedAt<=permission.recordedAt,'balance_permission')
+  insist(['customer-email','telephone','in-person','signed-writing'].includes(permission.captureChannel)&&typeof permission.wording==='string'&&permission.wording.trim()&&permission.wordingVersion==='balance-permission-v1'&&typeof permission.reference==='string'&&permission.reference.trim()&&typeof permission.evidence==='string'&&permission.evidence.trim(),'balance_permission_source')
+ }
+ const steps=[],tasks=[]
+ for await(const step of each('balanceReminderStep')){
+  const schedule=await get('outreach',step.scheduleId),invoice=await get('invoice',step.invoiceId)
+  insist(step.version===1&&whole(step.sequenceVersion,1)&&schedule.kind==='balance'&&schedule.policy==='one-approved-balance-email-v2'&&step.invoiceId===schedule.subjectId&&step.jobId===invoice.jobId&&step.accountId===schedule.permission.accountId&&same(step.permission,schedule.permission),'balance_step')
+  const expected=Object.fromEntries(['by','at','invoiceVersion','assignmentId','termsId','contactVersion','to','content','dueAt','expiresAt','timeZone','allowedStart','allowedEnd'].map(k=>[k,schedule[k]]))
+  insist(same(step.approval,expected),'balance_step_approval')
+  if(step.previousId){const previous=await get('balanceReminderStep',step.previousId);insist(previous.invoiceId===step.invoiceId&&previous.sequenceVersion+1===step.sequenceVersion,'balance_step_predecessor')}
+  else insist(step.sequenceVersion===1,'balance_step_first')
+  insist(!steps.some(x=>x.invoiceId===step.invoiceId&&x.sequenceVersion===step.sequenceVersion),'balance_step_unique');steps.push(step)
+ }
+ for await(const task of each('balanceReminderTask')){
+  const schedule=await get('outreach',task.scheduleId),invoice=await get('invoice',task.invoiceId),assignment=await get('arInvoice',task.assignmentId)
+  insist(task.version===1&&schedule.kind==='balance'&&['failed','uncertain'].includes(schedule.status)&&task.invoiceId===schedule.subjectId&&task.invoiceVersion===schedule.invoiceVersion&&task.invoiceRevision===invoice.revision&&task.assignmentId===schedule.assignmentId&&task.termsId===schedule.termsId&&task.accountId===assignment.accountId&&task.jobId===invoice.jobId&&whole(task.scheduleVersion,1)&&task.scheduleVersion<=schedule.version&&task.assignedRole==='owner'&&Number.isFinite(Date.parse(task.openedAt)),'balance_task')
+  tasks.push(task)
+  insist(same(task.originalOutcome,{status:schedule.status,provider:schedule.provider,claimedAt:schedule.claimedAt,outcomeAt:schedule.outcomeAt,providerReference:schedule.providerReference??'',reason:schedule.outcomeReason??''}),'balance_task_outcome')
+ }
+ for await(const schedule of each('outreach'))if(schedule.kind==='balance'&&schedule.policy==='one-approved-balance-email-v2'){insist(steps.some(step=>step.scheduleId===schedule.id),'balance_step_missing');if(['failed','uncertain'].includes(schedule.status))insist(tasks.some(task=>task.scheduleId===schedule.id),'balance_task_missing')}
  for await(const resolution of each('balanceReminderResolution')){
   const schedule=await get('outreach',resolution.scheduleId),invoice=await get('invoice',resolution.invoiceId),assignment=await get('arInvoice',resolution.assignmentId),terms=await get('arTerms',resolution.termsId)
   insist(evidence(resolution)&&resolution.version===1&&whole(resolution.scheduleVersion,1)&&resolution.scheduleVersion<=schedule.version&&schedule.kind==='balance'&&['failed','uncertain'].includes(schedule.status),'balance_resolution')
   insist(schedule.subjectId===invoice.id&&schedule.invoiceVersion===resolution.invoiceVersion&&resolution.invoiceVersion<=invoice.version&&resolution.invoiceRevision===invoice.revision&&schedule.assignmentId===assignment.id&&schedule.termsId===terms.id&&assignment.invoiceId===invoice.id&&assignment.accountId===resolution.accountId&&terms.accountId===resolution.accountId&&resolution.jobId===invoice.jobId,'balance_resolution_sources')
-  insist(same(resolution.originalOutcome,{status:schedule.status,provider:schedule.provider,claimedAt:schedule.claimedAt,outcomeAt:schedule.outcomeAt})&&resolution.at>=schedule.at,'balance_resolution_outcome')
+  const original={status:schedule.status,provider:schedule.provider,claimedAt:schedule.claimedAt,outcomeAt:schedule.outcomeAt,...(resolution.receiptVersion===2?{providerReference:schedule.providerReference??'',reason:schedule.outcomeReason??''}:{})}
+  insist(same(resolution.originalOutcome,original)&&resolution.at>=schedule.at,'balance_resolution_outcome')
  }
  for await(const receipt of each('handover')){
   const release=receipt.settlement?.accountTerms
