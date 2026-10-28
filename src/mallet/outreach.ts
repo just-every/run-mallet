@@ -127,7 +127,7 @@ export const outreach:Handler=(c,command,p)=>{
   const stop=outreachStop(c.s,row,c.now)
   if(stop)return bump(c.s,'outreach',row,{status:'stopped',stopReason:stop,stoppedAt:c.now})
   if(!outreachDue(c.s,row,c.now))fail('OUTREACH_NOT_DUE','Not yet eligible.')
-  const next=bump(c.s,'outreach',row,{status:'claimed',claimedAt:c.now});event(c,command,null,row.id,{approvalVersion:row.approval?.preparedVersion??null});return next
+  const next=bump(c.s,'outreach',row,{status:'claimed',claimedAt:instant(p.claimedAt??c.now,'claim time'),claimScheduledAt:c.now});event(c,command,null,row.id,{approvalVersion:row.approval?.preparedVersion??null});return next
  }
  if(row.status!=='claimed')fail('OUTREACH_OUTCOME','Already recorded.')
  if(!['accepted','development','failed','uncertain','skipped'].includes(p.status))fail('INPUT','Invalid delivery outcome.',null,400)

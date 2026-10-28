@@ -1592,11 +1592,15 @@
       "executable": false
     },
     "src/mallet/api/commands.ts": {
-      "sha256": "5dfef98d603a9a644c08a45b7c3e0d138e1fad70a9b05a1291e5b725c9edaae2",
+      "sha256": "d8a25bcb4d1c29a51908dd52f6a4411ee5c010afda722d9d0142ca0467341be4",
       "executable": false
     },
     "src/mallet/api/resources.ts": {
       "sha256": "adc4fc67c271539bcf7abdd66084dcdb595a659b6eda60c486f43cf65e393af9",
+      "executable": false
+    },
+    "src/mallet/appointment-reminder-policy.ts": {
+      "sha256": "5ba31df92d8ff462525a2fa5e9e0e7c1b8e0d43ddc9aea3a9b83b5894c21f3ec",
       "executable": false
     },
     "src/mallet/approval-chasing.ts": {
@@ -2028,11 +2032,11 @@
       "executable": false
     },
     "src/mallet/outreach-door.ts": {
-      "sha256": "2547a20edc8bdd05a1ce1a90695f2f807b4b83837ae76289f73ba1a9369266e8",
+      "sha256": "1a4db54ccb4991c8e386e11dd7f749077c871c5021ed7eb2937ba314375de79d",
       "executable": false
     },
     "src/mallet/outreach.ts": {
-      "sha256": "e8b173ad42bee1e42caa807c80008a19b9a5d72444e250c083bbcacfa3fd5d7d",
+      "sha256": "f7e1fbe5ab19ab43b59a7bcfe2d0e5af0cae25983475d1122103f6f955cd3af9",
       "executable": false
     },
     "src/mallet/pay-rates.ts": {
@@ -2364,7 +2368,7 @@
       "executable": false
     },
     "src/mallet/stripe/door.ts": {
-      "sha256": "8c51bcac56f1f8a9629d7752a896ea510a3f0e34f306a8766a985cd5c59ff44a",
+      "sha256": "f75dfe4be0afb016c4d0a9021ab840831717afbe155a0f77ecdd14da41b1dc25",
       "executable": false
     },
     "src/mallet/stripe/provider.ts": {
@@ -2495,6 +2499,10 @@
       "sha256": "5d85478ef5e89de6a8c60227c9e4ab695334026632c9b5ba76af8f34beceba0b",
       "executable": false
     },
+    "src/mallet/ui/appointment-reminder-settings.ts": {
+      "sha256": "1f762e1ddb7649beb7d1d0670e7f4f40c0f1856d2482bbb1637786406bf3029e",
+      "executable": false
+    },
     "src/mallet/ui/approval.ts": {
       "sha256": "2a18f975709a518b4fe5dd50083d993a85470b96e848280b253617958fcf30cd",
       "executable": false
@@ -2536,7 +2544,7 @@
       "executable": false
     },
     "src/mallet/ui/common.ts": {
-      "sha256": "3df318054b2791da5b7168b6ccfe58bfd2fcbb55468bfad472806cd3efb77e12",
+      "sha256": "e47fc3f64fe1e729c63800ec7c9cbffd5e2674ce4247ad8f0f1c6204a56d7e8a",
       "executable": false
     },
     "src/mallet/ui/conflict.ts": {
@@ -2712,7 +2720,7 @@
       "executable": false
     },
     "src/mallet/ui/security.ts": {
-      "sha256": "73e82d2e0cc35172bda7e126babd2a3b2f0cc1200f7616044974a5ae0a4ce5fe",
+      "sha256": "9edad1c2161ca376da3a3ab202ecafde0ab99496b5ea54669f7578aa05bfc042",
       "executable": false
     },
     "src/mallet/ui/shell.ts": {
@@ -4796,7 +4804,7 @@
       "executable": false
     },
     "tests/mallet.test.mjs": {
-      "sha256": "132d16ecb2180fe1c16987fd97a6bca6811ca3db91d88ff934f09b311136e347",
+      "sha256": "8de036b6d79201ffffa0965a45cdb949226a22a614894a93e2cb5217a8cd2b75",
       "executable": false
     },
     "tests/media-browser.mjs": {
@@ -5084,7 +5092,7 @@
       "executable": false
     },
     "tests/support/outreach-journey.mjs": {
-      "sha256": "a49c43d8d8ca8f9566be07bfba081dd413ee37b622f867b1d799b663a31474f6",
+      "sha256": "bd0f6f90716e3c1b9115a80c0a4810d39395f8d9baff2106084c652025996416",
       "executable": false
     },
     "tests/support/parts-browser.mjs": {

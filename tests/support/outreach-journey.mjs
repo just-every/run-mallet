@@ -145,7 +145,7 @@ async function appointmentRecoveryJourney(){
   await h.cron('2026-11-01T14:10:00Z');assert.equal(h.messages.length,before+2);assert.ok((await h.state()).records.outreach.find(r=>r.id===next.id).providerReference)
   const delayed=await approveAppointment(h,appointment,{allowedStart:9,allowedEnd:10})
   await h.configure({TEST_NOW:'2026-11-01T15:00:00Z'});await h.cron('2026-11-01T14:30:00Z');await h.configure({TEST_NOW:'2026-10-28T12:00:00Z'})
-  assert.equal(h.messages.length,before+2,'Delayed execution cannot send at the exclusive last hour');assert.equal((await h.state()).records.outreach.find(r=>r.id===delayed.id).status,'skipped')
+  assert.equal(h.messages.length,before+2,'Delayed execution cannot send at the exclusive last hour');const delayedOutcome=(await h.state()).records.outreach.find(r=>r.id===delayed.id);assert.equal(delayedOutcome.status,'skipped');assert.equal(delayedOutcome.claimedAt,'2026-11-01T15:00:00.000Z','Claim evidence records actual delayed execution, not the earlier scheduler tick');assert.equal(delayedOutcome.claimScheduledAt,'2026-11-01T14:30:00.000Z')
   const overnight=await approveAppointment(h,appointment,{dueAt:'2026-11-01T04:00:00Z',allowedStart:22,allowedEnd:2})
   await h.cron('2026-11-01T05:30:00Z');await h.cron('2026-11-01T06:30:00Z');assert.equal(h.messages.length,before+3,'An overnight window permits only one handoff across both DST hours');assert.equal((await h.state()).records.outreach.find(r=>r.id===overnight.id).status,'accepted')
   const pending=await approveAppointment(h,appointment),consent=(await h.state()).records.outreachConsent.find(c=>c.id===pending.consentId)

@@ -28,7 +28,7 @@ export async function runOutreach(original:Bindings,at:number){
   }
   const stop=outreachStop(snapshot,r,now)
   if(!stop&&!outreachDue(snapshot,r,now))continue
-  try{r=await execute(env.DB,scheduler,'outreach.claim',{id:r.id,version:r.version},undefined,now)}catch{continue}
+  try{r=await execute(env.DB,scheduler,'outreach.claim',{id:r.id,version:r.version,claimedAt:new Date(Math.max(at,Date.now())).toISOString()},undefined,now)}catch{continue}
   if(r.status!=='claimed')continue
   let status='skipped',provider='none',providerReference=''
   try{
