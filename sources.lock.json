@@ -572,7 +572,7 @@
       "executable": false
     },
     "ACCEPTANCE.md": {
-      "sha256": "1db054c7e2f3b05286416a377ab0486df5356ca02c04060cc29bcfa786210479",
+      "sha256": "4cd6cd21fc6d0684a1c52e78931155cf38c065db21270bdd8083e6befb641e85",
       "executable": false
     },
     "AGENTS.md": {
@@ -584,7 +584,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "d376a0b282b22de535309b0f0d57759bae3235a5780fd20d9a440946f17324e3",
+      "sha256": "4add49f7eace3f3845409f87f12cd09f90eaee5f0a98f4361f8330669e6d8b78",
       "executable": false
     },
     "deploy-demo.json": {
@@ -1000,7 +1000,7 @@
       "executable": false
     },
     "public/app/forms.css": {
-      "sha256": "2ce401750aec5f0bfa08c7e08d94b63e5d84b4c6adad9ddb718bc69a4ea71edb",
+      "sha256": "65e4a7d33c2290aa75318753e566e9a2749da24926393ef8f46c6fdd32c0f032",
       "executable": false
     },
     "public/app/media.css": {
@@ -1644,7 +1644,7 @@
       "executable": false
     },
     "src/mallet/booking-door.ts": {
-      "sha256": "5ca7ad8bbac65fe535bd1c42e851ea0075b2dc530d35183665da783d8342a390",
+      "sha256": "02ecf76bf21a8481b99fde1bc6c3474d2d66bf767bc4f67344b59867a7b1b65c",
       "executable": false
     },
     "src/mallet/booking-waitlist.ts": {
@@ -1824,7 +1824,7 @@
       "executable": false
     },
     "src/mallet/http.ts": {
-      "sha256": "a45b74536deb81806817b16af8b3d0d847e2d7da5b228b00d91ec246fb9072d5",
+      "sha256": "929b4de08baacb785f6c1645da03898413626391ccb02fe377e360d9c37ccd6e",
       "executable": false
     },
     "src/mallet/imports/context.ts": {
@@ -2024,7 +2024,7 @@
       "executable": false
     },
     "src/mallet/outreach-consent.ts": {
-      "sha256": "b79593b9767996197f602a0580d6629359312f0bb6c0e979625593dc859d083b",
+      "sha256": "c7ff5c9794fe69390ae3972b73a85768752eb782a4711a72445bcb8442be466d",
       "executable": false
     },
     "src/mallet/outreach-door.ts": {
@@ -2032,7 +2032,7 @@
       "executable": false
     },
     "src/mallet/outreach.ts": {
-      "sha256": "7e3c2418ec9126ebe19188b9dccf8ef022bbd1b8bc1860445ca41f0128ab02df",
+      "sha256": "e8b173ad42bee1e42caa807c80008a19b9a5d72444e250c083bbcacfa3fd5d7d",
       "executable": false
     },
     "src/mallet/pay-rates.ts": {
@@ -2220,7 +2220,7 @@
       "executable": false
     },
     "src/mallet/restore/validate-outreach.mjs": {
-      "sha256": "da735cec6b1b3db1b14a1e12e2ac194c704e83a51eb2fee516ad9277750311c3",
+      "sha256": "3c8a671f31d94e3bba882739b0c5b858b06e0c630ce510a071883aac5c4e1d71",
       "executable": false
     },
     "src/mallet/restore/validate-receivables.mjs": {
@@ -2228,7 +2228,7 @@
       "executable": false
     },
     "src/mallet/restore/validate-records.mjs": {
-      "sha256": "385d226504b1a5d486f3899b7006163d8ff852856a9e11ebe0fc05b86674a9b6",
+      "sha256": "e6746db092a7bcd054bc508f84d479ff83cbf6beb62b56ffe05d83fd09a51585",
       "executable": false
     },
     "src/mallet/restore/validate-reviews.mjs": {
@@ -2284,7 +2284,7 @@
       "executable": false
     },
     "src/mallet/retention/outreach.ts": {
-      "sha256": "7eb534829f4717f21252bbe3df4b2c46893ea836177d4ed2678d4ca6ab35953d",
+      "sha256": "6ca29e4bf866b8f605cb61626f1a8d518d727fbe6ae56c976fad22db1bc411dd",
       "executable": false
     },
     "src/mallet/retention/plans.ts": {
@@ -2492,7 +2492,7 @@
       "executable": false
     },
     "src/mallet/ui/appointment-outreach.ts": {
-      "sha256": "62ebbf77e9b7191feb0243d07dc140e8ae0b49c6ab967614ea6cc4902a3be170",
+      "sha256": "5d85478ef5e89de6a8c60227c9e4ab695334026632c9b5ba76af8f34beceba0b",
       "executable": false
     },
     "src/mallet/ui/approval.ts": {
@@ -2512,7 +2512,7 @@
       "executable": false
     },
     "src/mallet/ui/bookings.ts": {
-      "sha256": "64502e50dcdaa99ed9dfb0970a323061bcb914a5d64b93599754a2b8200fd853",
+      "sha256": "b0991b7322a25de671f4ac751cd7d7cd921646c0f54b57d845f6d4c8255b8618",
       "executable": false
     },
     "src/mallet/ui/calendar-forms.ts": {
@@ -2560,7 +2560,7 @@
       "executable": false
     },
     "src/mallet/ui/data.ts": {
-      "sha256": "38d8b5e056d61f8700fa46b72e635c23072ef617908e9ffdcedce65e4a50ab24",
+      "sha256": "56b711d83b72ca6233b9a96e5a41a080af69082fd5fe01ba608f56cb284a49b5",
       "executable": false
     },
     "src/mallet/ui/declined-work.ts": {
@@ -4812,7 +4812,7 @@
       "executable": false
     },
     "tests/outreach-browser.mjs": {
-      "sha256": "2dd7e22308910a885ab816e85ec840941184d967480d566c00a8171a80897f22",
+      "sha256": "8591c8935872daa6cd5288c32a10f2cb7296bcb0ba7c9b5d28b092c80bc82db2",
       "executable": false
     },
     "tests/outreach-worker.ts": {
@@ -5084,7 +5084,7 @@
       "executable": false
     },
     "tests/support/outreach-journey.mjs": {
-      "sha256": "93348876ebededbe17744d39af5f1329e5a7987e49198403b4983a9955708a50",
+      "sha256": "a49c43d8d8ca8f9566be07bfba081dd413ee37b622f867b1d799b663a31474f6",
       "executable": false
     },
     "tests/support/parts-browser.mjs": {

@@ -12,9 +12,9 @@ export async function appointmentFixture(h){
  return {service,path,appointment:(await h.state()).records.appointment[0]}
 }
 export const outreachInstallation=(options={})=>installation({...options,entry:'tests/outreach-worker.ts',bindings:{TEST_NOW:'2026-10-28T12:00:00Z',...options.bindings}})
-export const appointmentConsentFields=(a,overrides={})=>({subjectId:a.id,version:a.version,to:a.email,purpose:'appointment-reminder',wordingVersion:'appointment-permission-v1',consent:true,consentedAt:'2026-10-28T07:00:00-04:00',captureChannel:'telephone',sourceEvidence:'synthetic-mallet-710 customer telephone permission for one reminder and pre-visit instructions',...overrides})
+export const appointmentConsentFields=(a,overrides={})=>({subjectId:a.id,version:a.version,to:a.email,purpose:'appointment-reminder',wordingVersion:'appointment-permission-v1',consent:true,timeZone:'America/New_York',allowedStart:9,allowedEnd:18,consentedAt:'2026-10-28T07:00:00-04:00',captureChannel:'telephone',sourceEvidence:'synthetic-mallet-710 customer telephone permission for one reminder and pre-visit instructions',...overrides})
 export async function prepareAppointment(h,a,overrides={},consent){
- consent??=await h.command('outreach.consent',appointmentConsentFields(a))
+ consent??=await h.command('outreach.consent',appointmentConsentFields(a,Object.fromEntries(['timeZone','allowedStart','allowedEnd'].filter(key=>key in overrides).map(key=>[key,overrides[key]]))))
  return h.command('outreach.prepare',{...scheduleFields(a),consentId:consent.id,consentVersion:consent.version,...overrides})
 }
 export async function approveAppointment(h,a,overrides={},consent){
@@ -78,6 +78,7 @@ export async function appointmentOutreachJourney(){
  await appointmentCustomerPreferenceJourney()
  await appointmentStandaloneErasureJourney()
  await appointmentChangedApprovalJourney()
+ await appointmentSeriesJourney()
 }
 export async function declinedFixture(h){
  await shopSetup(h)
@@ -195,6 +196,7 @@ async function appointmentAuthorityJourney(){
   const {appointment}=await appointmentFixture(h)
   const consent=await h.command('outreach.consent',appointmentConsentFields(appointment)),fields={...scheduleFields(appointment),consentId:consent.id,consentVersion:consent.version}
   for(const invalid of [{timeZone:'Unknown'},{allowedStart:9,allowedEnd:9},{expiresAt:'2026-11-01T05:00:00Z'},{expiresAt:'2026-12-01T18:00:00Z'}])await h.command('outreach.prepare',{...fields,...invalid},{status:400})
+  const unchangedHours=await h.state();await h.command('outreach.prepare',{...fields,allowedStart:10},{status:422});assert.deepEqual(await h.state(),unchangedHours,'An owner cannot widen or change the customer recorded hours through approval')
   const draft=await h.command('outreach.prepare',fields),admin=await h.person(['synthetic-mallet-750','example.test'].join('@'),'admin')
   for(const [command,input]of [['outreach.consent',appointmentConsentFields(appointment)],['outreach.approve',{id:draft.id,version:draft.version,confirm:true}],['outreach.withdraw',{consentId:consent.id,version:consent.version,reason:'Not the owner'}],['outreach.resolve',{id:draft.id,version:draft.version,reason:'Not the owner'}]]){
    const before=await h.state();await h.command(command,input,{as:admin.cookie,status:403});assert.deepEqual(await h.state(),before,'Non-owner outreach commands change nothing')
@@ -211,7 +213,7 @@ async function appointmentAuthorityJourney(){
  }finally{await h.close()}
  const spring=await outreachInstallation({bindings:{TEST_NOW:'2026-03-08T05:00:00Z'}})
  try{
-  const {appointment}=await appointmentFixture(spring),permission=await spring.command('outreach.consent',appointmentConsentFields(appointment,{consentedAt:'2026-03-08T00:00:00-05:00'}))
+  const {appointment}=await appointmentFixture(spring),permission=await spring.command('outreach.consent',appointmentConsentFields(appointment,{consentedAt:'2026-03-08T00:00:00-05:00',allowedStart:2,allowedEnd:3}))
   const row=await approveAppointment(spring,appointment,{dueAt:'2026-03-08T06:00:00Z',expiresAt:'2026-03-08T10:00:00Z',allowedStart:2,allowedEnd:3},permission),before=spring.messages.length
   for(const at of ['2026-03-08T06:59:00Z','2026-03-08T07:00:00Z','2026-03-08T07:30:00Z'])await spring.cron(at)
   assert.equal(spring.messages.length,before,'The missing spring-forward hour never grants a made-up send window')
@@ -224,7 +226,7 @@ async function appointmentCustomerPreferenceJourney(){
  const h=await outreachInstallation()
  try{
   const {appointment:a,path,service}=await appointmentFixture(h),before=await h.state()
-  const choice={action:'reminder-consent',version:a.version,wordingVersion:'appointment-permission-v1',consent:'yes'}
+  const choice={action:'reminder-consent',version:a.version,wordingVersion:'appointment-permission-v1',consent:'yes',timeZone:'America/New_York',allowedStart:9,allowedEnd:18}
   assert.equal((await bookingPost(h,path,{...choice,consent:'no'})).status,422)
   assert.deepEqual(await h.state(),before,'A missing affirmative customer choice changes nothing')
   assert.equal((await bookingPost(h,path,choice,{origin:'https://other.test'})).status,403)
@@ -285,5 +287,46 @@ async function appointmentChangedApprovalJourney(){
   const next=await approveAppointment(h,a)
   await h.command('booking.publish',{...service,serviceId:service.id,name:'synthetic-mallet-762 revised service'})
   await h.cron('2026-11-01T14:15:00Z');assert.equal(h.messages.length,calls);assert.equal((await h.state()).records.outreach.find(r=>r.id===next.id).status,'stopped','A source revision after approval prevents handoff')
+ }finally{await h.close()}
+}
+
+
+export async function appointmentSeriesJourney(){
+ const h=await outreachInstallation()
+ try{
+  const {appointment:a,path}=await appointmentFixture(h),steps=[{minutesBefore:180,instructions:'Bring the service record.'},{minutesBefore:60,instructions:'Check in at the front desk.'}]
+  let config=await h.command('outreach.configure',{version:0,enabled:true,steps})
+  const customerChoice={action:'reminder-consent',version:a.version,wordingVersion:'appointment-permission-v1',consent:'yes',timeZone:'America/New_York',allowedStart:9,allowedEnd:18}
+  for(const stepIndex of [0,1])assert.equal((await bookingPost(h,path,{...customerChoice,stepIndex})).status,200)
+  const consents=(await h.state()).records.outreachConsent
+  assert.deepEqual(consents.map(c=>c.step.index).sort(),[0,1]);assert.ok(consents.every(c=>c.by.role==='customer'&&c.step.policyVersion===config.version))
+  const scheduled=[]
+  for(const c of consents.sort((a,b)=>a.step.index-b.step.index)){
+   const dueAt=new Date(Date.parse(a.startAt)-c.step.minutesBefore*60000).toISOString()
+   const fields={dueAt,expiresAt:'2026-11-01T18:59:00Z',instructions:c.step.instructions}
+   if(!c.step.index){
+    const unchanged=await h.state()
+    await h.command('outreach.prepare',{...scheduleFields(a),...fields,instructions:'Different instructions',consentId:c.id,consentVersion:c.version},{status:422})
+    assert.deepEqual(await h.state(),unchanged)
+   }
+   scheduled.push(await approveAppointment(h,a,fields,c))
+  }
+  const calls=h.messages.length
+  await h.cron('2026-11-01T15:59:00Z');assert.equal(h.messages.length,calls)
+  await h.cron('2026-11-01T16:00:00Z');assert.equal(h.messages.length,calls+1);assert.match(h.messages.at(-1).text,/Bring the service record/)
+  await h.restart();await h.cron('2026-11-01T16:15:00Z');assert.equal(h.messages.length,calls+1)
+  await h.cron('2026-11-01T18:00:00Z');assert.equal(h.messages.length,calls+2);assert.match(h.messages.at(-1).text,/Check in at the front desk/)
+  await h.cron('2026-11-01T18:15:00Z');assert.equal(h.messages.length,calls+2)
+  const pending=await approveAppointment(h,a,{dueAt:'2026-11-01T18:00:00Z',expiresAt:'2026-11-01T18:59:00Z',instructions:steps[1].instructions},await h.command('outreach.consent',appointmentConsentFields(a,{stepIndex:1})))
+  const baseline=await h.state()
+  await h.command('outreach.configure',{version:config.version,enabled:true,steps:[steps[0],steps[0]]},{status:400});assert.deepEqual(await h.state(),baseline)
+  config=await h.command('outreach.configure',{version:config.version,enabled:false,steps});assert.equal(config.history.length,1)
+  await h.cron('2026-11-01T18:30:00Z');assert.equal(h.messages.length,calls+2);assert.equal((await h.state()).records.outreach.find(r=>r.id===pending.id).status,'stopped')
+  const backup=await archive(h),fresh=await outreachInstallation()
+  try{
+   await restore(fresh,backup);assert.deepEqual((await fresh.state()).records.appointmentReminderPolicy,[config])
+   assert.deepEqual((await fresh.state()).records.outreach,(await h.state()).records.outreach)
+   await fresh.cron('2026-11-01T18:45:00Z');assert.equal(fresh.messages.filter(m=>m.subject==='Your appointment reminder').length,0)
+  }finally{await fresh.close()}
  }finally{await h.close()}
 }

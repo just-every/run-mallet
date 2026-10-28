@@ -1,10 +1,11 @@
+import {configureAppointmentReminders,stepDue} from './appointment-reminder-policy'
 import {APPOINTMENT_TEMPLATE,appointmentApprovalStop,appointmentContent,currentAppointmentConsent,recordAppointmentConsent,withdrawAppointmentConsent,withdrawAppointmentOutreach} from './outreach-consent'
 import {optedOut} from './approval-chasing'
 import {balanceReminderReview,balanceReminderContent} from './receivables'
 import {bump,event,expectVersion,fail,find,integer,put,rows,text,who,type Handler,type State} from './model'
 import {instant} from './workshop'
 import {readings} from './mileage'
-export const outreachCommands=['outreach.customerConsent','outreach.customerWithdraw','outreach.consent','outreach.withdraw','outreach.prepare','outreach.approve','outreach.resolve','outreach.schedule','outreach.stop','outreach.claim','outreach.outcome']
+export const outreachCommands=['outreach.configure','outreach.customerConsent','outreach.customerWithdraw','outreach.consent','outreach.withdraw','outreach.prepare','outreach.approve','outreach.resolve','outreach.schedule','outreach.stop','outreach.claim','outreach.outcome']
 export const internalOutreachCommands=['outreach.claim','outreach.outcome']
 export function allowedHour(at:string,zone:string,start:number,end:number){
  let hour:number;try{hour=Number(new Intl.DateTimeFormat('en-US',{timeZone:zone,hour:'numeric',hourCycle:'h23'}).format(new Date(at)))}catch{return false}
@@ -45,7 +46,7 @@ export const outreach:Handler=(c,command,p)=>{
  if(!outreachCommands.includes(command))return
  if(command==='outreach.customerConsent'){
   const a=find(c.s,'appointment',p.subjectId)
-  return recordAppointmentConsent(c,{subjectId:a.id,version:p.version,to:a.email,purpose:'appointment-reminder',wordingVersion:p.wordingVersion,consent:p.consent,consentedAt:c.now,captureChannel:'customer-form',sourceEvidence:'Private appointment form '+a.id})
+  return recordAppointmentConsent(c,{subjectId:a.id,version:p.version,to:a.email,purpose:'appointment-reminder',wordingVersion:p.wordingVersion,consent:p.consent,consentedAt:c.now,captureChannel:'customer-form',sourceEvidence:'Private appointment form '+a.id,timeZone:p.timeZone,allowedStart:p.allowedStart,allowedEnd:p.allowedEnd,stepIndex:p.stepIndex})
  }
  if(command==='outreach.customerWithdraw'){
   const a=find(c.s,'appointment',p.subjectId);expectVersion(a,p.version)
@@ -53,16 +54,19 @@ export const outreach:Handler=(c,command,p)=>{
   return withdrawAppointmentOutreach(c,a,'Customer withdrew through the private appointment form')
  }
  if(!internalOutreachCommands.includes(command)&&c.actor.role!=='owner')fail('FORBIDDEN','Only the current owner manages customer outreach.',null,403)
+ if(command==='outreach.configure')return configureAppointmentReminders(c,p)
  if(command==='outreach.consent')return recordAppointmentConsent(c,p)
  if(command==='outreach.withdraw')return withdrawAppointmentConsent(c,p)
  if(command==='outreach.prepare'){
   const {consent,a,source}=currentAppointmentConsent(c.s,p.consentId,p.subjectId);expectVersion(a,p.version);expectVersion(consent,p.consentVersion)
-  if(rows(c.s,'outreach').some(r=>r.kind==='appointment'&&r.subjectId===a.id&&(r.status==='claimed'||['draft','pending'].includes(r.status)&&!r.stoppedAt||['failed','uncertain'].includes(r.status)&&!r.resolution)))fail('OUTREACH_RECOVERY','Stop the active email or record a human resolution before preparing another attempt.')
+  if(rows(c.s,'outreach').some(r=>r.kind==='appointment'&&r.subjectId===a.id&&(r.status==='claimed'||r.consentId===consent.id&&['draft','pending'].includes(r.status)&&!r.stoppedAt||consent.step&&r.step?.policyId===consent.step.policyId&&r.step?.index===consent.step.index&&['draft','pending'].includes(r.status)&&!r.stoppedAt||['failed','uncertain'].includes(r.status)&&!r.resolution)))fail('OUTREACH_RECOVERY','Stop the active email or record a human resolution before preparing another attempt.')
   const dueAt=instant(p.dueAt,'due time'),expiresAt=instant(p.expiresAt,'expiry'),timeZone=text(p.timeZone,'recipient IANA timezone',100),allowedStart=integer(p.allowedStart,'first allowed hour',0,23),allowedEnd=integer(p.allowedEnd,'last allowed hour',0,23)
   try{new Intl.DateTimeFormat('en-US',{timeZone}).format()}catch{fail('INPUT','Choose a valid IANA timezone.',null,400)}
   if(allowedStart===allowedEnd||expiresAt<=dueAt||expiresAt<=c.now||expiresAt>a.startAt||dueAt>=a.startAt||Date.parse(expiresAt)-Date.parse(c.now)>31*86400000)fail('INPUT','Choose a nonempty window and expiry before the appointment, within 31 elapsed days.',null,400)
+  if(timeZone!==consent.preference.timeZone||allowedStart!==consent.preference.allowedStart||allowedEnd!==consent.preference.allowedEnd)fail('OUTREACH_HOURS','Use the recipient timezone and hours recorded with this customer permission.',null,422)
   const instructions=text(p.instructions,'pre-visit instructions',2000)
-  const row=put(c.s,'outreach',{kind:'appointment',subjectId:a.id,startAt:a.startAt,shopZone:a.service.timeZone,to:a.email,source,consentId:consent.id,consentVersion:consent.version,consentEvidence:consent.sourceEvidence,content:appointmentContent(a,instructions),instructions,templateVersion:APPOINTMENT_TEMPLATE,dueAt,expiresAt,timeZone,allowedStart,allowedEnd,by:who(c),at:c.now,status:'draft',policy:'one-approved-appointment-email-v2'})
+  if(consent.step&&(dueAt!==stepDue(a,consent.step)||instructions!==consent.step.instructions))fail('OUTREACH_POLICY','Use the exact reminder timing and instructions the customer selected.',null,422)
+  const row=put(c.s,'outreach',{kind:'appointment',subjectId:a.id,startAt:a.startAt,shopZone:a.service.timeZone,to:a.email,source,step:consent.step??null,consentId:consent.id,consentVersion:consent.version,consentEvidence:consent.sourceEvidence,content:appointmentContent(a,instructions),instructions,templateVersion:APPOINTMENT_TEMPLATE,dueAt,expiresAt,timeZone,allowedStart,allowedEnd,by:who(c),at:c.now,status:'draft',policy:'one-approved-appointment-email-v2'})
   event(c,command,null,row.id,{subjectId:a.id,consentId:consent.id});return row
  }
  if(command==='outreach.approve'){

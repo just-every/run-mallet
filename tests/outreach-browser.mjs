@@ -18,6 +18,7 @@ export async function outreachBrowser(){
   await p.setViewportSize({width:1440,height:1000});await p.goto(h.origin+'/app/bookings')
   const section=p.getByRole('heading',{name:'Appointment email follow-up',exact:true}).locator('..')
   let f=section.locator('form').filter({has:p.locator('input[name="command"][value="outreach.consent"]')})
+  await f.getByLabel('Recipient timezone').fill('America/New_York')
   await f.getByLabel('Customer permission time with UTC offset').fill('2026-10-28T07:00:00-04:00')
   await f.getByLabel('Permission capture channel').selectOption('telephone')
   await f.getByLabel('Customer permission evidence reference').fill('synthetic-mallet-741 telephone permission for this appointment reminder and instructions')
@@ -40,6 +41,11 @@ export async function outreachBrowser(){
   const resolve=section.locator('form').filter({has:p.locator('input[name="command"][value="outreach.resolve"]')})
   await resolve.getByLabel('Staff resolution evidence').fill('synthetic-mallet-742 owner checked the failed provider handoff and confirmed current customer permission')
   await resolve.getByRole('button',{name:'Record resolution'}).click();await p.waitForLoadState('domcontentloaded');assert.equal((await h.state()).records.outreach[0].resolution.by.role,'owner');await shot('appointment-failure-resolved')
+  await prepare();const stopped=(await h.state()).records.outreach.find(r=>r.status==='draft');await approve();assert.equal((await h.state()).records.outreach.find(r=>r.id===stopped.id).status,'pending')
+  const stop=section.locator('form').filter({has:p.locator('input[name="command"][value="outreach.stop"]')})
+  await stop.getByLabel('Stop reason').fill('Owner stopped this exact follow-up before preparing another review')
+  await stop.getByRole('button',{name:'Stop follow-up',exact:true}).click();await p.waitForLoadState('domcontentloaded')
+  assert.equal((await h.state()).records.outreach.find(r=>r.id===stopped.id).status,'stopped')
   await prepare();const retry=(await h.state()).records.outreach.find(r=>r.status==='draft');await approve();assert.equal((await h.state()).records.outreach.find(r=>r.id===retry.id).status,'pending')
   const withdraw=section.locator('form').filter({has:p.locator('input[name="command"][value="outreach.withdraw"]')})
   await withdraw.getByLabel('Customer withdrawal evidence').fill('synthetic-mallet-743 customer withdrew future reminders by telephone');await withdraw.getByRole('button',{name:'Record customer withdrawal'}).click();await p.waitForLoadState('domcontentloaded')
@@ -68,6 +74,7 @@ export async function outreachBrowser(){
   await shot('declined-inapplicable-review');await inapplicable.getByRole('button',{name:'Finding no longer applies'}).click();await p.waitForLoadState('domcontentloaded');await shot('declined-inapplicable-stopped')
   assert.match(await p.locator('main').innerText(),/Finding no longer applies: Owner inspected the vehicle/);assert.ok((await h.state()).records.declinedWork[0].inapplicable);assert.equal(await p.getByRole('heading',{name:'Declined-work email follow-up',exact:true}).locator('..').getByRole('button',{name:'Schedule email'}).count(),0)
   await appointmentPreferenceBrowser(browser,directory)
+  await appointmentSeriesBrowser(browser,directory)
   assert.deepEqual(errors,[])
  }finally{await browser?.close();await h.close()}
 }
@@ -82,6 +89,7 @@ async function appointmentPreferenceBrowser(browser,directory){
   await p.goto(h.origin+path)
   const choice=p.getByRole('checkbox',{name:'I choose email and give this reminder permission.'})
   assert.equal(await choice.isChecked(),false)
+  await p.getByLabel('Your IANA timezone').fill('America/New_York')
   await choice.check();await p.getByRole('button',{name:'Request one email reminder',exact:true}).click();await p.waitForLoadState('domcontentloaded')
   const consent=(await h.state()).records.outreachConsent[0]
   assert.equal(consent.by.role,'customer');assert.equal(consent.purpose,'appointment-reminder')
@@ -97,4 +105,52 @@ async function appointmentPreferenceBrowser(browser,directory){
   await h.cron('2026-11-01T14:15:00Z');assert.equal(h.messages.length,calls)
   await shot('customer-reminder-stopped')
  }finally{await context.close();await h.close()}
+}
+
+
+async function appointmentSeriesBrowser(browser,directory){
+ const h=await outreachInstallation({network:true,secureNetwork:true,assets:true})
+ const owner=await browser.newContext({ignoreHTTPSErrors:true,viewport:{width:1440,height:1000}})
+ const customer=await browser.newContext({ignoreHTTPSErrors:true,viewport:{width:1440,height:1000}})
+ try{
+  const {appointment:a,path}=await appointmentFixture(h);await h.stepUp()
+  await owner.addCookies(h.owner.split('; ').map(pair=>({name:pair.slice(0,pair.indexOf('=')),value:pair.slice(pair.indexOf('=')+1),url:h.origin})))
+  const p=await owner.newPage(),c=await customer.newPage()
+  const shot=async(name,page=p)=>{for(const width of [1440,390]){await page.setViewportSize({width,height:1000});assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));assert.equal(await page.locator('button,a').evaluateAll(nodes=>nodes.filter(n=>n.querySelector('svg,img')&&!n.textContent.trim()&&!n.getAttribute('data-tooltip')).length),0);await page.screenshot({path:join(directory,name+'-'+width+'.png'),fullPage:true})}await page.setViewportSize({width:1440,height:1000})}
+  await p.goto(h.origin+'/app/settings/appointment-reminders')
+  for(const [index,minutes,instructions]of [[1,180,'Bring the service record.'],[2,60,'Check in at the front desk.']]){
+   await p.getByLabel('Minutes before appointment '+index,{exact:true}).fill(String(minutes))
+   await p.getByLabel('Pre-visit instructions '+index,{exact:true}).fill(instructions)
+  }
+  await p.getByText('Offer this reminder series for explicit customer selection.').check()
+  const calls=h.messages.length
+  await p.getByRole('button',{name:'Save reminder settings',exact:true}).click();await p.waitForLoadState('domcontentloaded')
+  assert.equal((await h.state()).records.appointmentReminderPolicy[0].steps.length,2);assert.equal((await h.state()).records.outreach,undefined);assert.equal(h.messages.length,calls,'Saving a reminder recipe never sends')
+  await shot('appointment-reminder-settings')
+  await c.goto(h.origin+path)
+  for(const stepIndex of [0,1]){
+   await c.getByLabel('Reminder timing').selectOption(String(stepIndex));await c.getByLabel('Your IANA timezone').fill('America/New_York')
+   await c.getByText('I choose email and give this reminder permission.').check();await c.getByRole('button',{name:'Request one email reminder',exact:true}).click();await c.waitForLoadState('domcontentloaded')
+  }
+  await shot('customer-reminder-series',c)
+  const consents=(await h.state()).records.outreachConsent.sort((a,b)=>a.step.index-b.step.index)
+  assert.deepEqual(consents.map(c=>c.step.index),[0,1])
+  await p.goto(h.origin+'/app/bookings')
+  const section=p.getByRole('heading',{name:'Appointment email follow-up',exact:true}).locator('..')
+  for(const consent of consents){
+   const prepare=section.locator('form').filter({has:p.locator('input[name="command"][value="outreach.prepare"]')}).filter({has:p.locator('input[name="consentId"][value="'+consent.id+'"]')})
+   assert.equal(await prepare.getByLabel('Due time with UTC offset').inputValue(),new Date(Date.parse(a.startAt)-consent.step.minutesBefore*60000).toISOString())
+   assert.equal(await prepare.getByLabel('Pre-visit instructions',{exact:true}).inputValue(),consent.step.instructions)
+   await prepare.getByLabel('Expiry with UTC offset').fill('2026-11-01T18:59:00Z');await prepare.getByRole('button',{name:'Prepare email for review'}).click();await p.waitForLoadState('domcontentloaded')
+   const exact=section.locator('pre.appointment-email').last();assert.ok(Number.parseFloat(await exact.evaluate(n=>getComputedStyle(n).fontSize))>=13)
+   const approve=section.locator('form').filter({has:p.locator('input[name="command"][value="outreach.approve"]')})
+   await approve.getByText('I approve this exact recipient, email, consent, schedule, hours and expiry.').check();await approve.getByRole('button',{name:'Approve one email',exact:true}).click();await p.waitForLoadState('domcontentloaded')
+  }
+  assert.equal((await h.state()).records.outreach.filter(r=>r.status==='pending').length,2)
+  await shot('appointment-series-approved')
+  await h.cron('2026-11-01T16:00:00Z');assert.equal(h.messages.length,calls+1)
+  await h.cron('2026-11-01T18:00:00Z');assert.equal(h.messages.length,calls+2)
+  await p.reload();assert.equal((await h.state()).records.outreach.filter(r=>r.status==='accepted').length,2);assert.match(await section.innerText(),/Handed to the mail provider; delivery is not confirmed/)
+  await shot('appointment-series-handoff')
+ }finally{await owner.close();await customer.close();await h.close()}
 }

@@ -360,7 +360,7 @@ Evidence: `tests/mallet.test.mjs`; `tests/customers-browser.mjs`; `tests/support
 
 **AUTO-001 — Appointment confirmation and reminders.** Status: **partial**. [Target, acceptance and remaining work](./CONTRACT.md#customer-communication-and-follow-up).
 
-Evidence: `tests/mallet.test.mjs`; `tests/support/outreach-journey.mjs`; `tests/outreach-browser.mjs`.
+Evidence: `tests/mallet.test.mjs`; `tests/support/outreach-journey.mjs`; `tests/outreach-browser.mjs`; `tests/outreach-browser.mjs`.
 
 **AUTO-002 — Status and pickup notifications.** Status: **partial**. [Target, acceptance and remaining work](./CONTRACT.md#customer-communication-and-follow-up).
 

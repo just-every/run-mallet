@@ -48,7 +48,7 @@ export async function bookingResponse(request:Request,original:Bindings):Promise
     return new Response(null,{status:303,headers:{location:'/book/'+secret,'cache-control':'no-store','referrer-policy':'no-referrer'}})
    }
    if(['reminder-consent','reminder-withdraw'].includes(action)){
-    await execute(env.DB,actor,action==='reminder-consent'?'outreach.customerConsent':'outreach.customerWithdraw',{subjectId:row.id,version:Number(data.version),consent:data.consent==='yes',wordingVersion:data.wordingVersion},authority)
+    await execute(env.DB,actor,action==='reminder-consent'?'outreach.customerConsent':'outreach.customerWithdraw',{subjectId:row.id,version:Number(data.version),consent:data.consent==='yes',wordingVersion:data.wordingVersion,timeZone:data.timeZone,allowedStart:Number(data.allowedStart),allowedEnd:Number(data.allowedEnd),stepIndex:data.stepIndex===undefined||data.stepIndex===''?undefined:Number(data.stepIndex)},authority)
     const s=await bookingState(env);return view(manageBooking(s,row,url.pathname))
    }
    if(!['confirm','cancel','reschedule'].includes(action))return view('<p>Unknown action.</p>',400)

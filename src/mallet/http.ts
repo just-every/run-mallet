@@ -16,6 +16,7 @@ import {reviewResponse} from './review-customer-door'
 import {internalReviewCommands} from './reviews'
 import {reviewPanel} from './ui/reviews'
 import {internalOutreachCommands} from './outreach'
+import {appointmentReminderSettings} from './ui/appointment-reminder-settings'
 import {outreachCommand} from './outreach-door'
 import {unusedAssetOutreachErasure} from './retention/outreach'
 import {stripeResponse} from './stripe/door'
@@ -196,7 +197,7 @@ function visible(s:State,actor:Actor):State {
  s=scopedTime(s,actor)
  if(actor.role!=='owner'){const {reviewConsent:_reviewConsent,reviewRequest:_reviewRequest,...privateReviewRecords}=s.records;s={...s,records:{...privateReviewRecords,...(s.records.subtask?{subtask:s.records.subtask.filter(t=>t.kind!=='review-feedback')}:{}),event:rows(s,'event').filter(x=>!x.kind.startsWith('review.'))}}}
  if(actor.role!=='owner'){const {statusConsent:_statusConsent,statusNotice:_statusNotice,...statusRecords}=s.records;s={...s,records:{...statusRecords,...(s.records.subtask?{subtask:s.records.subtask.filter(t=>t.kind!=='pickup-followup')}:{}),event:rows(s,'event').filter(x=>!x.kind.startsWith('statusNotice.'))}}}
- if(actor.role!=='owner'){const {outreach:_outreach,outreachConsent:_outreachConsent,outreachSuppression:_outreachSuppression,...privateRecords}=s.records;s={...s,records:{...privateRecords,event:rows(s,'event').filter(x=>!x.kind.startsWith('outreach.'))}}}
+ if(actor.role!=='owner'){const {outreach:_outreach,outreachConsent:_outreachConsent,outreachSuppression:_outreachSuppression,appointmentReminderPolicy:_appointmentReminderPolicy,...privateRecords}=s.records;s={...s,records:{...privateRecords,event:rows(s,'event').filter(x=>!x.kind.startsWith('outreach.'))}}}
  if(actor.role!=='owner'){const {taxCertificate:_certificates,taxFeeRule:_feeRules,taxDiscountRule:_discountRules,taxJurisdiction:_jurisdiction,invoiceDocument:_docs,invoiceDelivery:_delivery,...records}=s.records;s={...s,records:{...records,event:rows(s,'event').filter(x=>!x.kind.startsWith('invoice.delivery')&&x.kind!=='invoice.issue'&&!x.kind.startsWith('tax.certificate')&&!x.kind.startsWith('tax.assignJurisdiction'))}}}
  if(!human(actor)){s={...s,records:Object.fromEntries(Object.entries(s.records).filter(([k])=>!['contact','customerAccount','customerMerge','customerBilling'].includes(k)))};s={...s,records:{...s.records,event:rows(s,'event').filter(x=>!x.kind.startsWith('contact.')&&!x.kind.startsWith('customer.')),invoice:rows(s,'invoice').map(i=>{const {billing,...rest}=i;return rest})}}}
  if(!human(actor)){const records=Object.fromEntries(Object.entries(s.records).filter(([k])=>!k.startsWith('stock')&&!k.startsWith('purchase')));s={...s,records:{...records,event:(records.event??[]).filter(x=>!x.kind.startsWith('stock.')&&!x.kind.startsWith('purchase.'))}}}
@@ -223,7 +224,8 @@ function formInput(data:FormData) {
  if(input.command==='statusNotice.approve'){input.confirm=data.has('confirm');for(const key of ['allowedStart','allowedEnd','jobVersion'])input[key]=Number(input[key])}
  if(input.command==='review.consent')input.consent=data.has('consent')
  if(input.command==='review.send')input.confirm=data.has('confirm')
- if(input.command==='outreach.consent')input.consent=data.has('consent')
+ if(input.command==='outreach.configure'){input.enabled=data.has('enabled');input.steps=[0,1,2].filter(i=>String(input['minutesBefore'+i]??'').trim()).map(i=>({minutesBefore:Number(input['minutesBefore'+i]),instructions:input['instructions'+i]}))}
+ if(input.command==='outreach.consent'){input.consent=data.has('consent');if(input.stepIndex!==undefined&&input.stepIndex!=='')input.stepIndex=Number(input.stepIndex);for(const key of ['allowedStart','allowedEnd'])input[key]=Number(input[key])}
  if(input.command==='outreach.approve')input.confirm=data.has('confirm')
  if(['outreach.schedule','outreach.prepare'].includes(input.command)){input.consent=data.has('consent');input.availabilityConfirmed=data.has('availabilityConfirmed');for(const key of ['allowedStart','allowedEnd','quoteVersion','outstandingCents','consentVersion'])if(input[key]!==undefined)input[key]=Number(input[key])}
  if(input.command==='reportFilter.schedule'){input.active=data.has('active');input.consent=data.has('consent');input.everyDays=Number(input.everyDays);input.nextAt=String(input.nextAt).endsWith('Z')?input.nextAt:String(input.nextAt)+':00Z'}
@@ -322,6 +324,7 @@ async function workshopResponse(request:Request,original:Bindings,execution:Pick
   }
   if(path==='/app'&&actor.staff)return redirect('/app/staff')
   if(['/app/staff','/api/mallet/staff/state'].includes(path)){if(!actor.staff)throw new HttpError(403,'staff_grant_required');const view=staffState(await load(env.DB),actor);if(!await env.DB.prepare(`SELECT 1 AS ok WHERE (${auth.authority.sql})`).bind(...auth.authority.params).first())throw new HttpError(403,'staff_grant_required');return path==='/app/staff'?page('Staff workspace',staffPage(view),actor,200,{section:'data'}):url.searchParams.has('download')?new Response(JSON.stringify(view,null,2),{headers:{...headers,'content-type':'application/json','content-disposition':'attachment; filename="mallet-staff.json"'}}):json(view)}
+  if(path==='/app/settings/appointment-reminders'){if(actor.role!=='owner')throw new HttpError(403,'owner_required');return page('Appointment reminder settings',appointmentReminderSettings(await load(env.DB)),actor,200,{section:'data'})}
   if(path==='/app/settings/assistants'){if(actor.role!=='owner')throw new HttpError(403,'owner_required');return page('Assistant settings',assistantsPage(await load(env.DB),new Set((await env.DB.prepare('SELECT grant_id FROM mallet_assistant_keys').all<{grant_id:string}>()).results.map(k=>k.grant_id))),actor,200,{section:'data'})}
   if(path==='/app/staff-access'){if(actor.role!=='owner')throw new HttpError(403,'owner_required');return page('Staff roles & limits',await staffSettings(env.DB),actor,200,{section:'data'})}
   if(['/app/audit','/api/mallet/audit'].includes(path)){
@@ -443,6 +446,7 @@ async function workshopResponse(request:Request,original:Bindings,execution:Pick
    if(command==='decline.inapplicable')return redirect('/app/jobs/'+encodeURIComponent(String(input.jobId)))
    if(command.startsWith('statusNotice.'))return redirect('/app/jobs/'+encodeURIComponent(String(result.jobId??input.jobId))+'/notifications')
    if(command.startsWith('review.'))return redirect('/app/jobs/'+encodeURIComponent(String(result.jobId??input.jobId))+'/reviews')
+   if(command==='outreach.configure')return redirect('/app/settings/appointment-reminders')
    if(command.startsWith('outreach.'))return redirect(input.returnTo==='receivables'?'/app/receivables?accountId='+encodeURIComponent(String(input.accountId)):input.returnTo==='declined'?'/app/jobs/'+encodeURIComponent(String(input.jobId)):'/app/bookings')
    if(command==='booking.publish'||command==='booking.revokeLink')return redirect('/app/bookings')
    if(command.startsWith('connector.'))return redirect('/app/connectors')
