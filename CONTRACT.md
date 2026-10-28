@@ -1473,7 +1473,7 @@ Inherits BASE-AGENT-001 to BASE-AGENT-013. The company’s policy decides every 
 
 - **external.** a message, share, source submission or record newly visible outside the shop; facts include recipient count and known, new or public counterparty.
 
-- **money.** an order, payment, refund, price or charge changes what the shop pays or charges; facts include exact USD amount and counterparty.
+- **money.** an authorized order, payment, refund, published price or charge changes what the shop pays or charges; facts include exact USD amount and counterparty.
 
 - **commitment.** a repair, promise, warranty or claim decision binds the shop; facts include value, counterparty and exact source revision.
 
@@ -1497,22 +1497,22 @@ Inherits BASE-AGENT-001 to BASE-AGENT-013. The company’s policy decides every 
 | `mallet.estimates.prepare` | Exact decision | ESTIMATE-001 | standard | not implemented over MCP |
 | `mallet.work.record` | Authorized actuals | WORK-001 | standard | not implemented over MCP |
 | `mallet.invoices.export` | One saved export | INVOICE-001 | standard | not implemented over MCP |
-| `mallet.grants.issue` | Scoped preparation keys | AGENT-001 | access | not implemented over MCP |
+| `mallet.grants.issue` | Scoped preparation keys | AGENT-001 | access · security | not implemented over MCP |
 | `mallet.custody.erase` | Custody and erasure | DATA-001 | destructive (+ sensitive) | not implemented over MCP |
 | `mallet.catalogue.read` | Read only | PIER-001 | standard | not implemented over MCP |
-| `mallet.customers.update` | Customer and fleet accounts | CUS-001 | standard | not implemented over MCP |
-| `mallet.vehicles.decode` | Vehicle identity and VIN decode | VEH-001 | standard | not implemented over MCP |
+| `mallet.customers.update` | Customer and fleet accounts | CUS-001 | standard or access | not implemented over MCP |
+| `mallet.vehicles.decode` | Vehicle identity and VIN decode | VEH-001 | standard or external | not implemented over MCP |
 | `mallet.readings.record` | Mileage and service intervals | VEH-002 | standard | not implemented over MCP |
 | `mallet.carfax.exchange` | CARFAX service history exchange | VEH-003 | external | not implemented over MCP |
-| `mallet.custody.record` | Condition media and custody | INTAKE-001 | standard | not implemented over MCP |
+| `mallet.custody.record` | Condition media and custody | INTAKE-001 | standard (+ commitment) | not implemented over MCP |
 | `mallet.unlock.manage` | Temporary unlock custody | INTAKE-004 | security (+ destructive) | not implemented over MCP |
-| `mallet.forms.publish` | Custom forms and signed shop terms | INTAKE-002 | standard | not implemented over MCP |
+| `mallet.forms.publish` | Custom forms and signed shop terms | INTAKE-002 | standard (+ money) (+ commitment) (+ external) (+ access) | not implemented over MCP |
 | `mallet.checkin.confirm` | Counter and after-hours check-in | INTAKE-003 | standard | not implemented over MCP |
-| `mallet.appointments.book` | Online appointment booking | BOOK-001 | standard | not implemented over MCP |
+| `mallet.appointments.book` | Online appointment booking | BOOK-001 | standard (+ commitment) (+ external) (+ access) | not implemented over MCP |
 | `mallet.resources.reserve` | Resource calendars and recurring reservations | BOOK-002 | standard | not implemented over MCP |
-| `mallet.waitlist.offer` | Cancellation waitlist offers | BOOK-003 | external | not implemented over MCP |
-| `mallet.findings.record` | Diagnostic findings and private notes | DIAG-001 | standard | not implemented over MCP |
-| `mallet.assets.classify` | Bicycle and device repair benches | ASSET-001 | standard | not implemented over MCP |
+| `mallet.waitlist.offer` | Cancellation waitlist offers | BOOK-003 | external (+ commitment) (+ access) | not implemented over MCP |
+| `mallet.findings.record` | Diagnostic findings and private notes | DIAG-001 | standard (+ external) (+ access) | not implemented over MCP |
+| `mallet.assets.classify` | Bicycle and device repair benches | ASSET-001 | standard (+ money) | not implemented over MCP |
 | `mallet.inspections.record` | Configurable digital inspections | DVI-001 | standard | not implemented over MCP |
 | `mallet.media.upload` | Photo and video inspection evidence | DVI-002 | standard | not implemented over MCP |
 | `mallet.inspections.share` | Customer inspection presentation | DVI-003 | external | not implemented over MCP |
@@ -1520,58 +1520,58 @@ Inherits BASE-AGENT-001 to BASE-AGENT-013. The company’s policy decides every 
 | `mallet.clearance.record` | Completion tests and return clearance | QUALITY-001 | commitment (+ money) (+ external) | not implemented over MCP |
 | `mallet.diagnostics.import` | Specialist diagnostics connections | DIAG-002 | standard | not implemented over MCP |
 | `mallet.pricing.prepare` | Parts and labor pricing | EST-001 | standard | not implemented over MCP |
-| `mallet.recipes.prepare` | Canned jobs and pricing matrices | EST-002 | standard | not implemented over MCP |
-| `mallet.estimates.decide` | Customer approval and decline by link | EST-003 | commitment (+ money) (+ external) | not implemented over MCP |
+| `mallet.recipes.prepare` | Canned jobs and pricing matrices | EST-002 | standard (+ money) | not implemented over MCP |
+| `mallet.estimates.decide` | Record the agent’s own exact estimate decision; retain the customer’s separate consent | ESTIMATE-001, EST-003, EST-004 | commitment (+ money) (+ external) | not implemented over MCP |
 | `mallet.supplements.prepare` | Supplemental approval on the same repair | EST-004 | standard | not implemented over MCP |
 | `mallet.declines.reprice` | Declined work register | EST-005 | standard | not implemented over MCP |
-| `mallet.chasing.schedule` | Estimate expiry and approval chasing | EST-006 | standard | not implemented over MCP |
+| `mallet.chasing.schedule` | Estimate expiry and approval chasing | EST-006 | standard or live (+ external) | not implemented over MCP |
 | `mallet.chasing.resolve` | Approval-chasing recovery tasks | EST-007 | standard | not implemented over MCP |
 | `mallet.board.read` | Live repair and technician boards | FLOW-001 | standard | not implemented over MCP |
 | `mallet.promises.update` | Promise times and capacity | FLOW-002 | standard or commitment (+ external) | not implemented over MCP |
 | `mallet.routing.run` | Rules-based routing and escalation | FLOW-003 | standard or live (+ external) | not implemented over MCP |
-| `mallet.time.record` | Employee clock and job timers | TIME-001 | standard | not implemented over MCP |
-| `mallet.crew.update` | Technician crews and subtasks | FLOW-004 | standard | not implemented over MCP |
-| `mallet.handoffs.acknowledge` | Acknowledged technician handoff | FLOW-005 | standard | not implemented over MCP |
+| `mallet.time.record` | Employee clock and job timers | TIME-001 | standard or sensitive (+ commitment) | not implemented over MCP |
+| `mallet.crew.update` | Technician crews and subtasks | FLOW-004 | standard or access | not implemented over MCP |
+| `mallet.handoffs.acknowledge` | Acknowledged technician handoff | FLOW-005 | standard or access (+ commitment) | not implemented over MCP |
 | `mallet.warranty.claim` | Warranty and comeback work | WARRANTY-001 | commitment (+ money) (+ external) | not implemented over MCP |
 | `mallet.handover.record` | Paid and documented handover | RETURN-001 | commitment (+ money) (+ external) | not implemented over MCP |
-| `mallet.storage.dispose` | Storage, abandoned property and repair liens | RETURN-002 | standard or destructive (+ commitment) (+ external) | not implemented over MCP |
+| `mallet.storage.dispose` | Storage, abandoned property and repair liens | RETURN-002 | standard or destructive (+ money) (+ commitment) (+ external) | not implemented over MCP |
 | `mallet.fleet.authorize` | Fleet and commercial repair workflows | FLEET-001 | commitment (+ money) (+ external) | not implemented over MCP |
-| `mallet.fleet.reconcile` | Fleet billing and statement reconciliation | FLEET-002 | standard | not implemented over MCP |
+| `mallet.fleet.reconcile` | Fleet billing and statement reconciliation | FLEET-002 | standard (+ money) (+ external) | not implemented over MCP |
 | `mallet.parts.trace` | Shop parts catalog and traceability | PART-001 | standard | not implemented over MCP |
-| `mallet.stock.count` | Barcode receiving and stock counts | PART-002 | standard | not implemented over MCP |
+| `mallet.stock.count` | Record physical receipts and stock counts | PART-002, BUY-001 | standard | not implemented over MCP |
 | `mallet.stock.consume` | Repair reservations and consumption | PART-003 | standard | not implemented over MCP |
 | `mallet.purchases.prepare` | Purchase orders and goods receipts | BUY-001 | standard | not implemented over MCP |
-| `mallet.orders.submit` | Supplier stock and approved ordering | BUY-002 | money (+ external) | not implemented over MCP |
-| `mallet.partstech.order` | PartsTech catalog and orders | BUY-003 | money (+ external) | not implemented over MCP |
-| `mallet.nexpart.order` | Nexpart catalog and orders | BUY-004 | money (+ external) | not implemented over MCP |
-| `mallet.worldpac.order` | Worldpac sourcing and orders | BUY-005 | money (+ external) | not implemented over MCP |
-| `mallet.cores.reconcile` | Core deposits and returns | PART-004 | standard | not implemented over MCP |
-| `mallet.returns.reconcile` | Supplier RMAs and defective parts | PART-005 | standard | not implemented over MCP |
+| `mallet.orders.submit` | Place the exact supplier order | BUY-002, PART-007 | money · commitment · external | not implemented over MCP |
+| `mallet.partstech.order` | PartsTech catalog and orders | BUY-003 | money (+ commitment) (+ external) | not implemented over MCP |
+| `mallet.nexpart.order` | Nexpart catalog and orders | BUY-004 | money (+ commitment) (+ external) | not implemented over MCP |
+| `mallet.worldpac.order` | Worldpac sourcing and orders | BUY-005 | money (+ commitment) (+ external) | not implemented over MCP |
+| `mallet.cores.reconcile` | Core deposits and returns | PART-004 | standard or money (+ commitment) (+ external) | not implemented over MCP |
+| `mallet.returns.reconcile` | Supplier RMAs and defective parts | PART-005 | standard or money (+ commitment) (+ external) | not implemented over MCP |
 | `mallet.specialparts.update` | ETA and special-order follow-through | PART-006 | standard | not implemented over MCP |
 | `mallet.stock.replenish` | Low-stock replenishment | PART-007 | standard | not implemented over MCP |
 | `mallet.stock.transfer` | Inter-store transfers | PART-008 | standard | not implemented over MCP |
-| `mallet.suppliers.reconcile` | Supplier and warranty compensation reconciliation | BUY-006 | standard | not implemented over MCP |
+| `mallet.suppliers.reconcile` | Supplier and warranty compensation reconciliation | BUY-006 | standard or money (+ commitment) (+ external) | not implemented over MCP |
 | `mallet.mobilesentrix.handoff` | MobileSentrix US parts | BUY-007 | external (+ money) (+ commitment) (+ gated) | not implemented over MCP |
-| `mallet.injuredgadgets.import` | Injured Gadgets order sync | BUY-008 | standard | not implemented over MCP |
-| `mallet.invoices.issue` | USD invoices and customer delivery | INV-001 | standard | not implemented over MCP |
-| `mallet.tax.configure` | US parts and labor sales tax | TAX-001 | standard | not implemented over MCP |
-| `mallet.exemptions.apply` | Exemptions and shop fees | TAX-002 | standard | not implemented over MCP |
+| `mallet.injuredgadgets.import` | Injured Gadgets order sync | BUY-008 | standard or external | not implemented over MCP |
+| `mallet.invoices.issue` | Issue the exact invoice and deliver its customer copy | INVOICE-001, INV-001 | standard or money (+ commitment) (+ external) | not implemented over MCP |
+| `mallet.tax.configure` | US parts and labor sales tax | TAX-001 | money | not implemented over MCP |
+| `mallet.exemptions.apply` | Exemptions and shop fees | TAX-002 | money (+ commitment) | not implemented over MCP |
 | `mallet.stripe.collect` | Stripe card and ACH collection | PAY-001 | money · external (+ gated) | not implemented over MCP |
 | `mallet.square.collect` | Square counter and online payments | PAY-002 | money · external (+ gated) | not implemented over MCP |
 | `mallet.balance.send` | Text-to-pay and mobile wallets | PAY-003 | external | not implemented over MCP |
 | `mallet.deposits.allocate` | Deposits and split tenders | PAY-004 | money (+ external) | not implemented over MCP |
 | `mallet.refunds.issue` | Refunds exchanges and customer credits | PAY-005 | money (+ commitment) (+ external) | not implemented over MCP |
-| `mallet.refunds.recover` | Uncertain refund recovery | PAY-008 | money (+ external) | not implemented over MCP |
+| `mallet.refunds.recover` | Uncertain refund recovery | PAY-008 | money (+ commitment) (+ external) | not implemented over MCP |
 | `mallet.financing.offer` | Consumer financing | PAY-006 | money · external (+ gated) | not implemented over MCP |
 | `mallet.tenders.record` | Paper checks and shop-defined tenders | PAY-007 | money (+ external) | not implemented over MCP |
 | `mallet.counter.sell` | Retail counter and cash drawer | POS-001 | money (+ external) | not implemented over MCP |
-| `mallet.terms.assign` | Terms statements and payment follow-up | AR-001 | standard | not implemented over MCP |
-| `mallet.balance.schedule` | Scheduled and automated balance-reminder sequences | AR-002 | external | not implemented over MCP |
-| `mallet.agreements.renew` | Recurring service agreements | BILL-001 | money (+ external) | not implemented over MCP |
+| `mallet.terms.assign` | Terms statements and payment follow-up | AR-001 | standard (+ money) (+ commitment) (+ external) | not implemented over MCP |
+| `mallet.balance.schedule` | Scheduled and automated balance-reminder sequences | AR-002 | external (+ live) | not implemented over MCP |
+| `mallet.agreements.renew` | Recurring service agreements | BILL-001 | money (+ commitment) (+ external) | not implemented over MCP |
 | `mallet.qbo.sync` | QuickBooks Online two-way sync | BOOKS-001 | money (+ external) | not implemented over MCP |
 | `mallet.xero.sync` | Xero two-way sync | BOOKS-002 | money (+ external) | not implemented over MCP |
 | `mallet.books.post` | Cost and cash postings to the books | BOOKS-003 | money (+ external) | not implemented over MCP |
-| `mallet.disputes.submit` | Payment disputes and settlement close | MONEY-001 | money (+ external) | not implemented over MCP |
+| `mallet.disputes.submit` | Payment disputes and settlement close | MONEY-001 | money (+ commitment) (+ external) | not implemented over MCP |
 | `mallet.sublets.receive` | Sublet work and outsourced services | SUBLET-001 | standard | not implemented over MCP |
 | `mallet.sms.send` | Two-way repair SMS with Twilio | MSG-001 | external | not implemented over MCP |
 | `mallet.gmail.send` | Gmail repair conversations | MSG-002 | external | not implemented over MCP |
@@ -1590,8 +1590,8 @@ Inherits BASE-AGENT-001 to BASE-AGENT-013. The company’s policy decides every 
 | `mallet.technicians.report` | Technician efficiency and productivity | REPORT-003 | standard or sensitive | not implemented over MCP |
 | `mallet.turnaround.report` | Turnaround and customer promises | REPORT-004 | standard | not implemented over MCP |
 | `mallet.close.record` | Daily financial and inventory close | REPORT-005 | standard | not implemented over MCP |
-| `mallet.reports.schedule` | Scheduled reports and portable data | REPORT-006 | external | not implemented over MCP |
-| `mallet.shops.configure` | Multiple shops and location controls | SHOP-001 | standard or live (+ external) | not implemented over MCP |
+| `mallet.reports.schedule` | Scheduled reports and portable data | REPORT-006 | external (+ live) (+ sensitive) | not implemented over MCP |
+| `mallet.shops.configure` | Multiple shops and location controls | SHOP-001 | standard or live (+ access) (+ external) | not implemented over MCP |
 | `mallet.googlecalendar.sync` | Google Calendar scheduling | CAL-001 | standard or live (+ external) | not implemented over MCP |
 | `mallet.outlookcalendar.sync` | Microsoft 365 Calendar scheduling | CAL-002 | standard or live (+ external) | not implemented over MCP |
 | `mallet.gsx.submit` | Apple GSX authorized repairs | OEM-001 | external (+ money) (+ commitment) (+ gated) | not implemented over MCP |
@@ -1599,15 +1599,15 @@ Inherits BASE-AGENT-001 to BASE-AGENT-013. The company’s policy decides every 
 | `mallet.shipstation.label` | ShipStation mail-in and return logistics | SHIP-001 | external (+ money) (+ commitment) (+ gated) | not implemented over MCP |
 | `mallet.shopify.sync` | Shopify storefront connection | STORE-001 | standard or money (+ external) (+ live) | not implemented over MCP |
 | `mallet.woocommerce.sync` | WooCommerce storefront connection | STORE-002 | standard or money (+ external) (+ live) | not implemented over MCP |
-| `mallet.clients.issue` | Documented shop API | API-001 | access | not implemented over MCP |
-| `mallet.events.subscribe` | Webhooks and visible integration recovery | API-002 | external | not implemented over MCP |
-| `mallet.tires.order` | Tire fitment pricing and sourcing | TIRE-001 | money (+ external) | not implemented over MCP |
-| `mallet.tires.register` | DOT tire registration and traceability | TIRE-002 | external | not implemented over MCP |
+| `mallet.clients.issue` | Documented shop API | API-001 | access · security | not implemented over MCP |
+| `mallet.events.subscribe` | Webhooks and visible integration recovery | API-002 | external (+ access) (+ security) (+ live) | not implemented over MCP |
+| `mallet.tires.order` | Tire fitment pricing and sourcing | TIRE-001 | money (+ commitment) (+ external) | not implemented over MCP |
+| `mallet.tires.register` | DOT tire registration and traceability | TIRE-002 | external (+ commitment) | not implemented over MCP |
 | `mallet.roles.update` | Job-specific staff rights | GOV-001 | access | not implemented over MCP |
 | `mallet.audit.read` | Approvals audit and accountable changes | GOV-002 | standard | not implemented over MCP |
 | `mallet.enterprise.configure` | Enterprise sign-on and provisioning | GOV-003 | access · security (+ gated) | not implemented over MCP |
-| `mallet.security.configure` | Strong staff authentication | GOV-004 | security | not implemented over MCP |
-| `mallet.links.manage` | Customer link protection | GOV-007 | access | not implemented over MCP |
+| `mallet.security.configure` | Strong staff authentication | GOV-004 | security (+ access) | not implemented over MCP |
+| `mallet.links.manage` | Customer link protection | GOV-007 | access (+ security) (+ external) | not implemented over MCP |
 | `mallet.credentials.rotate` | Provider credential custody | GOV-005 | security | not implemented over MCP |
 | `mallet.attachments.read` | Private attachment access | GOV-008 | standard or sensitive | not implemented over MCP |
 | `mallet.retention.erase` | Retention erasure and legal holds | GOV-006 | destructive (+ sensitive) | not implemented over MCP |
@@ -1621,7 +1621,11 @@ Inherits BASE-AGENT-001 to BASE-AGENT-013. The company’s policy decides every 
 | `mallet.advisor.reconcile` | Reconcile repair pickup payment and profit | ADV-007 | standard (+ commitment) (+ money) (+ external) (+ sensitive) | not implemented over MCP |
 | `mallet.assistants.intake` | Bounded agent authority and receptionist handoff | ADV-008 | standard (+ commitment) (+ money) (+ external) (+ sensitive) | not implemented over MCP |
 | `mallet.sms.register` | Register the shop’s outside messaging identity | MSG-001 | accounts · external (+ gated) | not implemented over MCP |
-| `mallet.providers.connect` | Connect the named merchant, mailbox and OEM accounts | PAY-001, PAY-002, MSG-002, MSG-003, OEM-001, OEM-002 | access · security (+ gated) | not implemented over MCP |
+| `mallet.providers.connect` | Connect the named merchant, mailbox, calendar, storefront and OEM accounts | PAY-001, PAY-002, MSG-002, MSG-003, CAL-001, CAL-002, STORE-001, STORE-002, OEM-001, OEM-002 | access · security (+ gated) | not implemented over MCP |
+| `mallet.purchases.approve` | Bind the exact purchase spend and PO version | BUY-001 | money · commitment | not implemented over MCP |
+| `mallet.orders.compare` | Compare current supplier quotes without placing an order | BUY-002, BUY-003, BUY-004, BUY-005, PART-007 | standard or external | not implemented over MCP |
+| `mallet.retention.hold` | Place or release the scoped retention hold | GOV-006 | commitment | not implemented over MCP |
+| `mallet.retention.configure` | Set the documented retention purposes and lifetimes | GOV-006 | security (+ commitment) | not implemented over MCP |
 
 **Resources.** `mallet://customers/{id}`, `mallet://assets/{id}`, `mallet://repairs/{id}`, `mallet://inspections/{id}`, `mallet://estimates/{id}`, `mallet://parts/{id}`, `mallet://orders/{id}`, `mallet://invoices/{id}`, `mallet://jobs/{id}` and `mallet://audit/{id}`.
 
@@ -1652,12 +1656,12 @@ Inherits BASE-AGENT-001 to BASE-AGENT-013. The company’s policy decides every 
 **Acceptance.**
 1. An internal reversible draft is standard with its item count.
 2. Sharing to a colleague stays internal; a customer, supplier or public link adds external with exact recipient count and counterparty.
-3. An order, price change, payment or refund carries money with exact amount, currency and counterparty.
+3. An authorized order, published price change, payment or refund carries money with exact amount, currency and counterparty; a draft alone creates none of those effects.
 4. Repair, promise, warranty and claim decisions carry commitment with their exact source revision and counterparty.
 5. Creating an outside messaging identity or paid resource carries accounts with its provider.
 6. A provider-owned consent, checkout or verification step carries gated with the provider and required step.
-7. Changing continuing staff, customer-link or agent authority carries access with people and widening or narrowing direction.
-8. Changing protective settings, factors or credentials carries security with the affected setting.
+7. Changing continuing staff, assigned-crew, customer-link or agent authority carries access with people and widening or narrowing direction.
+8. Changing protective settings, retention settings, factors or credentials carries security with the affected setting; issuing an access credential carries both access and security.
 
 #### SURFACE-003 — Irreversible, regulated and live repair facts
 

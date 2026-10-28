@@ -1958,12 +1958,12 @@ Agent surface · target · **missing** · From new · Cites BASE-AGENT-006, BASE
 **Acceptance.**
 1. An internal reversible draft is standard with its item count.
 2. Sharing to a colleague stays internal; a customer, supplier or public link adds external with exact recipient count and counterparty.
-3. An order, price change, payment or refund carries money with exact amount, currency and counterparty.
+3. An authorized order, published price change, payment or refund carries money with exact amount, currency and counterparty; a draft alone creates none of those effects.
 4. Repair, promise, warranty and claim decisions carry commitment with their exact source revision and counterparty.
 5. Creating an outside messaging identity or paid resource carries accounts with its provider.
 6. A provider-owned consent, checkout or verification step carries gated with the provider and required step.
-7. Changing continuing staff, customer-link or agent authority carries access with people and widening or narrowing direction.
-8. Changing protective settings, factors or credentials carries security with the affected setting.
+7. Changing continuing staff, assigned-crew, customer-link or agent authority carries access with people and widening or narrowing direction.
+8. Changing protective settings, retention settings, factors or credentials carries security with the affected setting; issuing an access credential carries both access and security.
 
 **Evidence.** None.
 **Gap.** No remote MCP registry, class classifier and company-policy conformance journey asserts these seed outcomes.
