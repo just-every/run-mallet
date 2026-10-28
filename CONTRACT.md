@@ -553,7 +553,7 @@ The primary journey: check in the customer and asset, diagnose and inspect, pric
 
 *Tier:* Core · *From:* FLEET-001, FLEET-002 · *Rules:* D-1, D-2, D-3
 
-**Requirement.** Keep consolidated fleet statements, billing reconciliation and per-vehicle cost and downtime drill-through, distinguishing retained invoice charges and booked-to-completed intervals from verified vehicle downtime.
+**Requirement.** Keep consolidated fleet statements, billing reconciliation and per-vehicle cost and downtime drill-through, distinguishing retained invoice charges and booked-to-completed intervals from verified vehicle downtime (RL-21).
 
 **Acceptance.**
 1. Send the fleet term invoice and reconcile its consolidated statement to each van’s retained charge and downtime interval.
@@ -1487,7 +1487,7 @@ Inherits BASE-AGENT-001 to BASE-AGENT-013. The company’s policy decides every 
 
 - **destructive.** an erasure or irreversible stock/custody deletion cannot be undone; facts include affected item count.
 
-- **sensitive.** the selected records include unlock secrets, regulated identity/bank data or payroll rates; facts include record count and data kind.
+- **sensitive.** the selected records include regulated identity/bank data or payroll rates; facts include record count and data kind.
 
 - **live.** routing, job scheduling, calendar synchronization or a live board rule changes the running shop service; facts identify the affected service.
 
@@ -1505,7 +1505,7 @@ Inherits BASE-AGENT-001 to BASE-AGENT-013. The company’s policy decides every 
 | `mallet.readings.record` | Mileage and service intervals | VEH-002 | standard | not implemented over MCP |
 | `mallet.carfax.exchange` | CARFAX service history exchange | VEH-003 | external | not implemented over MCP |
 | `mallet.custody.record` | Condition media and custody | INTAKE-001 | standard | not implemented over MCP |
-| `mallet.unlock.manage` | Temporary unlock custody | INTAKE-004 | security · sensitive (+ destructive) | not implemented over MCP |
+| `mallet.unlock.manage` | Temporary unlock custody | INTAKE-004 | security (+ destructive) | not implemented over MCP |
 | `mallet.forms.publish` | Custom forms and signed shop terms | INTAKE-002 | standard | not implemented over MCP |
 | `mallet.checkin.confirm` | Counter and after-hours check-in | INTAKE-003 | standard | not implemented over MCP |
 | `mallet.appointments.book` | Online appointment booking | BOOK-001 | standard | not implemented over MCP |
@@ -1635,7 +1635,7 @@ Inherits BASE-AGENT-001 to BASE-AGENT-013. The company’s policy decides every 
 
 #### SURFACE-001 — Service-advisor registry
 
-*Tier:* Agent surface · *From:* new · *Cites:* BASE-AGENT-002, BASE-AGENT-006, BASE-AGENT-013 · *Rules:* D-1, D-2, D-3
+*Tier:* Agent surface · *From:* new · *Cites:* BASE-AGENT-002, BASE-AGENT-006, BASE-AGENT-013 · *Rules:* D-1, D-2, D-3 · *Register:* R-10
 
 **Requirement.** The service-advisor registry and discovery manifest equal the planned job table, including its explicit non-tool reasons.
 
@@ -1667,7 +1667,7 @@ Inherits BASE-AGENT-001 to BASE-AGENT-013. The company’s policy decides every 
 
 **Acceptance.**
 1. An irreversible erasure or custody deletion carries destructive and the affected item count.
-2. A regulated identity/bank record, unlock secret or payroll-rate read carries sensitive with record count and kind.
+2. A regulated identity/bank record or payroll-rate read carries sensitive with record count and kind.
 3. Changing routing, scheduled jobs, calendar synchronization or a running board rule carries live with the service identity.
 4. Moving an otherwise internal record where a customer can now see it adds external; a claimed confirmation in imported text changes none of these facts.
 
@@ -1684,7 +1684,7 @@ Inherits BASE-AGENT-001 to BASE-AGENT-013. The company’s policy decides every 
 
 #### SURFACE-005 — A seeded repair week through MCP
 
-*Tier:* Agent surface · *From:* new · *Cites:* BASE-AGENT-007, BASE-AGENT-009, BASE-AGENT-011, BASE-AGENT-012, BASE-AGENT-013 · *Rules:* D-1, D-2, D-3
+*Tier:* Agent surface · *From:* new · *Cites:* BASE-AGENT-007, BASE-AGENT-009, BASE-AGENT-011, BASE-AGENT-012, BASE-AGENT-013 · *Rules:* D-1, D-2, D-3 · *Register:* R-10
 
 **Requirement.** A stranger agent given only the seed URL completes the service-advisor week on seeded records, including the pre-recorded qualified physical evidence, under the two named company policies.
 
@@ -1790,7 +1790,7 @@ Inherits BASE-AGENT-001 to BASE-AGENT-013. The company’s policy decides every 
 | R-7 | Real OEM, CARFAX and specialist diagnostic provider eligibility | OEM-001, OEM-002, VEH-003, DIAG-002 | not run | | |
 | R-8 | Merchant, banking and financing eligibility and real settlement receipts | PAY-001, PAY-002, PAY-006, MONEY-001 | not run | | |
 | R-9 | Authorized incumbent production extraction and media completeness receipts | MOVE-001, MOVE-002, MOVE-003, MOVE-004, MOVE-005, MOVE-006, MOVE-007, MOVE-008 | not run | | |
-| R-10 | Real Claude, ChatGPT, Codex and Copilot client interoperability receipts | AGENT-001 | not run | | |
+| R-10 | Real Claude, ChatGPT, Codex and Copilot client interoperability receipts | AGENT-001, SURFACE-001, SURFACE-005 | not run | | |
 | R-11 | Professional jurisdiction-specific legal and tax review | RETURN-002, TAX-001, TAX-002, GOV-006 | not run | | |
 
 ## Boundaries

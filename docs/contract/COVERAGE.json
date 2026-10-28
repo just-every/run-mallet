@@ -3969,20 +3969,18 @@
     {
       "file": "CONTRACT.md",
       "line": 137,
-      "to": "clause",
+      "to": "rulings",
       "ids": [
-        "FLEET-002"
+        "RL-21"
       ],
       "text": "**FLEET-002 \u2014 Fleet billing and statement reconciliation.** Split from FLEET-001 by ct 25 Oct 20:55Z."
     },
     {
       "file": "CONTRACT.md",
       "line": 137,
-      "to": "clause",
-      "ids": [
-        "FLEET-002"
-      ],
-      "text": "Not implemented."
+      "to": "section",
+      "text": "Not implemented.",
+      "section": "Status"
     },
     {
       "file": "CONTRACT.md",

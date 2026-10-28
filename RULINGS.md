@@ -221,6 +221,14 @@ provider acceptance or a completed intake-to-receipt journey.
 The API-001 Status Gap retains the exact replacement wording supplied by CT.
 Generated contract indexes follow CONTRACT.md.
 
+### RL-21 — Fleet billing split
+
+**Date:** 2026-10-25, 20:55 UTC
+**Ruled by:** ct
+**Governs:** FLEET-001, FLEET-002
+
+**Source record:** FLEET-002 was split from FLEET-001 by ct at 20:55 UTC on 25 October 2026. Its source record said “Not implemented.” The billing and statement target remains owed at missing; the split grants no implementation status.
+
 ### RL-101 — AR-002: Scheduled and automated balance-reminder sequences
 
 **Date:** 2026-10-28  

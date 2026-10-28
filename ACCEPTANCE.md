@@ -634,7 +634,7 @@ Core · target · **partial** · From FLEET-001 · Cites BASE-ROLE-001, BASE-MAI
 
 Core · target · **missing** · From FLEET-001, FLEET-002 · Rules D-1, D-2, D-3
 
-**Requirement.** Keep consolidated fleet statements, billing reconciliation and per-vehicle cost and downtime drill-through, distinguishing retained invoice charges and booked-to-completed intervals from verified vehicle downtime.
+**Requirement.** Keep consolidated fleet statements, billing reconciliation and per-vehicle cost and downtime drill-through, distinguishing retained invoice charges and booked-to-completed intervals from verified vehicle downtime (RL-21).
 
 **Acceptance.**
 1. Send the fleet term invoice and reconcile its consolidated statement to each van’s retained charge and downtime interval.
@@ -1938,7 +1938,7 @@ Core · push-further · **partial** · Cites BASE-AGENT-006, BASE-AGENT-007, BAS
 
 #### SURFACE-001 — Service-advisor registry
 
-Agent surface · target · **missing** · From new · Cites BASE-AGENT-002, BASE-AGENT-006, BASE-AGENT-013 · Rules D-1, D-2, D-3
+Agent surface · target · **missing** · From new · Cites BASE-AGENT-002, BASE-AGENT-006, BASE-AGENT-013 · Rules D-1, D-2, D-3 · Register R-10
 
 **Requirement.** The service-advisor registry and discovery manifest equal the planned job table, including its explicit non-tool reasons.
 
@@ -1976,7 +1976,7 @@ Agent surface · target · **missing** · From new · Cites BASE-AGENT-006, BASE
 
 **Acceptance.**
 1. An irreversible erasure or custody deletion carries destructive and the affected item count.
-2. A regulated identity/bank record, unlock secret or payroll-rate read carries sensitive with record count and kind.
+2. A regulated identity/bank record or payroll-rate read carries sensitive with record count and kind.
 3. Changing routing, scheduled jobs, calendar synchronization or a running board rule carries live with the service identity.
 4. Moving an otherwise internal record where a customer can now see it adds external; a claimed confirmation in imported text changes none of these facts.
 
@@ -1999,7 +1999,7 @@ Agent surface · target · **missing** · From new · Cites BASE-AGENT-003, BASE
 
 #### SURFACE-005 — A seeded repair week through MCP
 
-Agent surface · target · **missing** · From new · Cites BASE-AGENT-007, BASE-AGENT-009, BASE-AGENT-011, BASE-AGENT-012, BASE-AGENT-013 · Rules D-1, D-2, D-3
+Agent surface · target · **missing** · From new · Cites BASE-AGENT-007, BASE-AGENT-009, BASE-AGENT-011, BASE-AGENT-012, BASE-AGENT-013 · Rules D-1, D-2, D-3 · Register R-10
 
 **Requirement.** A stranger agent given only the seed URL completes the service-advisor week on seeded records, including the pre-recorded qualified physical evidence, under the two named company policies.
 
@@ -2029,5 +2029,5 @@ None.
 | R-7 | Real OEM, CARFAX and specialist diagnostic provider eligibility | OEM-001, OEM-002, VEH-003, DIAG-002 | not run | | |
 | R-8 | Merchant, banking and financing eligibility and real settlement receipts | PAY-001, PAY-002, PAY-006, MONEY-001 | not run | | |
 | R-9 | Authorized incumbent production extraction and media completeness receipts | MOVE-001, MOVE-002, MOVE-003, MOVE-004, MOVE-005, MOVE-006, MOVE-007, MOVE-008 | not run | | |
-| R-10 | Real Claude, ChatGPT, Codex and Copilot client interoperability receipts | AGENT-001 | not run | | |
+| R-10 | Real Claude, ChatGPT, Codex and Copilot client interoperability receipts | AGENT-001, SURFACE-001, SURFACE-005 | not run | | |
 | R-11 | Professional jurisdiction-specific legal and tax review | RETURN-002, TAX-001, TAX-002, GOV-006 | not run | | |
