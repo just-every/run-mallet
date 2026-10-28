@@ -572,7 +572,7 @@
       "executable": false
     },
     "ACCEPTANCE.md": {
-      "sha256": "413dec9f5be1564f11fd86551d300ddefc6021cbb307422664ecce0010981272",
+      "sha256": "20485795fe81d51dfcf9a818b0bbc93926982e5dfa8aa619fe3b014b87bd70ba",
       "executable": false
     },
     "AGENTS.md": {
@@ -584,7 +584,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "6a51681d16a209604d75c604065166d37badfe337826304af023d70070526648",
+      "sha256": "4d4209ba2a7f95bf68963ec9f988f7c47f3fae7b1fa58eaf41df7085b12d7140",
       "executable": false
     },
     "deploy-demo.json": {
@@ -616,7 +616,7 @@
       "executable": false
     },
     "docs/CLAIMS.md": {
-      "sha256": "31337d964d9b77bd48b36460e15976dfba6bc4d0113bc40ce40f4873b85e56ea",
+      "sha256": "063fef00a0bacfdf709524a8228cd7bfcea64b4f098d0f4c5e2a22c7413ea552",
       "executable": false
     },
     "docs/complete-a-repair.md": {
@@ -2337,6 +2337,10 @@
     },
     "src/mallet/sales-report-door.ts": {
       "sha256": "78c083106a3d126275b4e477be3c9e6eb0a24a65918025f42226fa7263610566",
+      "executable": false
+    },
+    "src/mallet/scheduled.ts": {
+      "sha256": "f3eace762b31ea4c8c752a3f6c350560ec2f2fec2e7e43807a17c9e2eaefade1",
       "executable": false
     },
     "src/mallet/setup.ts": {
@@ -4492,7 +4496,7 @@
       "executable": false
     },
     "src/server.ts": {
-      "sha256": "14539f19c966e30c83d61fb83a93968ff4f4f4811d03711046fb518404376e8f",
+      "sha256": "f0b9937d2c38d60660993f81306d8caaf13a4f108e84f603401970a323f92f7d",
       "executable": false
     },
     "src/site/docs/build/manifest.ts": {
@@ -5344,7 +5348,7 @@
       "executable": false
     },
     "tests/worker.ts": {
-      "sha256": "ad4da688ace6bdf101fc645c7c525b76cbe9ca332a8e680ec2e3fe277172e67c",
+      "sha256": "287be85c45e764a6f3a6068a123002ccaf5554fa4e7d2bd89e939a334ecae8f0",
       "executable": false
     },
     "tsconfig.json": {

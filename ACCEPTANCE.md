@@ -580,7 +580,7 @@ Evidence: `src/mallet/estimates.ts`; `src/mallet/model.ts`; `tests/mallet.test.m
 
 Evidence: No implementation evidence yet.
 
-**ADV-003 — Resolve the next repair blocker.** Status: **done**. [Target, acceptance and remaining work](./CONTRACT.md#push-further-with-a-service-advisor-agent).
+**ADV-003 — Resolve the next repair blocker.** Status: **partial**. [Target, acceptance and remaining work](./CONTRACT.md#push-further-with-a-service-advisor-agent).
 
 Evidence: `tests/mallet.test.mjs`; `tests/support/blocker-journey.mjs`; `tests/support/blocker-parts.mjs`; `tests/support/blocker-follow-through.mjs`; `tests/support/blocker-archive.mjs`; `tests/blocker-browser.mjs`; `tests/support/blocker-browser-follow-through.mjs`.
 
