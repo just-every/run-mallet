@@ -1,3 +1,4 @@
+import {quotedDeclinedLine} from './declined-work-review'
 import {bump,choice,event,expectVersion,fail,find,put,rows,text,who,type Context,type State} from './model'
 import {stockBalance} from './inventory'
 import {conflicts,instant} from './workshop'
@@ -18,6 +19,8 @@ export function currentDeclinedConsent(s:State,consent:any,item:any){
 }
 /** Evidence is limited to native stock and this quote's booked repair. It reserves nothing. */
 export function nativeDeclinedAvailability(s:State,item:any,q:any,mappings:any,now:string){
+ const proposal=item.proposals.find((p:any)=>p.estimateId===q.id)
+ if(!proposal||!quotedDeclinedLine(q,proposal)||q.revisions.at(-1).lines.length!==1)fail('OUTREACH_QUOTE','The refreshed quote must still identify only this declined work.')
  const job=find(s,'job',q.jobId),asset=find(s,'asset',item.assetId)
  if(job.assetId!==item.assetId||job.status!=='booked'||job.actuals.length||job.startAt<=now||asset.privacyErasedAt)fail('OUTREACH_AVAILABILITY','A future native booked repair for this vehicle is required.')
  const bay=find(s,'calendarResource',job.bayId),tech=rows(s,'calendarTechnician').find(t=>t.technicianId===job.technicianId)

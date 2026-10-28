@@ -41,6 +41,12 @@ export async function declinedEligibilityJourney(){
   let revised=await h.command('estimate.revise',{estimateId:quote.id,version:quote.version,revision:rev.n,lines:rev.lines.map(l=>({id:l.id,kind:l.kind,description:l.description,quantity:l.quantity,unitCents:l.unitCents+100}))})
   await stopped(row,/quote changed/i)
   revised=await h.command('estimate.approve',{estimateId:revised.id,version:revised.version,revision:revised.revisions.at(-1).n});fixture.quote=revised
+  // A quote identifier alone cannot bind unrelated replacement work to this permission.
+  let replacement=await h.command('estimate.revise',{estimateId:revised.id,version:revised.version,revision:revised.revisions.at(-1).n,lines:[{kind:'part',description:'Unrelated replacement work',quantity:2,unitCents:3100}]})
+  replacement=await h.command('estimate.approve',{estimateId:replacement.id,version:replacement.version,revision:replacement.revisions.at(-1).n});fixture.quote=replacement
+  await h.command('outreach.availability',declinedAvailabilityInput(fixture),{status:409})
+  let rebound=await h.command('estimate.revise',{estimateId:replacement.id,version:replacement.version,revision:replacement.revisions.at(-1).n,lines:[{kind:'part',description:'Brake pads',quantity:2,unitCents:3100}]})
+  rebound=await h.command('estimate.approve',{estimateId:rebound.id,version:rebound.version,revision:rebound.revisions.at(-1).n});fixture.quote=rebound
   // Capacity changes invalidate the quoted native slot without inventing supplier availability.
   row=await approve()
   const absence=await h.command('calendar.absenceSave',{technicianId:(await h.state()).actor.id,startAt:'2026-11-02T09:00:00Z',endAt:'2026-11-02T10:00:00Z',reason:'Technician unavailable',active:true})
