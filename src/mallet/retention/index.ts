@@ -1,3 +1,4 @@
+import {customerMailboxes,revokeMailboxAccess} from './mailboxes'
 import {revokeCoverageAccess} from './coverage'
 import {revokeReviewAccess} from './reviews'
 import type {Bindings} from '../../auth.server'
@@ -48,9 +49,10 @@ export async function retentionCommand(env:Bindings,actor:Actor,authority:Author
  if(command==='retention.preview')return reviewed.value
  if(p.consent!==true||p.confirm!==(mode==='erase'?'ERASE':'RUN RETENTION'))fail('RETENTION_CONSENT','Explicit consent and the exact confirmation phrase are required.',null,400)
  if(p.fingerprint!==reviewed.value.fingerprint)fail('RETENTION_PREVIEW','Preview and approve the exact current retention candidates before deletion.')
+ const mailboxes=customerMailboxes(snap.state,reviewed.scope)
  const reason=text(p.reason,'erasure reason',2000),consentEvidence=text(p.consentEvidence,'explicit request or retention approval evidence',2000),id=crypto.randomUUID()
  let receipt:Row={id,version:1,action:command,customerId:reviewed.scope.customerId,at:now,by,reason,consentEvidence,consent:true,fingerprint:reviewed.value.fingerprint,planned:reviewed.value.counts,held:reviewed.value.held,retained:reviewed.value.retained,phase:'started',counts:{unlockKeys:0,importProfiles:0}}
- await commit(env,grant,[...revokeCoverageAccess(reviewed.scope),...revokeReviewAccess(reviewed.scope),write('retentionReceipt',receipt)],snap)
+ await commit(env,grant,[...revokeMailboxAccess(snap.state,mailboxes),...revokeCoverageAccess(reviewed.scope),...revokeReviewAccess(reviewed.scope),write('retentionReceipt',receipt)],snap)
  let unlockKeys=0
  try{
  // A request is durably audited before destroying external keys. The key purge
@@ -80,7 +82,7 @@ export async function retentionCommand(env:Bindings,actor:Actor,authority:Author
   // Never widen the approved set after partial custody retirement.
   const allowed=new Set(eligible.value.mediaJobIds),mediaJobs=reviewed.value.mediaJobIds.filter(j=>allowed.has(j))
   if(mediaJobs.length!==reviewed.value.mediaJobIds.length||reviewed.value.personal&&!eligible.value.personal)fail('RETENTION_CHANGED','A hold or policy changed. Preview the remaining work; destroyed unlock keys stay destroyed.')
-  const cleanup=mediaCleanup(current.state,{...reviewed.value,mediaJobIds:mediaJobs},eligible.inventory,id,now),personal=reviewed.value.personal?personalCleanup(current.state,customerScope(current.state,reviewed.scope.customerId),now):{queries:[],counts:{accounts:0,contacts:0,sharedContactsRetained:0}}
+  const cleanup=mediaCleanup(current.state,{...reviewed.value,mediaJobIds:mediaJobs},eligible.inventory,id,now),personal=reviewed.value.personal?personalCleanup(current.state,customerScope(current.state,reviewed.scope.customerId),now,mailboxes):{queries:[],counts:{accounts:0,contacts:0,sharedContactsRetained:0}}
   receipt={...receipt,version:receipt.version+1,phase:'complete',completedAt:new Date().toISOString(),counts:{...reviewed.value.counts,...receipt.counts,metadataRecords:cleanup.metadataRecords,...personal.counts}}
   await commit(env,grant,[...await portabilityCheckpoint(env.DB),...cleanup.queries,...personal.queries,write('retentionReceipt',receipt)],current)
   return receipt
