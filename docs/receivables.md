@@ -21,3 +21,32 @@ Private JSON doors use the same native session and owner gate:
 - Existing `POST /api/mallet/commands` accepts `ar.terms`, `ar.invoice`, `ar.dispute`, `ar.promise` and `tender.clearance`, with the same validation as the native forms.
 
 No customer identity is inferred from matching names or addresses. Actor snapshots in a backup never grant current authority. Future GOV-001 delegated finance roles and GOV-004 finer-role confirmation inherit these gates.
+
+
+## Review a failed scheduled balance email
+
+In Commercial receivables, choose **Review failed balance emails**. With an
+account selected, the list shows that account; without one it shows all retained
+failed or uncertain scheduled balance emails. Each row preserves the original
+provider outcome and exposes the exact schedule version, frozen invoice version
+and revision, terms assignment and owner-approval references. Delivery remains
+unverified even after a human review is recorded.
+
+Only the current owner can read this review or append its resolution. Record
+what happened and an evidence reference, explicitly confirm the displayed
+limits, and repeat the action after fresh identity confirmation when requested.
+A resolution is one append-only receipt per schedule, attributed to its reviewer
+and recording time. Stale references, concurrent closure and replay cannot
+replace it. Recording a review changes no balance, schedule, retry eligibility
+or sending authority and never sends an email. It does not establish payment or
+verified delivery.
+
+`GET /api/mallet/receivables/recovery` supplies the private review list; optional
+`accountId` limits it to one retained account. The existing command door accepts
+`ar.resolveBalanceReminder` with the exact schedule ID and version, invoice ID
+and retained version, assignment ID, approval ID, evidence and explicit
+confirmation. The native form supplies those references from the selected row.
+Archives retain the exact receipt and outcome history without local send
+authority. A fresh destination owner may review unresolved history; archived
+approvals and receipts cannot authorize another handoff. Complete sequences,
+complete customer-consent provenance and advisor failure tasks remain unfinished.

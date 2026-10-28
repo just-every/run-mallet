@@ -43,6 +43,12 @@ export async function validateReceivables({get,each}){
   const invoice=await get('invoice',reminder.invoiceId),assignment=await get('arInvoice',reminder.assignmentId),terms=await get('arTerms',reminder.termsId)
   insist(evidence(reminder)&&reminder.invoiceRevision===invoice.revision&&assignment.invoiceId===invoice.id&&assignment.accountId===reminder.accountId&&terms.accountId===reminder.accountId&&terms.by.id===reminder.by.id&&whole(reminder.outstandingCents,1)&&date(reminder.dueOn)&&reminder.dueOn===assignment.dueOn&&typeof reminder.to==='string'&&typeof reminder.content==='string'&&typeof reminder.consentEvidence==='string'&&reminder.consentEvidence.trim()&&typeof reminder.reference==='string'&&['unconfirmed','accepted','development','failed','uncertain'].includes(reminder.status),'ar_reminder')
  }
+ for await(const resolution of each('balanceReminderResolution')){
+  const schedule=await get('outreach',resolution.scheduleId),invoice=await get('invoice',resolution.invoiceId),assignment=await get('arInvoice',resolution.assignmentId),terms=await get('arTerms',resolution.termsId)
+  insist(evidence(resolution)&&resolution.version===1&&whole(resolution.scheduleVersion,1)&&resolution.scheduleVersion<=schedule.version&&schedule.kind==='balance'&&['failed','uncertain'].includes(schedule.status),'balance_resolution')
+  insist(schedule.subjectId===invoice.id&&schedule.invoiceVersion===resolution.invoiceVersion&&resolution.invoiceVersion<=invoice.version&&resolution.invoiceRevision===invoice.revision&&schedule.assignmentId===assignment.id&&schedule.termsId===terms.id&&assignment.invoiceId===invoice.id&&assignment.accountId===resolution.accountId&&terms.accountId===resolution.accountId&&resolution.jobId===invoice.jobId,'balance_resolution_sources')
+  insist(same(resolution.originalOutcome,{status:schedule.status,provider:schedule.provider,claimedAt:schedule.claimedAt,outcomeAt:schedule.outcomeAt})&&resolution.at>=schedule.at,'balance_resolution_outcome')
+ }
  for await(const receipt of each('handover')){
   const release=receipt.settlement?.accountTerms
   if(!release)continue
