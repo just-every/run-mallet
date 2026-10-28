@@ -48,5 +48,6 @@ export async function warrantyBrowser(){
   for(const status of ['submitted','accepted','credited'])await fill(form('warranty.claimOutcome'),{status,creditUsd:30,evidence:'External supplier '+status+' confirmation'},'Record external claim evidence')
   assert.ok((await p.locator('main').innerText()).includes('net comeback cost $5.00'));await shot('warranty-04-credit-and-net-cost')
   assert.equal(JSON.stringify((await h.state()).records.invoice.find(i=>i.id===f.invoice.id)),original);assert.deepEqual(errors,[])
+  const {coverageBrowser}=await import('./coverage-follow-up-browser.mjs');await coverageBrowser(h,p,f,shot,browser)
  }finally{await browser?.close();await h.close()}
 }

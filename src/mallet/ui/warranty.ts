@@ -9,9 +9,10 @@ export function warrantyFormInput(input:any){
  if(input.creditUsd!==undefined)input.creditCents=Math.round(Number(input.creditUsd)*100)
 }
 const note=()=>area('Evidence','evidence','','required maxlength="2000"')
-export function warrantyPage(s:any,job:any,people:any[]){
+export function warrantyPage(s:any,job:any,people:any[],owner=false){
  const invoice=rows(s,'invoice').find(i=>i.jobId===job.id),cases=rows(s,'warranty').filter(w=>w.jobId===job.id||w.originalJobId===job.id),asset=rows(s,'asset').find(a=>a.id===job.assetId)
- let body=`<p><a href="/app/jobs/${e(job.id)}">Back to repair</a> · ${e(job.asset.label)} · ${e(job.asset.identifier)}</p><p>Coverage and responsibility are shop decisions against saved terms. Supplier and OEM warranties are not provider-verified. Rework needs its own customer-authorized estimate; a claim record does not submit a claim, post a ledger entry or change the original repair.</p>`
+ const coverageLink=owner?'<p><a href="/app/jobs/'+e(job.id)+'/coverage">Coverage review register</a></p>':''
+ let body=coverageLink+`<p><a href="/app/jobs/${e(job.id)}">Back to repair</a> · ${e(job.asset.label)} · ${e(job.asset.identifier)}</p><p>Coverage and responsibility are shop decisions against saved terms. Supplier and OEM warranties are not provider-verified. Rework needs its own customer-authorized estimate; a claim record does not submit a claim, post a ledger entry or change the original repair.</p>`
  if(invoice&&['approved','exported'].includes(invoice.status)){
   const balance=invoiceBalance(s,invoice)
   body+=box('Original invoice & tender',`<p>${e(invoice.number)} · Total ${money(balance.totalCents)} · Recorded tender ${money(balance.paidCents)} · Outstanding ${money(balance.outstandingCents)}</p><p>Staff-recorded tender is not processor-verified settlement.</p>${balance.outstandingCents?form('payment.record',field('Amount (USD)','amountUsd','number',balance.outstandingCents/100,'required min="0.01" step="0.01"')+select('Tender','method',[['cash','Cash'],['check','Paper check'],['other','Other manual tender']])+field('Unique tender reference','reference','text','','required')+note(),'Record tender evidence',{invoiceId:invoice.id,version:invoice.version,jobId:job.id}):''}`)
