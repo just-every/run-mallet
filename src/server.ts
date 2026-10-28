@@ -38,8 +38,10 @@ export default withDemo<Bindings, ExportedHandler<Bindings>>({
   async fetch(request, env, execution) {
     const asset = await staticAssetResponse(request, env)
     if (asset) return asset
-    const business = await (await businessSettings(runtimeBindings(env))).handle(request)
-    if (business) return rejectedResponse(request, business)
+    if (['/api/rer/business-settings', '/rer-business-logo', '/rer-business.css'].includes(new URL(request.url).pathname)) {
+      const business = await (await businessSettings(runtimeBindings(env))).handle(request)
+      if (business) return rejectedResponse(request, business)
+    }
     const agent = await agentResponse(request, env)
     if (agent) return rejectedResponse(request, agent)
     const preparation = await preparationAlias(request, env)

@@ -608,7 +608,7 @@
       "executable": false
     },
     "docs/agent-door.md": {
-      "sha256": "45d22724561e7a409f2bae1a5ca1d1825d4dc250ecdead3db8c97ae489e7fce9",
+      "sha256": "b543256bca286d8a5ece93d2cf47409840e9ff4020bf1acf0e3ba982f2835ac7",
       "executable": false
     },
     "docs/background-jobs.md": {
@@ -1632,7 +1632,7 @@
       "executable": false
     },
     "src/mallet/agent-door/tools.ts": {
-      "sha256": "873eb05a77c75583273e539ad4c8236bdfd6f149fd2c4f2ff1305f1fc38e7089",
+      "sha256": "df65d48047f8ab9dfd0c0f97a824e1c41b98449062264778e6c2355218476a6d",
       "executable": false
     },
     "src/mallet/api/clients.ts": {
@@ -4824,7 +4824,7 @@
       "executable": false
     },
     "src/server.ts": {
-      "sha256": "0ac4a3b89045610e9a4373990851584243fd41b9a1384fbd543568349fb68710",
+      "sha256": "c9c3aa12b54e7ce0742fa42fafa2e942de519542e63b56904167c973f94426d3",
       "executable": false
     },
     "src/site/docs/build/manifest.ts": {

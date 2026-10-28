@@ -2,6 +2,7 @@ import { ToolRefusal, type ToolContext, type ToolDefinition, type JsonSchemaObje
 import { execute, load, MalletError } from '../model'
 import { nativeAuthority, preparationActor } from './people.ts'
 import { readRepair, readableState } from './records.ts'
+import { webhookFamily } from '../webhooks'
 
 const id = { type: 'string', minLength: 1, maxLength: 200 }
 const version = { type: 'integer', minimum: 1 }
@@ -30,6 +31,10 @@ async function target(def: typeof definitions[number], args: Record<string, unkn
   const state = await load(ctx.db)
   const row = state.records[def.kind]?.find(row => row.id === args[def.target])
   if (!row) throw new ToolRefusal('not_found')
+  const family = webhookFamily(def.command)
+  if (family && state.records.webhookSubscription?.some(subscription => subscription.active && subscription.families.includes(family))) {
+    throw new ToolRefusal('queued_effect_not_adopted', 'This preparation would queue a native webhook. Its authenticated consent cannot yet be carried through the pinned shared door.')
+  }
   return row
 }
 
@@ -48,7 +53,13 @@ const preparations: ToolDefinition[] = definitions.map(def => ({
       items: Array.isArray(args.lines) ? args.lines.map((line: any) => `${line.quantity} × ${line.description}, USD ${line.unitCents} cents per unit`) : [def.title] }
   },
   async run(args, ctx) {
-    const actor = preparationActor(ctx), authority = await nativeAuthority(ctx)
+    await target(def, args, ctx)
+    const actor = preparationActor(ctx), native = await nativeAuthority(ctx), family = webhookFamily(def.command)
+    // Fence the actual native transaction too: a new subscription between
+    // classification and persistence must not turn a draft into queued egress.
+    const authority = family ? { sql: `(${native.sql}) AND NOT EXISTS(SELECT 1 FROM mallet_records r WHERE r.kind='webhookSubscription'
+      AND COALESCE(json_extract(r.value,'$.active'),0) NOT IN (0,'')
+      AND (json_type(r.value,'$.families')<>'array' OR EXISTS(SELECT 1 FROM json_each(r.value,'$.families') WHERE value=?)))`, params: [...native.params, family] } : native
     try {
       const result = await execute(ctx.db, actor, def.command, args, authority)
       const uri = `mallet://${def.resource}/${def.command === 'dispatch.prepare' ? result.jobId : result.id}`

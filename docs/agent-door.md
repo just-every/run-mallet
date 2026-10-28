@@ -78,6 +78,13 @@ signed owner-claim endpoint with a raw setup token. Preparation tools reach no
 outbound provider, so this declaration has no network-edge module. The existing
 native providers and scoped assistant sends are outside this adopted subset.
 
+Dispatch and invoice preparation refuse `queued_effect_not_adopted` when an
+active native webhook subscription would queue their event. The same condition
+is fenced in the native write transaction. Those preparations remain available
+without that queued effect; a caller cannot label an externally delivered event
+as an internal draft. This limit applies until the authenticated continuation
+binding described above is available.
+
 The complete declared journey is currently blocked at independent quality
 clearance for its invoice fixture. The native technician's own quality decision
 is correctly refused; a real independent admin invitation remains `invited`.
