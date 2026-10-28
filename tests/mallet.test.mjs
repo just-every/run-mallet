@@ -1,3 +1,5 @@
+import {conversationBrowser} from './conversation-drafts-browser.mjs'
+import {conversationJourney} from './support/conversation-drafts-journey.mjs'
 import {blockerJourney} from './support/blocker-journey.mjs'
 import {blockerBrowser} from './blocker-browser.mjs'
 import {enterpriseBrowser} from './enterprise-browser.mjs'
@@ -41,6 +43,10 @@ import {securityBrowser} from './security-browser.mjs'
 import {linkProtectionJourney} from './support/link-protection-journey.mjs'
 import {secondFactorJourney,policyRecoveryJourney,stepUpJourney} from './support/strong-auth-journey.mjs'
 import {run,installation,assetInput,booking,estimate,authorise,archive,restore,snapshots} from './harness.mjs'
+
+test('ADV-002: native private drafting, exact review, escalation and recovery at 1440 and 390',conversationBrowser)
+
+test('ADV-002: private cited drafts, exact review, escalation, authority and eligible recovery',()=>run(conversationJourney))
 
 test('ADV-003: source-cited blockers require actual evidence, exact consent and physical receipt, preserve handlers and recover privately',()=>run(blockerJourney))
 test('ADV-003: native blocker packet, handlers and proposal review at 1440 and 390',blockerBrowser)
