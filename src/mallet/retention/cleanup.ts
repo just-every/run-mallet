@@ -26,11 +26,12 @@ export function personalCleanup(state:State,scope:CustomerScope,at:string){
  // Exact customer-merge consent receipts are authorization history. Their
  // historical snapshots remain with other signed decisions, not mutable data.
  queries.push({sql:'DELETE FROM mallet_portal_tokens WHERE account_id IN (SELECT value FROM json_each(?))',params:[JSON.stringify([...scope.accountIds])]})
+ for(const r of rows(state,'declinedReview').filter(r=>scope.jobIds.has(r.jobId)))queries.push(write('declinedReview',{...r,version:r.version+1,revisions:[],offers:[],erasedAt:at}))
  queries.push(...eraseCoverageContent(state,scope,at),...eraseReviewFeedback(state,scope,at))
  return {queries,counts}
 }
 
-const mutableMediaKinds=new Set(['inspection','inspectionReport','diagnosis','note'])
+const mutableMediaKinds=new Set(['inspection','inspectionReport','diagnosis','note','declinedReview'])
 /** Remove byte/metadata replicas from mutable diagnostics. Signed, financial
  * and authorization snapshots remain exact and are disclosed on the receipt. */
 function withoutMedia(value:any,ids:Set<string>):any{
