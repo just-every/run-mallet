@@ -283,7 +283,15 @@
       "ids": [
         "BASE-ROLE-001"
       ],
-      "text": "Every transport checks role, exact configured host and same-origin mutations."
+      "text": "Every transport checks role, exact configured host and same-origin mutations.",
+      "also": [
+        {
+          "to": "clause",
+          "ids": [
+            "HTTP-001"
+          ]
+        }
+      ]
     },
     {
       "file": "CONTRACT.md",
@@ -1048,7 +1056,13 @@
       "ids": [
         "INTAKE-002"
       ],
-      "text": "Only its 256-bit hashed, seven-day, revocable scoped link can save the customer draft or typed-name acknowledgment; it grants no account or repair/payment authority and is excluded from archives."
+      "text": "Only its 256-bit hashed, seven-day, revocable scoped link can save the customer draft or typed-name acknowledgment; it grants no account or repair/payment authority and is excluded from archives.",
+      "also": [
+        {
+          "to": "docs",
+          "path": "docs/contract-mechanisms.md"
+        }
+      ]
     },
     {
       "file": "CONTRACT.md",
@@ -1849,43 +1863,75 @@
       "ids": [
         "BASE-ROLE-001"
       ],
-      "text": "Every upload, resume and download rechecks native authority and assignment; writes are same-origin."
+      "text": "Every upload, resume and download rechecks native authority and assignment; writes are same-origin.",
+      "also": [
+        {
+          "to": "clause",
+          "ids": [
+            "DVI-002"
+          ]
+        }
+      ]
     },
     {
       "file": "CONTRACT.md",
       "line": 80,
-      "to": "clause",
-      "ids": [
-        "DVI-002"
-      ],
-      "text": "Findings and uploads bind opaque client IDs and exact metadata, 64 KiB chunk ordinals and SHA-256; mismatched retries refuse, and completion verifies the whole digest before viewing."
+      "text": "Findings and uploads bind opaque client IDs and exact metadata, 64 KiB chunk ordinals and SHA-256; mismatched retries refuse, and completion verifies the whole digest before viewing.",
+      "to": "docs",
+      "path": "docs/contract-mechanisms.md",
+      "also": [
+        {
+          "to": "clause",
+          "ids": [
+            "DVI-002"
+          ]
+        }
+      ]
     },
     {
       "file": "CONTRACT.md",
       "line": 80,
-      "to": "clause",
-      "ids": [
-        "DVI-002"
-      ],
-      "text": "JPEG/PNG/WebP originals are at most 8 MiB and MP4/WebM originals at most 32 MiB."
+      "text": "JPEG/PNG/WebP originals are at most 8 MiB and MP4/WebM originals at most 32 MiB.",
+      "to": "docs",
+      "path": "docs/contract-mechanisms.md",
+      "also": [
+        {
+          "to": "clause",
+          "ids": [
+            "DVI-002"
+          ]
+        }
+      ]
     },
     {
       "file": "CONTRACT.md",
       "line": 80,
-      "to": "clause",
-      "ids": [
-        "DVI-002"
-      ],
-      "text": "The phone camera/file door retains original bytes; the annotated shared photo is a JPEG at quality 0.78 with its longest edge at most 1600 pixels."
+      "text": "The phone camera/file door retains original bytes; the annotated shared photo is a JPEG at quality 0.78 with its longest edge at most 1600 pixels.",
+      "to": "docs",
+      "path": "docs/contract-mechanisms.md",
+      "also": [
+        {
+          "to": "clause",
+          "ids": [
+            "DVI-002"
+          ]
+        }
+      ]
     },
     {
       "file": "CONTRACT.md",
       "line": 80,
-      "to": "clause",
-      "ids": [
-        "DVI-002"
-      ],
-      "text": "Browser video capture records up to 30 seconds at requested video/audio bitrates of 1,500,000/64,000 bits per second; a prepared shared video retains the captured compressed bytes."
+      "text": "Browser video capture records up to 30 seconds at requested video/audio bitrates of 1,500,000/64,000 bits per second; a prepared shared video retains the captured compressed bytes.",
+      "to": "docs",
+      "path": "docs/contract-mechanisms.md",
+      "also": [
+        {
+          "to": "clause",
+          "ids": [
+            "DVI-002"
+          ]
+        }
+      ]
     },
     {
       "file": "CONTRACT.md",
@@ -2610,11 +2656,39 @@
     {
       "file": "CONTRACT.md",
       "line": 98,
-      "to": "clause",
-      "ids": [
-        "EST-003"
-      ],
-      "text": "Links carry 256 random bits with only the SHA-256 stored outside archives, expire after 1\u201330 days (default 7), are revocable and stop working once the estimate gets a new revision or total, any decision, or the repair completes."
+      "text": "Links carry 256 random bits with only the SHA-256 stored outside archives, expire after",
+      "to": "docs",
+      "path": "docs/contract-mechanisms.md",
+      "also": [
+        {
+          "to": "clause",
+          "ids": [
+            "EST-003"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "CONTRACT.md",
+      "line": 98,
+      "text": "1\u201330 days (default 7)",
+      "to": "deleted",
+      "note": "Superseded by ct\u2019s 22 October seven-day-or-use approval-link rider, carried as RL-18 and GOV-007."
+    },
+    {
+      "file": "CONTRACT.md",
+      "line": 98,
+      "text": ", are revocable and stop working once the estimate gets a new revision or total, any decision, or the repair completes.",
+      "to": "docs",
+      "path": "docs/contract-mechanisms.md",
+      "also": [
+        {
+          "to": "clause",
+          "ids": [
+            "EST-003"
+          ]
+        }
+      ]
     },
     {
       "file": "CONTRACT.md",
@@ -2641,7 +2715,13 @@
       "ids": [
         "EST-003"
       ],
-      "text": "One same-origin POST per link records the decision through the exact-revision authorization rules as a link-only customer actor (method \u201csigned link\u201d, typed name, addressee email, UTC time, revision, approved and declined line amounts and approved totals, consent text); an identical replay returns the same receipt and a different second decision is refused."
+      "text": "One same-origin POST per link records the decision through the exact-revision authorization rules as a link-only customer actor (method \u201csigned link\u201d, typed name, addressee email, UTC time, revision, approved and declined line amounts and approved totals, consent text); an identical replay returns the same receipt and a different second decision is refused.",
+      "also": [
+        {
+          "to": "docs",
+          "path": "docs/contract-mechanisms.md"
+        }
+      ]
     },
     {
       "file": "CONTRACT.md",
@@ -2650,7 +2730,13 @@
       "ids": [
         "EST-003"
       ],
-      "text": "The receipt is canonical JSON with its SHA-256, retrievable by owner/admin and labelled a typed-name electronic signature with identity not verified beyond possession of the emailed link."
+      "text": "The receipt is canonical JSON with its SHA-256, retrievable by owner/admin and labelled a typed-name electronic signature with identity not verified beyond possession of the emailed link.",
+      "also": [
+        {
+          "to": "docs",
+          "path": "docs/contract-mechanisms.md"
+        }
+      ]
     },
     {
       "file": "CONTRACT.md",
@@ -2938,7 +3024,19 @@
       "ids": [
         "BASE-MAIL-001"
       ],
-      "text": "A Worker cron every minute sends due reminders through the shop\u2019s configured Base mail sender only while that link is the current, unrevoked, unexpired, undecided revision of an open repair; each reminder carries a fresh 256-bit token for the same link (only its SHA-256 is stored, outside archives), offers Stop reminders, and records the provider\u2019s answer as given (handed to the provider, never \u201cdelivered\u201d)."
+      "text": "A Worker cron every minute sends due reminders through the shop\u2019s configured Base mail sender only while that link is the current, unrevoked, unexpired, undecided revision of an open repair; each reminder carries a fresh 256-bit token for the same link (only its SHA-256 is stored, outside archives), offers Stop reminders, and records the provider\u2019s answer as given (handed to the provider, never \u201cdelivered\u201d).",
+      "also": [
+        {
+          "to": "clause",
+          "ids": [
+            "EST-006"
+          ]
+        },
+        {
+          "to": "docs",
+          "path": "docs/contract-mechanisms.md"
+        }
+      ]
     },
     {
       "file": "CONTRACT.md",
@@ -4435,11 +4533,8 @@
     {
       "file": "CONTRACT.md",
       "line": 149,
-      "to": "clause",
-      "ids": [
-        "BUY-002"
-      ],
-      "text": "Network-edge journeys prove this adapter, not production supplier eligibility."
+      "text": "Network-edge journeys prove this adapter, not production supplier eligibility.",
+      "to": "changelog"
     },
     {
       "file": "CONTRACT.md",
@@ -5906,7 +6001,15 @@
       "ids": [
         "AR-001"
       ],
-      "text": "Each reference has one durable attempt, never automatic retry; mail acceptance means handed to the provider, not delivered."
+      "text": "Each reference has one durable attempt, never automatic retry; mail acceptance means handed to the provider, not delivered.",
+      "also": [
+        {
+          "to": "base",
+          "ids": [
+            "BASE-MAIL-001"
+          ]
+        }
+      ]
     },
     {
       "file": "CONTRACT.md",
@@ -8390,7 +8493,15 @@
       "ids": [
         "REPORT-006"
       ],
-      "text": "JSON, CSV and XLSX downloads use the same current permissions; XLSX contains data cells without formulas."
+      "text": "JSON, CSV and XLSX downloads use the same current permissions; XLSX contains data cells without formulas.",
+      "also": [
+        {
+          "to": "base",
+          "ids": [
+            "BASE-ROLE-001"
+          ]
+        }
+      ]
     },
     {
       "file": "CONTRACT.md",

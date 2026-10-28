@@ -22,6 +22,10 @@ Owner/admin create read-only customer inspection links: 256 random bits shown on
 
 Findings and uploads bind opaque client IDs and exact metadata, 64 KiB chunk ordinals and SHA-256; mismatched retries refuse, and completion verifies the whole digest before viewing. The phone camera/file door retains original bytes; the annotated shared photo is a JPEG at quality 0.78 with its longest edge at most 1600 pixels. Browser video capture records up to 30 seconds at requested video/audio bitrates of 1,500,000/64,000 bits per second; a prepared shared video retains the captured compressed bytes.
 
+Findings and uploads bind opaque client IDs and exact metadata, 64 KiB chunk ordinals and content digest; mismatched retries refuse, and completion verifies the whole digest before viewing.
+
+JPEG/PNG/WebP originals are at most 8 MiB and MP4/WebM originals at most 32 MiB.
+
 ## DVI-003
 
 The report uses the existing hashed 256-bit, 1–30 day, revocable read-only inspection link; every media request and chunk page rechecks link authority and only serves the reviewed shared variants, never originals.
@@ -32,7 +36,11 @@ The landed file adapter accepts a single Phonecheck Device Info JSON response an
 
 ## EST-003
 
-Links carry 256 random bits with only the SHA-256 stored outside archives, expire after 1–30 days (default 7), are revocable and stop working once the estimate gets a new revision or total, any decision, or the repair completes. One same-origin POST per link records the decision through the exact-revision authorization rules as a link-only customer actor (method “signed link”, typed name, addressee email, UTC time, revision, approved and declined line amounts and approved totals, consent text); an identical replay returns the same receipt and a different second decision is refused. The receipt is canonical JSON with its SHA-256, retrievable by owner/admin and labelled a typed-name electronic signature with identity not verified beyond possession of the emailed link.
+Links carry 256 random bits with only the SHA-256 stored outside archives, expire no later than seven days under GOV-007 (the ct 22 October rider replaces the older 1–30-day range), are revocable and stop working once the estimate gets a new revision or total, any decision, or the repair completes. One same-origin POST per link records the decision through the exact-revision authorization rules as a link-only customer actor (method “signed link”, typed name, addressee email, UTC time, revision, approved and declined line amounts and approved totals, consent text); an identical replay returns the same receipt and a different second decision is refused. The receipt is canonical JSON with its SHA-256, retrievable by owner/admin and labelled a typed-name electronic signature with identity not verified beyond possession of the emailed link.
+
+Links carry 256 random bits with only the content digest stored outside archives, expire no later than seven days under GOV-007 (the ct 22 October rider replaces the older 1–30-day range), are revocable and stop working once the estimate gets a new revision or total, any decision, or the repair completes.
+
+The receipt is canonical JSON with its content digest, retrievable by owner/admin and labelled a typed-name electronic signature with identity not verified beyond possession of the emailed link.
 
 ## EST-006
 
