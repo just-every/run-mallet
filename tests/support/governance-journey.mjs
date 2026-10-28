@@ -189,6 +189,32 @@ async function delegatedPurchasingJourney(h,people,{item,order,po}){
  let current=(await h.state()).records.purchaseOrder.find(p=>p.id===order.id)
  const refs=()=>({purchaseId:current.id,version:current.version}),refresh=async()=>{current=(await h.state()).records.purchaseOrder.find(p=>p.id===order.id)}
  const denied=async(command,input,status=409,options=as)=>{const before=(await h.state()).records;await h.command(command,input,{...options,status});assert.deepEqual((await h.state()).records,before,command+' refusal leaves all product and audit records unchanged')}
+ const otherBin=await h.command('stock.bin',{code:'Other location receiving',barcode:'synthetic-mallet-other-bin'})
+ await h.command('stock.location',{binId:otherBin.id,version:otherBin.version,location:'other'})
+ const otherInput={...po,reference:'synthetic-mallet-other-po',binId:otherBin.id,lines:[{...po.lines[0],unitCents:500}]}
+ await denied('purchase.create',otherInput,403)
+ let other=await h.command('purchase.create',otherInput)
+ await denied('purchase.approve',{purchaseId:other.id,version:other.version,reason:'Other location is outside the grant'},403)
+ other=await h.command('purchase.approve',{purchaseId:other.id,version:other.version,reason:'Owner controls the other location'})
+ const otherReceipt={purchaseId:other.id,version:other.version,lineId:other.lines[0].id,itemBarcode:item.barcode,binBarcode:otherBin.barcode,quantity:1,reference:'synthetic-mallet-other-receipt'}
+ await denied('purchase.receive',otherReceipt,403)
+ const receipt=await h.command('purchase.receive',otherReceipt)
+ other=(await h.state()).records.purchaseOrder.find(p=>p.id===other.id)
+ const otherBillInput={purchaseId:other.id,version:other.version,invoiceNumber:'synthetic-mallet-other-bill',lines:[{lineId:other.lines[0].id,quantity:1,unitCents:500}],taxCents:0,freightCents:0,evidence:'Other location private supplier history'}
+ await denied('purchase.bill',otherBillInput,403)
+ const otherBill=await h.command('purchase.bill',otherBillInput)
+ other=(await h.state()).records.purchaseOrder.find(p=>p.id===other.id)
+ for(const command of ['purchase.close','purchase.shortClose'])await denied(command,{purchaseId:other.id,version:other.version,reason:'Other shop is denied'},403)
+ const otherCount=await h.command('stock.count',{itemBarcode:item.barcode,binBarcode:otherBin.barcode,quantity:1,mode:'blind',reason:'Owner observed the other shop'})
+ await denied('stock.approveCount',{countId:otherCount.id,version:otherCount.version,reason:'Other count is denied'},403)
+ for(const role of ['purchaser','manager']){
+  const options={as:people[role].cookie},projection=await h.api('/api/mallet/staff/state',undefined,options),download=await h.request('/api/mallet/staff/state?download=1',options)
+  assert.deepEqual(await download.json(),projection)
+  const serialized=JSON.stringify(projection)
+  for(const privateValue of [other.id,otherBin.id,receipt.id,otherBill.id,otherCount.id,otherInput.reference,otherBillInput.evidence])assert.ok(!serialized.includes(privateValue),role+' cannot read linked other-location records')
+ }
+ for(const role of ['advisor','cashier','accountant'])for(const command of ['purchase.create','purchase.approve','purchase.receive','purchase.bill','purchase.shortClose','purchase.close'])await denied(command,{},403,{as:people[role].cookie})
+ for(const command of ['purchase.submit','purchase.reconcile','stock.transferReceive','agent.create','retention.erase'])await denied(command,{},403)
  const over=await h.command('purchase.create',{...po,reference:'synthetic-mallet-over-limit'})
  await denied('purchase.approve',{purchaseId:over.id,version:over.version,reason:'Too much spend'},403)
  const receive=()=>({...refs(),lineId:current.lines[0].id,itemBarcode:item.barcode,binBarcode:bin.barcode,quantity:0.5,reference:'synthetic-mallet-purchaser-receipt-1'})
@@ -211,6 +237,7 @@ async function delegatedPurchasingJourney(h,people,{item,order,po}){
  const view=await h.api('/api/mallet/staff/state',undefined,as),download=await h.request('/api/mallet/staff/state?download=1',as)
  assert.match(download.headers.get('content-disposition'),/attachment/);assert.deepEqual(await download.json(),view)
  assert.deepEqual(view.records.purchaseBill.filter(b=>b.purchaseId===current.id).sort((a,b)=>a.sequence-b.sequence).map(b=>[b.sequence,b.matched,b.totalCents]),[[1,false,900],[2,true,1000]])
+ assert.deepEqual(view.stockBalances.find(b=>b.itemId===item.id&&b.binId===bin.id),{itemId:item.id,binId:bin.id,item:item.name,bin:bin.code,onHandMilli:1000,reservedMilli:1000,availableMilli:0})
  assert.equal(view.records.purchaseReceipt.filter(r=>r.purchaseId===current.id).reduce((n,r)=>n+r.quantityMilli,0),1000)
  assert.equal(view.records.stockReservation.filter(r=>r.source.purchaseId===current.id).reduce((n,r)=>n+r.quantityMilli,0),1000)
  assert.ok(!JSON.stringify(view).includes('Private supplier original'));assert.ok(view.records.job.every(j=>Object.keys(j).sort().join(',')==='id,status,title,version'))
