@@ -15,6 +15,7 @@ import {statusNoticePage} from './ui/status-notices'
 import {profitabilityReport} from './reports/profitability'
 import {profitabilityPage,profitabilitySettings} from './ui/profitability'
 import {reviewCommand,reviewState} from './review-door'
+import {declinedCustomerResponse} from './declined-customer-door'
 import {reviewResponse} from './review-customer-door'
 import {internalReviewCommands} from './reviews'
 import {reviewPanel} from './ui/reviews'
@@ -294,6 +295,7 @@ async function workshopResponse(request:Request,original:Bindings,execution:Pick
  const stripe=await stripeResponse(request,original);if(stripe)return stripe
  const deliveryEvent=await inspectionReportEventResponse(request,original);if(deliveryEvent)return deliveryEvent
  const customerDoor=await guardLinks(request,original,async()=>{
+  const declined=await declinedCustomerResponse(request,original);if(declined)return declined
   const review=await reviewResponse(request,original);if(review)return review
   const booking=await bookingResponse(request,original);if(booking)return booking
   const checkIn=await checkInResponse(request,original);if(checkIn)return checkIn

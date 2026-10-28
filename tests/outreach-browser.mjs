@@ -82,6 +82,32 @@ export async function outreachBrowser(){
    const recovered=await browser.newContext({ignoreHTTPSErrors:true})
    try{await recovered.addCookies(fresh.owner.split('; ').map(pair=>({name:pair.slice(0,pair.indexOf('=')),value:pair.slice(pair.indexOf('=')+1),url:fresh.origin})));const restored=await recovered.newPage();await restored.goto(fresh.origin+'/app/jobs/'+declined.job.id);assert.match(await restored.locator('main').innerText(),/authority unavailable/);await shot('declined-inert-recovery',restored)}finally{await recovered.close()}
   }finally{await fresh.close()}
+  const scheduled=(await h.state()).records.outreach.findLast(r=>r.kind==='declined'&&r.status==='pending')
+  const withdrawalPath=new URL(scheduled.content.match(/Stop declined-work emails: (https?:[^\s]+)/)[1]).pathname
+  const customerContext=await browser.newContext({ignoreHTTPSErrors:true})
+  try{
+   const customer=await customerContext.newPage()
+   const invitation=new URL(scheduled.content.match(/Book a follow-up: (https?:[^\s]+)/)[1])
+   await customer.goto(h.origin+invitation.pathname+invitation.search)
+   const booking=customer.locator('form').filter({has:customer.locator('input[name="action"][value="hold"]')}).first()
+   await booking.getByLabel('Your name').fill('Synthetic declined-work customer')
+   await booking.getByLabel('Confirmation email',{exact:true}).fill(declined.asset.customerEmail)
+   await booking.getByRole('checkbox').check()
+   for(const width of [1440,390]){await customer.setViewportSize({width,height:1000});await customer.screenshot({path:join(directory,'declined-customer-booking-'+width+'.png'),fullPage:true})}
+   await booking.getByRole('button',{name:'Hold this time',exact:true}).click();await customer.waitForLoadState('domcontentloaded')
+   await customer.getByRole('button',{name:'Confirm appointment',exact:true}).click();await customer.waitForLoadState('domcontentloaded')
+   assert.equal((await h.state()).records.appointment.findLast(r=>r.declinedWorkId===declined.item.id).status,'confirmed')
+   await h.cron('2026-11-01T14:25:00Z')
+   assert.match((await h.state()).records.outreach.find(r=>r.id===scheduled.id).stopReason,/booked this declined work/)
+   for(const width of [1440,390]){await customer.setViewportSize({width,height:1000});await customer.screenshot({path:join(directory,'declined-customer-booked-'+width+'.png'),fullPage:true})}
+   await customer.goto(h.origin+withdrawalPath)
+   // This small form reuses the existing customer card and labelled button.
+   for(const width of [1440,390]){await customer.setViewportSize({width,height:1000});assert.ok(await customer.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));await customer.screenshot({path:join(directory,'declined-customer-permission-'+width+'.png'),fullPage:true})}
+   await customer.getByRole('button',{name:'Stop declined-work emails',exact:true}).click();await customer.waitForLoadState('domcontentloaded')
+   assert.match(await customer.locator('main').innerText(),/Your permission is withdrawn/)
+   assert.equal((await h.state()).records.outreach.find(r=>r.id===scheduled.id).status,'stopped')
+   for(const width of [1440,390]){await customer.setViewportSize({width,height:1000});await customer.screenshot({path:join(directory,'declined-customer-withdrawn-'+width+'.png'),fullPage:true})}
+  }finally{await customerContext.close()}
   await p.goto(h.origin+'/app/jobs/'+declined.job.id)
   const inapplicable=p.locator('form').filter({has:p.locator('input[name="command"][value="decline.inapplicable"]')})
   await inapplicable.getByLabel('Current finding review evidence').fill('Owner inspected the vehicle; this finding no longer applies')

@@ -53,18 +53,18 @@ export function declinedAvailabilityStop(s:State,r:any,now:string){
 }
 export function declinedContent(instructions:string,totalCents:number){return `${instructions}\nRefreshed quote: USD ${(totalCents/100).toFixed(2)}. Contact the shop to review and book. No work or payment is authorized.`}
 export function declinedOutreachCommand(c:Context,command:string,p:any):any{
- if(!['outreach.consent','outreach.withdraw','outreach.availability','outreach.resolve'].includes(command))return
- if(c.actor.role!=='owner')fail('FORBIDDEN','Only the current owner records declined-work permission and reviews.',null,403)
+ if(!['outreach.consent','outreach.withdraw','outreach.customerWithdraw','outreach.availability','outreach.resolve'].includes(command))return
+ if(command!=='outreach.customerWithdraw'&&c.actor.role!=='owner')fail('FORBIDDEN','Only the current owner records declined-work permission and reviews.',null,403)
  if(command==='outreach.resolve'){
   const row=find(c.s,'outreach',p.id);expectVersion(row,p.version)
   if(row.kind!=='declined'||!['failed','uncertain'].includes(row.status)||row.resolution)fail('OUTREACH_RESOLUTION','Resolve an unresolved failed or uncertain declined-work handoff.')
   const next=bump(c.s,'outreach',row,{resolution:{by:who(c),at:c.now,evidence:text(p.evidence,'human resolution evidence',2000)}})
   event(c,command,row.jobId,row.id,{});return next
  }
- if(command==='outreach.withdraw'){
+ if(command==='outreach.withdraw'||command==='outreach.customerWithdraw'){
   const consent=find(c.s,'declinedConsent',p.consentId);expectVersion(consent,p.version)
   if(consent.withdrawnAt)return consent
-  const next=bump(c.s,'declinedConsent',consent,{withdrawnAt:c.now,withdrawal:{by:who(c),evidence:text(p.evidence,'customer withdrawal evidence',2000)}})
+  const next=bump(c.s,'declinedConsent',consent,{withdrawnAt:c.now,withdrawal:{by:who(c),evidence:command==='outreach.customerWithdraw'?'Customer withdrew through the private email permission link':text(p.evidence,'customer withdrawal evidence',2000)}})
   for(const row of rows(c.s,'outreach').filter(r=>r.kind==='declined'&&(r.assetId===consent.assetId||r.to===consent.to)&&r.status==='pending'))bump(c.s,'outreach',row,{status:'stopped',stoppedAt:c.now,stopReason:'Customer withdrew declined-work email permission',stoppedBy:who(c)})
   event(c,command,consent.jobId,consent.id,{});return next
  }

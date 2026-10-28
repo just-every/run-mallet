@@ -105,4 +105,4 @@ export async function declinedOutreachJourney(){
  }finally{await h.close()}
 }
 
-export {declinedEligibilityJourney,declinedErasureJourney} from './declined-outreach-journey.mjs'
+export {declinedEligibilityJourney,declinedErasureJourney,declinedCustomerJourney,declinedClockJourney,declinedBookingJourney} from './declined-outreach-journey.mjs'

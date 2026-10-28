@@ -3,6 +3,7 @@ export async function validateDeclinedOutreach({table,rejectIf}){
  const records=table('mallet_records');if(!records)return
  const j=(field,alias='r')=>`json_extract(${alias}.value,'$.${field}')`,type=field=>`json_type(r.value,'$.${field}')`
  const check=(kind,code,condition)=>rejectIf('declined_outreach_'+code,`SELECT 1 FROM ${records} r WHERE r.kind='${kind}' AND (${condition})`)
+ await check('appointment','booking_source',`${type('declinedWorkId')} IS NOT NULL AND (NOT EXISTS(SELECT 1 FROM ${records} c WHERE c.kind='declinedConsent' AND c.id=${j('declinedConsentId')} AND ${j('subjectId','c')}=${j('declinedWorkId')}) OR NOT EXISTS(SELECT 1 FROM ${records} o WHERE o.kind='outreach' AND o.id=${j('declinedOutreachId')} AND ${j('subjectId','o')}=${j('declinedWorkId')} AND ${j('consentId','o')}=${j('declinedConsentId')}))`)
  for(const kind of ['declinedConsent','declinedAvailability']){
   await check(kind,'subject',`NOT EXISTS(SELECT 1 FROM ${records} d WHERE d.kind='declinedWork' AND d.id=${j('subjectId')} AND ${j('assetId','d')}=${j('assetId')})`)
   await check(kind,'actor',`${j('by.role')} IS NOT 'owner' OR ${type('by.id')} IS NOT 'text' OR julianday(${j('at')}) IS NULL`)

@@ -19,7 +19,13 @@ export async function outreachCommand(env:Bindings,actor:Actor,authority:Authori
   input={...input,nativeTechnician:native}
   checked={sql:'('+authority.sql+") AND EXISTS(SELECT 1 FROM oa_operators WHERE id=? AND version=? AND status='active')",params:[...authority.params,native.id,native.version]}
  }
+ let withdrawalToken=''
+ if(command==='outreach.schedule'&&input.kind==='declined'){
+  withdrawalToken=btoa(String.fromCharCode(...crypto.getRandomValues(new Uint8Array(32)))).replaceAll('+','-').replaceAll('/','_').replaceAll('=','')
+  input={...input,withdrawUrl:env.AUTH_ORIGIN+'/declined-email/'+withdrawalToken,bookingUrl:env.AUTH_ORIGIN+'/book?declined='+withdrawalToken}
+ }
  const row=await execute(env.DB,actor as any,command,input,checked)
+ if(withdrawalToken)await env.DB.prepare('INSERT INTO mallet_declined_withdrawal_tokens(token_hash,consent_id,outreach_id) VALUES(?,?,?)').bind(await digest(withdrawalToken),row.consentId,row.id).run()
  if(command==='outreach.schedule'){
   // A crash here leaves an inert business record, never an authorized send.
   await env.DB.prepare(`INSERT INTO mallet_outreach_authority SELECT ?,id,version FROM oa_operators WHERE id=? AND role='owner' AND status='active' AND (${authority.sql})`).bind(row.id,actor.id,...authority.params).run()
@@ -32,16 +38,18 @@ async function authorized(env:Bindings,row:any){
 }
 /** Bounded cron work; a persisted claim can never initiate a second send. */
 export async function runOutreach(original:Bindings,at:number){
- const env=runtimeBindings(original),now=new Date(at).toISOString(),snapshot=await load(env.DB)
- for(const candidate of rows(snapshot,'outreach').filter(r=>r.status==='claimed'||r.status==='pending'&&(outreachStop(snapshot,r,now)||outreachDue(snapshot,r,now))).sort((a,b)=>a.dueAt.localeCompare(b.dueAt)||a.id.localeCompare(b.id)).slice(0,100)){
+ const env=runtimeBindings(original),now=new Date(at).toISOString(),actualNow=new Date(Math.max(at,Date.now())).toISOString(),snapshot=await load(env.DB)
+ const executionTime=(r:any)=>r.kind==='declined'?actualNow:now
+ for(const candidate of rows(snapshot,'outreach').filter(r=>r.status==='claimed'||r.status==='pending'&&(outreachStop(snapshot,r,executionTime(r))||outreachDue(snapshot,r,executionTime(r)))).sort((a,b)=>a.dueAt.localeCompare(b.dueAt)||a.id.localeCompare(b.id)).slice(0,100)){
   let r=candidate
+  const currentTime=executionTime(r)
   if(r.status==='claimed'){
-   if(Date.parse(r.claimedAt)+60000<=at)try{await execute(env.DB,scheduler,'outreach.outcome',{id:r.id,version:r.version,status:'uncertain',provider:'interrupted'},undefined,now)}catch{}
+   if(Date.parse(r.claimedAt)+60000<=Date.parse(currentTime))try{await execute(env.DB,scheduler,'outreach.outcome',{id:r.id,version:r.version,status:'uncertain',provider:'interrupted'},undefined,currentTime)}catch{}
    continue
   }
-  const stop=outreachStop(snapshot,r,now)
-  if(!stop&&!outreachDue(snapshot,r,now))continue
-  try{r=await execute(env.DB,scheduler,'outreach.claim',{id:r.id,version:r.version},undefined,now)}catch{continue}
+  const stop=outreachStop(snapshot,r,currentTime)
+  if(!stop&&!outreachDue(snapshot,r,currentTime))continue
+  try{r=await execute(env.DB,scheduler,'outreach.claim',{id:r.id,version:r.version},undefined,currentTime)}catch{continue}
   if(r.status!=='claimed')continue
   let status='skipped',provider='none',providerReference='',reason=''
   try{
@@ -63,8 +71,8 @@ export async function runOutreach(original:Bindings,at:number){
      const result=await mail.send({deliveryId:r.id,from:String(env.MAIL_FROM??''),to:[r.to],subject:r.kind==='appointment'?'Your appointment reminder':r.kind==='balance'?'Your invoice balance reminder':'Your declined-work follow-up',text:content,html:'<p>'+e(content).replaceAll('\n','<br>')+'</p>',headers:{}})
      status=['rejected','rate_limited','unavailable'].includes(result.status)?'failed':result.status;provider=result.provider??'mail';providerReference=result.providerMessageId??''
     }else{status='failed';provider='unavailable'}
-   }
+   }else if(!reason)reason='Recipient allowed hours or eligibility no longer permit handoff'
   }catch{status='uncertain';provider='mail'}
-  try{await execute(env.DB,scheduler,'outreach.outcome',{id:r.id,version:r.version,status,provider,providerReference,reason},undefined,now)}catch{}
+  try{await execute(env.DB,scheduler,'outreach.outcome',{id:r.id,version:r.version,status,provider,providerReference,reason},undefined,r.kind==='declined'?new Date(Math.max(at,Date.now())).toISOString():now)}catch{}
  }
 }
