@@ -14,7 +14,7 @@ export function balancePermission(c:Context,p:any,checked:any){
  const reference=text(p.consentReference,'customer permission source reference',200)
  if(rows(c.s,'outreach').some(r=>r.kind==='balance'&&r.subjectId===checked.invoice.id&&r.permission?.reference===reference))fail('AR_CONSENT_USED','This one-email permission already approved a schedule. Record fresh permission; stopping or resolving the old schedule does not reuse it.')
  if(rows(c.s,'outreach').some(r=>r.kind==='balance'&&r.subjectId===checked.invoice.id&&['failed','uncertain'].includes(r.status)&&!rows(c.s,'balanceReminderResolution').some(x=>x.scheduleId===r.id)))fail('AR_REVIEW_REQUIRED','Record human resolution of the original handoff before approving another email. Resolution itself never authorizes it.')
- const erased=rows(c.s,'retentionReceipt').some(r=>r.action==='customer.erase'&&r.customerId===checked.accountId)
+ const erased=find(c.s,'customerAccount',checked.accountId).privacyErasedAt||rows(c.s,'retentionReceipt').some(r=>r.action==='customer.erase'&&r.customerId===checked.accountId)
  if(erased)fail('AR_ERASURE','Balance email authority remains suppressed for this erased customer account.')
  return {purpose:'balance-reminder',channel:'email',invoiceId:checked.invoice.id,accountId:checked.accountId,accountVersion:find(c.s,'customerAccount',checked.accountId).version,contactId:checked.contact.id,contactVersion:checked.contact.version,to:checked.contact.email,wording:BALANCE_PERMISSION,wordingVersion:BALANCE_WORDING_VERSION,consentedAt,captureChannel:p.captureChannel,reference,evidence:text(p.consentEvidence,'customer email consent evidence',2000),recordedBy:who(c),recordedAt:c.now,source:'owner-recorded customer instruction; channel identity is not independently verified'}
 }
@@ -27,7 +27,7 @@ export function retainBalanceStep(c:Context,schedule:Row){
 export function balancePermissionStop(s:State,r:Row){
  if(r.policy!==BALANCE_POLICY||!r.permission)return 'Fresh attributable one-email customer permission is required'
  const p=r.permission,invoice=find(s,'invoice',r.subjectId),account=find(s,'customerAccount',p.accountId),contact=find(s,'contact',p.contactId)
- if(p.purpose!=='balance-reminder'||p.invoiceId!==invoice.id||p.to!==r.to||p.contactVersion!==contact.version||p.accountVersion!==account.version||r.erasureSuppressedAt)return 'Customer permission changed or was suppressed'
+ if(p.purpose!=='balance-reminder'||p.invoiceId!==invoice.id||p.to!==r.to||p.contactVersion!==contact.version||p.accountVersion!==account.version||r.erasureSuppressedAt||account.privacyErasedAt)return 'Customer permission changed or was suppressed'
  if(rows(s,'retentionReceipt').some(x=>x.action==='customer.erase'&&x.customerId===p.accountId))return 'Customer erasure suppressed balance reminders'
  return ''
 }

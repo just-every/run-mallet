@@ -68,6 +68,8 @@ export async function receivablesJourney(h){
  await h.stepUp()
  for(const outsider of [{as:admin.cookie},{as:member.cookie},agent]){
   await h.command('ar.terms',termsInput,{...outsider,status:403})
+  for(const command of ['ar.saveBalanceReviewPolicy','ar.planBalanceReviews','ar.stopBalanceReviews'])await h.command(command,{},{...outsider,status:403})
+  assert.equal((await h.request('/app/settings/balance-reviews',outsider)).status,403)
   for(const path of ['/api/mallet/receivables?accountId='+account.id,'/app/receivables?accountId='+account.id])assert.equal((await h.request(path,outsider)).status,403)
  }
  await h.command('ar.terms',termsInput,{as:'',status:401})
@@ -201,11 +203,31 @@ export async function receivablesJourney(h){
 async function scheduledBalances(h,{account,manager,i1,i2}){
  const day=new Date(Date.now()+3*86400000).toISOString().slice(0,10),at=time=>day+'T'+time+':00Z'
  const fields=i=>({...balancePermissionFields(),kind:'balance',subjectId:i.id,version:i.version,to:manager.email,outstandingCents:11000,consent:true,consentEvidence:'Billing contact explicitly requested this one scheduled balance email',instructions:'Exact approved balance',timeZone:'UTC',allowedStart:9,allowedEnd:18,dueAt:at('09:00'),expiresAt:at('18:00')})
- const first=await h.command('outreach.schedule',fields(i1)),second=await h.command('outreach.schedule',fields(i2)),before=h.messages.length
+ const policy=await h.command('ar.saveBalanceReviewPolicy',{name:'Synthetic fleet balance reviews',days:[0,7],evidence:'Review one current balance at a time, with separate one-email approvals'})
+ const planInput=(invoice,policyRow)=>({invoiceId:invoice.id,version:invoice.version,to:manager.email,outstandingCents:11000,policyId:policyRow.id,policyRevision:policyRow.revision,startAt:new Date(Date.now()-60000).toISOString(),evidence:'Owner requested internal reviews only; this grants no customer email permission',confirm:'plan-balance-reviews'})
+ const plan=await h.command('ar.planBalanceReviews',planInput(i1,policy))
+ const replacementPolicy=await h.command('ar.saveBalanceReviewPolicy',{id:policy.id,version:policy.version,name:'Revised fleet balance reviews',days:[0,14],evidence:'Owner revised the review cadence without changing existing plans'})
+ assert.equal(replacementPolicy.revision,2);assert.equal(replacementPolicy.previousId,policy.id)
+ const policyBefore=await h.state()
+ await h.command('ar.saveBalanceReviewPolicy',{id:policy.id,version:policy.version,name:'Stale policy',days:[0,3],evidence:'Stale overwrite must be refused'},{status:409})
+ await h.command('ar.saveBalanceReviewPolicy',{id:replacementPolicy.id,version:replacementPolicy.version,name:'Invalid order',days:[7,0],evidence:'A reversed cadence cannot replace the policy'},{status:400})
+ assert.deepEqual(await h.state(),policyBefore,'Stale or invalid policy edits retain every existing revision')
+ assert.deepEqual((await h.state()).records.balanceReviewPlan.find(r=>r.id===plan.id).policy,policy,'Policy replacement preserves the earlier exact sequence')
+ await h.command('ar.planBalanceReviews',planInput(i2,policy),{status:409})
+ const secondPlan=await h.command('ar.planBalanceReviews',planInput(i2,replacementPolicy)),unapproved=await h.state(),messages=h.messages.length
+ await h.command('outreach.schedule',{...fields(i1),reviewPlanId:plan.id,reviewPlanVersion:plan.version,reviewStep:2},{status:409})
+ await h.command('outreach.schedule',{...fields(i1),reviewPlanId:secondPlan.id,reviewPlanVersion:secondPlan.version,reviewStep:1},{status:409})
+ assert.deepEqual(await h.state(),unapproved);assert.equal(h.messages.length,messages,'Internal tasks and future or cross-invoice steps approve no email')
+ const first=await h.command('outreach.schedule',{...fields(i1),reviewPlanId:plan.id,reviewPlanVersion:plan.version,reviewStep:1}),second=await h.command('outreach.schedule',{...fields(i2),reviewPlanId:secondPlan.id,reviewPlanVersion:secondPlan.version,reviewStep:1}),before=h.messages.length
+
  await h.cron(at('08:59'));assert.equal(h.messages.length,before)
  await h.restart();await Promise.all([h.cron(at('09:00')),h.cron(at('09:00'))])
  assert.equal(h.messages.length,before+2);for(const m of h.messages.slice(before)){assert.equal(m.subject,'Your invoice balance reminder');assert.match(m.text,/USD 110.00/);assert.ok(!m.text.includes('overdue'))}
  await h.cron(at('09:15'));assert.equal(h.messages.length,before+2,'Durable claims prevent duplicate balance email')
+ await h.command('outreach.schedule',{...fields(i1),reviewPlanId:plan.id,reviewPlanVersion:plan.version,reviewStep:1},{status:409})
+ const stoppedPlan=await h.command('ar.stopBalanceReviews',{id:plan.id,version:plan.version,reason:'Owner ended these internal reviews'})
+ assert.equal(stoppedPlan.steps.length,2);assert.deepEqual(stoppedPlan.policy,policy)
+ await h.command('ar.stopBalanceReviews',{id:plan.id,version:plan.version,reason:'Replay cannot replace the reason'},{status:409})
  const pending=await h.command('outreach.schedule',fields(i2));await h.command('ar.dispute',{invoiceId:i2.id,version:i2.version,status:'open',evidence:'Billing contact disputes work'})
  await h.cron(at('09:30'));assert.equal((await h.state()).records.outreach.find(r=>r.id===pending.id).status,'stopped');assert.equal(h.messages.length,before+2)
  await h.command('ar.dispute',{invoiceId:i2.id,version:i2.version,status:'resolved',evidence:'Billing contact resolved dispute'})
@@ -226,7 +248,10 @@ export async function balanceFailureFixture(h){
  for(const invoice of [i1,i2])await h.command('ar.invoice',{invoiceId:invoice.id,version:invoice.version,termsId:terms.id,authorizerId:manager.id,po:'synthetic-mallet-902-'+invoice.number,evidence:'Fleet manager requested these exact invoice terms'})
  const day=new Date(Date.now()+3*86400000).toISOString().slice(0,10),at=time=>day+'T'+time+':00Z'
  const fields=i=>({...balancePermissionFields(),kind:'balance',subjectId:i.id,version:i.version,to:manager.email,outstandingCents:11000,consent:true,consentEvidence:'Billing contact requested this exact one-email reminder',instructions:'Exact approved balance',timeZone:'UTC',allowedStart:9,allowedEnd:18,dueAt:at('15:00'),expiresAt:at('18:00')})
- const first=await h.command('outreach.schedule',fields(i1)),before=h.messages.length
+ const policy=await h.command('ar.saveBalanceReviewPolicy',{name:'Failure review sequence',days:[0,7],evidence:'Plan internal owner reviews without approving an email'})
+ const plan=await h.command('ar.planBalanceReviews',{invoiceId:i1.id,version:i1.version,to:manager.email,outstandingCents:11000,policyId:policy.id,policyRevision:policy.revision,startAt:new Date(Date.now()-60000).toISOString(),evidence:'Owner requested follow-through on retained balances',confirm:'plan-balance-reviews'})
+ const first=await h.command('outreach.schedule',{...fields(i1),reviewPlanId:plan.id,reviewPlanVersion:plan.version,reviewStep:1}),before=h.messages.length
+
  await h.cron(at('15:00'));assert.equal(h.messages.length,before+1)
  assert.equal((await h.state()).records.outreach.find(r=>r.id===first.id).status,'failed')
  const second=await h.command('outreach.schedule',fields(i2)),db=await h.mf.getD1Database('DB')
@@ -240,14 +265,14 @@ export async function balanceFailureFixture(h){
  await h.restart();await h.cron(at('15:02'))
  const schedules=(await h.state()).records.outreach,failed=schedules.find(r=>r.id===first.id),interrupted=schedules.find(r=>r.id===second.id)
  assert.equal(interrupted.status,'uncertain');assert.equal(interrupted.provider,'interrupted');assert.equal(h.messages.length,before+2,'Restart never repeats an uncertain handoff')
- return {...f,failed,interrupted,at,fields}
+ return {...f,failed,interrupted,at,fields,policy,plan}
 }
 export const balanceResolutionInput=r=>({id:r.scheduleId,version:r.scheduleVersion,invoiceId:r.invoiceId,invoiceVersion:r.invoiceVersion,assignmentId:r.assignmentId,termsId:r.termsId,confirm:'record-balance-review',evidence:'Owner contacted accounts personally; synthetic-mallet-904; provider delivery remains unverified'})
 
 async function balanceRecoveryJourney(){
  const h=await installation({mailService:balanceRecoveryMail()})
  try{
-  const {account,i1,i2,failed,interrupted,at,fields}=await balanceFailureFixture(h),path='/api/mallet/receivables/recovery?accountId='+account.id
+  const {account,i1,i2,failed,interrupted,at,fields,plan}=await balanceFailureFixture(h),path='/api/mallet/receivables/recovery?accountId='+account.id
   const reviews=await h.api(path);assert.equal(reviews.length,2);assert.ok(reviews.every(r=>r.resolution===null));assert.deepEqual(new Set(reviews.map(r=>r.originalOutcome.status)),new Set(['failed','uncertain']))
   const first=reviews.find(r=>r.scheduleId===failed.id),input=balanceResolutionInput(first)
   let second=reviews.find(r=>r.scheduleId===interrupted.id)
@@ -287,10 +312,10 @@ async function balanceRecoveryJourney(){
   await h.command('ar.resolveBalanceReminder',input,{status:409})
   const audit=await h.api('/api/mallet/audit?action=ar.resolveBalanceReminder');assert.equal(audit.entries.length,1);assert.equal(audit.entries[0].actor.id,receipt.by.id);assert.ok(audit.entries[0].changes.some(c=>c.kind==='balanceReminderResolution'&&c.id===receipt.id&&c.beforeRevision===null&&c.afterRevision===1))
   const after=await h.state()
-  for(const kind of ['outreach','balanceReminderTask','balanceReminderStep','invoice','arInvoice','arTerms','payment','deposit','arPromise','arDispute'])assert.deepEqual(after.records[kind],before.records[kind],'Human review does not change '+kind)
+  for(const kind of ['outreach','balanceReminderTask','balanceReminderStep','balanceReviewPolicy','balanceReviewPlan','invoice','arInvoice','arTerms','payment','deposit','arPromise','arDispute'])assert.deepEqual(after.records[kind],before.records[kind],'Human review does not change '+kind)
   const statementPath='/api/mallet/receivables?accountId='+account.id+'&asOf=2099-01-02',statement=await h.api(statementPath)
   assert.equal(statement.outstandingCents,22000)
-  for(const outsider of [{as:admin.cookie},{as:member.cookie},agent])for(const kind of ['balanceReminderResolution','balanceReminderTask','balanceReminderStep'])assert.equal((await h.state(outsider)).records[kind],undefined,'Private recovery evidence is owner-only in state projections too')
+  for(const outsider of [{as:admin.cookie},{as:member.cookie},agent])for(const kind of ['balanceReminderResolution','balanceReminderTask','balanceReminderStep','balanceReviewPolicy','balanceReviewPlan'])assert.equal((await h.state(outsider)).records[kind],undefined,'Private recovery evidence is owner-only in state projections too')
   await h.restart();await h.cron(at('15:15'));assert.equal(h.messages.length,mail);assert.deepEqual((await h.state()).records.outreach,before.records.outreach)
   const used={...fields(i1),consentReference:failed.permission.reference}
   await h.command('outreach.schedule',used,{status:409})
@@ -304,18 +329,29 @@ async function balanceRecoveryJourney(){
   const saved=await h.state(),fresh=await installation({mailService:balanceRecoveryMail()})
   try{
    await restore(fresh,await archive(h))
-   for(const kind of ['outreach','balanceReminderResolution','balanceReminderTask','balanceReminderStep','invoice','arInvoice','arTerms'])assert.deepEqual((await fresh.state()).records[kind],saved.records[kind],'Exact recovered '+kind)
+   for(const kind of ['outreach','balanceReminderResolution','balanceReminderTask','balanceReminderStep','balanceReviewPolicy','balanceReviewPlan','invoice','arInvoice','arTerms'])assert.deepEqual((await fresh.state()).records[kind],saved.records[kind],'Exact recovered '+kind)
    assert.deepEqual(await fresh.api(path),await h.api(path));assert.deepEqual(await fresh.api(statementPath),statement)
    const authority=await (await fresh.mf.getD1Database('DB')).prepare('SELECT count(*) AS n FROM mallet_outreach_authority').first();assert.equal(authority.n,0)
+   await fresh.command('ar.terms',{accountId:account.id,version:account.version,days:30,limitCents:50000,active:true,consent:true,evidence:'Fresh destination owner reviewed the commercial account terms'})
+   const oldPlanRefusal=await fresh.command('outreach.schedule',{...fields(i1),reviewPlanId:plan.id,reviewPlanVersion:plan.version,reviewStep:1},{status:409});assert.equal(oldPlanRefusal.error,'AR_PLAN_REVIEW','A restored review plan cannot authorize destination sending, even after fresh terms approval')
    await fresh.cron(at('15:30'));assert.equal(fresh.messages.length,0,'A restored pending schedule and a resolution grant no sending authority')
    const resolved=await fresh.command('ar.resolveBalanceReminder',balanceResolutionInput(second))
    assert.equal(resolved.by.id,(await fresh.state()).actor.id);assert.notEqual(resolved.by.id,receipt.by.id);assert.deepEqual(resolved.originalOutcome,second.originalOutcome)
    const recoveredBefore=await fresh.state();await fresh.restart();await fresh.cron(at('15:45'));assert.equal(fresh.messages.length,0);assert.deepEqual((await fresh.state()).records.balanceReminderResolution,recoveredBefore.records.balanceReminderResolution);assert.deepEqual(await fresh.api(statementPath),statement)
    assert.equal((await fresh.request(path,{as:h.owner})).status,401,'Source owner credentials confer no destination review authority')
   }finally{await fresh.close()}
+  const recipient=await h.command('contact.save',{name:'Replacement vehicle payer',email:'synthetic-mallet-910'+String.fromCharCode(64)+'example.test',phone:'',communication:'email'})
+  const nextAccount=await h.command('customer.save',{name:'New vehicle owner',kind:'business',contactIds:[recipient.id],payerId:recipient.id,billingContactId:recipient.id,taxStatus:'standard'})
+  const transferState=await h.state(),vehicle=transferState.records.asset.find(r=>r.id===transferState.records.job.find(r=>r.id===i1.jobId).assetId)
+  await h.command('customer.linkAsset',{assetId:vehicle.id,version:vehicle.version,customerId:nextAccount.id,customerVersion:nextAccount.version,reason:'Vehicle transferred after the original payer invoice was frozen'})
+  const nextPreview=await h.command('retention.preview',{customerId:nextAccount.id,categories:['personal','import']})
+  await h.command('customer.erase',{customerId:nextAccount.id,categories:['personal','import'],fingerprint:nextPreview.fingerprint,consent:true,confirm:'ERASE',reason:'New vehicle owner requested erasure of their profile',consentEvidence:'Owner reviewed the new payer request'})
+  assert.equal((await h.state()).records.outreach.find(r=>r.id===pending.id).status,'pending','Erasing the new vehicle owner does not cancel the original invoice payer approval')
+  assert.equal((await h.state()).records.balanceReviewPlan.find(r=>r.id===plan.id).stoppedAt,null)
   const old=await archive(h),preview=await h.command('retention.preview',{customerId:account.id,categories:['personal','import']})
   const erased=await h.command('customer.erase',{customerId:account.id,categories:['personal','import'],fingerprint:preview.fingerprint,consent:true,confirm:'ERASE',reason:'Customer requested erasure and withdrawal of further balance email authority',consentEvidence:'Owner reviewed the exact customer request'})
   assert.ok(erased.id)
+  assert.ok((await h.state()).records.balanceReviewPlan.find(r=>r.id===plan.id).stoppedAt,'Erasure stops the internal review plan as well as sending authority')
   assert.equal((await h.state()).records.outreach.find(r=>r.id===pending.id).status,'stopped')
   await h.cron(at('16:00'));assert.equal(h.messages.length,mail,'Erasure cannot send a pending balance reminder')
   await h.command('outreach.schedule',fields(i1),{status:409})

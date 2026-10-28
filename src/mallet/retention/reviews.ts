@@ -6,8 +6,10 @@ import type {Sql} from '../media/types'
 export function revokeReviewAccess(scope:CustomerScope,state:State,at:string,by:any):{recordChanges:number;queries:Sql[]}{
  const ids=JSON.stringify([...scope.jobIds])
  const consentIds=new Set(rows(state,'declinedConsent').filter(r=>scope.assetIds.has(r.assetId)).map(r=>r.id))
- const invoiceIds=new Set(rows(state,'invoice').filter(r=>scope.jobIds.has(r.jobId)).map(r=>r.id))
+ // Financial outreach follows the retained payer, even after a vehicle transfer.
+ const invoiceIds=new Set([...rows(state,'invoice').filter(r=>scope.accountIds.has(r.billing?.accountId)).map(r=>r.id),...rows(state,'arInvoice').filter(r=>scope.accountIds.has(r.accountId)).map(r=>r.invoiceId)])
  const changed=[
+  ...rows(state,'balanceReviewPlan').filter(r=>invoiceIds.has(r.invoiceId)&&!r.stoppedAt).map(r=>write('balanceReviewPlan',{...r,version:r.version+1,stoppedAt:at,stoppedBy:by,stopReason:'Customer erasure request suppresses balance review planning'})),
   ...rows(state,'outreach').filter(r=>r.kind==='balance'&&invoiceIds.has(r.subjectId)&&r.status==='pending'&&!r.erasureSuppressedAt).map(r=>write('outreach',{...r,version:r.version+1,status:'stopped',stoppedAt:at,stoppedBy:by,stopReason:'Customer erasure request suppresses balance reminders',erasureSuppressedAt:at})),
   ...rows(state,'appointment').filter(r=>consentIds.has(r.declinedConsentId)&&!r.outreachSuppressedAt).map(r=>write('appointment',{...r,version:r.version+1,outreachSuppressedAt:at,outreachSuppressedBy:by})),
   ...rows(state,'declinedConsent').filter(r=>scope.assetIds.has(r.assetId)&&!r.erasureSuppressedAt).map(r=>write('declinedConsent',{...r,version:r.version+1,erasureSuppressedAt:at,erasureSuppressedBy:by})),

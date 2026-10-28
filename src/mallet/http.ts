@@ -25,7 +25,7 @@ import {outreachCommand} from './outreach-door'
 import {stripeResponse} from './stripe/door'
 import {staffCommand,grantStaff,staffSettings,staffState,staffPage} from './staff'
 import {auditReport,auditPage,auditCsv} from './audit'
-import {receivablesPage,receivablesInput,filingPage} from './ui/receivables'
+import {receivablesPage,receivablesInput,filingPage,balanceReviewSettings} from './ui/receivables'
 import {filingTax} from './filing-tax'
 import {accountStatement,utcDate} from './receivables'
 import {depositsPage,depositFormInput} from './ui/deposits'
@@ -195,7 +195,7 @@ function visible(s:State,actor:Actor):State {
  if(actor.role==='owner')s={...s,records:{...s.records,deposit:rows(s,'deposit').map(d=>({...d,balance:depositBalance(s,d)}))}}
  if(actor.role!=='owner')s={...s,records:{...s.records,handover:rows(s,'handover').map(r=>{const {accountTerms,...settlement}=r.settlement;return {...r,settlement}})}}
  if(actor.role!=='owner'){const {audit:_audit,...records}=s.records;s={...s,records}}
- if(actor.role!=='owner')s={...s,records:Object.fromEntries(Object.entries(s.records).filter(([kind])=>!['taxCreditBasis','tenderClearance','arTerms','arInvoice','arDispute','arPromise','arReminder','balanceReminderResolution','balanceReminderTask','balanceReminderStep','deposit','retentionPolicy','retentionHold','retentionReceipt','diagnosticResult'].includes(kind)))}
+ if(actor.role!=='owner')s={...s,records:Object.fromEntries(Object.entries(s.records).filter(([kind])=>!['taxCreditBasis','tenderClearance','arTerms','arInvoice','arDispute','arPromise','arReminder','balanceReminderResolution','balanceReminderTask','balanceReminderStep','balanceReviewPolicy','balanceReviewPlan','deposit','retentionPolicy','retentionHold','retentionReceipt','diagnosticResult'].includes(kind)))}
  if(actor.role!=='owner')s={...s,records:{...s.records,event:rows(s,'event').filter(row=>!row.kind.startsWith('tax.creditBasis')&&!row.kind.startsWith('tender.')&&!row.kind.startsWith('ar.')&&!row.kind.startsWith('deposit.')&&!row.kind.startsWith('diagnosticResult.'))}}
  if(!human(actor))s={...s,records:Object.fromEntries(Object.entries(s.records).map(([k,v])=>[k,(k.startsWith('calendar')||k==='bookingWaitlist'||k==='waitlistOffer'||k==='appointment'||k==='bookingService'||k==='counterIntake'||k.startsWith('intake')||['warranty','warrantyTerms','payment','handover','returnDelegate','returnOverride'].includes(k))?[]:k==='event'?v.filter(x=>!x.kind.startsWith('calendar.')&&!x.kind.startsWith('waitlist.')&&!x.kind.startsWith('booking.')&&!x.kind.startsWith('checkin.')&&!x.kind.startsWith('intake.')&&!x.kind.startsWith('warranty.')&&!x.kind.startsWith('payment.')&&!x.kind.startsWith('return.')):v]))}
  s=scopedCollaboration(scopedPromises(s,actor),actor)
@@ -231,7 +231,7 @@ function formInput(data:FormData) {
  if(input.command==='review.send')input.confirm=data.has('confirm')
  if(['outreach.consent','outreach.schedule'].includes(input.command))input.consent=data.has('consent')
  if(input.command==='outreach.availability'){input.quoteVersion=Number(input.quoteVersion);input.mappings=Object.keys(input).filter(k=>k.startsWith('stockItem:')).map(k=>({lineId:k.slice(10),itemId:input[k],binId:input['stockBin:'+k.slice(10)]}))}
- if(input.command==='outreach.schedule'){input.approved=data.has('approved');for(const key of ['consentVersion','availabilityVersion'])if(input[key]!==undefined)input[key]=Number(input[key]);input.consent=data.has('consent');input.availabilityConfirmed=data.has('availabilityConfirmed');for(const key of ['allowedStart','allowedEnd','quoteVersion','outstandingCents'])if(input[key]!==undefined)input[key]=Number(input[key])}
+ if(input.command==='outreach.schedule'){input.approved=data.has('approved');for(const key of ['consentVersion','availabilityVersion'])if(input[key]!==undefined)input[key]=Number(input[key]);input.consent=data.has('consent');input.availabilityConfirmed=data.has('availabilityConfirmed');for(const key of ['allowedStart','allowedEnd','quoteVersion','outstandingCents','reviewPlanVersion','reviewStep'])if(input[key]!==undefined)input[key]=Number(input[key])}
  if(input.command==='reportFilter.schedule'){input.active=data.has('active');input.consent=data.has('consent');input.everyDays=Number(input.everyDays);input.nextAt=String(input.nextAt).endsWith('Z')?input.nextAt:String(input.nextAt)+':00Z'}
  if(input.staffJob!==undefined&&input.command==='estimate.prepare'||input.staffInvoice!==undefined&&input.command==='payment.record'){let source:any;try{source=JSON.parse(input.staffJob??input.staffInvoice)}catch{throw new HttpError(400,'invalid_staff_source')};if(input.command==='estimate.prepare')input.jobId=source.jobId;else input.invoiceId=source.invoiceId;input.version=source.version}
  assetNativeInput(input)
@@ -446,6 +446,7 @@ async function workshopResponse(request:Request,original:Bindings,execution:Pick
    if(isApi){if(!human(actor)&&result&&typeof result==='object'&&'billing' in result){const {billing,...rest}=result;result=rest}return json(actor.role==='agent'?withoutSubletCosts(withoutInspectionSource(result)):result)}
    if(retentionCommands.includes(command)){if(command==='customer.export')return new Response(JSON.stringify(result,null,2),{headers:{...headers,'content-type':'application/json','content-disposition':'attachment; filename="customer-data.json"'}});return page('Retention & erasure',retentionPage(await load(env.DB),input.customerId??'',command==='retention.preview'?result:undefined,input,['customer.erase','retention.run'].includes(command)?result:undefined),actor,200,{section:'data'})}
    if(['invoice.issue','invoice.send'].includes(command)){const invoiceId=command==='invoice.issue'?input.invoiceId:result.invoiceId;return redirect('/app/invoices/'+encodeURIComponent(invoiceId))}
+   if(command==='ar.saveBalanceReviewPolicy')return redirect('/app/settings/balance-reviews')
    if(command.startsWith('ar.'))return redirect('/app/receivables?'+new URLSearchParams({accountId:String(result.accountId??input.accountId??''),...(command==='ar.resolveBalanceReminder'?{recovery:'balance'}:{})}))
    if(command==='tender.clearance'||command==='tax.creditBasis')return redirect('/app/tax/filing')
    if(command.startsWith('deposit.'))return redirect('/app/deposits?'+new URLSearchParams({accountId:String(input.accountId??'')}))
@@ -574,6 +575,7 @@ async function workshopResponse(request:Request,original:Bindings,execution:Pick
    const ids=new Set([id,...rows(state,'customerAccount').filter(a=>a.mergedInto===id).map(a=>a.id)])
    return json(rows(state,'invoice').filter(i=>ids.has(i.billing?.accountId)))
   }
+  if(path==='/app/settings/balance-reviews'){if(actor.role!=='owner')throw new HttpError(403,'owner_required');return page('Balance review settings',balanceReviewSettings(state),actor,200,frame('data'))}
   if(path==='/api/mallet/receivables/recovery'){if(actor.role!=='owner')throw new HttpError(403,'owner_required');const reviews=balanceReminderReviews(state,url.searchParams.get('accountId')??'');if(!await env.DB.prepare(`SELECT 1 AS ok WHERE (${auth.authority.sql})`).bind(...auth.authority.params).first())throw new HttpError(403,'owner_required');return json(reviews)}
   if(path==='/app/receivables'){if(actor.role!=='owner')throw new HttpError(403,'owner_required');const content=receivablesPage(state,url.searchParams.get('accountId')??'',utcDate(url.searchParams.get('asOf')??new Date().toISOString().slice(0,10)),url.searchParams.get('recovery')==='balance');if(!await env.DB.prepare(`SELECT 1 AS ok WHERE (${auth.authority.sql})`).bind(...auth.authority.params).first())throw new HttpError(403,'owner_required');return page('Commercial receivables',content,actor,200,frame('customers'))}
   if(path==='/app/tax/filing'){if(actor.role!=='owner')throw new HttpError(403,'owner_required');const today=new Date().toISOString().slice(0,10);return page('Filing-period tax preview',filingPage(state,url.searchParams.get('from')??today.slice(0,8)+'01',url.searchParams.get('to')??today),actor,200,frame('tax'))}

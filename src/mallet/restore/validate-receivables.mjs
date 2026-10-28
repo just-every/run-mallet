@@ -43,6 +43,25 @@ export async function validateReceivables({get,each}){
   const invoice=await get('invoice',reminder.invoiceId),assignment=await get('arInvoice',reminder.assignmentId),terms=await get('arTerms',reminder.termsId)
   insist(evidence(reminder)&&reminder.invoiceRevision===invoice.revision&&assignment.invoiceId===invoice.id&&assignment.accountId===reminder.accountId&&terms.accountId===reminder.accountId&&terms.by.id===reminder.by.id&&whole(reminder.outstandingCents,1)&&date(reminder.dueOn)&&reminder.dueOn===assignment.dueOn&&typeof reminder.to==='string'&&typeof reminder.content==='string'&&typeof reminder.consentEvidence==='string'&&reminder.consentEvidence.trim()&&typeof reminder.reference==='string'&&['unconfirmed','accepted','development','failed','uncertain'].includes(reminder.status),'ar_reminder')
  }
+ const policies=[]
+ for await(const policy of each('balanceReviewPolicy')){
+  insist(policy.version===1&&whole(policy.revision,1)&&evidence(policy)&&typeof policy.name==='string'&&policy.name.trim()&&Array.isArray(policy.days)&&policy.days.length>0&&policy.days.length<=8&&policy.days.every((day,i)=>whole(day,0,30)&&(!i||day>policy.days[i-1])),'balance_review_policy')
+  if(policy.previousId){const previous=await get('balanceReviewPolicy',policy.previousId);insist(previous.revision+1===policy.revision,'balance_policy_predecessor')}else insist(policy.revision===1,'balance_policy_first')
+  insist(!policies.includes(policy.revision),'balance_policy_unique');policies.push(policy.revision)
+ }
+ for await(const plan of each('balanceReviewPlan')){
+  const invoice=await get('invoice',plan.invoiceId),assignment=await get('arInvoice',plan.assignmentId),terms=await get('arTerms',plan.termsId),policy=await get('balanceReviewPolicy',plan.policy?.id)
+  await get('contact',plan.contactId)
+  insist(evidence(plan)&&same(plan.policy,policy)&&whole(plan.invoiceVersion,1)&&plan.invoiceVersion<=invoice.version&&plan.jobId===invoice.jobId&&assignment.invoiceId===invoice.id&&assignment.accountId===plan.accountId&&terms.accountId===plan.accountId&&whole(plan.contactVersion,1)&&typeof plan.to==='string'&&plan.to.trim()&&Number.isFinite(Date.parse(plan.startAt)),'balance_review_plan')
+  insist(Array.isArray(plan.steps)&&same(plan.steps,policy.days.map((day,i)=>({n:i+1,day,dueAt:new Date(Date.parse(plan.startAt)+day*86400000).toISOString()}))),'balance_review_plan_steps')
+  if(plan.stoppedAt)insist(actor(plan.stoppedBy,['owner'])&&Number.isFinite(Date.parse(plan.stoppedAt))&&typeof plan.stopReason==='string'&&plan.stopReason.trim(),'balance_review_plan_stop')
+ }
+ const usedSteps=[]
+ for await(const schedule of each('outreach'))if(schedule.reviewPlanId){
+  const plan=await get('balanceReviewPlan',schedule.reviewPlanId),step=plan.steps.find(s=>s.n===schedule.reviewStep)
+  insist(schedule.kind==='balance'&&whole(schedule.reviewPlanVersion,1)&&schedule.reviewPlanVersion<=plan.version&&schedule.subjectId===plan.invoiceId&&schedule.invoiceVersion===plan.invoiceVersion&&schedule.termsId===plan.termsId&&schedule.assignmentId===plan.assignmentId&&schedule.by.id===plan.by.id&&step&&step.dueAt<=schedule.at,'balance_review_step_approval')
+  const key=plan.id+':'+step.n;insist(!usedSteps.includes(key),'balance_review_step_unique');usedSteps.push(key)
+ }
  for await(const schedule of each('outreach')){
   if(schedule.kind!=='balance'||schedule.policy!=='one-approved-balance-email-v2')continue
   const permission=schedule.permission,invoice=await get('invoice',schedule.subjectId),contact=await get('contact',permission?.contactId),accountRow=await get('customerAccount',permission?.accountId)

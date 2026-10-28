@@ -48,5 +48,46 @@ and retained version, assignment ID, approval ID, evidence and explicit
 confirmation. The native form supplies those references from the selected row.
 Archives retain the exact receipt and outcome history without local send
 authority. A fresh destination owner may review unresolved history; archived
-approvals and receipts cannot authorize another handoff. Complete sequences,
-complete customer-consent provenance and advisor failure tasks remain unfinished.
+approvals and receipts cannot authorize another handoff. Unattended repeated chasing and delegated advisor finance access remain unfinished; see the current AR-002 Gap.
+
+
+## Plan reviews and approve each email separately
+
+Open **Balance review settings** to save an attributable policy revision with
+increasing elapsed-day offsets. Replacing a policy preserves every earlier
+revision and the exact policy retained by existing plans. In an invoice's
+**Internal balance review sequence**, select a start instant and confirm an
+internal review plan. It creates review tasks only: no customer permission,
+email approval, standing sending authority or automatic retry. Stop internal
+reviews from the same invoice; earlier policy, steps and approvals remain in
+history. The current owner must create a fresh plan after recovery.
+
+For a due review step, separately review the current balance and exact message.
+Record the customer's agreement to the displayed one-email wording, its time,
+capture channel and source reference, then explicitly approve scheduling. The
+record identifies the purpose, invoice, account, billing recipient and contact
+revision, wording version, customer time, capture actor and time. The owner's
+exact approval is retained separately with its message, invoice version, terms,
+recipient hours and expiry. These are owner-recorded customer instructions;
+Mallet does not independently authenticate a telephone call or entered transcript.
+
+One permission reference approves one schedule for that invoice. A future,
+stopped, stale, cross-invoice or already-used review step cannot authorize
+another email. Each approved step appends immutable sequence history. A plan
+or a previous receipt never supplies permission for the next email.
+
+Failed or uncertain handoffs automatically retain an owner review task with the
+original outcome, provider reference and exact invoice and terms sources. The
+receivables entry shows the outstanding review count; its on-demand list lets
+the current owner append one human resolution. Closing the task preserves the
+original outcome and all uncertainty. A further email still needs fresh customer
+permission and a separate exact owner approval. It cannot be approved while an
+earlier failed or uncertain handoff for that invoice remains unresolved.
+
+Customer erasure immediately stops internal review plans, suppresses pending
+balance email and removes its local sending capability even when retained
+financial history is held. Archives recover policy, plan, permission, step, task
+and resolution evidence; they do not recover outbound authority. Supplying a
+later erasure journal refuses replay of an older archive. Full unattended repeated
+chasing remains outside RL-101's approved one-email rule, and delegated advisor
+finance rights remain GOV-001 work.

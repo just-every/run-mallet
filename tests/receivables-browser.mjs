@@ -6,7 +6,7 @@ import {join} from 'node:path'
 import {chromium} from '@playwright/test'
 import {installation,archive,restore} from './harness.mjs'
 import {publicDoor} from './support/portable-repair.mjs'
-import {receivablesFixture,balanceFailureFixture,balanceRecoveryMail,balancePermissionFields} from './support/receivables-journey.mjs'
+import {receivablesFixture,balanceFailureFixture,balanceRecoveryMail} from './support/receivables-journey.mjs'
 import {shopSetup} from './support/diagnosis-journey.mjs'
 export async function receivablesBrowser(){
  const h=await installation({entry:'tests/dev-worker.ts',network:true,assets:true,bindings:{AUTH_LOCAL:'true',RER_DEV_KEY:randomBytes(32).toString('base64url')}});let browser
@@ -51,10 +51,22 @@ export async function receivablesBrowser(){
    await p.goto(ledger)
    await submit('ar.remind',{evidence:'Owner reviewed the current balance and billing recipient',consentEvidence:'Billing contact explicitly requested this exact balance reminder by email'},{invoiceId:invoice.id,checks:['consent']})
    await p.goto(ledger);assert.match(await p.locator('#ar-'+invoice.id).innerText(),/Suppressed in development/);await shot('03b-consented-balance-reminder',width)
+   await p.goto(h.origin+'/app/settings/balance-reviews')
+   await submit('ar.saveBalanceReviewPolicy',{name:'Fleet owner review plan',days:index===0?'0, 7':'0, 14',evidence:'Owner selected internal reviews; every email still needs exact consent and approval'})
+   assert.equal((await h.state()).records.balanceReviewPolicy.length,index+1);await shot('03ba-balance-review-settings',width)
+   await p.goto(ledger);await p.locator('#ar-'+invoice.id).getByText('Internal balance review sequence',{exact:true}).click()
+   await submit('ar.planBalanceReviews',{startAt:new Date(Date.now()-60000).toISOString(),evidence:'Owner requested review of these exact current invoice terms'},{invoiceId:invoice.id,checks:['confirm']})
+   await p.locator('#ar-'+invoice.id).getByText('Internal balance review sequence',{exact:true}).click()
+   assert.match(await p.locator('#ar-'+invoice.id).innerText(),/Owner review due; no email approved/)
+   const plan=(await h.state()).records.balanceReviewPlan.find(r=>r.invoiceId===invoice.id)
+   assert.equal(plan.policy.revision,index+1);await shot('03bb-internal-balance-review-sequence',width)
    const reminderDay=new Date(Date.now()+3*86400000).toISOString().slice(0,10)
-   await submit('outreach.schedule',{dueAt:reminderDay+'T15:00:00Z',expiresAt:reminderDay+'T18:00:00Z',timeZone:'UTC',allowedStart:9,allowedEnd:18,consentedAt:'2026-10-01T12:00:00Z',consentReference:'synthetic-mallet-native-balance-'+width,consentEvidence:'Billing contact requested one scheduled balance email'},{invoiceId:invoice.id,checks:['consent'],selects:{captureChannel:'telephone'}})
+
+   await submit('outreach.schedule',{dueAt:reminderDay+'T15:00:00Z',expiresAt:reminderDay+'T18:00:00Z',timeZone:'UTC',allowedStart:9,allowedEnd:18,consentedAt:'2026-10-01T12:00:00Z',consentReference:'synthetic-mallet-native-balance-'+width,consentEvidence:'Billing contact requested one scheduled balance email'},{invoiceId:invoice.id,checks:['consent'],selects:{captureChannel:'telephone',balanceReviewSource:plan.id+':'+plan.version+':1'}})
    await p.goto(ledger);assert.match(await p.locator('#ar-'+invoice.id).innerText(),/Scheduled balance reminder/);await shot('03c-scheduled-balance-reminder',width)
    await submit('outreach.stop',{reason:'Billing contact canceled this scheduled request'},{invoiceId:invoice.id})
+   await p.locator('#ar-'+invoice.id).getByText('Internal balance review sequence',{exact:true}).click()
+   await submit('ar.stopBalanceReviews',{reason:'Owner stopped internal follow-through; no later email is approved'},{invoiceId:invoice.id})
 
    await submit('ar.dispute' ,{evidence:'Fleet disputed the recorded work pending review'},{invoiceId:invoice.id})
    await p.goto(ledger);assert.match(await p.locator('#ar-'+invoice.id).innerText(),/Dispute open/);assert.match(await p.locator('#ar-'+invoice.id).innerText(),/Chasing paused/);await shot('04-dispute-pauses-chasing',width)

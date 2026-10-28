@@ -584,7 +584,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "0c74cf6b0534010a8e17a699262216714d4ac1d86bcc5fb050fac56cedc4eca0",
+      "sha256": "2b5e5e53499ad8b46675f5ee474caf0b1f327647a57f8a00d5de2d1c819d3c78",
       "executable": false
     },
     "deploy-demo.json": {
@@ -684,7 +684,7 @@
       "executable": false
     },
     "docs/receivables.md": {
-      "sha256": "c5d976fb7cba41ef9bc7f94469280fe6d08c026c3034f7139ac658dd9744eea4",
+      "sha256": "80ff5be9b06949911b8bd97054425eeddaa64b8760fc9059430b2d52009c00b6",
       "executable": false
     },
     "docs/refunds.md": {
@@ -1643,6 +1643,10 @@
       "sha256": "090cd6bff5257d61b2a606e999860264db4a830b5c0022f28b397004d8088dd6",
       "executable": false
     },
+    "src/mallet/balance-reminder-policy.ts": {
+      "sha256": "ce682212641ee56b2b860615ea6199858e5cd49d51bd78d016a96784f90253f0",
+      "executable": false
+    },
     "src/mallet/balance-reminder-recovery.ts": {
       "sha256": "cc8bdf50314d99f4a028061c80e162b9fd44db5ea4382235ab0fce56585f1187",
       "executable": false
@@ -1844,7 +1848,7 @@
       "executable": false
     },
     "src/mallet/http.ts": {
-      "sha256": "db3c661ccf1375d35c9fac1873c18140cef520351755363bbe604f95942a9272",
+      "sha256": "62a35982d4c0a2f5e530aae1878a0e455153bf6f129daaa0cce719b8365acc47",
       "executable": false
     },
     "src/mallet/imports/context.ts": {
@@ -2036,7 +2040,7 @@
       "executable": false
     },
     "src/mallet/model.ts": {
-      "sha256": "311028dad99baa6d86e7b8a0a8556fa990a94b6bad94336fc051872042186297",
+      "sha256": "e74661c1b677cbcd62eede1630eb316d4657e621ae1eed852b51b7b5fe83df8f",
       "executable": false
     },
     "src/mallet/money.ts": {
@@ -2048,7 +2052,7 @@
       "executable": false
     },
     "src/mallet/outreach.ts": {
-      "sha256": "ce480bc9f3a1e9fe76c5c152367ba152f07e374c5e3d389278c9a72e03277822",
+      "sha256": "44f3c9ad6713c2b7f186da2fb3cc81e73c39b47f04f703cf722f12199585bc25",
       "executable": false
     },
     "src/mallet/pay-rates.ts": {
@@ -2264,11 +2268,11 @@
       "executable": false
     },
     "src/mallet/restore/validate-receivables.mjs": {
-      "sha256": "8128e67315b13992594294899ba0d84229e1e7485831ae9a32884c2d1a7d6a2f",
+      "sha256": "97834c5189e1b9bdba9ad160cf08eecb449bfcf7c4d8e4caebdafc28e9133960",
       "executable": false
     },
     "src/mallet/restore/validate-records.mjs": {
-      "sha256": "f683de5400519a8491cec55f51b5ee117f2e6237cea9fc16808222c1edb0c8cc",
+      "sha256": "0ee53d3db79fe475c8c01bdb651ede6cebc66c33715e9721a1d9d15cdf1db27e",
       "executable": false
     },
     "src/mallet/restore/validate-reviews.mjs": {
@@ -2328,7 +2332,7 @@
       "executable": false
     },
     "src/mallet/retention/reviews.ts": {
-      "sha256": "f147bec3b71bac3f30cbbc8bdc872146413a0137a9d799f5ab6165f2c17cd376",
+      "sha256": "b5723b96999d6a5a55f326cd67d49ba88bbf2be25bc2ee77aa6ea0f9cda8c1d6",
       "executable": false
     },
     "src/mallet/retention/store.ts": {
@@ -2456,7 +2460,7 @@
       "executable": false
     },
     "src/mallet/strong-auth/gate.ts": {
-      "sha256": "6460b6c48a39cab0242d9f406ee882a5f0b7a5d068512ffff5cfff416edef1d3",
+      "sha256": "11749180cd8ae94617e0aa12262b6322c1906829b33ea109f6b42b5a3e2babfb",
       "executable": false
     },
     "src/mallet/strong-auth/link-guard.ts": {
@@ -2596,7 +2600,7 @@
       "executable": false
     },
     "src/mallet/ui/data.ts": {
-      "sha256": "38d8b5e056d61f8700fa46b72e635c23072ef617908e9ffdcedce65e4a50ab24",
+      "sha256": "02fadfb1edbc9d26efe4161f614d2fecc2c12fd3966d390540382cbbd9bfcd86",
       "executable": false
     },
     "src/mallet/ui/declined-outreach.ts": {
@@ -2684,7 +2688,7 @@
       "executable": false
     },
     "src/mallet/ui/outreach.ts": {
-      "sha256": "88ec2620bb1a958fbae182f69da970aa24b09f630648d8b5376532b39b9b70af",
+      "sha256": "80fba1f944a2557ea88e3f037a7c6939e18a95e8b734f9f3ce6027bc39b21c58",
       "executable": false
     },
     "src/mallet/ui/portal.ts": {
@@ -2716,7 +2720,7 @@
       "executable": false
     },
     "src/mallet/ui/receivables.ts": {
-      "sha256": "a0882d816160d71a2f6db22362397e830f7449820370b4b98822f21f2c37fde6",
+      "sha256": "13f72f6b8f15d1859f35b919eabc096eb74d200f5dacfa85ddc4c89f4c3a315b",
       "executable": false
     },
     "src/mallet/ui/repair-blockers.ts": {
@@ -4896,7 +4900,7 @@
       "executable": false
     },
     "tests/receivables-browser.mjs": {
-      "sha256": "c9d5c2c82ed62d2a8409c2413d008ff6a7bd53444db89e0ca43aae899a9cea0b",
+      "sha256": "498a11be3a68a551a5ffc4f3e5d7f756cc098e0efbdaa37a9b830162d484f036",
       "executable": false
     },
     "tests/replenishment-browser.mjs": {
@@ -5220,7 +5224,7 @@
       "executable": false
     },
     "tests/support/receivables-journey.mjs": {
-      "sha256": "30da7807959601c07106e3bd22be8c63cf18b2187ef9e795ab242ef611f56550",
+      "sha256": "4fcbbf94aa6962387f54447757d67ece191990a7c3355367d724e673700ef1c6",
       "executable": false
     },
     "tests/support/refunds-journey.mjs": {

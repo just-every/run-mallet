@@ -1,3 +1,4 @@
+import {approvedBalanceReviewStep} from './balance-review-plans'
 import {balancePermission,balancePermissionStop,retainBalanceStep,BALANCE_POLICY} from './balance-reminder-policy'
 import {openBalanceReminderTask} from './balance-reminder-recovery'
 import {declinedOutreachCommand,currentDeclinedConsent,declinedAvailabilityStop,declinedCustomer,DECLINED_POLICY,declinedContent} from './declined-outreach'
@@ -68,7 +69,7 @@ export const outreach:Handler=(c,command,p)=>{
    const review={...p,invoiceId:p.subjectId,confirm:'send-balance-reminder',reference:crypto.randomUUID(),evidence:p.consentEvidence}
    if(optedOut(c.s,String(p.to)))fail('AR_SUPPRESSED','Automatic reminders are opted out.')
    const checked=balanceReminderReview(c.s,c.actor,review,c.now)
-   source={subjectId:checked.invoice.id,invoiceVersion:checked.invoice.version,contactVersion:checked.contact.version,termsId:checked.terms.id,assignmentId:checked.item.terms!.id,to:checked.contact.email,content:balanceReminderContent(checked.invoice,checked.item),review:{invoiceId:checked.invoice.id,to:checked.contact.email,outstandingCents:checked.item.balance.outstandingCents,consent:true,confirm:'send-balance-reminder'},permission:balancePermission(c,p,checked),policy:BALANCE_POLICY}
+   source={subjectId:checked.invoice.id,invoiceVersion:checked.invoice.version,contactVersion:checked.contact.version,termsId:checked.terms.id,assignmentId:checked.item.terms!.id,to:checked.contact.email,content:balanceReminderContent(checked.invoice,checked.item),review:{invoiceId:checked.invoice.id,to:checked.contact.email,outstandingCents:checked.item.balance.outstandingCents,consent:true,confirm:'send-balance-reminder'},...approvedBalanceReviewStep(c.s,c.actor.id,p,checked,c.now),permission:balancePermission(c,p,checked),policy:BALANCE_POLICY}
   }else{
    const item=find(c.s,'declinedWork',p.subjectId);expectVersion(item,p.version)
    if(rows(c.s,'appointment').some(a=>a.status==='confirmed'&&a.declinedWorkId===item.id))fail('OUTREACH_STOP','The customer has booked this declined work.')
