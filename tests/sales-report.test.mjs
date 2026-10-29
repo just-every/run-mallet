@@ -28,7 +28,7 @@ async function complete(h,{job,q},{invoice='approved'}={}){
  return i
 }
 
-test('REPORT-001: known native repairs reconcile sales and decisions, download sources and recover without new authority',()=>run(async h=>{
+test('REPORT-001 / REPORT-007: known native repairs reconcile sales and decisions, download sources and recover without new authority',()=>run(async h=>{
  await setup(h)
  const one=await quote(h,1,{discount:1000}),two=await quote(h,2),three=await quote(h,3,{approve:false}),four=await quote(h,4),five=await quote(h,5),six=await quote(h,6,{approve:false})
  const i1=await complete(h,one),i2=await complete(h,two)
@@ -87,7 +87,7 @@ test('REPORT-001: known native repairs reconcile sales and decisions, download s
  try{await restore(fresh,backup);assert.deepEqual(await fresh.api(path+range),after);await fresh.api(path+range,undefined,{as:h.owner,status:401})}finally{await fresh.close()}
 }))
 
-test('REPORT-001: local calendar boundaries, empty ratios, filter refusal and native report authority',()=>run(async h=>{
+test('REPORT-001 / REPORT-007: local calendar boundaries, empty ratios, filter refusal and native report authority',()=>run(async h=>{
  await setup(h)
  const empty=await h.api(path)
  assert.equal(empty.sales.averageRepairOrderCents,null);assert.equal(empty.funnel.approvalRatioTenths,null)

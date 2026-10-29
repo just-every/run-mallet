@@ -29,7 +29,7 @@ export async function approvalBrowser(){
   assert.deepEqual(errors,[])
  }finally{await browser?.close();await h.close()}
 }
-// EST-006: chase policy, advisor queue, per-link reminders and the customer's Stop reminders door at 1440/390.
+// EST-006 / EST-007: chase policy, advisor queue, per-link reminders and the customer's Stop reminders door at 1440/390.
 export async function chaseBrowser(){
  const h=await installation({entry:'tests/dev-worker.ts',network:true,assets:true,bindings:{AUTH_LOCAL:'true',RER_DEV_KEY:randomBytes(32).toString('base64url')}});let browser
  try{
@@ -39,7 +39,7 @@ export async function chaseBrowser(){
   browser=await chromium.launch({headless:true,args:['--use-mock-keychain','--password-store=basic']})
   const errors=[],open=async(cookie,width)=>{const c=await browser.newContext({viewport:{width,height:1000},timezoneId:'America/Los_Angeles',locale:'en-US',hasTouch:width<500});if(cookie)await c.addCookies(cookie.split('; ').map(pair=>({name:pair.slice(0,pair.indexOf('=')),value:pair.slice(pair.indexOf('=')+1),url:h.origin})));const p=await c.newPage();p.on('pageerror',e=>errors.push(e.message));return p}
   await mkdir('.cache/chase-browser',{recursive:true})
-  const shot=async(p,name,target)=>{for(const width of [390,1440]){await p.setViewportSize({width,height:1000});await target.scrollIntoViewIfNeeded();await p.evaluate(()=>new Promise(requestAnimationFrame));assert.ok(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'EST-006 responsive '+name+' '+width);await p.screenshot({path:`.cache/chase-browser/${name}-${width}.png`})}await p.setViewportSize({width:1440,height:1000})}
+  const shot=async(p,name,target)=>{for(const width of [390,1440]){await p.setViewportSize({width,height:1000});await target.scrollIntoViewIfNeeded();await p.evaluate(()=>new Promise(requestAnimationFrame));assert.ok(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'EST-006 / EST-007 responsive '+name+' '+width);await p.screenshot({path:`.cache/chase-browser/${name}-${width}.png`})}await p.setViewportSize({width:1440,height:1000})}
   const o=await open(h.owner,1440);await o.goto(h.origin+'/app/approvals');const policy=o.locator('#chase-policy')
   await policy.getByLabel('Approval links expire after (days, 1–7)').fill('7');await policy.getByLabel('Reminder days after sending (up to three, comma separated)').fill('2, 6');await shot(o,'01-chase-policy',policy)
   await policy.getByRole('button',{name:'Save chase policy'}).click();await o.waitForLoadState('domcontentloaded')

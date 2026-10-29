@@ -137,7 +137,7 @@ test('DVI-004: second-visit comparison, imported source, declined carry and reso
  const {inspectionHistoryBrowser}=await import('./inspection-history-browser.mjs');await inspectionHistoryBrowser()
 })
 
-test('INTAKE-001 / OPS-001: signed condition and custody, exact checklist comparison, private temporary secrets and fresh-owner recovery',()=>run(async h=>{const {intakeJourney}=await import('./support/intake-journey.mjs');await intakeJourney(h)}))
+test('INTAKE-001 / INTAKE-004 / OPS-001: signed condition and custody, exact checklist comparison, private temporary secrets and fresh-owner recovery',()=>run(async h=>{const {intakeJourney}=await import('./support/intake-journey.mjs');await intakeJourney(h)}))
 
 test('INTAKE-001: vehicle and device signed custody and actual checklist comparison at 1440/390',async()=>{const {intakeBrowser}=await import('./intake-browser.mjs');await intakeBrowser()})
 

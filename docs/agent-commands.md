@@ -144,3 +144,8 @@ AGENT-001 preparation keys keep the four commands above. They cannot invoke the 
 | `assistant.revoke` | Fresh-confirmed owner only: `grantId`, current `version`, and `reason`. Revokes the key and stops queued or reviewed messages. Prior evidence remains. |
 
 A grant permits no spending, supplier order, repair approval or customer authorization. Missing scope or limits grant nothing. Every write rechecks live owner and grant authority in its transaction; a final current-authority read precedes mail handoff. Expired or revoked keys cannot read scoped data. Historical grants and proposals survive backup, but local keys never do. The conservative expanded authority default remains pending ct approval as described in ADV-008.
+
+
+## Native API client floor
+
+The existing client door selects resource reads and the four preparation commands. This slice grants no financial-read or decision capability and does not broaden AGENT-001 preparation authority. The full API-001 target also requires delegated management, renewal, order and inventory reads, separately scoped fulfilment and financial capabilities; its Status row retains those gaps.

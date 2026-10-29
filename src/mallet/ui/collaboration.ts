@@ -1,6 +1,6 @@
 import {area,box,e,field,form,person,rows,when,type Names} from './common'
 import {crewTime,onCrew} from '../collaboration'
-// FLOW-004 screens: crew, dependent subtasks, staff-private notes with mentions, and acknowledged handoffs.
+// FLOW-004 / FLOW-005 screens: crew, dependent subtasks, staff-private notes with mentions, and acknowledged handoffs.
 type Op={id:string,name:string,role:string,status:string}
 const hours=(seconds:number)=>`${(seconds/3600).toFixed(2)} h`
 const timeList=(time:Record<string,any>)=>Object.entries(time).map(([,t])=>`<li>${e(t.name)} · billable ${hours(t.billable)} · rework ${hours(t.rework)} · nonbillable ${hours(t.nonbillable)}</li>`).join('')||'<li>No job time recorded.</li>'

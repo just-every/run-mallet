@@ -5,7 +5,7 @@ import {chromium} from '@playwright/test'
 import {authorise,booking,estimate,installation} from './harness.mjs'
 import {publicDoor} from './support/portable-repair.mjs'
 import {shopSetup} from './support/diagnosis-journey.mjs'
-// FLOW-004 native forms: helper, dependent subtasks, a mention, and a handoff the specialist acknowledges at 1440/390.
+// FLOW-004 / FLOW-005 native forms: helper, dependent subtasks, a mention, and a handoff the specialist acknowledges at 1440/390.
 export async function collaborationBrowser(){
  const h=await installation({entry:'tests/dev-worker.ts',network:true,assets:true,bindings:{AUTH_LOCAL:'true',RER_DEV_KEY:randomBytes(32).toString('base64url')}});let browser
  try{
@@ -14,7 +14,7 @@ export async function collaborationBrowser(){
   browser=await chromium.launch({headless:true,args:['--use-mock-keychain','--password-store=basic']})
   const errors=[],open=async cookie=>{const c=await browser.newContext({viewport:{width:1440,height:1000},timezoneId:'America/New_York',locale:'en-US'});await c.addCookies(cookie.split('; ').map(pair=>({name:pair.slice(0,pair.indexOf('=')),value:pair.slice(pair.indexOf('=')+1),url:h.origin})));const p=await c.newPage();p.on('pageerror',e=>errors.push(e.message));return p}
   await mkdir('.cache/collaboration-browser',{recursive:true})
-  const shot=async(p,name,target)=>{for(const width of [390,1440]){await p.setViewportSize({width,height:1000});await target.scrollIntoViewIfNeeded();await p.evaluate(()=>new Promise(requestAnimationFrame));assert.ok(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'FLOW-004 responsive '+name+' '+width);await p.screenshot({path:`.cache/collaboration-browser/${name}-${width}.png`})}await p.setViewportSize({width:1440,height:1000})}
+  const shot=async(p,name,target)=>{for(const width of [390,1440]){await p.setViewportSize({width,height:1000});await target.scrollIntoViewIfNeeded();await p.evaluate(()=>new Promise(requestAnimationFrame));assert.ok(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'FLOW-004 / FLOW-005 responsive '+name+' '+width);await p.screenshot({path:`.cache/collaboration-browser/${name}-${width}.png`})}await p.setViewportSize({width:1440,height:1000})}
   const go=async(p,path)=>{await p.goto(h.origin+path);return p.locator('#crew')},submit=async(p,button)=>{await button.click();await p.waitForLoadState('domcontentloaded')}
   const owner=await open(h.owner);let crew=await go(owner,'/app/jobs/'+job.id)
   await crew.getByLabel('Add a helper technician').selectOption(specialist.id);await submit(owner,crew.getByRole('button',{name:'Add helper'}))

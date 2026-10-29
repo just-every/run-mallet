@@ -1,6 +1,6 @@
 import {area,box,e,field,form,rows,when} from './common'
 import {DEFAULT_POLICY,chasePolicy} from '../approval-chasing'
-// EST-006 screens: the shop's chase policy, the advisor queue and per-link reminder history.
+// EST-006 / EST-007 screens: the shop's chase policy, the advisor queue and per-link reminder history.
 const stepState:Record<string,string>={pending:'scheduled',claimed:'sending',accepted:'handed to the mail provider; delivery not confirmed',development:'development outbox; not sent',rejected:'rejected by the mail provider',rate_limited:'rate limited by the mail provider',uncertain:'mail outcome uncertain; not retried',unavailable:'not sent: no mail sender configured',skipped:'not sent'}
 const stopLabel:Record<string,string>={decision:'the customer decided',reply:'staff recorded a customer reply','opt-out':'the customer opted out of reminders',superseded:'the estimate changed or the repair closed',revoked:'the link was revoked',expired:'the link expired undecided','delivery-failed':'the first email failed'}
 const taskLabel:Record<string,string>={'delivery-failed':'Approval email failed','unanswered':'Estimate unanswered'}
