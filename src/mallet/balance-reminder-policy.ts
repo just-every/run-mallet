@@ -25,6 +25,13 @@ export function retainBalanceStep(c:Context,schedule:Row){
  return step
 }
 export function balancePermissionStop(s:State,r:Row){
+ // Deployment preserves an existing one-email approval; new approvals use v2.
+ if(r.policy==='one-approved-balance-email-v1'){
+  if(r.review?.consent!==true||r.review?.confirm!=='send-balance-reminder'||!r.consentEvidence?.trim())return 'Recorded one-email customer permission is required'
+  const invoice=find(s,'invoice',r.subjectId),account=find(s,'customerAccount',invoice.billing.accountId)
+  if(r.erasureSuppressedAt||account.privacyErasedAt||rows(s,'retentionReceipt').some(x=>x.action==='customer.erase'&&x.customerId===account.id))return 'Customer erasure suppressed balance reminders'
+  return ''
+ }
  if(r.policy!==BALANCE_POLICY||!r.permission)return 'Fresh attributable one-email customer permission is required'
  const p=r.permission,invoice=find(s,'invoice',r.subjectId),account=find(s,'customerAccount',p.accountId),contact=find(s,'contact',p.contactId)
  if(p.purpose!=='balance-reminder'||p.invoiceId!==invoice.id||p.to!==r.to||p.contactVersion!==contact.version||p.accountVersion!==account.version||r.erasureSuppressedAt||account.privacyErasedAt)return 'Customer permission changed or was suppressed'
