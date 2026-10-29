@@ -34,7 +34,9 @@ export const storageLiens:Handler=(c,command,p)=>{
   if(effectiveUntil<=effectiveFrom)fail('INPUT','Rule review expiry must follow its effective date.',null,400)
   const sources=Object.fromEntries(['storage','notice','lien','disposal'].map(key=>{
    const source=text(p[key+'Source'],key+' source URL',2000);let url:URL;try{url=new URL(source)}catch{fail('INPUT','Use an HTTPS source URL.',null,400)}
-   if(url!.protocol!=='https:'||url!.username||url!.password||url!.search||url!.hash)fail('INPUT','Use a public HTTPS source without credentials or a query.',null,400)
+   const statuteParameters=new Set(['lawCode','sectionNum','division','title','part','chapter','article'])
+   const publicStatuteQuery=url!.hostname==='leginfo.legislature.ca.gov'&&['/faces/codes_displaySection.xhtml','/faces/codes_displayText.xhtml'].includes(url!.pathname)&&[...url!.searchParams].every(([key,value])=>statuteParameters.has(key)&&value.length<=40&&/^[A-Za-z0-9. -]*$/.test(value))
+   if(url!.protocol!=='https:'||url!.username||url!.password||url!.hash||url!.search&&!publicStatuteQuery)fail('INPUT','Use a public HTTPS source without credentials; only public California statute parameters are accepted in source queries.',null,400)
    return [key,{url:source,rule:text(p[key+'Rule'],key+' rule and source section',4000)}]
   }))
   const row=put(c.s,'storageRule',{state,assetKind:kind,label:text(p.label,'rule version label',200),effectiveFrom,effectiveUntil,sources,legalReview:evidence(p),noticeMethod:text(p.noticeMethod,'statutory notice method',200),startDelayHours:integer(p.startDelayHours,'storage delay hours',0,87600),noticeWithinDays:integer(p.noticeWithinDays,'notice deadline days',1,3650),waitDays:integer(p.waitDays,'wait after delivery days',1,3650),disposalAfterDays:integer(p.disposalAfterDays,'minimum custody days',1,3650),storageCapCents:integer(p.storageCapCents,'storage lien cap cents',0),repairLien:p.repairLien===true,by:who(c),at:c.now})
