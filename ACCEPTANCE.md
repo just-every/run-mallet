@@ -8,10 +8,10 @@ The primary journey: check in the customer and asset, diagnose and inspect, pric
 
 | Tier | Done | Partial | Missing | Total |
 | --- | ---: | ---: | ---: | ---: |
-| Core | 22 | 76 | 54 | 152 |
+| Core | 22 | 77 | 53 | 152 |
 | Agent surface | 0 | 0 | 5 | 5 |
 | Later | 0 | 0 | 0 | 0 |
-| Full target | 22 | 76 | 59 | 157 |
+| Full target | 22 | 77 | 58 | 157 |
 
 Judged from the code and tests at commit `0c4b8e0be86462c713e63dc7875074220be9e636` (28 October 2026). Field proof register: 12 rows; 0 passed, 0 failed, 12 not run.
 
@@ -608,15 +608,17 @@ Core · target · **partial** · Cites BASE-ROLE-001, BASE-AGENT-005, BASE-AGENT
 
 #### RETURN-002 — Storage, abandoned property and repair liens
 
-Core · target · **missing** · Cites BASE-MAIL-001 · Rules D-1, D-2, D-3 · Register R-11
+Core · target · **partial** · Cites BASE-MAIL-001 · Rules D-1, D-2, D-3 · Register R-11
 
 **Requirement.** Mallet applies the shop's state rules, kept as versioned data with sources. The rules cover: when storage charges start; abandoned vehicle and device notices (method, recipients including lienholders, timing); the possessory or mechanic's lien amount; lien sale or disposal. Notices, their delivery evidence and deadline clocks attach to the repair. Release ends accrual and records any lien waived. Disposal needs the owner, completed statutory steps and a recorded legal review, and never erases history. Mallet tracks deadlines and evidence; it gives no legal advice.
 
 **Acceptance.**
 1. In a California shop and a Texas shop, leave a repair uncollected, accrue storage, record the notices on schedule, refuse early disposal, then release on payment.
 
-**Evidence.** None.
-**Gap.** No versioned state-rule storage accrual, statutory notices, lien calculation or legally reviewed disposal.
+Conservative tracking default adopted for ct review (sx-mallet-c-f2): only the fresh-confirmed current owner records reviewed rule versions, physical custody, required recipient search, notices, storage tender and disposition. Each rule version retains source URLs and text for all four rule areas, an effective interval and legal review; each case freezes that version. Complete elapsed 24-hour periods after the reviewed delay accrue the agreed rate up to the reviewed cap; the tracked lien includes unpaid storage and, only when allowed, the current unpaid repair balance. Every required recipient needs the reviewed notice method, exact content or immutable copy reference, sent time and delivery evidence. Missing, late or unelapsed notice steps refuse disposition. The owner records completed statutory steps, legal review and physical disposition evidence; no notice, sale or disposal occurs automatically. Existing documented handover freezes storage accrual and retains the exact remaining lien waived with an explicit owner reason. Rules and case history inherit OPS-001 and the existing DATA-001 and GOV-006 custody and erasure fences; restored history grants no new custody authority until the destination owner reviews the same rules and physical custody. No statutory values, legal sufficiency or verified funds are certified.
+
+**Evidence.** `tests/mallet.test.mjs` — "RETURN-002: reviewed state rules, exact accrual, notice clocks, owner disposal and paid release retain portable history" (`tests/support/storage-journey.mjs`) asserts separate sourced California and Texas rule snapshots, immutable versions, independent storage and lien cents, owner and lienholder evidence, method and early-disposal refusals, recorded legal review, paid release ending accrual, exact unpaid-lien waiver, device custody, private authority, audit and fresh-owner archive recovery. "RETURN-002: owner records rules, notice clocks, early refusal and paid handover at 1440 and 390" (`tests/storage-browser.mjs`) asserts the native settings, custody, delivery, storage tender and release receipt, with both-width screens. `docs/storage-liens.md` documents the supported rule model and honest limits.
+**Gap.** Reviewed-rule tracking slice only. No legally verified California or Texas statutory rule dataset is bundled; the fixtures deliberately use synthetic rules. Actual state-rule coverage, statutory calendar and conditional procedures, and legally reviewed jurisdiction fixtures remain unproved. The owner-only recording, elapsed-period capped accrual, per-recipient evidence and inert-restore defaults await ct approval under sx-mallet-c-f2. RETURN-002 remains PARTIAL; no acceptance point is removed.
 
 #### FLEET-001 — Fleet and commercial repair workflows
 
