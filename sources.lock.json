@@ -1732,7 +1732,7 @@
       "executable": false
     },
     "src/mallet/connectors/registry.ts": {
-      "sha256": "3c8dca8ba858caf2f671d0091b14b11359e056a87e0d228b511beb1260d820a9",
+      "sha256": "45ecf220bbef9be983b3f03914045adde509a36ab59d2e6c727348ad356239e5",
       "executable": false
     },
     "src/mallet/connectors/secrets.ts": {
