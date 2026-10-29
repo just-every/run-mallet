@@ -1,3 +1,5 @@
+import {balanceReminderReviews} from './balance-reminder-recovery'
+import {declinedReviewPage} from './ui/declined-work-review'
 import {coverageCommand,coverageState} from './coverage-door'
 import {coveragePage} from './ui/coverage-follow-up'
 import {webhookResponse} from './webhook-door'
@@ -14,6 +16,7 @@ import {statusNoticePage} from './ui/status-notices'
 import {profitabilityReport} from './reports/profitability'
 import {profitabilityPage,profitabilitySettings} from './ui/profitability'
 import {reviewCommand,reviewState} from './review-door'
+import {declinedCustomerResponse} from './declined-customer-door'
 import {reviewResponse} from './review-customer-door'
 import {internalReviewCommands} from './reviews'
 import {reviewPanel} from './ui/reviews'
@@ -22,7 +25,7 @@ import {outreachCommand} from './outreach-door'
 import {stripeResponse} from './stripe/door'
 import {staffCommand,grantStaff,staffSettings,staffState,staffPage} from './staff'
 import {auditReport,auditPage,auditCsv} from './audit'
-import {receivablesPage,receivablesInput,filingPage} from './ui/receivables'
+import {receivablesPage,receivablesInput,filingPage,balanceReviewSettings} from './ui/receivables'
 import {filingTax} from './filing-tax'
 import {accountStatement,utcDate} from './receivables'
 import {depositsPage,depositFormInput} from './ui/deposits'
@@ -183,6 +186,7 @@ function withoutFleetApproval(value:any):any {
  return value
 }
 export function visible(s:State,actor:Actor):State {
+ if(!human(actor))s={...s,records:Object.fromEntries(Object.entries(s.records).filter(([kind])=>kind!=='declinedReview').map(([kind,values])=>[kind,kind==='event'?values.filter(r=>!r.kind.startsWith('declineReview.')):values]))}
  if(actor.role!=='owner')s={...s,records:Object.fromEntries(Object.entries(s.records).filter(([kind])=>!kind.startsWith('coverage')).map(([kind,values])=>[kind,kind==='event'?values.filter(x=>!x.kind.startsWith('coverage.')):values]))}
  if(actor.role!=='owner')s={...s,records:Object.fromEntries(Object.entries(s.records).filter(([kind])=>!kind.startsWith('webhook')&&!kind.startsWith('assistant')).map(([kind,values])=>[kind,kind==='event'?values.filter(x=>!x.kind.startsWith('assistant.')):values]))}
  if(!human(actor)){const {repairBlockerPacket:_packet,repairBlockerTask:_task,...records}=s.records;s={...s,records:{...records,event:rows(s,'event').filter(e=>!e.kind.startsWith('blocker.'))}}}
@@ -191,14 +195,14 @@ export function visible(s:State,actor:Actor):State {
  if(actor.role==='owner')s={...s,records:{...s.records,deposit:rows(s,'deposit').map(d=>({...d,balance:depositBalance(s,d)}))}}
  if(actor.role!=='owner')s={...s,records:{...s.records,handover:rows(s,'handover').map(r=>{const {accountTerms,...settlement}=r.settlement;return {...r,settlement}})}}
  if(actor.role!=='owner'){const {audit:_audit,...records}=s.records;s={...s,records}}
- if(actor.role!=='owner')s={...s,records:Object.fromEntries(Object.entries(s.records).filter(([kind])=>!['taxCreditBasis','tenderClearance','arTerms','arInvoice','arDispute','arPromise','arReminder','deposit','retentionPolicy','retentionHold','retentionReceipt','diagnosticResult'].includes(kind)))}
+ if(actor.role!=='owner')s={...s,records:Object.fromEntries(Object.entries(s.records).filter(([kind])=>!['taxCreditBasis','tenderClearance','arTerms','arInvoice','arDispute','arPromise','arReminder','balanceReminderResolution','balanceReminderTask','balanceReminderStep','balanceReviewPolicy','balanceReviewPlan','deposit','retentionPolicy','retentionHold','retentionReceipt','diagnosticResult'].includes(kind)))}
  if(actor.role!=='owner')s={...s,records:{...s.records,event:rows(s,'event').filter(row=>!row.kind.startsWith('tax.creditBasis')&&!row.kind.startsWith('tender.')&&!row.kind.startsWith('ar.')&&!row.kind.startsWith('deposit.')&&!row.kind.startsWith('diagnosticResult.'))}}
  if(!human(actor))s={...s,records:Object.fromEntries(Object.entries(s.records).map(([k,v])=>[k,(k.startsWith('calendar')||k==='bookingWaitlist'||k==='waitlistOffer'||k==='appointment'||k==='bookingService'||k==='counterIntake'||k.startsWith('intake')||['warranty','warrantyTerms','payment','handover','returnDelegate','returnOverride'].includes(k))?[]:k==='event'?v.filter(x=>!x.kind.startsWith('calendar.')&&!x.kind.startsWith('waitlist.')&&!x.kind.startsWith('booking.')&&!x.kind.startsWith('checkin.')&&!x.kind.startsWith('intake.')&&!x.kind.startsWith('warranty.')&&!x.kind.startsWith('payment.')&&!x.kind.startsWith('return.')):v]))}
  s=scopedCollaboration(scopedPromises(s,actor),actor)
  s=scopedTime(s,actor)
  if(actor.role!=='owner'){const {reviewConsent:_reviewConsent,reviewRequest:_reviewRequest,...privateReviewRecords}=s.records;s={...s,records:{...privateReviewRecords,...(s.records.subtask?{subtask:s.records.subtask.filter(t=>t.kind!=='review-feedback')}:{}),event:rows(s,'event').filter(x=>!x.kind.startsWith('review.'))}}}
  if(actor.role!=='owner'){const {statusConsent:_statusConsent,statusNotice:_statusNotice,...statusRecords}=s.records;s={...s,records:{...statusRecords,...(s.records.subtask?{subtask:s.records.subtask.filter(t=>t.kind!=='pickup-followup')}:{}),event:rows(s,'event').filter(x=>!x.kind.startsWith('statusNotice.'))}}}
- if(actor.role!=='owner'){const {outreach:_outreach,...privateRecords}=s.records;s={...s,records:{...privateRecords,event:rows(s,'event').filter(x=>!x.kind.startsWith('outreach.'))}}}
+ if(actor.role!=='owner'){const {outreach:_outreach,declinedConsent:_declinedConsent,declinedAvailability:_declinedAvailability,...privateRecords}=s.records;s={...s,records:{...privateRecords,event:rows(s,'event').filter(x=>!x.kind.startsWith('outreach.'))}}}
  if(actor.role!=='owner'){const {taxCertificate:_certificates,taxFeeRule:_feeRules,taxDiscountRule:_discountRules,taxJurisdiction:_jurisdiction,invoiceDocument:_docs,invoiceDelivery:_delivery,...records}=s.records;s={...s,records:{...records,event:rows(s,'event').filter(x=>!x.kind.startsWith('invoice.delivery')&&x.kind!=='invoice.issue'&&!x.kind.startsWith('tax.certificate')&&!x.kind.startsWith('tax.assignJurisdiction'))}}}
  if(!human(actor)){s={...s,records:Object.fromEntries(Object.entries(s.records).filter(([k])=>!['contact','customerAccount','customerMerge','customerBilling'].includes(k)))};s={...s,records:{...s.records,event:rows(s,'event').filter(x=>!x.kind.startsWith('contact.')&&!x.kind.startsWith('customer.')),invoice:rows(s,'invoice').map(i=>{const {billing,...rest}=i;return rest})}}}
  if(!human(actor)){const records=Object.fromEntries(Object.entries(s.records).filter(([k])=>!k.startsWith('stock')&&!k.startsWith('purchase')));s={...s,records:{...records,event:(records.event??[]).filter(x=>!x.kind.startsWith('stock.')&&!x.kind.startsWith('purchase.'))}}}
@@ -213,7 +217,7 @@ export function visible(s:State,actor:Actor):State {
  return {version:s.version,records:{reportDelivery:rows(s,'reportDelivery'),reportFilter:rows(s,'reportFilter'),jobNote:rows(s,'jobNote'),subtask:rows(s,'subtask'),handoff:rows(s,'handoff'),promiseSettings:rows(s,'promiseSettings'),promise:rows(s,'promise'),promisePlan:rows(s,'promisePlan'),timeEntry:rows(s,'timeEntry'),timeCorrection:rows(s,'timeCorrection'),job:jobs,asset:rows(s,'asset').filter(a=>assets.has(a.id)).map(a=>({...a,visits:a.visits.filter((id:string)=>ids.has(id))})),estimate:rows(s,'estimate').filter(x=>ids.has(x.jobId)),declinedWork:rows(s,'declinedWork').filter(x=>ids.has(x.jobId)),reading:rows(s,'reading').filter(x=>ids.has(x.jobId)),serviceInterval:rows(s,'serviceInterval').filter(x=>ids.has(x.jobId)),quality:rows(s,'quality').filter(x=>ids.has(x.jobId)),diagnosis:rows(s,'diagnosis').filter(x=>ids.has(x.jobId)),flow:scopedFlow(s,ids),inspection:rows(s,'inspection').filter(x=>ids.has(x.jobId)),stageEvent:rows(s,'stageEvent').filter(x=>ids.has(x.jobId)),event:rows(s,'event').filter(x=>!x.kind.startsWith('sublet.')&&(ids.has(x.jobId)||x.kind.startsWith('time.')&&x.data.ownerId===actor.id))}}
 }
 async function operators(db:D1Database) {
- const people=(await db.prepare("SELECT id,display_name AS name,role,status FROM oa_operators WHERE status IN ('active','invited') ORDER BY created_at,id").all<{id:string,name:string,role:string,status:string}>()).results
+ const people=(await db.prepare("SELECT id,version,display_name AS name,role,status FROM oa_operators WHERE status IN ('active','invited') ORDER BY created_at,id").all<{id:string,version:number,name:string,role:string,status:string}>()).results
  return {list:people,names:Object.fromEntries(people.map(o=>[o.id,o.name])) as Names}
 }
 const bookingFields=['title','bayId','technicianId','startAt','endAt']
@@ -225,7 +229,9 @@ function formInput(data:FormData) {
  if(input.command==='statusNotice.approve'){input.confirm=data.has('confirm');for(const key of ['allowedStart','allowedEnd','jobVersion'])input[key]=Number(input[key])}
  if(input.command==='review.consent')input.consent=data.has('consent')
  if(input.command==='review.send')input.confirm=data.has('confirm')
- if(input.command==='outreach.schedule'){input.consent=data.has('consent');input.availabilityConfirmed=data.has('availabilityConfirmed');for(const key of ['allowedStart','allowedEnd','quoteVersion','outstandingCents'])if(input[key]!==undefined)input[key]=Number(input[key])}
+ if(['outreach.consent','outreach.schedule'].includes(input.command))input.consent=data.has('consent')
+ if(input.command==='outreach.availability'){input.quoteVersion=Number(input.quoteVersion);input.mappings=Object.keys(input).filter(k=>k.startsWith('stockItem:')).map(k=>({lineId:k.slice(10),itemId:input[k],binId:input['stockBin:'+k.slice(10)]}))}
+ if(input.command==='outreach.schedule'){input.approved=data.has('approved');for(const key of ['consentVersion','availabilityVersion'])if(input[key]!==undefined)input[key]=Number(input[key]);input.consent=data.has('consent');input.availabilityConfirmed=data.has('availabilityConfirmed');for(const key of ['allowedStart','allowedEnd','quoteVersion','outstandingCents','reviewPlanVersion','reviewStep'])if(input[key]!==undefined)input[key]=Number(input[key])}
  if(input.command==='reportFilter.schedule'){input.active=data.has('active');input.consent=data.has('consent');input.everyDays=Number(input.everyDays);input.nextAt=String(input.nextAt).endsWith('Z')?input.nextAt:String(input.nextAt)+':00Z'}
  if(input.staffJob!==undefined&&input.command==='estimate.prepare'||input.staffInvoice!==undefined&&input.command==='payment.record'){let source:any;try{source=JSON.parse(input.staffJob??input.staffInvoice)}catch{throw new HttpError(400,'invalid_staff_source')};if(input.command==='estimate.prepare')input.jobId=source.jobId;else input.invoiceId=source.invoiceId;input.version=source.version}
  assetNativeInput(input)
@@ -290,6 +296,7 @@ async function workshopResponse(request:Request,original:Bindings,execution:Pick
  const stripe=await stripeResponse(request,original);if(stripe)return stripe
  const deliveryEvent=await inspectionReportEventResponse(request,original);if(deliveryEvent)return deliveryEvent
  const customerDoor=await guardLinks(request,original,async()=>{
+  const declined=await declinedCustomerResponse(request,original);if(declined)return declined
   const review=await reviewResponse(request,original);if(review)return review
   const booking=await bookingResponse(request,original);if(booking)return booking
   const checkIn=await checkInResponse(request,original);if(checkIn)return checkIn
@@ -439,7 +446,8 @@ async function workshopResponse(request:Request,original:Bindings,execution:Pick
    if(isApi){if(!human(actor)&&result&&typeof result==='object'&&'billing' in result){const {billing,...rest}=result;result=rest}return json(actor.role==='agent'?withoutSubletCosts(withoutInspectionSource(result)):result)}
    if(retentionCommands.includes(command)){if(command==='customer.export')return new Response(JSON.stringify(result,null,2),{headers:{...headers,'content-type':'application/json','content-disposition':'attachment; filename="customer-data.json"'}});return page('Retention & erasure',retentionPage(await load(env.DB),input.customerId??'',command==='retention.preview'?result:undefined,input,['customer.erase','retention.run'].includes(command)?result:undefined),actor,200,{section:'data'})}
    if(['invoice.issue','invoice.send'].includes(command)){const invoiceId=command==='invoice.issue'?input.invoiceId:result.invoiceId;return redirect('/app/invoices/'+encodeURIComponent(invoiceId))}
-   if(command.startsWith('ar.'))return redirect('/app/receivables?'+new URLSearchParams({accountId:String(input.accountId??'')}))
+   if(command==='ar.saveBalanceReviewPolicy')return redirect('/app/settings/balance-reviews')
+   if(command.startsWith('ar.'))return redirect('/app/receivables?'+new URLSearchParams({accountId:String(result.accountId??input.accountId??''),...(command==='ar.resolveBalanceReminder'?{recovery:'balance'}:{})}))
    if(command==='tender.clearance'||command==='tax.creditBasis')return redirect('/app/tax/filing')
    if(command.startsWith('deposit.'))return redirect('/app/deposits?'+new URLSearchParams({accountId:String(input.accountId??'')}))
    if(command==='customer.mergePreview')return page('Review duplicate merge',mergePreviewPage(result,input),actor,200,{section:'customers'})
@@ -463,6 +471,7 @@ async function workshopResponse(request:Request,original:Bindings,execution:Pick
    if(command.startsWith('intake.'))return redirect(`/app/jobs/${e(input.jobId)}/intake`)
    if(command.startsWith('return.')||command==='payment.verifyStripe'||command==='flow.collect')return redirect(`/app/jobs/${e(input.jobId)}/return`)
    if(command==='payment.record'&&input.returnTo==='return')return redirect(`/app/jobs/${e(input.jobId)}/return`)
+   if(command.startsWith('declineReview.'))return redirect('/app/jobs/'+encodeURIComponent(String(input.jobId))+'/declined-review')
    if(command.startsWith('coverage.'))return redirect('/app/jobs/'+encodeURIComponent(String(input.jobId))+'/coverage')
    if(command.startsWith('warranty.')||command==='payment.record')return redirect(`/app/jobs/${e(command==='warranty.open'?result.jobId:input.jobId)}/warranty`)
    if(command==='assistant.grant')return page('Scoped assistant key',`<section class="card"><p>Copy this separate key once into the assistant’s private environment.</p><pre>${e(result.token)}</pre><p>Allowed action: ${e(result.kind)}. Zero spend. Expires ${when(result.expiresAt)}.</p><a href="/app/settings/assistants">Return to assistant settings</a></section>`,actor,200,{section:'data'})
@@ -507,6 +516,13 @@ async function workshopResponse(request:Request,original:Bindings,execution:Pick
    return new Response(await service.exports.download(id),{headers:{...headers,'content-type':'application/x-ndjson','content-disposition':'attachment; filename="workshop.rer"'}})
   }
   if(request.method!=='GET' && request.method!=='HEAD')throw new HttpError(405,'method_not_allowed')
+  const declinedReviewMatch=path.match(/^\/app\/jobs\/([^/]+)\/declined-review$/)
+  if(declinedReviewMatch){
+   if(!human(actor)||actor.staff)throw new HttpError(403,'manager_required')
+   const raw=await load(env.DB),job=rows(raw,'job').find(j=>j.id===declinedReviewMatch[1])
+   if(!job)throw new HttpError(404,'not_found')
+   return page('Declined-work review',declinedReviewPage(raw,job),actor,200,{section:'jobs'})
+  }
   const state=visible(await load(env.DB),actor)
   if(path==='/app/retention'){if(actor.role!=='owner')throw new HttpError(403,'owner_required');return page('Retention & erasure',retentionPage(state,url.searchParams.get('customerId')??''),actor,200,{section:'data'})}
   if(path==='/api/mallet/catalogue'){if(actor.role==='member')throw new HttpError(403,'manager_required');return json(await catalogue(env,await connectorSecret(env,'pier','PIER_SESSION')))}
@@ -559,7 +575,9 @@ async function workshopResponse(request:Request,original:Bindings,execution:Pick
    const ids=new Set([id,...rows(state,'customerAccount').filter(a=>a.mergedInto===id).map(a=>a.id)])
    return json(rows(state,'invoice').filter(i=>ids.has(i.billing?.accountId)))
   }
-  if(path==='/app/receivables'){if(actor.role!=='owner')throw new HttpError(403,'owner_required');return page('Commercial receivables',receivablesPage(state,url.searchParams.get('accountId')??'',utcDate(url.searchParams.get('asOf')??new Date().toISOString().slice(0,10))),actor,200,frame('customers'))}
+  if(path==='/app/settings/balance-reviews'){if(actor.role!=='owner')throw new HttpError(403,'owner_required');return page('Balance review settings',balanceReviewSettings(state),actor,200,frame('data'))}
+  if(path==='/api/mallet/receivables/recovery'){if(actor.role!=='owner')throw new HttpError(403,'owner_required');const reviews=balanceReminderReviews(state,url.searchParams.get('accountId')??'');if(!await env.DB.prepare(`SELECT 1 AS ok WHERE (${auth.authority.sql})`).bind(...auth.authority.params).first())throw new HttpError(403,'owner_required');return json(reviews)}
+  if(path==='/app/receivables'){if(actor.role!=='owner')throw new HttpError(403,'owner_required');const content=receivablesPage(state,url.searchParams.get('accountId')??'',utcDate(url.searchParams.get('asOf')??new Date().toISOString().slice(0,10)),url.searchParams.get('recovery')==='balance');if(!await env.DB.prepare(`SELECT 1 AS ok WHERE (${auth.authority.sql})`).bind(...auth.authority.params).first())throw new HttpError(403,'owner_required');return page('Commercial receivables',content,actor,200,frame('customers'))}
   if(path==='/app/tax/filing'){if(actor.role!=='owner')throw new HttpError(403,'owner_required');const today=new Date().toISOString().slice(0,10);return page('Filing-period tax preview',filingPage(state,url.searchParams.get('from')??today.slice(0,8)+'01',url.searchParams.get('to')??today),actor,200,frame('tax'))}
   if(path==='/api/mallet/tax/filing'){if(actor.role!=='owner')throw new HttpError(403,'owner_required');return json(filingTax(state,url.searchParams.get('from'),url.searchParams.get('to')))}
   if(path==='/api/mallet/receivables'){if(actor.role!=='owner')throw new HttpError(403,'owner_required');return json(accountStatement(state,url.searchParams.get('accountId')??'',utcDate(url.searchParams.get('asOf')??new Date().toISOString().slice(0,10))))}
