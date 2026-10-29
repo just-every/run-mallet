@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-10-29 — Current-main contract reconciliation
+
+Judged from the code and tests at commit `0c4b8e0be86462c713e63dc7875074220be9e636` (28 October 2026). ADV-003 retains that completed judgment. ADV-005 now has the named native advisory-review journeys in this revision and remains PARTIAL; other clauses retain their existing judgments.
+
+The cleanup carries main’s FLEET-001 recorded-custody evidence, AR-002 bounded permission/review/recovery evidence, AUTO-004 eligibility/booking/withdrawal evidence and ADV-005 native advisory evidence and gaps. ADV-005 carries main’s partial judgment; the earlier cleanup demotions remain. The newer RL-101 application preserves original outcomes and grants no sending or retry authority.
+
 ## 2026-10-28 — Repair blocker reconciliation
 
 Main `f75e662e9acd8125e571f87f7b34a5cdd5433023` carries ADV-003 as done, judged at `0c4b8e0be86462c713e63dc7875074220be9e636`. Its source record says: Judged from the code and tests at commit `0c4b8e0be86462c713e63dc7875074220be9e636` (28 October 2026). The candidate changes only the generated status documents and source lock after that tested code commit. ADV-003 is newly completed; other clauses retain their existing judgments.

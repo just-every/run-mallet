@@ -4,13 +4,42 @@ import {event,expectVersion,fail,find,integer,put,rows,text,who,type Handler,typ
 export const latestLedger=(s:State,kind:string,predicate:(row:Row)=>boolean)=>rows(s,kind).filter(predicate).sort((a,b)=>(a.stateVersion??0)-(b.stateVersion??0)||a.id.localeCompare(b.id)).at(-1)
 export const receivableCommands=['ar.terms','ar.invoice','ar.dispute','ar.promise','ar.remind','ar.reminderClaim','ar.reminderOutcome']
 export function utcDate(value:unknown){const v=text(value,'UTC date',10);if(!/^\d{4}-\d{2}-\d{2}$/.test(v)||!Number.isFinite(Date.parse(v))||new Date(v).toISOString().slice(0,10)!==v)fail('INPUT','Use a valid UTC calendar date.',null,400);return v}
+/** Read retained custody evidence without inferring physical off-road time. */
+function recordedCustody(s:State,job:Row,invoice:Row){
+ const label='Recorded custody evidence; not verified off-road downtime.'
+ const result=(status:'recorded'|'open'|'unknown',reason:string,intake:Row|null=null,handover:Row|null=null,comparison:Row|null=null)=>({
+  status,reason,label,from:intake?.capturedAt??null,to:handover?.at??null,
+  durationMs:intake&&handover?Date.parse(handover.at)-Date.parse(intake.capturedAt):null,
+  intake:intake?{id:intake.id,revision:intake.version,sequence:intake.n,observedAt:intake.capturedAt,recordedAt:intake.at}:null,
+  comparison:comparison?{id:comparison.id,revision:comparison.version,recordedAt:comparison.at}:null,
+  handover:handover?{id:handover.id,revision:handover.version,recordedAt:handover.at}:null,
+  invoice:{id:invoice.id,revision:invoice.revision,number:invoice.number,chargeCents:invoice.totals.totalCents}
+ })
+ const instant=(v:unknown)=>typeof v==='string'&&Number.isFinite(Date.parse(v))
+ const signed=(r:Row)=>!!r?.signature?.name&&!!r.signature.consent&&instant(r.signature.at)
+ const validIntake=(r:Row)=>r?.jobId===job.id&&r.assetId===job.assetId&&r.phase==='before'&&signed(r)&&instant(r.capturedAt)&&instant(r.at)&&Date.parse(r.capturedAt)<=Date.parse(r.at)
+ const handovers=rows(s,'handover').filter(r=>r.jobId===job.id)
+ if(handovers.length>1)return result('unknown','Conflicting handover sources for this visit.')
+ if(!handovers.length){
+  const intakes=rows(s,'intake').filter(r=>r.jobId===job.id&&r.phase==='before')
+  if(intakes.length>1)return result('unknown','Multiple before-condition sources; no documented handover selects one.')
+  if(!intakes.length||!validIntake(intakes[0]))return result('unknown','No usable signed before-condition source for this visit.')
+  return result('open','No documented handover endpoint; elapsed custody is unknown.',intakes[0])
+ }
+ const handover=handovers[0],comparison=handover.comparison,source=comparison?.source
+ const retained=rows(s,'intake').find(r=>r.id===source?.id)
+ if(handover.assetId!==job.assetId||handover.invoiceId!==invoice.id||handover.invoice?.id!==invoice.id||handover.invoice.revision!==invoice.revision||handover.invoice.totals?.totalCents!==invoice.totals.totalCents||!instant(handover.at))return result('unknown','Handover and frozen invoice sources do not agree.')
+ if(!validIntake(source)||comparison?.jobId!==job.id||comparison.assetId!==job.assetId||comparison.intakeId!==source.id||!signed(comparison)||!instant(comparison.at)||!retained||retained.jobId!==job.id||retained.version!==source.version||retained.capturedAt!==source.capturedAt||retained.at!==source.at)return result('unknown','Missing or conflicting same-visit signed intake source in the documented handover.')
+ if(Date.parse(source.at)>Date.parse(comparison.at)||Date.parse(comparison.at)>Date.parse(handover.at))return result('unknown','Custody source times conflict; elapsed custody is unknown.')
+ return result('recorded','Signed before-condition observation to staff-recorded handover.',source,handover,comparison)
+}
 export function accountStatement(s:State,accountId:string,asOf:string){
  const account=find(s,'customerAccount',accountId);if(account.mergedInto)fail('AR_ACCOUNT','Review the surviving account explicitly.')
  const invoices=rows(s,'invoice').filter(i=>['approved','exported'].includes(i.status)&&creditAccount(s,i.billing?.accountId)===account.id).map(i=>{
   const terms=rows(s,'arInvoice').find(r=>r.invoiceId===i.id),balance=invoiceBalance(s,i),dispute=latestLedger(s,'arDispute',r=>r.invoiceId===i.id),promise=latestLedger(s,'arPromise',r=>r.invoiceId===i.id),job=find(s,'job',i.jobId)
   const overdueDays=terms?Math.max(0,Math.floor((Date.parse(asOf)-Date.parse(terms.dueOn))/86400000)):null
   const bucket=overdueDays===null?'No terms':overdueDays===0?'Current':overdueDays<=30?'1–30':overdueDays<=60?'31–60':overdueDays<=90?'61–90':'91+'
-  return {invoiceId:i.id,number:i.number,jobId:i.jobId,assetId:job.assetId,vehicle:job.asset.label,terms,balance,dispute,promise,overdueDays,bucket,chaseEligible:!!terms&&overdueDays!==null&&balance.outstandingCents>0&&dispute?.status!=='open'&&(!promise||promise.promisedOn<asOf),recordedCostCents:i.totals.totalCents,downtime:{from:job.startAt,to:job.completedAt??null,label:'Booked start to recorded completion; actual off-road time is not verified.'}}
+  return {invoiceId:i.id,number:i.number,jobId:i.jobId,assetId:job.assetId,vehicle:job.asset.label,terms,balance,dispute,promise,overdueDays,bucket,chaseEligible:!!terms&&overdueDays!==null&&balance.outstandingCents>0&&dispute?.status!=='open'&&(!promise||promise.promisedOn<asOf),recordedCostCents:i.totals.totalCents,downtime:{from:job.startAt,to:job.completedAt??null,label:'Booked start to recorded completion; actual off-road time is not verified.'},recordedCustody:recordedCustody(s,job,i)}
  })
  const ageing=Object.fromEntries(['Current','1–30','31–60','61–90','91+','No terms'].map(b=>[b,invoices.filter(i=>i.bucket===b).reduce((n,i)=>n+i.balance.outstandingCents,0)]))
  return {accountId:account.id,accountName:account.name,asOf,currency:'USD',invoices,ageing,outstandingCents:invoices.reduce((n,i)=>n+i.balance.outstandingCents,0),basis:'Current ledger balances aged at the selected UTC date; this is not a historical balance snapshot. Recorded checks reduce balances without claiming clearance. Promises due today suppress chasing through today. A statement read sends no reminder. An owner may explicitly send a consented balance reminder before or after its due date; no overdue claim is inferred.'}

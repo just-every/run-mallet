@@ -11,7 +11,7 @@ A claim is done when every clause behind it is done, missing when every one is m
 | 3 | "orders parts" | `BUY-002` done | done |
 | 4 | "runs the technician board" | `FLOW-001` partial | partial |
 | 5 | "takes payment" | `PAY-003` missing | missing |
-| 6 | "brings customers back" | `AUTO-003` missing; `AUTO-004` partial; `ADV-005` missing | partial |
+| 6 | "brings customers back" | `AUTO-003` missing; `AUTO-004` partial; `ADV-005` partial | partial |
 | 7 | "100% free, open source" | `OPEN-001` done | done |
 | 8 | "alternative to Tekmetric, Shopmonkey and Mitchell 1 Manager SE" | `MOVE-001` missing; `MOVE-002` missing; `MOVE-003` missing | missing |
 | 9 | RO 4127 · VIN decoded · 62,100 mi | `VEH-001` missing; `VEH-002` done | partial |
@@ -49,9 +49,9 @@ A claim is done when every clause behind it is done, missing when every one is m
 | 41 | Invoice 10418 from labor and parts, sales tax 7.5% | `INVOICE-001` partial; `TAX-001` partial | partial |
 | 42 | "QuickBooks has it a minute later" | `BOOKS-001` missing | missing |
 | 43 | Collected 4:30 pm, miles out, keys returned | `RETURN-001` partial; `VEH-002` done | partial |
-| 44 | Reminder on Priya's phone: "Timing belt due at 105,000 mi", $780.00, Book | `AUTO-004` partial; `ADV-005` missing; `MSG-001` missing; `BOOK-001` partial | partial |
-| 45 | "The agent tracks declined work and service intervals by mileage" | `ADV-005` missing; `AUTO-003` missing; `AUTO-004` partial | partial |
-| 46 | "refreshes each price" | `ADV-005` missing | missing |
+| 44 | Reminder on Priya's phone: "Timing belt due at 105,000 mi", $780.00, Book | `AUTO-004` partial; `ADV-005` partial; `MSG-001` missing; `BOOK-001` partial | partial |
+| 45 | "The agent tracks declined work and service intervals by mileage" | `ADV-005` partial; `AUTO-003` missing; `AUTO-004` partial | partial |
+| 46 | "refreshes each price" | `ADV-005` partial | partial |
 | 47 | "drafts the text for Kayla to send" | `ADV-002` missing; `MSG-001` missing; `MSG-004` missing | missing |
 | 48 | Text failed on a landline, sent by email | `MSG-001` missing; `MSG-002` missing | missing |
 | 49 | Reminders stopped for a sold vehicle | `AUTO-003` missing | missing |
@@ -66,4 +66,4 @@ A claim is done when every clause behind it is done, missing when every one is m
 | 58 | "100% free and open source. MIT licensed." | `OPEN-001` done | done |
 | 59 | "Free, open source shop management" | `OPEN-001` done | done |
 
-Claims: 59; 11 done, 35 partial, 13 missing.
+Claims: 59; 11 done, 36 partial, 12 missing.

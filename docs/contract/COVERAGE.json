@@ -2,7 +2,7 @@
   "schema": 1,
   "seed": "mallet-product",
   "old": {
-    "commit": "404ea0549bdfd542e0228362da4a0ab687565d82",
+    "commit": "dc6570b5e6f81daf366a566a132240f3e9f755b9",
     "files": [
       "CONTRACT.md",
       "ACCEPTANCE.md",
@@ -4047,6 +4047,15 @@
     {
       "file": "CONTRACT.md",
       "line": 136,
+      "text": "A separate recorded-custody projection pairs the documented handover with its retained same-visit signed before-condition intake, exposing source identifiers and revisions, observation and recording times and the frozen invoice charge. Missing, conflicting or open custody endpoints remain unknown or open; the recorded evidence does not verify off-road downtime.",
+      "to": "clause",
+      "ids": [
+        "FLEET-001"
+      ]
+    },
+    {
+      "file": "CONTRACT.md",
+      "line": 136,
       "to": "clause",
       "ids": [
         "FLEET-002"
@@ -6007,83 +6016,29 @@
     {
       "file": "CONTRACT.md",
       "line": 199,
+      "text": "**AR-002 — Scheduled and automated balance-reminder sequences.**",
       "to": "clause",
       "ids": [
         "AR-002"
-      ],
-      "text": "**AR-002 — Scheduled and automated balance-reminder sequences.** Conservative interim scheduled email default (ct approval pending, mallet-balance-i881): only the fresh-confirmed current owner schedules one email for an exact invoice, current billing recipient, outstanding balance and consent evidence."
+      ]
     },
     {
       "file": "CONTRACT.md",
       "line": 199,
-      "to": "clause",
+      "text": "Approved bounded scheduled email rule (ct RL-101, 28 October 2026; broader automatic chasing remains pending under mallet-balance-i881):",
+      "to": "rulings",
       "ids": [
-        "AR-002"
-      ],
-      "text": "Scheduling snapshots the exact message, invoice version, terms approval, contact version, recipient IANA timezone, allowed hours, due instant and expiry within 31 elapsed days."
+        "RL-101"
+      ]
     },
     {
       "file": "CONTRACT.md",
       "line": 199,
+      "text": "only the fresh-confirmed current owner schedules one email for an exact invoice, current billing recipient, outstanding balance and consent evidence. Scheduling snapshots the exact message, invoice version, terms approval, contact version, recipient IANA timezone, allowed hours, due instant and expiry within 31 elapsed days. A durable claim precedes handoff; current eligibility and owner authority are rechecked, and failed or uncertain sends never retry automatically. Payment, credit, dispute, an unexpired promise, changed terms or contact, and the installation-wide automatic-reminder opt-out suppress pending email. Restore retains history without runnable authority. Messages request payment before or after the recorded due date without claiming overdue status. Full versioned sequences, complete consent provenance and advisor failure tasks remain named Gaps. Human review preserves the original failed or uncertain outcome and grants no retry or sending authority. AR-001 manual reminder authority is unchanged. **Acceptance evidence:** Run scheduled reminders for unpaid and partial invoices; only eligible outstanding balances are chased, with disputed and paid balances suppressed.",
       "to": "clause",
       "ids": [
         "AR-002"
-      ],
-      "text": "A durable claim precedes handoff; current eligibility and owner authority are rechecked, and failed or uncertain sends never retry automatically."
-    },
-    {
-      "file": "CONTRACT.md",
-      "line": 199,
-      "to": "clause",
-      "ids": [
-        "AR-002"
-      ],
-      "text": "Payment, credit, dispute, an unexpired promise, changed terms or contact, and the installation-wide automatic-reminder opt-out suppress pending email."
-    },
-    {
-      "file": "CONTRACT.md",
-      "line": 199,
-      "to": "clause",
-      "ids": [
-        "AR-002"
-      ],
-      "text": "Restore retains history without runnable authority."
-    },
-    {
-      "file": "CONTRACT.md",
-      "line": 199,
-      "to": "clause",
-      "ids": [
-        "AR-002"
-      ],
-      "text": "Messages request payment before or after the recorded due date without claiming overdue status."
-    },
-    {
-      "file": "CONTRACT.md",
-      "line": 199,
-      "to": "clause",
-      "ids": [
-        "AR-002"
-      ],
-      "text": "Full versioned sequences, complete consent provenance, failure tasks and human resolution remain named Gaps."
-    },
-    {
-      "file": "CONTRACT.md",
-      "line": 199,
-      "to": "clause",
-      "ids": [
-        "AR-002"
-      ],
-      "text": "AR-001 manual reminder authority is unchanged."
-    },
-    {
-      "file": "CONTRACT.md",
-      "line": 199,
-      "to": "clause",
-      "ids": [
-        "AR-002"
-      ],
-      "text": "**Acceptance evidence:** Run scheduled reminders for unpaid and partial invoices; only eligible outstanding balances are chased, with disputed and paid balances suppressed."
+      ]
     },
     {
       "file": "CONTRACT.md",
@@ -11579,7 +11534,7 @@
     {
       "file": "CONTRACT.md",
       "line": 509,
-      "text": "The candidate changes only the generated status documents and source lock after that tested code commit. ADV-003 is newly completed; other clauses retain their existing judgments.",
+      "text": "ADV-003 retains that completed judgment. ADV-005 now has the named native advisory-review journeys in this revision and remains PARTIAL; other clauses retain their existing judgments.",
       "to": "changelog"
     },
     {
@@ -11859,9 +11814,9 @@
     {
       "file": "CONTRACT.md",
       "line": 571,
-      "cell": "gap",
-      "text": "Native terms, credit limits, statements, per-vehicle invoice charges, labelled booked-start to recorded-completion intervals and explicit term-invoice Base mail handoff now ship. ct 25 Oct 20:55Z: FLEET-001 approved PARTIAL as adopted (owner records account, authorizer, PO and approval evidence; driver and bearer cannot authorize). Riders: a change of fleet account or authorizer voids pending approvals; the PO and evidence are required, not optional; new missing row Fleet billing and statement reconciliation (FLEET-002). Existing approved terms custody remains current-owner-only with explicit audited fleet instructions, current account and invoice-authorizer match, no automatic outbound action or restored finance authority. This extends the qualified FLEET-001 inheritance of the ct 25 Oct 17:20Z AR-001 ruling; GOV-001 inherits delegated finance authority. No independent identity verification, email delivery or verified off-road downtime is claimed. The existing receivables API and native journeys prove account and authorizer changes void pending approvals, renewed approval, required PO and evidence, and driver refusal. FLEET-001 remains PARTIAL. Fleet billing and statement reconciliation is tracked separately by FLEET-002.",
+      "text": "Native terms, credit limits, statements, per-vehicle invoice charges, labelled booked-start to recorded-completion intervals and explicit term-invoice Base mail handoff now ship. ct 25 Oct 20:55Z: FLEET-001 approved PARTIAL as adopted (owner records account, authorizer, PO and approval evidence; driver and bearer cannot authorize). Riders: a change of fleet account or authorizer voids pending approvals; the PO and evidence are required, not optional; new missing row Fleet billing and statement reconciliation (FLEET-002). Existing approved terms custody remains current-owner-only with explicit audited fleet instructions, current account and invoice-authorizer match, no automatic outbound action or restored finance authority. This extends the qualified FLEET-001 inheritance of the ct 25 Oct 17:20Z AR-001 ruling; GOV-001 inherits delegated finance authority. No independent identity verification, email delivery or verified off-road downtime is claimed. The existing receivables API and native journeys prove account and authorizer changes void pending approvals, renewed approval, required PO and evidence, and driver refusal. FLEET-001 remains PARTIAL. Fleet billing and statement reconciliation is tracked separately by FLEET-002. Recorded custody evidence is implemented separately from booked start and completion. Verified off-road downtime, independent fleet-manager identity verification, mail delivery and complete FLEET-001 qualification remain unclaimed. Existing account, retention and multi-shop holds are unchanged.",
       "to": "gap",
+      "cell": "gap",
       "ids": [
         "FLEET-001",
         "FLEET-002"
@@ -12094,19 +12049,11 @@
     {
       "file": "CONTRACT.md",
       "line": 601,
-      "cell": "gap",
-      "text": "One owner-approved scheduled email is implemented; complete versioned reminder sequences, complete customer-consent provenance, advisor failure tasks and explicit uncertainty resolution remain unbuilt or unproved. Automatic-chase policy awaits ct approval under mallet-balance-i881. Conservative default ADOPTED: exact-balance one-email owner approval, current-recipient preference, IANA allowed hours, expiry within 31 days, durable no-retry claim, current payment, credit, dispute, promise and automatic-opt-out suppression, and inert restored authority. AR-002 remains PARTIAL.",
+      "text": "RL-101's bounded one-email path now retains purpose-specific customer permission wording and version, customer time, capture channel, source reference, recipient and contact revision, captured actor and time, and separate exact owner approval. Versioned policies plan internal owner reviews; each step requires fresh permission and a separate current-balance email approval. Failed or uncertain handoffs create durable current-owner review tasks and append-only human resolutions without changing their outcome, balance, retry eligibility or sending authority. Full configured unattended repeated chasing remains unbuilt and awaits policy approval under mallet-balance-i881; RL-101 approves only the bounded current-balance email. Delegated advisor task and finance access remains GOV-001 work. The complete automated-sequence acceptance journey remains unproved. Current payment, credit, dispute, promise, preference, contact, terms and opt-out suppression, allowed hours, 31-day expiry, durable no-retry claims and inert restored authority remain. Customer erasure suppresses plans and pending email and removes local sending authority; stale archives cannot replay over a supplied later erasure journal. Existing account, retention and multi-shop holds are unchanged. AR-002 remains PARTIAL.",
       "to": "gap",
+      "cell": "gap",
       "ids": [
         "AR-002"
-      ],
-      "also": [
-        {
-          "to": "rulings",
-          "ids": [
-            "RL-101"
-          ]
-        }
       ]
     },
     {
@@ -12232,9 +12179,9 @@
     {
       "file": "CONTRACT.md",
       "line": 615,
-      "cell": "gap",
-      "text": "One explicitly approved email per declined item only. Automatic booking linkage and suppression, customer self-service opt-out, recurring cadence, finding-no-longer-applicable workflow and fresh availability revalidation immediately before outreach remain unbuilt or unproved. Current quote changes and repeat customer decisions stop the saved follow-up; owner stop records booking, opt-out or inapplicability. Broader advisor and staff scheduling rights remain a named Gap under GOV-001. The conservative email default is ct APPROVE WITH RIDERS on 26 October 2026 under mallet-outreach-i817; separate declined-work consent provenance, execution-time eligibility, suppression, failure resolution, audit, erasure and inert-restore evidence for these riders remains unverified by this policy review. AUTO-004 remains PARTIAL.",
+      "text": "One explicitly approved current-owner email per declined item only. Broader advisor and staff scheduling rights remain a named Gap under GOV-001 and the ct APPROVE WITH RIDERS ruling of 26 October 2026, mallet-outreach-i817; this run does not release that sending-authority fence. Configured recurring cadence, complete availability beyond evidenced native stock and booked repair sources, and complete target workflow qualification remain unbuilt or unproved. An invitation now binds a customer-confirmed native appointment to the exact declined item; booking stops further approval for that item, and destination-local invitation and management capabilities are not restored. Customer-scope erasure revokes these new capabilities even after a recipient correction. Existing native vehicle bookings, new recipient appointments, current quote changes, repeat customer decisions, finding inapplicability and private customer withdrawal suppress saved follow-up. Complete rider coverage at future manual, scheduled and agent doors remains MSG-004 work. Provider acceptance is handoff, never delivery; supplier and account, retention and sending-authority holds remain unchanged. AUTO-004 remains PARTIAL; no acceptance point is removed.",
       "to": "gap",
+      "cell": "gap",
       "ids": [
         "AUTO-004"
       ]
@@ -12759,9 +12706,9 @@
     {
       "file": "CONTRACT.md",
       "line": 666,
-      "cell": "gap",
-      "text": "No mileage-based declined-work agent, current evidence refresh, outreach or booking follow-through.",
+      "text": "Advisory preparation only. A shop-authorized licensed maintenance-source entitlement and matching schedule evidence were not supplied, so the schedule-qualified outreach-to-booking journey cannot be proven here. Licensed service-schedule evidence, independently verified ownership, affirmative item-specific communication consent, current availability qualification, approved outreach, reply handling and booking follow-through remain unbuilt or unproved; unknown eligibility is never inferred from a mileage or time threshold. The conservative owner or admin review default permits no send, reservation or customer-decision change and remains PARTIAL under the standing policy floor pending ct approval. AGENT-001 retains its four preparation commands; expanded agent grants, customer sending and promise-changing authority remain held. ADV-008 retains its ct, conversation, channel and standalone-intake erasure gaps.",
       "to": "gap",
+      "cell": "gap",
       "ids": [
         "ADV-005"
       ]
@@ -14041,9 +13988,9 @@
     {
       "file": "ACCEPTANCE.md",
       "line": 375,
-      "text": "Evidence: `tests/mallet.test.mjs`; `tests/support/outreach-journey.mjs`; `tests/outreach-browser.mjs`; `tests/support/outreach-journey.mjs`; `tests/outreach-browser.mjs`.",
+      "text": "Evidence: `tests/mallet.test.mjs`; `tests/support/outreach-journey.mjs`; `tests/support/declined-outreach-journey.mjs`; `tests/outreach-browser.mjs`.",
       "to": "generated",
-      "note": "The contract generator writes this status or count."
+      "note": "The regenerated acceptance entry carries the current clause status and evidence from CONTRACT.md."
     },
     {
       "file": "ACCEPTANCE.md",
@@ -14750,16 +14697,16 @@
     {
       "file": "ACCEPTANCE.md",
       "line": 591,
-      "text": "**ADV-005 — Bring declined work back at the right mileage.** Status: **missing**. [Target, acceptance and remaining work](./CONTRACT.md#push-further-with-a-service-advisor-agent).",
+      "text": "**ADV-005 — Bring declined work back at the right mileage.** Status: **partial**. [Target, acceptance and remaining work](./CONTRACT.md#push-further-with-a-service-advisor-agent).",
       "to": "generated",
-      "note": "The contract generator writes this status or count."
+      "note": "The regenerated acceptance entry carries the current clause status and evidence from CONTRACT.md."
     },
     {
       "file": "ACCEPTANCE.md",
       "line": 593,
-      "text": "Evidence: No implementation evidence yet.",
+      "text": "Evidence: `tests/support/declined-work-review-journey.mjs`; `tests/mallet.test.mjs`; `tests/declined-work-review-browser.mjs`.",
       "to": "generated",
-      "note": "The contract generator writes this status or count."
+      "note": "The regenerated acceptance entry carries the current clause status and evidence from CONTRACT.md."
     },
     {
       "file": "ACCEPTANCE.md",

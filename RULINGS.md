@@ -250,6 +250,8 @@ Generated contract indexes follow CONTRACT.md.
 
 **Main read:** `ef1213e14df9f110df7889445c1d6f7bf2c39785`, `CONTRACT.md:587`. No status change; all unfinished acceptance and proof remain owed.
 
+**Application carried from main (28 October 2026):** Human review in this revision records the exact retained handoff and its evidence without changing the provider outcome, balance, schedule, retry eligibility or sending authority. Broader automatic chasing remains outside the approved bounded rule.
+
 ### RL-102 — AUTO-005: Review and satisfaction requests
 
 **Date:** 2026-10-28  

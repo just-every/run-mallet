@@ -10,8 +10,8 @@ import {totpCode} from './support/second-factor.mjs'
 import {localHttps} from './support/local-https.mjs'
 const bundles={}
 // entry: the Worker under test; bindings: extra Worker bindings (the demo test sets RER_DEMO).
-export async function installation({entry='tests/worker.ts',bindings={},outboundService,mailService,network=false,assets=false,secureNetwork=false,localhost=false,onScratch}={}) {
- const bundle=bundles[entry]??=await workerBundle(entry)
+export async function installation({entry='tests/worker.ts',bindings={},outboundService,mailService,network=false,assets=false,secureNetwork=false,localhost=false,onScratch,clock}={}) {
+ const bundle=bundles[entry+String(clock??'')]??=await workerBundle(entry,clock)
  const directory=await mkdtemp(join(tmpdir(),'mallet-api-')),setup=randomBytes(32).toString('hex'),messages=[]
  let origin='https://127.0.0.1'
  // Everything the Worker logs, kept for tests that prove a secret never reaches a log.
@@ -35,7 +35,7 @@ export async function installation({entry='tests/worker.ts',bindings={},outbound
   if(bindings.RER_DEV_KEY){const gate=await request('/__dev/key',{method:'POST',body:{key:bindings.RER_DEV_KEY}});assert.equal(gate.status,204);owner+='; '+gate.headers.getSetCookie().map(x=>x.split(';')[0]).join('; ')}
   // A further sign-in for an existing person, as a confirmed email link would open it, for browsers that run with mail suppressed.
   const signInAs=async email=>{
-   const db=await mf.getD1Database('DB'),token=randomBytes(32).toString('base64url'),person=await db.prepare('SELECT id,version FROM oa_operators WHERE email=?').bind(email).first(),now=Date.now(),name=owner.split('; ').map(x=>x.split('=')[0]).find(x=>/operator_session/.test(x))
+   const db=await mf.getD1Database('DB'),token=randomBytes(32).toString('base64url'),person=await db.prepare('SELECT id,version FROM oa_operators WHERE email=?').bind(email).first(),now=clock?Date.parse(clock):Date.now(),name=owner.split('; ').map(x=>x.split('=')[0]).find(x=>/operator_session/.test(x))
    await db.prepare("INSERT INTO oa_sessions(id,token_hash,operator_id,operator_version,kind,created_at,expires_at) VALUES(?,?,?,?,'native',?,?)").bind(randomUUID(),createHmac('sha256',secret).update('session\0'+token).digest('hex'),person.id,person.version,now,now+3600000).run()
    return name+'='+token
   }
@@ -44,12 +44,12 @@ export async function installation({entry='tests/worker.ts',bindings={},outbound
   const stepUp=async(as=owner)=>{
    const known=secrets.get(as)
    if(!known){
-    const begun=await (await request('/api/mallet/security/totp/begin',{method:'POST',as,body:{}})).json(),confirmed=await request('/api/mallet/security/totp/confirm',{method:'POST',as,body:{code:totpCode(begun.secret)}}),value=await confirmed.json()
+    const begun=await (await request('/api/mallet/security/totp/begin',{method:'POST',as,body:{}})).json(),confirmed=await request('/api/mallet/security/totp/confirm',{method:'POST',as,body:{code:totpCode(begun.secret,clock?Date.parse(clock):undefined)}}),value=await confirmed.json()
     assert.equal(confirmed.status,200,JSON.stringify(value));secrets.set(as,begun.secret);return {secret:begun.secret,recoveryCodes:value.recoveryCodes}
    }
    // The same authenticator again: a code is single-use per thirty-second step, so clear the replay fence the clock would.
    await (await mf.getD1Database('DB')).prepare('UPDATE mallet_factors SET last_step=NULL WHERE kind=?').bind('totp').run()
-   const verified=await request('/api/mallet/security/verify/totp',{method:'POST',as,body:{code:totpCode(known)}});assert.equal(verified.status,200,await verified.text());return {secret:known}
+   const verified=await request('/api/mallet/security/verify/totp',{method:'POST',as,body:{code:totpCode(known,clock?Date.parse(clock):undefined)}});assert.equal(verified.status,200,await verified.text());return {secret:known}
   }
   // A privileged command asks for a fresh proof; the shared harness gives it unless a test is asserting the refusal.
   const api=async(path,body,{status=200,...options}={})=>{const response=await request(path,{...(body===undefined?{}:{method:'POST',body}),...options});const value=await response.json();if(response.status===403&&value.error==='step_up_required'&&status!==403&&!options.refuseStepUp){await stepUp(options.as??owner);return api(path,body,{status,...options,refuseStepUp:true})}assert.equal(response.status,status,JSON.stringify(value));return value}

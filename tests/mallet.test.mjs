@@ -480,7 +480,7 @@ test('PAY-001: authenticated ACH returns and reinstatement preserve captured pay
 })
 
 test('AUTO-001: appointment email quiet hours across DST, replacement, cancellation, failure and inert recovery',async()=>{const {appointmentOutreachJourney}=await import('./support/outreach-journey.mjs');await appointmentOutreachJourney()})
-test('AUTO-004: approved refreshed quote, observed mileage, explicit stop and repeat decline preserve decisions',async()=>{const {declinedOutreachJourney}=await import('./support/outreach-journey.mjs');await declinedOutreachJourney()})
+test('AUTO-004: approved refreshed quote, observed mileage, explicit stop and repeat decline preserve decisions',async()=>{const {declinedOutreachJourney,declinedEligibilityJourney,declinedErasureJourney,declinedCustomerJourney,declinedClockJourney,declinedBookingJourney}=await import('./support/outreach-journey.mjs');await declinedOutreachJourney();await declinedEligibilityJourney();await declinedErasureJourney();await declinedCustomerJourney();await declinedClockJourney();await declinedBookingJourney()})
 test('AUTO-001 and AUTO-004: owner schedules and stops email through native forms at 1440 and 390',async()=>{const {outreachBrowser}=await import('./outreach-browser.mjs');await outreachBrowser()})
 
 test('GOV-003: explicit provider sign-in, SCIM employment revocation and repair attribution survive recovery',enterpriseJourney)
@@ -516,3 +516,6 @@ test('ADV-008: failed or uncertain appointment email survives restart without an
 test('API-001: versioned resource pages, retained repair history and stable identities recover without credentials',()=>run(async h=>{const {shopApiReadJourney}=await import('./support/shop-api-journey.mjs');await shopApiReadJourney(h)}))
 test('API-001: scoped preparation retries are atomic across transports and preserve each existing person decision',()=>run(async h=>{const {shopApiRetryJourney}=await import('./support/shop-api-journey.mjs');await shopApiRetryJourney(h)}))
 test('API-001: missing scopes, alternate transports and expired or revoked authority fail closed',()=>run(async h=>{const {shopApiAuthorityJourney}=await import('./support/shop-api-journey.mjs');await shopApiAuthorityJourney(h)}))
+
+test('ADV-005: cited declined-work review preserves decisions, refuses stale or unsafe preparation and recovers erased history',async()=>{const {declinedReviewJourney}=await import('./support/declined-work-review-journey.mjs');await declinedReviewJourney()})
+test('ADV-005: owner reviews later mileage, replacement inspection and advisory history at 1440 and 390',async()=>{const {declinedReviewBrowser}=await import('./declined-work-review-browser.mjs');await declinedReviewBrowser()})
