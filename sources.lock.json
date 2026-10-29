@@ -2312,7 +2312,7 @@
       "executable": false
     },
     "src/mallet/restore/validate-retail.mjs": {
-      "sha256": "1a30cec3151c4c3d88416c53211effdca3fce8fbadcd10d6c8d199aaf96cdb76",
+      "sha256": "833a086fd15e7d0110bde734e760daaab0f3e9ebea620edc08788190e9d17c5b",
       "executable": false
     },
     "src/mallet/restore/validate-reviews.mjs": {
@@ -5304,7 +5304,7 @@
       "executable": false
     },
     "tests/support/retail-journey.mjs": {
-      "sha256": "4fe2fe178e50dde494f61b818fcbf4a85170d08d59c49fe8c7da397eec7017ad",
+      "sha256": "997f85bd61725f3aeddadca93185ae6c71165f8a7fd10dd1cf6e20442937606a",
       "executable": false
     },
     "tests/support/retention-journey.mjs": {
