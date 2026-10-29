@@ -52,7 +52,7 @@ consent, physical work, native estimate approval or settled payment.
 ## Scope and verification
 
 Runtime source is recorded at Base
-`114ef7a61f080da053af783c5fbe06f625d692cc`; the CLI is released rer 0.2.88.
+`2135c394939f4a737adabdc8003b0e667b31ac5a`; the CLI is released rer 0.2.91.
 The normal `rer verify` journey uses setup-token `/auth/bootstrap`, as declared
 by `rer-setup.json`, then the real first-run form and workshop commands. Its
 independent reviewer accepts a native invitation through `/auth/confirm` using

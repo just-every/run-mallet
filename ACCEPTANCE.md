@@ -1952,7 +1952,7 @@ Agent surface · target · **partial**
 5. A foreign Origin returns 403, and a header and body method mismatch returns `HeaderMismatch`.
 6. An oversized body returns 413 with no effect.
 
-**Evidence.** `agent-surface.json`; `tests/agent-door/owner.mjs`; `tests/agent-door/reviewer.mjs`; `tests/agent-door/fixtures.mjs` — SEED_VERIFY_SHARD=runtime pnpm exec rer verify on rer 0.2.88: "Agent door conformance: 565/565 points passed", normal exit 0 (29 October 2026).
+**Evidence.** `agent-surface.json`; `tests/agent-door/owner.mjs`; `tests/agent-door/reviewer.mjs`; `tests/agent-door/fixtures.mjs` — SEED_VERIFY_SHARD=runtime npx -y @runeditrun/rer@0.2.91 verify: "Agent door conformance: 587/587 points passed", normal exit 0 (29 October 2026).
 **Gap.** CORE adopted at one production door. Multi-sponsor and dual-host lifecycles remain unproved; no broader transport completion is claimed.
 
 #### BASE-AGENT-002 — The seed's jobs are tools, through the UI's own actions
@@ -1969,7 +1969,7 @@ Agent surface · target · **partial**
 5. The UI action and its tool, on the same fixture, give the same record state and the same audit event type.
 6. The seed's embedded agents appear in the audit as calls to the same tools.
 
-**Evidence.** `agent-surface.json`; `tests/agent-door/owner.mjs`; `tests/agent-door/reviewer.mjs`; `tests/agent-door/fixtures.mjs` — SEED_VERIFY_SHARD=runtime pnpm exec rer verify on rer 0.2.88: "Agent door conformance: 565/565 points passed", normal exit 0 (29 October 2026).
+**Evidence.** `agent-surface.json`; `tests/agent-door/owner.mjs`; `tests/agent-door/reviewer.mjs`; `tests/agent-door/fixtures.mjs` — SEED_VERIFY_SHARD=runtime npx -y @runeditrun/rer@0.2.91 verify: "Agent door conformance: 587/587 points passed", normal exit 0 (29 October 2026).
 **Gap.** Six native preparation/read tools only. The ct service-advisor surface, separately scoped assistant and native API client adoption remain incomplete.
 
 #### BASE-AGENT-003 — Records are resources
@@ -1986,7 +1986,7 @@ Agent surface · target · **partial**
 5. Bytes over budget return `budget_exhausted` and no partial content.
 6. Customer-sourced text carries the untrusted marker.
 
-**Evidence.** `agent-surface.json`; `tests/agent-door/owner.mjs`; `tests/agent-door/reviewer.mjs`; `tests/agent-door/fixtures.mjs` — SEED_VERIFY_SHARD=runtime pnpm exec rer verify on rer 0.2.88: "Agent door conformance: 565/565 points passed", normal exit 0 (29 October 2026).
+**Evidence.** `agent-surface.json`; `tests/agent-door/owner.mjs`; `tests/agent-door/reviewer.mjs`; `tests/agent-door/fixtures.mjs` — SEED_VERIFY_SHARD=runtime npx -y @runeditrun/rer@0.2.91 verify: "Agent door conformance: 587/587 points passed", normal exit 0 (29 October 2026).
 **Gap.** Undeclared family: resources. Public record resources and resource refresh are not offered; internal visibility adapters do not prove the planned ten-family public catalogue.
 
 #### BASE-AGENT-004 — Business identity and short-lived, audience-bound tokens
@@ -2004,7 +2004,7 @@ Agent surface · target · **partial**
 6. Revoking consent in the seed or in Business refuses the next call within 60 seconds.
 7. After unpairing, Business tokens are refused and the seed's own sign-in still works.
 
-**Evidence.** `agent-surface.json`; `tests/agent-door/owner.mjs`; `tests/agent-door/reviewer.mjs`; `tests/agent-door/fixtures.mjs` — SEED_VERIFY_SHARD=runtime pnpm exec rer verify on rer 0.2.88: "Agent door conformance: 565/565 points passed", normal exit 0 (29 October 2026).
+**Evidence.** `agent-surface.json`; `tests/agent-door/owner.mjs`; `tests/agent-door/reviewer.mjs`; `tests/agent-door/fixtures.mjs` — SEED_VERIFY_SHARD=runtime npx -y @runeditrun/rer@0.2.91 verify: "Agent door conformance: 587/587 points passed", normal exit 0 (29 October 2026).
 **Gap.** Signed owner binding and current native admission are proved in the disposable production build. Multi-sponsor lifecycle and production Business delivery remain unproved. Native authConfig declares no allow-list, so no excluded-allow-list proof is claimed.
 
 #### BASE-AGENT-005 — An agent acts as a person in a role, never more
@@ -2020,7 +2020,7 @@ Agent surface · target · **partial**
 4. Calls that widen the agent's own grant or its sponsor's role, or change the policy or Pause, return `self_escalation` and change nothing, even under a policy with every class autonomous; dropping a scope from its own grant runs.
 5. An injection fixture yields no out-of-grant call and no change of class: record text asking for a wider action, or claiming that a recipient is internal.
 
-**Evidence.** `agent-surface.json`; `tests/agent-door/owner.mjs`; `tests/agent-door/reviewer.mjs`; `tests/agent-door/fixtures.mjs` — SEED_VERIFY_SHARD=runtime pnpm exec rer verify on rer 0.2.88: "Agent door conformance: 565/565 points passed", normal exit 0 (29 October 2026).
+**Evidence.** `agent-surface.json`; `tests/agent-door/owner.mjs`; `tests/agent-door/reviewer.mjs`; `tests/agent-door/fixtures.mjs` — SEED_VERIFY_SHARD=runtime npx -y @runeditrun/rer@0.2.91 verify: "Agent door conformance: 587/587 points passed", normal exit 0 (29 October 2026).
 **Gap.** Native preparation authority stays narrow; no access/security mutation is registered. Owner-native administration and the broader ct authority/escalation surfaces remain unadopted.
 
 #### BASE-AGENT-006 — Every action declares its risk class
@@ -2037,7 +2037,7 @@ Agent surface · target · **partial**
 5. No tool in `tools / list` declares a class outside the fleet list, and `rer check` fails on one.
 6. A refused call's audit row still records its computed classes.
 
-**Evidence.** `agent-surface.json`; `tests/agent-door/owner.mjs`; `tests/agent-door/reviewer.mjs`; `tests/agent-door/fixtures.mjs` — SEED_VERIFY_SHARD=runtime pnpm exec rer verify on rer 0.2.88: "Agent door conformance: 565/565 points passed", normal exit 0 (29 October 2026).
+**Evidence.** `agent-surface.json`; `tests/agent-door/owner.mjs`; `tests/agent-door/reviewer.mjs`; `tests/agent-door/fixtures.mjs` — SEED_VERIFY_SHARD=runtime npx -y @runeditrun/rer@0.2.91 verify: "Agent door conformance: 587/587 points passed", normal exit 0 (29 October 2026).
 **Gap.** Only native standard preparation effects are adopted. The other ten classes in the ct surface remain unadopted; no spend, provider or target-only capability is claimed.
 
 #### BASE-AGENT-007 — The company's policy decides, at one chokepoint
@@ -2056,7 +2056,7 @@ Agent surface · target · **partial**
 7. A policy change applies to the next call within 60 seconds, and the audit cites the new revision.
 8. A policy document with a bad signature or another Business's id is rejected, and the door keeps the last valid revision.
 
-**Evidence.** `agent-surface.json`; `tests/agent-door/owner.mjs`; `tests/agent-door/reviewer.mjs`; `tests/agent-door/fixtures.mjs` — SEED_VERIFY_SHARD=runtime pnpm exec rer verify on rer 0.2.88: "Agent door conformance: 565/565 points passed", normal exit 0 (29 October 2026).
+**Evidence.** `agent-surface.json`; `tests/agent-door/owner.mjs`; `tests/agent-door/reviewer.mjs`; `tests/agent-door/fixtures.mjs` — SEED_VERIFY_SHARD=runtime npx -y @runeditrun/rer@0.2.91 verify: "Agent door conformance: 587/587 points passed", normal exit 0 (29 October 2026).
 **Gap.** The declared CORE policy pipeline is proved; production Business delivery, standalone policy issuance outside the seed and the broader ct repair-week effects remain unproved.
 
 #### BASE-AGENT-008 — Truthful attribution
@@ -2074,7 +2074,7 @@ Agent surface · target · **partial**
 6. Activity and exports at 1440 and 390 show `"<agent> for <person>"` for every agent act.
 7. Mail an agent sends to an outside address names `"<agent> for <person>"` as its sender.
 
-**Evidence.** `agent-surface.json`; `tests/agent-door/owner.mjs`; `tests/agent-door/reviewer.mjs`; `tests/agent-door/fixtures.mjs` — SEED_VERIFY_SHARD=runtime pnpm exec rer verify on rer 0.2.88: "Agent door conformance: 565/565 points passed", normal exit 0 (29 October 2026).
+**Evidence.** `agent-surface.json`; `tests/agent-door/owner.mjs`; `tests/agent-door/reviewer.mjs`; `tests/agent-door/fixtures.mjs` — SEED_VERIFY_SHARD=runtime npx -y @runeditrun/rer@0.2.91 verify: "Agent door conformance: 587/587 points passed", normal exit 0 (29 October 2026).
 **Gap.** Native preparation retains agent and sponsor attribution. Complete specialist-week, outbound and queued attribution remain unproved; no unsupported Undo is invented.
 
 #### BASE-AGENT-009 — Every agent action is audited with its class and decision
@@ -2092,7 +2092,7 @@ Agent surface · target · **partial**
 6. Removing the agent keeps its rows and its name.
 7. The Agents page works at 1440 and 390 with no serious or critical axe findings.
 
-**Evidence.** `agent-surface.json`; `tests/agent-door/owner.mjs`; `tests/agent-door/reviewer.mjs`; `tests/agent-door/fixtures.mjs` — SEED_VERIFY_SHARD=runtime pnpm exec rer verify on rer 0.2.88: "Agent door conformance: 565/565 points passed", normal exit 0 (29 October 2026).
+**Evidence.** `agent-surface.json`; `tests/agent-door/owner.mjs`; `tests/agent-door/reviewer.mjs`; `tests/agent-door/fixtures.mjs` — SEED_VERIFY_SHARD=runtime npx -y @runeditrun/rer@0.2.91 verify: "Agent door conformance: 587/587 points passed", normal exit 0 (29 October 2026).
 **Gap.** Declared calls and typed family refusals are audited. Full specialist native-activity coverage outside this registry remains unproved.
 
 #### BASE-AGENT-010 — Agents can follow changes
@@ -2109,7 +2109,7 @@ Agent surface · target · **partial**
 5. A failed webhook is visible and replays without duplicate effects.
 6. `approval.pending`, `approval.decided`, `review.flagged` and `policy.adopted` carry the class and decision and nothing the subscriber may not read.
 
-**Evidence.** `agent-surface.json`; `tests/agent-door/owner.mjs`; `tests/agent-door/reviewer.mjs`; `tests/agent-door/fixtures.mjs` — SEED_VERIFY_SHARD=runtime pnpm exec rer verify on rer 0.2.88: "Agent door conformance: 565/565 points passed", normal exit 0 (29 October 2026).
+**Evidence.** `agent-surface.json`; `tests/agent-door/owner.mjs`; `tests/agent-door/reviewer.mjs`; `tests/agent-door/fixtures.mjs` — SEED_VERIFY_SHARD=runtime npx -y @runeditrun/rer@0.2.91 verify: "Agent door conformance: 587/587 points passed", normal exit 0 (29 October 2026).
 **Gap.** Undeclared families: events and subscriptions. Typed refusals are proved; event replay, live notifications and subscribed handoffs are not offered.
 
 #### BASE-AGENT-011 — Limits are policy, and Pause stops everything
@@ -2127,7 +2127,7 @@ Agent surface · target · **partial**
 6. Pause and Pause all agents each stop the next call within 60 seconds, and resume restores access.
 7. An agent token cannot resume.
 
-**Evidence.** `agent-surface.json`; `tests/agent-door/owner.mjs`; `tests/agent-door/reviewer.mjs`; `tests/agent-door/fixtures.mjs` — SEED_VERIFY_SHARD=runtime pnpm exec rer verify on rer 0.2.88: "Agent door conformance: 565/565 points passed", normal exit 0 (29 October 2026).
+**Evidence.** `agent-surface.json`; `tests/agent-door/owner.mjs`; `tests/agent-door/reviewer.mjs`; `tests/agent-door/fixtures.mjs` — SEED_VERIFY_SHARD=runtime npx -y @runeditrun/rer@0.2.91 verify: "Agent door conformance: 587/587 points passed", normal exit 0 (29 October 2026).
 **Gap.** CORE Pause is adopted. Spend reservations, company-wide byte/spend budgets and timed lifecycle remain unproved; no provider cost is registered.
 
 #### BASE-AGENT-012 — Writes are idempotent and conflict-safe
@@ -2143,7 +2143,7 @@ Agent surface · target · **partial**
 4. A stale revision returns a conflict naming the current revision.
 5. A job handle used by another person's token reads as not found.
 
-**Evidence.** `agent-surface.json`; `tests/agent-door/owner.mjs`; `tests/agent-door/reviewer.mjs`; `tests/agent-door/fixtures.mjs` — SEED_VERIFY_SHARD=runtime pnpm exec rer verify on rer 0.2.88: "Agent door conformance: 565/565 points passed", normal exit 0 (29 October 2026).
+**Evidence.** `agent-surface.json`; `tests/agent-door/owner.mjs`; `tests/agent-door/reviewer.mjs`; `tests/agent-door/fixtures.mjs` — SEED_VERIFY_SHARD=runtime npx -y @runeditrun/rer@0.2.91 verify: "Agent door conformance: 587/587 points passed", normal exit 0 (29 October 2026).
 **Gap.** Native preparation replay and current-authority replay admission are proved. Queued lifecycle and uncertain-provider recovery remain outside this registry and unproved.
 
 #### BASE-AGENT-013 — Manifest, docs and the conformance journey
@@ -2159,7 +2159,7 @@ Agent surface · target · **partial**
 4. Every acceptance point runs under both policies, every decision matches the policy in force, and under all autonomous no call waits for a person or is refused by policy.
 5. A stranger agent given only the seed URL completes the specialist journey through MCP.
 
-**Evidence.** `agent-surface.json`; `tests/agent-door/owner.mjs`; `tests/agent-door/reviewer.mjs`; `tests/agent-door/fixtures.mjs` — SEED_VERIFY_SHARD=runtime pnpm exec rer verify on rer 0.2.88: "Agent door conformance: 565/565 points passed", normal exit 0 (29 October 2026).
+**Evidence.** `agent-surface.json`; `tests/agent-door/owner.mjs`; `tests/agent-door/reviewer.mjs`; `tests/agent-door/fixtures.mjs` — SEED_VERIFY_SHARD=runtime npx -y @runeditrun/rer@0.2.91 verify: "Agent door conformance: 587/587 points passed", normal exit 0 (29 October 2026).
 **Gap.** Undeclared family: prompts. The wider ct registry, public resources, full repair-week journeys and owner-native administration remain incomplete. No clause is promoted to done.
 
 ### Agent surface

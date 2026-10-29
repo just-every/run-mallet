@@ -325,6 +325,12 @@
     },
     {
       "binding": "DB",
+      "name": "core-0120_mallet_declined_withdrawal.sql",
+      "sha256": "4c40cdf736660b80911229f561cda6b6519c79dfe9c46b31eb67e2eec6ae8f5a",
+      "sql": "-- Destination-local withdrawal capability; portable message history grants no access.\nCREATE TABLE mallet_declined_withdrawal_tokens (\n token_hash TEXT PRIMARY KEY,\n consent_id TEXT NOT NULL,\n outreach_id TEXT NOT NULL\n);\n"
+    },
+    {
+      "binding": "DB",
       "name": "core-0121_mallet_business_settings.sql",
       "sha256": "a16f736a781aa3fe02a2e090c993f8c360c904f9fb6d86126acdab6e1f24e773",
       "sql": "CREATE TABLE bs_settings (\n  singleton INTEGER PRIMARY KEY CHECK(singleton=1),\n  rev INTEGER NOT NULL DEFAULT 0,\n  document TEXT,\n  applied_at TEXT,\n  stopped INTEGER NOT NULL DEFAULT 0 CHECK(stopped IN(0,1)),\n  token TEXT NOT NULL DEFAULT ''\n);\nCREATE TABLE bs_overrides (\n  field TEXT PRIMARY KEY CHECK(field IN('display_name','owner_name','brand_color','logo','timezone')),\n  value TEXT NOT NULL,\n  actor TEXT NOT NULL,\n  changed_at TEXT NOT NULL\n);\nCREATE TABLE bs_logo (\n  singleton INTEGER PRIMARY KEY CHECK(singleton=1),\n  sha256 TEXT NOT NULL,\n  type TEXT NOT NULL,\n  bytes BLOB NOT NULL\n);\nCREATE TABLE bs_team (\n  email TEXT PRIMARY KEY,\n  operator_id TEXT,\n  invite INTEGER NOT NULL,\n  state TEXT NOT NULL CHECK(state IN('invited','active','inactive','conflict'))\n);\nCREATE TABLE bs_audit (\n  id INTEGER PRIMARY KEY,\n  actor TEXT NOT NULL,\n  action TEXT NOT NULL,\n  field TEXT,\n  changed_at TEXT NOT NULL\n);\n-- An INSERT of NULL fails the transaction if a concurrent write invalidated its fence.\nCREATE TABLE bs_assert (value INTEGER NOT NULL);\n"
@@ -351,8 +357,7 @@
     "MAIL_ACCOUNT_ID": "",
     "IDENTITY_PROVIDER": "",
     "PIER_ORIGIN": "",
-    "MALLET_SUPPLIER_ORIGIN": "",
-    "OWNER_EMAIL": ""
+    "MALLET_SUPPLIER_ORIGIN": ""
   },
   "secretNames": [
     "SESSION_SECRET",
