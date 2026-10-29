@@ -41,19 +41,21 @@ export async function woocommerceJourney(){
   await h.command('woo.observe',{}, {status:404});await h.api('/api/mallet/woocommerce',undefined,{as:member.cookie,status:403})
   if(!f.live){const sku=f.product.sku;f.product.sku='synthetic-mallet-wrong';await h.command('woocommerce.map',{productId:f.product.id,itemId:f.item.id,binId:f.bin.id},{status:409});f.product.sku=sku}
   await f.map();await f.map().then(()=>assert.fail('duplicate mapping'),e=>assert.match(e.message,/409|already mapped/))
-  const before=f.calls.length;assert.equal((await f.event(f.order,'synthetic-mallet-wrong')).status,401);assert.equal(f.calls.length,before)
-  assert.equal((await f.event()).status,200)
-  if(!f.live){f.order.line_items[0].quantity=3;assert.equal((await f.event()).status,409);f.order.line_items[0].quantity=2}
-  const snapshot=await h.api('/api/mallet/woocommerce');assert.equal(snapshot.orders.length,1);assert.equal(snapshot.balances[0].onHandMilli,8000);assert.equal(snapshot.orders[0].transactionId,'synthetic-mallet-payment-61');assert.deepEqual((await h.state()).records.payment??[],[])
-  assert.equal((await f.event()).status,200);assert.equal((await h.api('/api/mallet/woocommerce')).balances[0].onHandMilli,8000)
   let received=0
   if(f.live){
    server=createServer(async(req,res)=>{const parts=[];for await(const part of req)parts.push(part);const raw=Buffer.concat(parts);if(raw.toString().startsWith('webhook_id=')){res.writeHead(200).end();return}try{const response=await h.mf.dispatchFetch(h.origin+'/api/mallet/woocommerce/events',{method:'POST',headers:req.headers,body:raw});const result=await response.text();if(response.ok)received++;else console.log('WooCommerce delivery refusal: '+response.status+' '+result);res.writeHead(response.status).end(result)}catch{res.writeHead(500).end()}})
    await new Promise(resolve=>server.listen(0,'0.0.0.0',resolve))
    const gateway=process.env.MALLET_WOO_GATEWAY??'172.18.0.1';webhook=await f.api('webhooks',{name:'synthetic-mallet-round-trip',topic:'order.updated',delivery_url:'http://'+gateway+':'+server.address().port,secret:signing,status:'active'})
+   await f.api('orders/'+f.order.id,{customer_note:'synthetic-mallet-observe-order'});assert.ok(received>0,'WooCommerce itself delivered the first signed order observation')
+   assert.equal((await f.api('products/'+f.product.id)).stock_quantity,8,'Provider stock independently matches the paid order')
   }
+  const before=f.calls.length;assert.equal((await f.event(f.order,'synthetic-mallet-wrong')).status,401);assert.equal(f.calls.length,before)
+  assert.equal((await f.event()).status,200)
+  if(!f.live){f.order.line_items[0].quantity=3;assert.equal((await f.event()).status,409);f.order.line_items[0].quantity=2}
+  const snapshot=await h.api('/api/mallet/woocommerce');assert.equal(snapshot.orders.length,1);assert.equal(snapshot.balances[0].onHandMilli,8000);assert.equal(snapshot.orders[0].transactionId,'synthetic-mallet-payment-61');assert.deepEqual((await h.state()).records.payment??[],[])
+  assert.equal((await f.event()).status,200);assert.equal((await h.api('/api/mallet/woocommerce')).balances[0].onHandMilli,8000)
   const refund=await f.refund();assert.equal(refund.amount,'25.00')
-  if(f.live)assert.ok(received>0,'Actual WooCommerce delivered its signed refund event')
+  if(f.live){assert.ok(received>=2,'Actual WooCommerce delivered signed order and refund events');assert.equal((await f.api('products/'+f.product.id)).stock_quantity,9,'Provider stock independently matches the actual line refund')}
   assert.equal((await f.event({id:f.order.id,status:'pending',line_items:[]})).status,200,'Old event payload re-reads current provider facts')
   let view=await h.api('/api/mallet/woocommerce');assert.equal(view.refunds.length,1);assert.equal(view.refunds[0].receipt.lines[0].quantity,1);assert.equal(view.balances[0].onHandMilli,8000,'Refund alone never proves returned goods')
   await h.command('woocommerce.reconcile',{orderId:f.order.id,restockRefundIds:String(refund.id)});await h.command('woocommerce.reconcile',{orderId:f.order.id,restockRefundIds:String(refund.id)})
