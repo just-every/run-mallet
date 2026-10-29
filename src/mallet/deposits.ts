@@ -1,3 +1,4 @@
+import {recordLocation} from './locations'
 import {creditAccount} from './credits'
 import {invoiceBalance,depositReferenceUsed} from './payments'
 import {bump,choice,event,expectVersion,fail,find,integer,put,rows,text,who,type Handler,type Row,type State} from './model'
@@ -21,7 +22,7 @@ export const deposits:Handler=(c,command,p)=>{
  }
  const deposit=find(c.s,'deposit',p.depositId),amountCents=integer(p.amountCents,'USD cents',1)
  if(command==='deposit.allocate'){
-  const invoice=find(c.s,'invoice',p.invoiceId),prior=rows(c.s,'payment').find(r=>r.reference===reference)
+  const invoice=find(c.s,'invoice',p.invoiceId);if(recordLocation(c.s,'deposit',deposit)!==recordLocation(c.s,'invoice',invoice))fail('LOCATION_FUNDS','Deposits cannot cross location ledgers.');const prior=rows(c.s,'payment').find(r=>r.reference===reference)
   if(prior){if(prior.depositId===deposit.id&&prior.invoiceId===invoice.id&&prior.amountCents===amountCents&&prior.evidence===evidence)return prior;fail('DEPOSIT_REPLAY','This allocation reference has different instructions.')}
   expectVersion(invoice,p.version)
   if(p.confirm!=='allocate-deposit')fail('DEPOSIT_CONFIRM','Confirm the exact deposit allocation.')

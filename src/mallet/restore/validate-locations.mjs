@@ -1,0 +1,13 @@
+import {refuse} from './validate-staged.mjs'
+// Routing references are product declarations. They carry no provider authority.
+export async function validateLocations({db,table,rejectIf}){
+ const records=table('mallet_records');if(!records)return
+ const j=(field,alias='r')=>`json_extract(${alias}.value,'$.${field}')`,type=field=>`json_type(r.value,'$.${field}')`
+ const ref=(kind,value)=>`EXISTS(SELECT 1 FROM ${records} t WHERE t.kind='${kind}' AND t.id=${value})`
+ await rejectIf('location_reference',`SELECT 1 FROM ${records} r WHERE ${j('locationId')} IS NOT NULL AND (${type('locationId')} IS NOT 'text' OR (${j('locationId')}<>'shop' AND NOT ${ref('location',j('locationId'))}))`)
+ await rejectIf('location_shape',`SELECT 1 FROM ${records} r WHERE kind='location' AND (${type('code')} IS NOT 'text' OR ${type('name')} IS NOT 'text' OR ${type('timeZone')} IS NOT 'text' OR ${type('state')} IS NOT 'text' OR length(${j('state')})<>2 OR ${type('invoicePrefix')} IS NOT 'text' OR ${type('merchantReference')} IS NOT 'text' OR ${type('ledgerReference')} IS NOT 'text' OR ${type('tax.rateMillionths')} IS NOT 'integer' OR ${j('tax.rateMillionths')}<0 OR ${j('tax.rateMillionths')}>1000000 OR ${type('tax.ratePercent')} NOT IN ('integer','real') OR round(${j('tax.ratePercent')}*10000)<>${j('tax.rateMillionths')} OR ${type('tax.partsTaxable')} NOT IN ('true','false') OR ${type('tax.laborTaxable')} NOT IN ('true','false') OR ${type('hours')} IS NOT 'array' OR json_array_length(r.value,'$.hours')<>7 OR EXISTS(SELECT 1 FROM json_each(r.value,'$.hours') h WHERE h.type<>'null' AND (h.type<>'object' OR json_type(h.value,'$.open') IS NOT 'integer' OR json_type(h.value,'$.close') IS NOT 'integer' OR json_extract(h.value,'$.open')<0 OR json_extract(h.value,'$.close')>1440 OR json_extract(h.value,'$.open')>=json_extract(h.value,'$.close'))))`)
+ let after=''
+ for(;;){const row=await db.prepare(`SELECT id,value FROM ${records} WHERE kind='location' AND id>? ORDER BY id LIMIT 1`).bind(after).first();if(!row)break;after=row.id;const value=JSON.parse(row.value);try{new Intl.DateTimeFormat('en-US',{timeZone:value.timeZone}).format(0)}catch{refuse('location_timezone')}}
+ for(const field of ['code','invoicePrefix'])await rejectIf('location_duplicate_'+field,`SELECT 1 FROM ${records} WHERE kind='location' GROUP BY json_extract(value,'$.${field}') HAVING count(*)>1`)
+ await rejectIf('location_transfer',`SELECT 1 FROM ${records} r WHERE kind='locationTransfer' AND (NOT ${ref('job',j('jobId'))} OR NOT ${ref('asset',j('assetId'))} OR NOT ${ref('location',j('to'))} OR (${j('from')}<>'shop' AND NOT ${ref('location',j('from'))}) OR ${j('from')}=${j('to')} OR ${type('evidence')} IS NOT 'text' OR ${type('reason')} IS NOT 'text')`)
+}

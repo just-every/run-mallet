@@ -1,3 +1,4 @@
+import {locationFields,recordLocation} from './locations'
 import {stockTrace} from './stock-trace'
 import {typedAssetFields,assetSnapshot} from './asset-types'
 import {capacityConflicts,resourceFields} from './calendar-capacity'
@@ -20,11 +21,11 @@ export function instant(value: unknown, label: string) {
 export function slot(p: any) {
   const startAt = instant(p.startAt, 'startAt'), endAt = instant(p.endAt, 'endAt')
   if (endAt <= startAt || Date.parse(endAt) - Date.parse(startAt) > 7 * 86400000) fail('INPUT', 'A booking must end after it starts and last no more than seven days.', null, 400)
-  return { ...resourceFields(p), bayId: text(p.bayId, 'bayId', 100), technicianId: text(p.technicianId, 'technicianId', 100), startAt, endAt }
+  return { ...(p.locationId?{locationId:p.locationId}:{}), ...resourceFields(p), bayId: text(p.bayId, 'bayId', 100), technicianId: text(p.technicianId, 'technicianId', 100), startAt, endAt }
 }
 export function conflicts(s: State, plan: ReturnType<typeof slot>, exceptJobId?: string, includeAppointments = true) {
   const appointments=includeAppointments?appointmentConflicts(s,plan):[]
-  return [...capacityConflicts(s,plan,exceptJobId,undefined,includeAppointments),...appointments.map(a=>({href:'/app/bookings',jobId:a.id,title:'Customer appointment',bayId:a.bayId,technicianId:a.technicianId,startAt:a.startAt,endAt:a.endAt,resources:['appointment']})),...rows(s, 'job').filter(j => j.id !== exceptJobId && !['completed', 'invoiced', 'canceled', 'lost'].includes(j.status) && plan.startAt < j.endAt && plan.endAt > j.startAt && (plan.bayId === j.bayId || plan.technicianId === j.technicianId)).map(j => ({ jobId: j.id, title: j.title, bayId: j.bayId, technicianId: j.technicianId, startAt: j.startAt, endAt: j.endAt, resources: [j.bayId === plan.bayId ? 'bay' : '', j.technicianId === plan.technicianId ? 'technician' : ''].filter(Boolean) }))]
+  return [...capacityConflicts(s,plan,exceptJobId,undefined,includeAppointments),...appointments.map(a=>({href:'/app/bookings',jobId:a.id,title:'Customer appointment',bayId:a.bayId,technicianId:a.technicianId,startAt:a.startAt,endAt:a.endAt,resources:['appointment']})),...rows(s, 'job').filter(j => j.id !== exceptJobId && !['completed', 'invoiced', 'canceled', 'lost'].includes(j.status) && plan.startAt < j.endAt && plan.endAt > j.startAt && ((plan.locationId??'shop')===recordLocation(s,'job',j)&&plan.bayId === j.bayId || plan.technicianId === j.technicianId)).map(j => ({ jobId: j.id, title: j.title, bayId: j.bayId, technicianId: j.technicianId, startAt: j.startAt, endAt: j.endAt, resources: [j.bayId === plan.bayId ? 'bay' : '', j.technicianId === plan.technicianId ? 'technician' : ''].filter(Boolean) }))]
 }
 function requireFree(c: Context, plan: ReturnType<typeof slot>, jobId?: string) {
   const found = conflicts(c.s, plan, jobId)
@@ -47,7 +48,7 @@ export const workshop: Handler = (c, command, p) => {
     case 'asset.create': {
       const fields = assetFields(p)
       if (rows(c.s, 'asset').some(a => a.identifier.toLowerCase() === fields.identifier.toLowerCase())) fail('DUPLICATE', 'An asset with that identifier is already on file.')
-      const row = put(c.s, 'asset', { ...fields, visits: [], createdAt: c.now })
+      const row = put(c.s, 'asset', { ...fields, ...locationFields(c.s,p.locationId), visits: [], createdAt: c.now })
       event(c, command, null, row.id, fields)
       return row
     }
@@ -63,16 +64,19 @@ export const workshop: Handler = (c, command, p) => {
     case 'job.book': {
       const asset = find(c.s, 'asset', p.assetId)
       expectVersion(asset, p.version)
-      const plan = slot(p)
+      const destination=p.locationId??recordLocation(c.s,'asset',asset)
+      if(destination!==recordLocation(c.s,'asset',asset))fail('LOCATION_SHARE','Cross-location customer sharing has not been authorized.',null,403)
+      const location=locationFields(c.s,destination)
+      const plan = slot({...p,locationId:destination})
       requireFree(c, plan)
-      const row = put(c.s, 'job', { assetId: asset.id, asset: assetSnapshot(asset), title: text(p.title, 'title'), notes: text(p.notes, 'notes', 4000, true), ...plan, status: 'booked', estimateId: null, invoiceId: null, actuals: [], createdAt: c.now, bookedBy: who(c) })
+      const row = put(c.s, 'job', { ...location, assetId: asset.id, asset: assetSnapshot(asset), title: text(p.title, 'title'), notes: text(p.notes, 'notes', 4000, true), ...plan, status: 'booked', estimateId: null, invoiceId: null, actuals: [], createdAt: c.now, bookedBy: who(c) })
       if(asset.customerAccountId)put(c.s,'customerBilling',{jobId:row.id,snapshot:customerBillingSnapshot(c.s,asset),by:who(c),at:c.now})
       bump(c.s, 'asset', asset, { visits: [...asset.visits, row.id] })
       event(c, command, row.id, row.id, plan)
       return row
     }
     case 'dispatch.prepare': {
-      const job = openJob(c, p), plan = slot({...job,...p})
+      const job = openJob(c, p), plan = slot({...job,...p,locationId:recordLocation(c.s,'job',job)})
       const row = put(c.s, 'proposal', { jobId: job.id, jobVersion: job.version, plan, reason: text(p.reason, 'reason', 2000), status: 'pending', preparedBy: who(c), preparedAt: c.now, conflictsWhenPrepared: conflicts(c.s, plan, job.id) })
       event(c, command, job.id, row.id, { plan, conflicts: row.conflictsWhenPrepared })
       return row
