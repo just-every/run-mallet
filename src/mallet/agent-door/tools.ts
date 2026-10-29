@@ -33,7 +33,7 @@ async function target(def: typeof definitions[number], args: Record<string, unkn
   if (!row) throw new ToolRefusal('not_found')
   const family = webhookFamily(def.command)
   if (family && state.records.webhookSubscription?.some(subscription => subscription.active && subscription.families.includes(family))) {
-    throw new ToolRefusal('queued_effect_not_adopted', 'This preparation would queue a native webhook. Its authenticated consent cannot yet be carried through the pinned shared door.')
+    throw new ToolRefusal('queued_effect_not_adopted', 'This preparation would queue a native webhook. Queued webhook execution has not been adopted into the shared Mallet agent door.')
   }
   return row
 }
@@ -46,6 +46,7 @@ const preparations: ToolDefinition[] = definitions.map(def => ({
     // Prices are draft proposals; preparing never moves money or shares a record.
     return [{ class: 'standard', facts: { measure: Array.isArray(args.lines) ? args.lines.length : 1 } }]
   },
+  async target(args, ctx) { const row = await target(def, args, ctx); return { kind: def.kind, id: row.id } },
   async revision(args, ctx) { return (await target(def, args, ctx)).version },
   async summary(args, ctx) {
     const row = await target(def, args, ctx)

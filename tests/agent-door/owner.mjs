@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 
 /** Native setup-token bootstrap and real workshop fixtures, through production requests only. */
-export default async function initialize({ request, origin, token, displayName }) {
+export default async function initialize({ request, origin, token, displayName, reviewers }) {
  const bootstrap = await request(origin + '/auth/bootstrap', { method: 'POST', redirect: 'manual',
   headers: { Origin: origin, 'Content-Type': 'application/json' }, body: JSON.stringify({ token, displayName, returnTo: '/setup' }) })
  assert.equal(bootstrap.status, 303, 'native setup-token bootstrap')
@@ -21,6 +21,7 @@ export default async function initialize({ request, origin, token, displayName }
  console.log('Native first-run setup: HTTP 303')
  await setup.body?.cancel()
  const command = (command, input) => call('/api/mallet/commands', { command, input })
+ const reviewer = await reviewers.initialize('quality', { cookie })
  const technicianId = (await call('/auth/session')).operator.id
  for (let i = 0; i < 4; i++) {
   const asset = await command('asset.create', { customerName: `Cedar Workshop ${i}`, customerEmail: `cedar-${i}@example.invalid`, label: 'Shop bicycle', identifier: `AGENT-${i}` })
@@ -42,12 +43,11 @@ export default async function initialize({ request, origin, token, displayName }
   const samePerson = await request(origin + '/api/mallet/commands', { method: 'POST', headers: { Origin: origin, Cookie: cookie, 'Content-Type': 'application/json' }, body: JSON.stringify({ command: 'quality.signQuality', input: { jobId: job.id, version: job.version, qualityVersion: quality.version, qualification: 'Synthetic qualified reviewer', note: 'Must refuse the same technician', safetyDecision: 'safe' } }) })
   assert.equal(samePerson.status, 403)
   assert.equal((await samePerson.json()).error, 'INDEPENDENT_QUALITY')
-  const invitation = await request(origin + '/auth/invite', { method: 'POST', headers: { Origin: origin, Cookie: cookie, 'Content-Type': 'application/json' }, body: JSON.stringify({ email: 'synthetic-quality@example.invalid', displayName: 'Synthetic Independent Reviewer', role: 'admin' }) })
-  assert.equal(invitation.status, 202)
-  await invitation.body?.cancel()
-  const operators = await call('/auth/operators')
-  assert.equal(operators.find(person => person.email === 'synthetic-quality@example.invalid')?.status, 'invited')
-  console.log('Native quality witness: same-person signoff refused 403 INDEPENDENT_QUALITY; real independent admin invitation accepted 202 and remains invited. Pinned owner initializer has no mailbox/confirmation hook to consume that native invitation.')
+  const independent = await request(origin + '/api/mallet/commands', { method: 'POST', headers: { Origin: origin, Cookie: reviewer.cookie, 'Content-Type': 'application/json' },
+   body: JSON.stringify({ command: 'quality.signQuality', input: { jobId: job.id, version: job.version, qualityVersion: quality.version, qualification: 'Synthetic independent qualified reviewer', note: 'Independent physical-work fixture review', safetyDecision: 'safe' } }) })
+  assert.equal(independent.status, 200, 'independent native quality clearance')
+  await independent.body?.cancel()
+  console.log('Native quality witness: same-person 403 INDEPENDENT_QUALITY; independently invited and confirmed reviewer cleared the repair through the production command.')
   await command('job.complete', { jobId: job.id, version: job.version })
  }
  console.log('Native owner lifecycle: setup-token /auth/bootstrap; first-run tax and four real workshop fixtures created through public doors.')

@@ -40,17 +40,6 @@
       ]
     },
     {
-      "name": "mallet.events.list",
-      "scope": "events:read",
-      "readOnly": true,
-      "classes": [
-        "standard"
-      ],
-      "clauses": [
-        "BASE-AGENT-010"
-      ]
-    },
-    {
       "name": "mallet.invoices.prepare",
       "scope": "invoice:prepare",
       "readOnly": false,
@@ -126,13 +115,7 @@
       "reason": "connector"
     }
   ],
-  "resources": [
-    "mallet://assets/{id}",
-    "mallet://repairs/{id}",
-    "mallet://jobs/{id}",
-    "mallet://estimates/{id}",
-    "mallet://invoices/{id}"
-  ],
+  "resources": [],
   "witness": {
     "tool": "mallet.repairs.list",
     "args": {}
@@ -144,6 +127,22 @@
   "verification": {
     "owner": {
       "initializer": "tests/agent-door/owner.mjs"
+    },
+    "reviewers": [
+      {
+        "label": "quality",
+        "email": "synthetic-quality@example.invalid",
+        "initializer": "tests/agent-door/reviewer.mjs"
+      }
+    ],
+    "fixtures": {
+      "module": "tests/agent-door/fixtures.mjs"
+    },
+    "replayAdmission": {
+      "prepare": [
+        "list",
+        "prepare"
+      ]
     }
   },
   "journey": [
@@ -313,18 +312,13 @@
           }
         }
       ]
-    },
-    {
-      "id": "events",
-      "tool": "mallet.events.list",
-      "args": {
-        "limit": 200
-      },
-      "expect": [
-        {
-          "class": "standard"
-        }
-      ]
     }
+  ],
+  "capabilities": [
+    "tools",
+    "policy",
+    "pause",
+    "audit",
+    "idempotency"
   ]
 }

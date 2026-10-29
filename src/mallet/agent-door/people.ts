@@ -43,7 +43,7 @@ export function nativePeople(env: Bindings) {
     businessRole: (person: Person) => policyRoles.get(person.id) ?? null }
 }
 
-const preparationScopes = ['estimate:prepare', 'estimate:revise', 'dispatch:prepare', 'invoice:prepare', 'workshop:read', 'events:read']
+const preparationScopes = ['estimate:prepare', 'estimate:revise', 'dispatch:prepare', 'invoice:prepare', 'workshop:read']
 
 /** Only the original preparation keys enter this adapter; SDK and assistant keys retain their own scopes. */
 export async function localPreparation(request: Request, env: Bindings) {
@@ -60,8 +60,8 @@ export async function nativeAuthority(ctx: Pick<ToolContext, 'db' | 'person' | '
   const person = await ctx.db.prepare("SELECT id,version,role FROM oa_operators WHERE id=? AND status='active'")
     .bind(ctx.person.id).first<{ id: string; version: number; role: string }>()
   if (!person || person.role !== ctx.person.role) throw new ToolRefusal('sponsor_unavailable')
-  const base = { sql: "EXISTS(SELECT 1 FROM oa_operators WHERE id=? AND version=? AND role=? AND status='active') AND NOT EXISTS(SELECT 1 FROM mallet_enterprise_users WHERE id=?)",
-    params: [person.id, person.version, person.role, person.id] as unknown[] }
+  const base = { sql: "EXISTS(SELECT 1 FROM oa_operators WHERE id=? AND version=? AND role=? AND status='active') AND NOT EXISTS(SELECT 1 FROM mallet_enterprise_users WHERE id=?) AND NOT EXISTS(SELECT 1 FROM mallet_staff_grants WHERE operator_id=?)",
+    params: [person.id, person.version, person.role, person.id, person.id] as unknown[] }
   if (!ctx.agent.id.startsWith('mallet-key:')) return base
   return { sql: `(${base.sql}) AND EXISTS(SELECT 1 FROM mallet_agent_keys k JOIN oa_operators o ON o.id=k.created_by
     WHERE k.id=? AND k.created_by=? AND k.revoked_at IS NULL AND k.expires_at>(julianday('now')-2440587.5)*86400000
@@ -71,5 +71,5 @@ export async function nativeAuthority(ctx: Pick<ToolContext, 'db' | 'person' | '
 
 export function preparationActor(ctx: ToolContext): Actor {
   if (!['owner', 'admin'].includes(ctx.person.role)) throw new ToolRefusal('manager_required')
-  return { id: ctx.agent.id, name: ctx.actor.label, role: 'agent', attribution: ctx.actor, policyApprovers: ctx.approvers }
+  return { id: ctx.agent.id, name: ctx.actor.label, role: 'agent', attribution: ctx.actor, policyApprovers: ctx.approvers.map(person => ({ ...person })) }
 }

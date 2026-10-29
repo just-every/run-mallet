@@ -1,96 +1,76 @@
-# Company agents in Mallet
+Mallet's shared agent door is `/mcp`, using MCP 2026-07-28 or 2025-11-25.
+`/agents` shows company policy, Pause, activity, approvals and reviews.
+The declared capabilities are tools, policy, pause, audit and idempotency.
+Events, public resources, prompts and subscriptions are undeclared and return
+`capability_not_declared`; they are not advertised as supported work.
+Native authority, current sponsor admission, consent and exact repair versions
+apply to every supported call, including retries.
 
-Mallet's shared agent door is `/mcp`. It provides discovery, tools, repair
-resources and subscriptions. `/agents` shows the signed company policy,
-Pause, preparation activity, approvals and reviews. A company policy chooses
-whether a supported call runs, waits for approval, enters review or is refused.
-Native authorization and exact repair versions still apply.
+Every supported tool has the server-computed class `standard`.
 
-The current shared registry covers preparation, rather than completion of a
-repair week:
+| Tool and scope | Native action and clauses |
+| --- | --- |
+| `mallet.estimates.prepare` · `estimate:prepare` | `estimate.prepare` — AGENT-001, ESTIMATE-001 |
+| `mallet.estimates.revise` · `estimate:revise` | `estimate.revise` — AGENT-001, ESTIMATE-001 |
+| `mallet.dispatch.prepare` · `dispatch:prepare` | `dispatch.prepare` — AGENT-001, WORKSHOP-001 |
+| `mallet.invoices.prepare` · `invoice:prepare` | `invoice.prepare` — AGENT-001, INVOICE-001 |
+| `mallet.repairs.list` · `workshop:read` | Current native preparation view — AGENT-001, WORKSHOP-001 |
+| `mallet.repairs.read` · `workshop:read` | Indexed native repair graph — AGENT-001, WORKSHOP-001 |
 
-| Tool | Scope | Class | Native action | Clauses |
-| --- | --- | --- | --- | --- |
-| `mallet.estimates.prepare` | `estimate:prepare` | standard | `estimate.prepare` | AGENT-001, ESTIMATE-001 |
-| `mallet.estimates.revise` | `estimate:revise` | standard | `estimate.revise` | AGENT-001, ESTIMATE-001 |
-| `mallet.dispatch.prepare` | `dispatch:prepare` | standard | `dispatch.prepare` | AGENT-001, WORKSHOP-001 |
-| `mallet.invoices.prepare` | `invoice:prepare` | standard | `invoice.prepare` | AGENT-001, INVOICE-001 |
-| `mallet.repairs.list` | `workshop:read` | standard | Current native preparation view | AGENT-001, WORKSHOP-001 |
-| `mallet.repairs.read` | `workshop:read` | standard | Indexed native repair graph | AGENT-001, WORKSHOP-001 |
-| `mallet.events.list` | `events:read` | standard | Shared door events | BASE-AGENT-010 |
+Draft prices create no payment, published price or commitment. Server-computed
+class facts count proposed lines or the one dispatch/invoice. Mutations retain
+native versions, resolved native targets and server summaries. Caller classes,
+approval claims and imported instructions never grant authority. No provider
+cost, spend authority or unsupported reversal is registered.
 
-Draft prices create no payment, published price or commitment. Class facts count
-the proposed lines, or the one proposed dispatch/invoice. Mutations retain native
-versions and server summaries. An agent-supplied class, approval claim or imported
-instruction cannot change authority. There is no registered provider cost or spend.
-No reversal is offered for a draft without an existing native reversal.
+Internal resource visibility adapters cover assets, repairs, jobs, estimates
+and invoices; the public resource capability is undeclared. Preparation reads
+exclude credentials, private diagnostic notes and original media. Imported and
+customer text is untrusted data. Members retain assigned-repair restrictions.
+Service-specific staff grants and enterprise-provider identities are refused
+until their additional native admission is supported.
 
-Resources are `mallet://assets/{id}`, `mallet://repairs/{id}`,
-`mallet://jobs/{id}`, `mallet://estimates/{id}` and `mallet://invoices/{id}`.
-They use the native preparation projection. Missing and restricted records have
-the same response. Imported and customer text remains untrusted; credentials,
-private diagnostic notes and original media are outside that projection.
-Members retain their native assigned-repair boundary. Service-specific staff
-grants and enterprise-provider identities are refused until their additional
-native admission can be represented; the door cannot substitute for that proof.
+Signed Business settings bind `owner_id` to the original native setup owner
+and teammate IDs to managed native operator IDs. Owner maps to owner, Business
+admin to native admin and policy editor, and member to native member with no
+policy role. Local promotion grants no Business edit role. Email never chooses
+or moves the binding. Unknown, inactive and inadmissible sponsors are refused;
+existing approvals and attribution retain native IDs after email changes.
 
-Signed Business settings bind the Business owner ID to the original native setup
-owner and teammate IDs to managed native operator IDs. Owner remains owner,
-Business admin maps to native admin and policy editor, and member maps to native
-member without a policy role. A local promotion does not make a Business editor.
-Email does not choose or move the binding. Unknown and inactive sponsors fail
-admission. Approval and attribution retain native IDs after address changes.
+Original preparation keys retain only their four mutation scopes and workshop
+reads. Their REST preparation and state URLs enter the same policy pipeline.
+The owner must answer standalone policy or adopt signed company policy first.
+SDK and separately scoped assistant credentials keep their existing purposes.
+A failed recognizable Business token cannot fall through to a local key.
 
-Original preparation keys can also use the shared door with only their original
-four mutation scopes and preparation reads. Their existing REST preparation and
-state URLs are compatibility adapters into this same policy pipeline. They now
-require the owner to answer the standalone policy, or the company to adopt its
-signed policy. Requests with an `Idempotency-Key` retain one result; reuse with
-changed arguments conflicts. `/mcp` mutations require `idempotency_key` and can
-supply `expected_revision`. SDK and separately scoped assistant credentials
-retain their own native purposes; they are not converted into Business tokens.
+MCP mutations require `idempotency_key`; matching replay retains one result,
+changed arguments conflict, and `expected_revision` can fence a native revision.
+Preparation attribution is `<agent> for <person>`, retaining both identities
+and named policy approvers. Approval of a preparation never asserts customer
+consent, physical work, native estimate approval or settled payment.
 
-An agent prepares as `<agent> for <person>`. Native drafts and timeline events
-retain both IDs and any named policy approvers. A policy approval of preparation
-is distinct from approving an estimate, authorizing customer work or exporting
-an invoice. Those native decisions continue to require their existing evidence.
+## Scope and verification
 
-The import door, installation and backups, physical printer/scanner work, device
-capture, and licensed source connectors retain their own doors. The current
-registry does not claim payments, ordering, communications, access changes,
-erasure, physical safety clearance or the broader planned service-advisor jobs.
+Runtime source is recorded at Base
+`114ef7a61f080da053af783c5fbe06f625d692cc`; the CLI is released rer 0.2.88.
+The normal `rer verify` journey uses setup-token `/auth/bootstrap`, as declared
+by `rer-setup.json`, then the real first-run form and workshop commands. Its
+independent reviewer accepts a native invitation through `/auth/confirm` using
+the verifier's declared, recipient-scoped mail capture. Same-person quality
+clearance, invalid confirmation and reused proof remain refused. No fixture SQL,
+substituted auth adapter or production verification route is used.
 
-## Queued-work adoption limit
+The preparation tools reach no outbound provider. No network module is declared.
+When an active webhook would turn a preparation into queued egress, the call
+refuses `queued_effect_not_adopted`, with the same fence in the native write
+transaction. Base now provides authenticated continuation hooks; integrating
+Mallet's queued work remains a seed adoption gap, not a missing Base API.
 
-Runtime source is copied from Base commit
-`d555e789cffb744a9f83d76ebe42a2e3bdd7a055`. In that API `ToolContext` does not
-carry the authenticated consent, and embedded `invoke` accepts only a person and
-agent. Mallet cannot safely carry a queued action's original consent into its
-native outbox and recheck that consent at delivery using this public API.
-A caller-provided consent field would not establish the binding. Queued agent
-execution remains unadopted until Base exposes an authenticated continuation
-context and a policy-checked execution path retaining that consent.
-
-The production build's declared journey uses the existing setup-token
-`/auth/bootstrap`, completes the normal first-run form and creates fixtures
-through native workshop commands. It does not write fixture SQL or call the
-signed owner-claim endpoint with a raw setup token. Preparation tools reach no
-outbound provider, so this declaration has no network-edge module. The existing
-native providers and scoped assistant sends are outside this adopted subset.
-
-Dispatch and invoice preparation refuse `queued_effect_not_adopted` when an
-active native webhook subscription would queue their event. The same condition
-is fenced in the native write transaction. Those preparations remain available
-without that queued effect; a caller cannot label an externally delivered event
-as an internal draft. This limit applies until the authenticated continuation
-binding described above is available.
-
-The complete declared journey is currently blocked at independent quality
-clearance for its invoice fixture. The native technician's own quality decision
-is correctly refused; a real independent admin invitation remains `invited`.
-The pinned initializer receives only same-origin requests, while the isolated
-mail edge exposes neither captured invitation delivery to that initializer nor
-an authenticated mailbox continuation. The invitation therefore cannot be
-consumed through the supplied lifecycle hooks. The normal verification command
-fails rather than inventing a reviewer session, inserting an identity or
-weakening the two-person safety requirement.
+The import, installation, device, screen and licensed connector doors retain
+their native purposes. Payments, ordering, communications, access changes,
+erasure, physical safety clearance and the wider planned advisor jobs are
+outside this adopted registry. Native API clients and the separately scoped
+assistant do not acquire company-agent authority through this adoption.
+Multi-sponsor, public record refresh, timed and queued execution, second-host
+operation and full owner administration remain unproved. The broader ct
+SURFACE-001–005 target and its complete repair-week journey remain open.

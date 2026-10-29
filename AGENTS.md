@@ -2,9 +2,9 @@
 
 ## Contract-derived documents
 
-Lander-Regenerate: `node scripts/contract-docs.mjs write ADV-003`
+Lander-Regenerate: node scripts/contract-docs.mjs write ADV-003
 
-Lander-Regenerate-Check: `node scripts/contract-docs.mjs check ADV-003`
+Lander-Regenerate-Check: node scripts/contract-docs.mjs check ADV-003
 
 The command accepts additional clause IDs when updating other legacy paragraphs.
 CONTRACT.md remains the source; generated documents do not change acceptance points.

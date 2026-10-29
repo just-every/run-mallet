@@ -570,6 +570,60 @@ Evidence: `tests/mallet.test.mjs`; `tests/support/capacity-import-journey.mjs`; 
 
 Evidence: `LICENSE`; `rer-project.json`; `tests/clone-journey.mjs`; `tests/open-source-journey.mjs`; `tests/browser-journey.mjs`.
 
+## Agent surface (Base-delivered)
+
+**BASE-AGENT-001 — One MCP door per seed.** Status: **partial**. [Target, acceptance and remaining work](./CONTRACT.md#agent-surface-base-delivered).
+
+Evidence: `agent-surface.json`; `tests/agent-door/owner.mjs`; `tests/agent-door/reviewer.mjs`; `tests/agent-door/fixtures.mjs`.
+
+**BASE-AGENT-002 — The seed's jobs are tools, through the UI's own actions.** Status: **partial**. [Target, acceptance and remaining work](./CONTRACT.md#agent-surface-base-delivered).
+
+Evidence: `agent-surface.json`; `tests/agent-door/owner.mjs`; `tests/agent-door/reviewer.mjs`; `tests/agent-door/fixtures.mjs`.
+
+**BASE-AGENT-003 — Records are resources.** Status: **partial**. [Target, acceptance and remaining work](./CONTRACT.md#agent-surface-base-delivered).
+
+Evidence: `agent-surface.json`; `tests/agent-door/owner.mjs`; `tests/agent-door/reviewer.mjs`; `tests/agent-door/fixtures.mjs`.
+
+**BASE-AGENT-004 — Business identity and short-lived, audience-bound tokens.** Status: **partial**. [Target, acceptance and remaining work](./CONTRACT.md#agent-surface-base-delivered).
+
+Evidence: `agent-surface.json`; `tests/agent-door/owner.mjs`; `tests/agent-door/reviewer.mjs`; `tests/agent-door/fixtures.mjs`.
+
+**BASE-AGENT-005 — An agent acts as a person in a role, never more.** Status: **partial**. [Target, acceptance and remaining work](./CONTRACT.md#agent-surface-base-delivered).
+
+Evidence: `agent-surface.json`; `tests/agent-door/owner.mjs`; `tests/agent-door/reviewer.mjs`; `tests/agent-door/fixtures.mjs`.
+
+**BASE-AGENT-006 — Every action declares its risk class.** Status: **partial**. [Target, acceptance and remaining work](./CONTRACT.md#agent-surface-base-delivered).
+
+Evidence: `agent-surface.json`; `tests/agent-door/owner.mjs`; `tests/agent-door/reviewer.mjs`; `tests/agent-door/fixtures.mjs`.
+
+**BASE-AGENT-007 — The company's policy decides, at one chokepoint.** Status: **partial**. [Target, acceptance and remaining work](./CONTRACT.md#agent-surface-base-delivered).
+
+Evidence: `agent-surface.json`; `tests/agent-door/owner.mjs`; `tests/agent-door/reviewer.mjs`; `tests/agent-door/fixtures.mjs`.
+
+**BASE-AGENT-008 — Truthful attribution.** Status: **partial**. [Target, acceptance and remaining work](./CONTRACT.md#agent-surface-base-delivered).
+
+Evidence: `agent-surface.json`; `tests/agent-door/owner.mjs`; `tests/agent-door/reviewer.mjs`; `tests/agent-door/fixtures.mjs`.
+
+**BASE-AGENT-009 — Every agent action is audited with its class and decision.** Status: **partial**. [Target, acceptance and remaining work](./CONTRACT.md#agent-surface-base-delivered).
+
+Evidence: `agent-surface.json`; `tests/agent-door/owner.mjs`; `tests/agent-door/reviewer.mjs`; `tests/agent-door/fixtures.mjs`.
+
+**BASE-AGENT-010 — Agents can follow changes.** Status: **partial**. [Target, acceptance and remaining work](./CONTRACT.md#agent-surface-base-delivered).
+
+Evidence: `agent-surface.json`; `tests/agent-door/owner.mjs`; `tests/agent-door/reviewer.mjs`; `tests/agent-door/fixtures.mjs`.
+
+**BASE-AGENT-011 — Limits are policy, and Pause stops everything.** Status: **partial**. [Target, acceptance and remaining work](./CONTRACT.md#agent-surface-base-delivered).
+
+Evidence: `agent-surface.json`; `tests/agent-door/owner.mjs`; `tests/agent-door/reviewer.mjs`; `tests/agent-door/fixtures.mjs`.
+
+**BASE-AGENT-012 — Writes are idempotent and conflict-safe.** Status: **partial**. [Target, acceptance and remaining work](./CONTRACT.md#agent-surface-base-delivered).
+
+Evidence: `agent-surface.json`; `tests/agent-door/owner.mjs`; `tests/agent-door/reviewer.mjs`; `tests/agent-door/fixtures.mjs`.
+
+**BASE-AGENT-013 — Manifest, docs and the conformance journey.** Status: **partial**. [Target, acceptance and remaining work](./CONTRACT.md#agent-surface-base-delivered).
+
+Evidence: `agent-surface.json`; `tests/agent-door/owner.mjs`; `tests/agent-door/reviewer.mjs`; `tests/agent-door/fixtures.mjs`.
+
 ## Push further with a service-advisor agent
 
 **ADV-001 — Inspection evidence to priced estimate.** Status: **partial**. [Target, acceptance and remaining work](./CONTRACT.md#push-further-with-a-service-advisor-agent).
