@@ -1,3 +1,4 @@
+import {wooView} from '../woocommerce/service'
 // The connector pages: /connectors publishes every declaration to anyone; /app/connectors and the API show the owner and advisors
 // which credentials are in use (fingerprint only) and let the owner save, rotate or revoke them through the command door.
 import type {Bindings} from '../../auth.server'
@@ -22,7 +23,7 @@ export async function connectorsResponse(request:Request,original:Bindings):Prom
   if(path==='/app/connectors'&&auth.actor.role==='owner'&&!auth.gate?.enrolled)return new Response(null,{status:303,headers:{...headers,location:'/app/security?returnTo=%2Fapp%2Fconnectors'}})
   const status=await connectorStatus(env)
   if(path.startsWith('/api/'))return Response.json({declarations:CONNECTORS,secrets:Object.values(status).map((s:any)=>({connector:s.connector,name:s.name,status:s.status,version:s.version,fingerprint:s.fingerprint,changedAt:s.changedAt}))},{headers})
-  return page('Connectors',connectorsPage(auth.actor,status),auth.actor,200,{section:'data'})
+  return page('Connectors',connectorsPage(auth.actor,status,auth.actor.role==='owner'?await wooView(env):undefined),auth.actor,200,{section:'data'})
  }catch(error:any){
   if(!(error instanceof HttpError))throw error
   if(path.startsWith('/api/'))return Response.json({error:error.code,message:error.message},{status:error.status,headers})

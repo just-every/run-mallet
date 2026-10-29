@@ -1,3 +1,4 @@
+import {validateWooCommerce} from './validate-woocommerce.mjs'
 import {validateStripe} from './validate-stripe.mjs'
 import {validateReceivables} from './validate-receivables.mjs'
 import { createHash } from 'node:crypto'
@@ -19,6 +20,7 @@ export async function validateFinance({db,table}){
  }
  const revision=(estimate,n)=>{const rev=estimate.revisions.find(r=>r.n===n);insist(rev,'revision');return rev}
  const context={db,records,get,each,revision}
+ await validateWooCommerce(context)
  await validateReceivables(context)
  await validateStripe(context)
  const capacity=async(estimate,rev,line)=>{

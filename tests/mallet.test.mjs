@@ -948,3 +948,5 @@ test('ADV-005: cited declined-work review preserves decisions, refuses stale or 
 test('ADV-005: owner reviews later mileage, replacement inspection and advisory history at 1440 and 390',async()=>{const {declinedReviewBrowser}=await import('./declined-work-review-browser.mjs');await declinedReviewBrowser()})
 test('RETURN-002: reviewed CA and TX storage versions, notice clocks, disposal refusal, payment release and private recovery',()=>run(async h=>{const {storageJourney}=await import('./support/storage-journey.mjs');await storageJourney(h)}))
 test('RETURN-002: native storage rules, notices, legal refusal and released ledger at 1440 and 390',async()=>{const {storageBrowser}=await import('./storage-browser.mjs');await storageBrowser()})
+test('STORE-002: authenticated WooCommerce orders, signed replay, line refunds and inert recovery',async()=>{const {woocommerceJourney}=await import('./support/woocommerce-journey.mjs');await woocommerceJourney()})
+test('STORE-002: owner maps products and reconciles returned goods at 1440 and 390',async()=>{const {woocommerceBrowser}=await import('./woocommerce-browser.mjs');await woocommerceBrowser()})
