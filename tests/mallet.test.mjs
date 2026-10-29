@@ -519,3 +519,6 @@ test('API-001: missing scopes, alternate transports and expired or revoked autho
 
 test('ADV-005: cited declined-work review preserves decisions, refuses stale or unsafe preparation and recovers erased history',async()=>{const {declinedReviewJourney}=await import('./support/declined-work-review-journey.mjs');await declinedReviewJourney()})
 test('ADV-005: owner reviews later mileage, replacement inspection and advisory history at 1440 and 390',async()=>{const {declinedReviewBrowser}=await import('./declined-work-review-browser.mjs');await declinedReviewBrowser()})
+test('SHOP-001: two-state locations, local invoices, custody transfers, reconciled results and manager isolation recover without grants',()=>run(async h=>{const {locationJourney}=await import('./support/locations-journey.mjs');await locationJourney(h)}))
+
+test('SHOP-001: native one-location manager grant and scoped staff workspace at 1440 and 390',async()=>{const {locationsBrowser}=await import('./locations-browser.mjs');await locationsBrowser()})
