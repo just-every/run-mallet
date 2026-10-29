@@ -988,8 +988,8 @@ Core · target · **missing** · Rules D-1, D-2, D-3
 **Acceptance.**
 1. Sell a scanned accessory, return one, split tender between cash and a check and close the drawer with a variance; cash movement, check list, deposit batch and daily sales reports reconcile.
 
-**Evidence.** None.
-**Gap.** No retail checkout, cash drawer, cashier tender or closeout workflow.
+**Evidence.** `tests/mallet.test.mjs` — "POS-001: cash receipts, exact replay, partial returns, stock custody, authority and fresh-owner recovery" (`tests/support/retail-journey.mjs`) asserts immutable cents, original-tax allocation, stock and cash once, refusal and complete fresh-owner recovery. "POS-001: native cash checkout and return forms at 1440 and 390" (`tests/retail-browser.mjs`) proves the owner forms, receipts and excess-return refusal.
+**Gap.** Main’s current MISSING judgment is retained; the full acceptance journey remains unproved. Candidate evidence covers the current-owner home-shop USD cash slice only, using untracked stock or a non-serialized lot. Customer credits, split cash and check payments, shop-defined tenders, opening float, cash paid in and out, cashier and location drawer close and variance, cash and check deposit batches and daily-sales reconciliation remain unbuilt or unproved. PAY-007 remains prerequisite to checks and shop-defined tenders; SHOP-001 retains its recorded location hold. HARDWARE-001 retains real DYMO, Zebra and Star printer and counter-scanner proof. Broader cashier authority remains held under GOV-001. No bank verification, legal tax filing or physical hardware acceptance is claimed.
 
 #### AR-001 — Terms statements and payment follow-up
 
