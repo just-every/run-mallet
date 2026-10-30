@@ -2,6 +2,18 @@ import assert from 'node:assert/strict'
 import {booking,authorise,archive,restore,installation} from '../harness.mjs'
 import {inventoryFixture} from './inventory-journey.mjs'
 import {qualityReady} from './quality-ready.mjs'
+export const coreClock='2026-10-30T12:34:56.000Z'
+export function coreShipmentExpectation(f,coreId,input,actor){
+ return {id:coreId,jobId:f.job.id,invoiceId:f.invoice.id,lineId:f.input.lineId,stockUseId:f.use.id,lotId:f.lot.id,shipment:{...input,by:{id:actor.id,name:actor.name,role:actor.role},at:coreClock}}
+}
+export async function readCoreShipment(h,expected){
+ const state=await h.state(),report=await h.api('/api/mallet/cores')
+ for(const row of [state.records.stockCore.find(r=>r.id===expected.id),report.find(r=>r.id===expected.id)]){
+  assert.ok(row,'The recorded core is independently readable')
+  assert.deepEqual(Object.fromEntries(Object.keys(expected).map(key=>[key,row[key]])),expected,'Shipment evidence and original invoice and installed lot references match the entered facts')
+ }
+ return state.records.stockCore.find(r=>r.id===expected.id)
+}
 export async function coreFixture(h){
  const f=await inventoryFixture(h),lot=await h.command('stock.lot',{...f.scans,quantity:1,supplier:'Cedar Parts',supplierLot:'synthetic-mallet-90',serial:'synthetic-mallet-91',reference:'synthetic-mallet-92',unitCostCents:10000,evidence:'Alternator serial on packing slip'})
  await h.command('tax.configure',{ratePercent:10,partsTaxable:true,laborTaxable:false})
@@ -10,7 +22,7 @@ export async function coreFixture(h){
  const use=await h.command('stock.useLot',{jobId:job.id,version:job.version,actualId:job.actuals[0].id,lotId:lot.id,quantity:1,reference:'synthetic-mallet-93',reason:'Installed alternator serial checked'})
  await qualityReady(h,job);job=await h.command('job.complete',{jobId:job.id,version:job.version})
  let invoice=await h.command('invoice.prepare',{jobId:job.id,version:job.version});invoice=await h.command('invoice.approve',{invoiceId:invoice.id,version:invoice.version})
- const input={invoiceId:invoice.id,version:invoice.version,lineId:invoice.lines.find(l=>l.kind==='fee').id,stockUseId:use.id,customerDueAt:new Date(Date.now()+864e5).toISOString(),supplierDueAt:new Date(Date.now()+2*864e5).toISOString(),expectedCreditCents:4000,alertDays:7,terms:'Full customer core deposit including original tax refunded after physical core return. Supplier credits are reconciled separately.'}
+ const input={invoiceId:invoice.id,version:invoice.version,lineId:invoice.lines.find(l=>l.kind==='fee').id,stockUseId:use.id,customerDueAt:new Date(Date.parse(coreClock)+864e5).toISOString(),supplierDueAt:new Date(Date.parse(coreClock)+2*864e5).toISOString(),expectedCreditCents:4000,alertDays:7,terms:'Full customer core deposit including original tax refunded after physical core return. Supplier credits are reconciled separately.'}
  const payment=await h.command('payment.record',{invoiceId:invoice.id,version:invoice.version,amountCents:invoice.totals.totalCents,method:'cash',reference:'synthetic-mallet-94',evidence:'Staff counted the customer tender, not verified by Mallet'})
  return {...f,lot,use,job,invoice,input,payment}
 }
@@ -24,7 +36,17 @@ export async function coresJourney(h){
  await h.command('stock.coreShip',{...refs(),carrier:'Carrier',tracking:'synthetic-mallet-95',evidence:'No physical core yet'},{status:409})
  core=await h.command('stock.coreReturn',{...refs(),condition:'Used old alternator intact; one cracked mounting tab',evidence:'Advisor received and photographed the old core'})
  await h.command('stock.coreReturn',{...refs(),condition:'Cannot rewrite',evidence:'Second receipt'},{status:409})
- core=await h.command('stock.coreShip',{...refs(),carrier:'Synthetic carrier',tracking:'synthetic-mallet-95',evidence:'Counter receipt for core shipment'})
+ const shipmentInput={carrier:'Synthetic carrier',tracking:'synthetic-mallet-95',evidence:'Counter receipt for core shipment'},actor=(await h.state({as:admin.cookie})).actor
+ const expectedShipment=coreShipmentExpectation(f,core.id,shipmentInput,actor)
+ await h.command('stock.coreShip',{...refs(),...shipmentInput},{as:admin.cookie})
+ core=await readCoreShipment(h,expectedShipment)
+ const shippedRecords=(await h.state()).records,shippedReport=await h.api('/api/mallet/cores')
+ const replacement={...refs(),carrier:'Another carrier',tracking:'synthetic-mallet-98',evidence:'Replacement must not erase the original receipt'}
+ await h.command('stock.coreShip',replacement,{status:409})
+ await h.command('stock.coreShip',replacement,{as:member.cookie,status:403})
+ assert.deepEqual((await h.state()).records,shippedRecords,'Refused replacement and unauthorized shipping change no records or successful events')
+ assert.deepEqual(await h.api('/api/mallet/cores'),shippedReport)
+ await readCoreShipment(h,expectedShipment)
  const credit={...refs(),reference:'synthetic-mallet-96',amountCents:3500,reason:'Supplier deducted $5 for cracked tab',evidence:'Supplier adjusted credit document'}
  const reconciled=await h.command('stock.coreCredit',credit);assert.deepEqual(await h.command('stock.coreCredit',credit),reconciled);await h.command('stock.coreCredit',{...credit,amountCents:4000},{status:409})
  await h.command('stock.coreCorrect',{...refs(),paymentId:f.payment.id,reason:'Returned old core',consentEvidence:'Customer instructed original cash refund',confirm:'correct-core'},{as:admin.cookie,status:403})
@@ -38,6 +60,21 @@ export async function coresJourney(h){
  assert.equal(refund.amountCents,5500);report=(await h.api('/api/mallet/cores'))[0];assert.equal(report.customerCreditCents,5500);assert.equal(report.customerRefundCents,5500);assert.equal(report.supplierCreditCents,3500);assert.equal(report.supplierExposureCents,500);assert.equal(report.customerDue,false);assert.equal(report.creditExpiryAlert,true)
  const advisorView=(await h.api('/api/mallet/cores',undefined,{as:admin.cookie}))[0];assert.equal(advisorView.customerCreditCents,null);assert.equal(advisorView.customerRefundCents,null);const advisorPage=await h.request('/app/inventory/cores',{as:admin.cookie});assert.equal(advisorPage.status,200);assert.ok((await advisorPage.text()).includes('details require the owner'))
  await h.api('/api/mallet/cores',undefined,{as:member.cookie,status:403});assert.equal((await h.state({as:member.cookie})).records.stockCore,undefined)
- const final=(await h.state()).records,fresh=await installation({bindings:{OWNER_EMAIL:'core-recovery@example.test'}})
- try{await restore(fresh,await archive(h));assert.deepEqual((await fresh.state()).records,final);assert.deepEqual((await fresh.api('/api/mallet/cores'))[0],report);assert.equal((await fresh.command('stock.coreCorrect',refs())).id,note.id)}finally{await fresh.close()}
+ const beforeRevocation=(await h.state()).records
+ await h.api('/auth/operator/status',{operatorId:admin.id,status:'inactive'})
+ await h.command('stock.coreShip',replacement,{as:admin.cookie,status:401})
+ await h.api('/api/mallet/cores',undefined,{as:admin.cookie,status:401})
+ assert.deepEqual((await h.state()).records,beforeRevocation,'Revoked staff cannot change or read retained shipment custody')
+ await readCoreShipment(h,expectedShipment)
+ const final=(await h.state()).records,fresh=await installation({clock:coreClock,bindings:{OWNER_EMAIL:'recovered-'+(await h.api('/auth/session')).operator.email}})
+ try{
+  await restore(fresh,await archive(h))
+  assert.notEqual((await fresh.state()).actor.id,actor.id,'Retained shipment attribution is independent of the destination owner')
+  await fresh.api('/api/mallet/cores',undefined,{as:admin.cookie,status:401})
+  assert.deepEqual((await fresh.state()).records,final);assert.deepEqual((await fresh.api('/api/mallet/cores'))[0],report)
+  await readCoreShipment(fresh,expectedShipment)
+  await fresh.command('stock.coreShip',{...replacement,version:final.stockCore[0].version},{status:409})
+  assert.deepEqual((await fresh.state()).records,final,'Recovery cannot reopen shipment custody')
+  assert.equal((await fresh.command('stock.coreCorrect',refs())).id,note.id)
+ }finally{await fresh.close()}
 }
