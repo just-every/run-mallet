@@ -7,7 +7,7 @@ A claim is done when every clause behind it is done, missing when every one is m
 | # | Claim | Clauses | Status |
 | --- | --- | --- | --- |
 | 1 | "Mallet checks cars in by VIN" | `INTAKE-003` done; `VEH-001` missing | partial |
-| 2 | "texts photo inspections for line-by-line approval" | `DVI-002` partial; `DVI-003` partial; `MSG-001` missing; `EST-003` done; `ESTIMATE-001` done | partial |
+| 2 | "texts photo inspections for line-by-line approval" | `DVI-002` done; `DVI-003` partial; `MSG-001` missing; `EST-003` done; `ESTIMATE-001` done | partial |
 | 3 | "orders parts" | `BUY-002` done | done |
 | 4 | "runs the technician board" | `FLOW-001` partial | partial |
 | 5 | "takes payment" | `PAY-003` missing | missing |
@@ -26,13 +26,13 @@ A claim is done when every clause behind it is done, missing when every one is m
 | 18 | "has the repair order ready when Kayla opens it" | `INTAKE-003` done | done |
 | 19 | RO card: mileage in, last visit, "6 visits · 5 imported from Tekmetric" | `WORKSHOP-001` partial; `VEH-002` done; `MOVE-001` missing | partial |
 | 20 | "Luis inspects 39 points on a tablet" | `DVI-001` done | done |
-| 21 | "Every red and yellow item carries a measurement and a photo" | `DVI-001` done; `DVI-002` partial | partial |
+| 21 | "Every red and yellow item carries a measurement and a photo" | `DVI-001` done; `DVI-002` done | done |
 | 22 | Inspection texted, "Delivered 9:12 · opened 9:19" | `DVI-003` partial; `MSG-001` missing | partial |
 | 23 | "The agent prices what Luis found" | `ADV-001` partial; `AGENT-001` partial | partial |
 | 24 | MOTOR labor times (1.6 + 0.8 hrs) | `GUIDE-001` missing | missing |
 | 25 | "Checked by Kayla Ortiz" before it goes out | `ESTIMATE-001` done; `AGENT-001` partial | partial |
 | 26 | "Dana says yes to the brakes and not now to the filter" (on her phone, signed) | `ESTIMATE-001` done; `EST-003` done | done |
-| 27 | Declined work kept with photo and price, due at 67,000 mi | `EST-005` done; `DVI-002` partial | partial |
+| 27 | Declined work kept with photo and price, due at 67,000 mi | `EST-005` done; `DVI-002` done | done |
 | 28 | "The agent finds pads in stock nearby" | `ADV-004` missing; `BUY-002` done; `BUY-003` missing | partial |
 | 29 | "reprices the line" | `ESTIMATE-001` done; `AGENT-001` partial | partial |
 | 30 | "checks Bay 3’s afternoon" | `AGENT-001` partial; `FLOW-002` done | partial |
@@ -66,4 +66,4 @@ A claim is done when every clause behind it is done, missing when every one is m
 | 58 | "100% free and open source. MIT licensed." | `OPEN-001` done | done |
 | 59 | "Free, open source shop management" | `OPEN-001` done | done |
 
-Claims: 59; 13 done, 34 partial, 12 missing.
+Claims: 59; 15 done, 32 partial, 12 missing.

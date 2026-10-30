@@ -1876,13 +1876,13 @@ Provider sandboxes, official-schema fakes, run-auth and seeded capacity runs rem
 
 ## Status
 
-Judged from the code and tests at commit `1af117eb5175a32adf1b2830570f31b2285768bb` (30 October 2026).
+Judged from the code and tests at commit `39e7b596fc2a2a9cd592c139276f47f1611565d0` (30 October 2026).
 
 | Clauses | Done | Partial | Missing | Total |
 | --- | ---: | ---: | ---: | ---: |
 | Published | 3 | 6 | 0 | 9 |
-| Target and push further | 21 | 68 | 59 | 148 |
-| All | 24 | 74 | 59 | 157 |
+| Target and push further | 22 | 67 | 59 | 148 |
+| All | 25 | 73 | 59 | 157 |
 
 | Clause | Title | Kind | Status | Evidence | Gap |
 | --- | --- | --- | --- | --- | --- |
@@ -1909,7 +1909,7 @@ Judged from the code and tests at commit `1af117eb5175a32adf1b2830570f31b2285768
 | `DIAG-001` | Diagnostic findings and private notes | target | done | `src/mallet/diagnostics.ts`; `src/mallet/diagnosis-links.ts`; `src/mallet/ui/diagnostics.ts`; `migrations/core/0021_customer_links.sql`; `tests/support/diagnosis-journey.mjs`; `tests/diagnosis-browser.mjs` |  |
 | `ASSET-001` | Bicycle and device repair benches | target | done | `tests/mallet.test.mjs`; `tests/support/asset-journey.mjs`; `tests/asset-browser.mjs` |  |
 | `DVI-001` | Configurable digital inspections | target | done | `src/mallet/inspections.ts`; `src/mallet/inspection-photo.ts`; `src/mallet/inspection-visibility.ts`; `src/mallet/ui/inspections.ts`; `tests/mallet.test.mjs`; `tests/support/inspection-journey.mjs`; `tests/inspection-browser.mjs`; `src/mallet/media/history.ts`; `src/mallet/media/browser-history.ts` |  |
-| `DVI-002` | Photo and video inspection evidence | target | partial | `src/mallet/media/http.ts`; `src/mallet/media/service.ts`; `src/mallet/ui/media.ts`; `public/app/media.css`; `migrations/core/0019_inspection_media.sql`; `tests/media.test.mjs`; `tests/media-browser.mjs` | Not asserted in the old cited evidence: Original private response is refused without leaked bytes. Asserted: Saved brake photo contains markup; Short video completes; Actual multipart upload is interrupted; Resume keeps the original upload identity; One finding retains all media versions; Original image bytes are exact; Shared image is viewable. |
+| `DVI-002` | Photo and video inspection evidence | target | done | `tests/media.test.mjs` — “DVI-002 and OPS-001: private original and shared custody, interrupted upload, exact replay, assignment and revocation and full archive recovery” proves attributable capture time, resumable chunks, exact original digest, duplicate and conflict control, private full and ranged refusal bodies for signed-out, unassigned, reassigned, revoked and agent readers, and exact fresh-owner recovery without source-session authority. `tests/media-browser.mjs` — “mediaBrowser”, registered in `tests/media.test.mjs`, captures marked-up brake photos and playable video, interrupts and resumes the actual multipart upload with one finding and upload identity, opens the original and compressed shared photo, and records the finding screens at 1440 and 390. |  |
 | `DVI-003` | Customer inspection presentation | target | partial | `tests/mallet.test.mjs` | ct 22 Oct 12:58Z APPROVED AS LANDED. Email leg only: SMS stays MSG-001's and report/media retention stays GOV-006's as named Gaps; DVI-003 stays PARTIAL. Resend downstream email delivery is proved at the controlled network edge; SendGrid events whose message ID differs from its submission receipt remain unconfirmed, and Cloudflare queue delivery is not wired. |
 | `DVI-004` | Inspection history comparison | target | done | `src/mallet/media/history.ts`; `src/mallet/media/validation.ts`; `src/mallet/media/browser-history.ts`; `src/mallet/ui/media.ts`; `migrations/core/0020_inspection_resolution.sql`; `tests/media.test.mjs`; `tests/inspection-history-browser.mjs` |  |
 | `QUALITY-001` | Completion tests and return clearance | target | partial | `src/mallet/quality.ts`; `src/mallet/ui/quality.ts`; `src/mallet/workshop.ts`; `tests/mallet.test.mjs`; `tests/support/quality-journey.mjs`; `tests/quality-browser.mjs`; `tests/support/portable-repair.mjs` | The native physical-quality sequence and independent sign-off are asserted. The agent’s own commitment decision under the company’s policy remains unasserted. |
