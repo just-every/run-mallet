@@ -38,6 +38,7 @@ export async function stripeResponse(request:Request,original:Bindings):Promise<
   const authority=requireStepUp(auth,true),input=await inputBody(request,api),command=api?path.split('/').at(-1):input.command
   const handlers:Record<string,Function>={...returnHandlers,...terminalHandlers,connect:connectStripe,checkout:createCheckout,expire:expireCheckout,event:observeEvent,session:reconcileSession,settlement:reconcileSettlement},handler=Object.hasOwn(handlers,String(command))?handlers[String(command)]:undefined
   if(!handler)throw new HttpError(404,'not_found')
+  if(input.invoiceId&&((await load(env.DB)).records.invoice??[]).some(i=>i.id===input.invoiceId&&i.locationId&&i.locationId!=='shop'))throw new HttpError(409,'location_merchant_unconfigured','Connected collection for additional locations needs verified merchant routing.')
   const result=await handler(env,actor,authority,input)
   if(api)return Response.json(result,{headers})
   return new Response(null,{status:303,headers:{...headers,location:input.invoiceId?'/app/invoices/'+encodeURIComponent(input.invoiceId)+'/payment':'/app/stripe'}})
