@@ -76,8 +76,8 @@ Core · published · **partial** · Rules D-1, D-2, D-3
 **Acceptance.**
 1. Complete authorized work, prepare and approve the invoice through the app, export twice with current and preceding versions, and compare saved identity, lines, totals and approval history.
 
-**Evidence.** `src/mallet/invoices.ts`; `tests/mallet.test.mjs`; `tests/browser-journey.mjs`
-**Gap.** Not asserted in the old cited evidence: Approval history retains exact deciding actor and revision; Retry using the preceding version returns the same saved export; Actual-work invoice has the expected lines. Asserted: Exact invoice cent total; Repeated export identity is equal; Exactly one saved export; Exact approval history count.
+**Evidence.** `src/mallet/invoices.ts`; `tests/mallet.test.mjs` — agent prepares, person approves, immutable actual-work invoice exports once; `tests/browser-journey.mjs` — browserJourney, registered in `tests/mallet.test.mjs` as INVOICE-001: native invoice and downloaded CSV readback at 1440 and 390; `tests/sales-tax.test.mjs` — pre-US records migrate without changing amounts and request unknown shop rate; `tests/support/portable-repair.mjs` — portableRepair, registered in `tests/mallet.test.mjs` as OPS-001: complete native archive restores every current record and finishes repair under fresh authority
+**Gap.** Current main's partial judgment is retained. New assertions cover exact deciding actor and revision, current and preceding-version saved export retrieval, actual-work lines, native app and CSV readback, legacy migration identity and approval preservation, and archive recovery. Completion requires rejudgment of this expanded evidence.
 
 #### AGENT-001 — Scoped preparation keys
 
