@@ -29,7 +29,15 @@ export async function returnBrowser(){
   await h.stepUp();await p.goto(h.origin+'/app/jobs/'+second.job.id+'/return');assert.ok((await p.locator('main').innerText()).includes('possessory lien'));await fill(form('return.override'),{reason:'Owner explicitly releases this vehicle pending payment after reviewing the customer agreement'},'Permit unpaid release');const exception=(await h.state()).records.returnOverride.find(o=>o.jobId===second.job.id&&o.reason==='Owner explicitly releases this vehicle pending payment after reviewing the customer agreement')
   await fill(form('flow.collect'),{collectorName:unpaid.collectorName,comparisonId:unpaid.comparisonId,readingId:unpaid.readingId,identityEvidence:unpaid.identityEvidence,warrantyAdvice:unpaid.warrantyAdvice,overrideId:exception.id},'Record documented handover');assert.ok((await p.locator('main').innerText()).includes(exception.reason));assert.ok((await p.locator('main').innerText()).includes('settlement is not verified'));await shot('return-07-explicit-owner-exception')
   for(const [n,method]of ['cash','check','other'].entries()){
-   const asset=await h.command('asset.create',{customerName:'Counter '+method,label:'Counter pickup',identifier:'synthetic-mallet-'+(110+n)}),manual=await readyInvoice(h,{asset,reviewer}),pickup=await handoverInput(h,manual.job.id,method==='cash'?'Cash pickup delegate':asset.customerName)
+   const asset=await h.command('asset.create',{customerName:'Counter '+method,label:'Counter pickup',identifier:'synthetic-mallet-'+(110+n)}),manual=await readyInvoice(h,{asset,reviewer,failedQuality:method==='cash',onFailed:async({job,failed})=>{
+    await p.goto(h.origin+'/app/jobs/'+job.id)
+    assert.ok((await p.locator('main').innerText()).includes(failed.note),'The native repair retains the failed physical check')
+    await shot('return-13-failed-quality')
+    await p.goto(h.origin+'/app/jobs/'+job.id+'/return')
+    assert.equal(await form('flow.collect').count(),0,'An uncleared repair has no native handover form')
+    assert.ok((await p.locator('main').innerText()).includes('invoice'))
+    await shot('return-14-failed-quality-no-handover')
+   }}),pickup=await handoverInput(h,manual.job.id,method==='cash'?'Cash pickup delegate':asset.customerName)
    const recorder=(await h.state()).actor
    let authorization,delegateBefore,delegateAfter,savedDelegate
    if(method==='cash'){
@@ -58,7 +66,7 @@ export async function returnBrowser(){
     const fresh=await installation()
     try{
      const freshOwner=(await fresh.state()).actor;await restore(fresh,await archive(h));const recovered=await fresh.state();assert.equal(recovered.actor.id,freshOwner.id);assert.notEqual(recovered.actor.id,recorder.id)
-     for(const kind of ['handover','returnDelegate','returnOverride','payment','flow'])assert.deepEqual(recovered.records[kind],state.records[kind],'The native cash flow recovers exact '+kind+' evidence')
+     for(const kind of ['handover','returnDelegate','returnOverride','payment','flow','quality'])assert.deepEqual(recovered.records[kind],state.records[kind],'The native cash flow recovers exact '+kind+' evidence')
      await fresh.command('flow.collect',pickup,{as:h.owner,status:401});await fresh.command('flow.collect',pickup,{status:409});assert.deepEqual((await fresh.state()).records,recovered.records)
     }finally{await fresh.close()}
    }
