@@ -8,12 +8,12 @@ The primary journey: check in the customer and asset, diagnose and inspect, pric
 
 | Tier | Done | Partial | Missing | Total |
 | --- | ---: | ---: | ---: | ---: |
-| Core | 23 | 75 | 54 | 152 |
+| Core | 24 | 74 | 54 | 152 |
 | Agent surface | 0 | 0 | 5 | 5 |
 | Later | 0 | 0 | 0 | 0 |
-| Full target | 23 | 75 | 59 | 157 |
+| Full target | 24 | 74 | 59 | 157 |
 
-Judged from the code and tests at commit `bc221074fbd18e9112710da13d09b708bc3ce630` (30 October 2026). WORK-001 proof updated; other clause judgments retained. Field proof register: 12 rows; 0 passed, 0 failed, 12 not run.
+Judged from the code and tests at commit `842a8d6fb05a633fabb8fd47fa9750417d592583` (30 October 2026). WORK-001 proof and current main judgments retained. Field proof register: 12 rows; 0 passed, 0 failed, 12 not run.
 
 ## Core
 
@@ -314,15 +314,15 @@ Core · target · **done** · Cites BASE-ROLE-001, BASE-AGENT-005, BASE-AGENT-00
 
 #### DVI-002 — Photo and video inspection evidence
 
-Core · target · **partial** · Cites BASE-ROLE-001, BASE-INPUT-003, BASE-MAIL-001, BASE-DATA-003, BASE-DATA-006, BASE-AGENT-005, BASE-AGENT-006, BASE-AGENT-007 · Rules D-1, D-2, D-3
+Core · target · **done** · Cites BASE-ROLE-001, BASE-INPUT-003, BASE-MAIL-001, BASE-DATA-003, BASE-DATA-006, BASE-AGENT-005, BASE-AGENT-006, BASE-AGENT-007 · Rules D-1, D-2, D-3
 
 **Requirement.** Capture, annotate and upload findings on phones/tablets with compression, resumable progress, capture time and technician provenance; keep originals and shared versions and recover interruption without duplicate findings. Owner/admin sessions may access all shop findings; technicians access only their currently assigned repairs, and agent media reads follow the sponsor’s scope and the company’s sensitive policy. A foreign-origin upload writes no finding or chunk. Retries retain one finding and each original/shared version. Conflicting metadata or bytes are refused, and a variant is verified before it can be viewed. Phone capture retains original bytes and a separately compressed, annotated shared photo. The prepared shared video retains its compressed capture; its capture duration and encoding parameters are documented with the media formats. Capture time is technician-reported with a timezone and normalized to UTC, separate from server receipt time and native actor provenance. Both versions stay private, with no public URLs; “shared” means prepared, not sent. The browser remembers only opaque finding/upload IDs and content hashes for reselect-and-resume. DVI-003 owns reviewed customer delivery and must preserve private-original control; GOV-006 owns retention, erasure and holds, with no automatic media deletion before that policy ships. Technical formats and custody parameters are in [contract mechanisms](docs/contract-mechanisms.md#dvi-002).
 
 **Acceptance.**
 1. Capture marked-up brake photos and a short video, interrupt the upload, resume, and view original/shared media from the finding; duplicates and private originals are controlled.
 
-**Evidence.** `src/mallet/media/http.ts`; `src/mallet/media/service.ts`; `src/mallet/ui/media.ts`; `public/app/media.css`; `migrations/core/0019_inspection_media.sql`; `tests/media.test.mjs`; `tests/media-browser.mjs`
-**Gap.** Not asserted in the old cited evidence: Original private response is refused without leaked bytes. Asserted: Saved brake photo contains markup; Short video completes; Actual multipart upload is interrupted; Resume keeps the original upload identity; One finding retains all media versions; Original image bytes are exact; Shared image is viewable.
+**Evidence.** `tests/media.test.mjs` — “DVI-002 and OPS-001: private original and shared custody, interrupted upload, exact replay, assignment and revocation and full archive recovery” proves attributable capture time, resumable chunks, exact original digest, duplicate and conflict control, private full and ranged refusal bodies for signed-out, unassigned, reassigned, revoked and agent readers, and exact fresh-owner recovery without source-session authority. `tests/media-browser.mjs` — “mediaBrowser”, registered in `tests/media.test.mjs`, captures marked-up brake photos and playable video, interrupts and resumes the actual multipart upload with one finding and upload identity, opens the original and compressed shared photo, and records the finding screens at 1440 and 390.
+**Gap.** None.
 
 #### DVI-003 — Customer inspection presentation
 
