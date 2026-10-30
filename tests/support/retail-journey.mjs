@@ -20,11 +20,11 @@ async function changedArchive(lines,change){
 export async function retailFixture(h){
  await shopSetup(h)
  await h.command('tax.configure',{ratePercent:7.5,partsTaxable:true,laborTaxable:false})
- const item=await h.command('stock.item',{sku:'synthetic-mallet-retail-1',barcode:'synthetic-mallet-retail-2',name:'Counter accessory',unit:'each'})
- const bin=await h.command('stock.bin',{code:'Counter shelf',barcode:'synthetic-mallet-retail-3'})
+ const item=await h.command('stock.item',{sku:'synthetic-mallet-retail-1',barcode:'Synthetic-Mallet-Retail-2',name:'Counter accessory',unit:'each'})
+ const bin=await h.command('stock.bin',{code:'Counter shelf',barcode:'Synthetic-Mallet-Retail-3'})
  const scans={itemBarcode:item.barcode,binBarcode:bin.barcode}
  await h.command('stock.receive',{...scans,quantity:5,expectedQuantity:5,reference:'synthetic-mallet-retail-4',reason:'Observed accessory delivery'})
- return {item,bin,scans,sale:{...scans,reference:'synthetic-mallet-retail-5',quantity:3,unitCents:99,cashCents:500}}
+ return {item,bin,scans,sale:{itemBarcode:item.barcode.toUpperCase(),binBarcode:bin.barcode.toLowerCase(),reference:'synthetic-mallet-retail-5',quantity:3,unitCents:99,cashCents:500}}
 }
 export async function retailJourney(h){
  const f=await retailFixture(h),member=await h.person('counter-member@example.test'),advisor=await h.person('counter-advisor@example.test','admin')
@@ -64,6 +64,8 @@ export async function retailJourney(h){
   await restore(fresh,saved)
   report=await fresh.api('/api/mallet/retail')
   assert.deepEqual(report.sales,[frozen]);assert.deepEqual(report.returns,[partial]);assert.equal(report.netCashCents,213)
+  assert.deepEqual([report.sales[0].itemBarcode,report.sales[0].request.itemBarcode,report.sales[0].binBarcode,report.sales[0].request.binBarcode],['synthetic-mallet-retail-2','synthetic-mallet-retail-2','synthetic-mallet-retail-3','synthetic-mallet-retail-3'],'Mixed-case scans retain one canonical spelling through sale, receipt and restore')
+  assert.deepEqual(await fresh.command('retail.sell',{...f.sale,itemBarcode:f.item.barcode.toLowerCase(),binBarcode:f.bin.barcode.toUpperCase()}),frozen,'Case-only scan differences replay the same restored receipt')
   assert.notEqual((await fresh.state()).actor.id,(await h.state()).actor.id)
   await fresh.state({as:h.owner,status:401})
   assert.deepEqual(await fresh.command('retail.sell',f.sale),frozen,'Historical retry under fresh authority never moves stock twice')
@@ -79,6 +81,7 @@ export async function retailJourney(h){
   ['return amount', (kind,r)=>{if(kind!=='retailReturn')return false;r.totalCents++;return true}],
   ['stock quantity', (kind,r)=>{if(kind!=='stockMovement'||r.source.kind!=='retailSale')return false;r.deltaMilli=-1000;return true}],
   ['excess return', (kind,r)=>{if(kind!=='retailReturn')return false;r.quantity=4;r.quantityMilli=4000;return true}],
+  ['barcode retry identity', (kind,r)=>{if(kind!=='retailSale')return false;r.request.itemBarcode='synthetic-mallet-other';return true}],
   ['retry identity', (kind,r)=>{if(kind!=='retailSale')return false;r.request.quantity=1;return true}],
  ]){
   const invalid=await changedArchive(saved,change),empty=await installation()
