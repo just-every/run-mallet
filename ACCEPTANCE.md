@@ -8,12 +8,12 @@ The primary journey: check in the customer and asset, diagnose and inspect, pric
 
 | Tier | Done | Partial | Missing | Total |
 | --- | ---: | ---: | ---: | ---: |
-| Core | 22 | 76 | 54 | 152 |
+| Core | 23 | 75 | 54 | 152 |
 | Agent surface | 0 | 0 | 5 | 5 |
 | Later | 0 | 0 | 0 | 0 |
-| Full target | 22 | 76 | 59 | 157 |
+| Full target | 23 | 75 | 59 | 157 |
 
-Judged from the code and tests at commit `0c4b8e0be86462c713e63dc7875074220be9e636` (28 October 2026). Field proof register: 12 rows; 0 passed, 0 failed, 12 not run.
+Judged from the code and tests at commit `0c4b8e0be86462c713e63dc7875074220be9e636` (28 October 2026). FLOW-005 is judged from this candidate's committed HEAD and registered journeys (30 October 2026); the immutable candidate SHA and run are supplied with its landing report. Field proof register: 12 rows; 0 passed, 0 failed, 12 not run.
 
 ## Core
 
@@ -571,7 +571,7 @@ Core · target · **done** · From FLOW-004 · Cites BASE-INPUT-003, BASE-AUDIT-
 
 #### FLOW-005 — Acknowledged technician handoff
 
-Core · target · **partial** · From FLOW-004 · Cites BASE-MAIL-001 · Rules D-1, D-2, D-3
+Core · target · **done** · From FLOW-004 · Cites BASE-MAIL-001 · Rules D-1, D-2, D-3
 
 **Requirement.** The lead or owner/admin proposes a handoff to another active technician with a required work-state note, refused while the lead has a running timer on the repair or another handoff is waiting; it takes effect only when the recipient acknowledges it (or declines with a reason), and the previous lead leaves the crew unless the proposal keeps them as a helper. Acknowledgment writes an immutable handover receipt: from/to, proposer, note, proposed and acknowledged times, open subtasks and each person’s billable, rework and nonbillable seconds on the repair.
 
@@ -579,8 +579,8 @@ Core · target · **partial** · From FLOW-004 · Cites BASE-MAIL-001 · Rules D
 1. Propose a diagnostic handoff without changing the lead; accept it as the recipient and inspect the exact handover receipt.
 2. Preserve both technicians’ time and open subtasks, or decline with a reason and keep the prior assignment.
 
-**Evidence.** `src/mallet/collaboration.ts`; `src/mallet/ui/collaboration.ts`; `src/mallet/http.ts`; `src/mallet/media/storage.ts`; `tests/support/collaboration-journey.mjs`; `tests/collaboration-browser.mjs`
-**Gap.** Not asserted in the old cited evidence: Exact elapsed per-person time in receipt; Decline retains reason. Asserted: Proposal leaves the prior lead unchanged; Recipient acceptance changes the lead; Receipt retains exact from actor; Receipt retains exact to actor; Receipt retains work-state note; Receipt has both technicians’ time identities; Open subtasks are retained; Decline keeps the prior assignment.
+**Evidence.** Acceptance 1: `tests/support/collaboration-journey.mjs` collaborationJourney and `tests/collaboration-browser.mjs` collaborationBrowser propose without reassignment, require the recipient, and inspect exact receipt identities, note, times, open subtasks and independently specified per-person category seconds. Acceptance 2: the same journeys retain time and subtasks, reload the exact decline reason with unchanged assignment and records, preserve the immutable receipt after later corrections, and compare fresh-owner recovery; both are registered in `tests/mallet.test.mjs`.
+**Gap.** None.
 
 #### WARRANTY-001 — Warranty and comeback work
 

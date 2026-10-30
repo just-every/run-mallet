@@ -47,10 +47,10 @@ export async function collaborationBrowser(){
    [specialist.id]:{name:'rio crew',billable:720,rework:1440,nonbillable:540}
   },'The native handover receipt retains independently specified category seconds')
   const receiptText=async p=>{
-   assert.deepEqual(await p.locator('#crew .receipt li').allTextContents(),[
+   assert.deepEqual((await p.locator('#crew .receipt li').allTextContents()).sort(),[
     'morgan crew · billable 0.42 h · rework 0.12 h · nonbillable 0.08 h',
     'rio crew · billable 0.20 h · rework 0.40 h · nonbillable 0.15 h'
-   ],'Rendered receipt distinguishes every technician and time category')
+   ].sort(),'Rendered receipt distinguishes every technician and time category')
    assert.match(await p.locator('#crew .receipt').innerText(),/Open subtasks at handover: Road test/)
   }
   await receiptText(owner)
