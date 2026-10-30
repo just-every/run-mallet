@@ -4772,7 +4772,7 @@
       "executable": false
     },
     "tests/collaboration-browser.mjs": {
-      "sha256": "c60f3ce9aed9a26ac98b0d9c9d83db9490162485682e889c0d1920ea744563b3",
+      "sha256": "41e871aaf330cc3b677ffe90f9be3bdbdc9ad1905a3e52b50ab0c1e472dcc869",
       "executable": false
     },
     "tests/cores-browser.mjs": {
@@ -4896,7 +4896,7 @@
       "executable": false
     },
     "tests/mallet.test.mjs": {
-      "sha256": "8c2cc43806fd417ccc9f4c97f68e763bdc0bdd7ee9a7d5b65fa42a589e34e33f",
+      "sha256": "0b2cf7c05b548df0393921e205f7b2626b8da6bbf2afcb059a034ee4ea908ef8",
       "executable": false
     },
     "tests/media-browser.mjs": {
@@ -5096,7 +5096,7 @@
       "executable": false
     },
     "tests/support/collaboration-journey.mjs": {
-      "sha256": "3087522fe176b3c731c0dee6399122b5f8be885fd9c5cef09383924c2e10fe01",
+      "sha256": "402d9c5b27f1e408f892846ffcef8a5f9b756d3d9d921c9c2d83056264f8e943",
       "executable": false
     },
     "tests/support/connector-journey.mjs": {
