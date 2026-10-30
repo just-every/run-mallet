@@ -4996,7 +4996,7 @@
       "executable": false
     },
     "tests/stock-trace-browser.mjs": {
-      "sha256": "dae32202dc4097d285f52c49823cec566edd3c14178ed815a50eba986ba3f541",
+      "sha256": "839092b3aab5f60a75caf2ab66514f1b8b8d8eef99ebfb00009d472cad5e5786",
       "executable": false
     },
     "tests/storage-browser.mjs": {
