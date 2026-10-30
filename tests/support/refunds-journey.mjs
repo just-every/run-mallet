@@ -74,7 +74,8 @@ export async function refundsJourney(){
   assert.deepEqual(await h.command('credit.issue',{...input,review,confirm:'issue-credit'}),note,'Exact issue replay returns the same immutable note')
   await h.command('credit.issue',{...input,reason:'Changed instructions',review,confirm:'issue-credit'},{status:409})
   const state=await h.state();let refund=state.records.refund.find(r=>r.creditNoteId===note.id)
-  const payerLogin=await portalSignIn(h,contact.email,account.name)
+  let payerLogin=await portalSignIn(h,contact.email,account.name)
+  const originalPayerLogin=payerLogin
   const privateTexts=[...Object.values(cashRefundPrivateText),'synthetic-mallet-306 other payer cash custody','synthetic-mallet-308 other payer return narrative','synthetic-mallet-309 other payer instruction']
   const checkCashPayers=async(status,refundedCents,paidCents)=>{
    const beforeRead=await refundReadSnapshot(h)
@@ -109,11 +110,28 @@ export async function refundsJourney(){
    assert.deepEqual(await refundReadSnapshot(h),beforeRead,'Payer reads preserve all business records and exact saved export bytes')
    console.log('PROBE PAY-008 cash '+status+': portal billing -> cash refund 109 cents, refunded '+refundedCents+' cents; separate invoice retains refunded cash 215 cents; private narratives and other account excluded; records and exports unchanged')
   }
+  const replaceCashPayer=async(status,refundedCents,paidCents,suffix)=>{
+   const next=await h.command('contact.save',{name:'Cash refund payer '+suffix,email:['synthetic-mallet-'+suffix,'example.test'].join('@'),phone:'',communication:'none',notes:''})
+   const current=(await h.state()).records.customerAccount.find(a=>a.id===account.id)
+   await h.command('customer.save',{...current,customerId:account.id,version:current.version,contactIds:[...current.contactIds,next.id],payerId:next.id,billingContactId:next.id})
+   const beforeRefusal=await refundReadSnapshot(h)
+   for(const path of ['/api/mallet/portal/billing','/portal/billing']){
+    const response=await h.request(path,{as:payerLogin.cookie});assert.equal(response.status,403)
+    const body=await response.text()
+    for(const text of [...privateTexts,invoice.id,invoice.number,note.id,note.number,second.invoice.id,second.invoice.number,second.note.id,second.note.number,otherCash.invoice.id,otherCash.invoice.number,otherNote.id,otherNote.number])assert.ok(!body.includes(text),'Former payer cannot read a '+status+' refund')
+    assert.deepEqual(await refundReadSnapshot(h),beforeRefusal,'Each former-payer refusal preserves records and saved exports in '+status+' state')
+   }
+   payerLogin=await portalSignIn(h,next.email,account.name)
+   await checkCashPayers(status,refundedCents,paidCents)
+   console.log('PROBE PAY-008 '+status+' payer change: customer.save -> old session refused on billing API and page; new current payer sees exact cash refunds; records and exports unchanged')
+  }
   await checkCashPayers('unsubmitted',0,541)
+  await replaceCashPayer('unsubmitted',0,541,330)
   for(const [n,status]of ['failed','disputed','refunded'].entries()){
    const outcome={refundId:refund.id,version:refund.version,status,reference:'synthetic-mallet-'+(104+n),evidence:cashRefundPrivateText.outcomeEvidence+' '+status,confirm:'record-refund'}
    refund=await h.command('refund.record',outcome);assert.equal(refund.status,status);assert.deepEqual(await h.command('refund.record',outcome),refund)
    await checkCashPayers(status,status==='refunded'?109:0,status==='refunded'?432:541)
+   if(status!=='refunded')await replaceCashPayer(status,0,541,331+n)
   }
   const nextPayer=await h.command('contact.save',{name:'Replacement refund payer',email:['synthetic-mallet-310','example.test'].join('@'),phone:'',communication:'none',notes:''})
   const currentAccount=(await h.state()).records.customerAccount.find(a=>a.id===account.id)
@@ -132,6 +150,12 @@ export async function refundsJourney(){
   const beforeReplay=await refundReadSnapshot(h)
   await h.api('/api/mallet/portal/billing',undefined,{as:payerLogin.cookie,status:403})
   assert.deepEqual(await refundReadSnapshot(h),beforeReplay,'Returning the payer role never revives an old session or changes finances')
+  for(const path of ['/api/mallet/portal/billing','/portal/billing']){
+   const response=await h.request(path,{as:originalPayerLogin.cookie});assert.equal(response.status,403)
+   const body=await response.text()
+   for(const text of [...privateTexts,invoice.id,invoice.number,note.id,note.number,second.invoice.id,second.invoice.number,second.note.id,second.note.number])assert.ok(!body.includes(text),'Restoring the original payer role does not restore its old session')
+   assert.deepEqual(await refundReadSnapshot(h),beforeReplay,'Original payer session replay preserves records and exports at each door')
+  }
   console.log('PROBE PAY-008 payer change: native customer.save -> former payer refused immediately on billing API and page, fresh current payer served; no financial effects')
   await h.command('refund.record',{refundId:refund.id,version:refund.version,status:'refunded',reference:'synthetic-mallet-107',evidence:'Pay again',confirm:'record-refund'},{status:409})
   const credit=await issueCredit(h,creditInput(invoice,null,'synthetic-mallet-108',invoice.lines[0],2))

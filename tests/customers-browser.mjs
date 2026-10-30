@@ -99,6 +99,8 @@ export async function refundsBrowser(){
   await p.goto(url);await p.getByRole('button',{name:'Confirm sign-in',exact:true}).click();await p.waitForLoadState('domcontentloaded');assert.ok((await p.locator('main').innerText()).includes(invoice.number))
   const credit=await issueCredit(h,{...creditInput(invoice,payment,'synthetic-mallet-141'),reason:cashRefundPrivateText.reason,consentEvidence:cashRefundPrivateText.consentEvidence});let refund=(await h.state()).records.refund.find(r=>r.creditNoteId===credit.id)
   const privateTexts=[...Object.values(cashRefundPrivateText),'synthetic-mallet-312 private other account cash','synthetic-mallet-314 private other account return','synthetic-mallet-315 private other account instruction']
+  const originalPayerCookie=(await context.cookies(h.origin)).map(c=>c.name+'='+c.value).join('; ')
+  const usePayer=async(email)=>{const login=await portalSignIn(h,email,account.name);await context.clearCookies();await context.addCookies(login.cookie.split('; ').map(pair=>({name:pair.slice(0,pair.indexOf('=')),value:pair.slice(pair.indexOf('=')+1),url:h.origin})));await p.goto(h.origin+'/portal/billing')}
   const checkCashStatement=async(status,refundedCents,paidCents,name)=>{
    const beforeRead=await refundReadSnapshot(h)
    for(const text of [cashRefundPrivateText.reason,cashRefundPrivateText.consentEvidence,cashRefundPrivateText.paymentEvidence,cashRefundPrivateText.secondReason,cashRefundPrivateText.secondConsent,cashRefundPrivateText.secondEvidence,...(status==='unsubmitted'?[]:[cashRefundPrivateText.outcomeEvidence+' '+status])])assert.ok(JSON.stringify(beforeRead.records).includes(text),'Private evidence is populated before payer read')
@@ -131,10 +133,29 @@ export async function refundsBrowser(){
    await shot(name)
    assert.deepEqual(await refundReadSnapshot(h),beforeRead,'Rendered statements and API reads change no business record or saved export bytes')
   }
+  const replaceCashPayer=async(status,suffix)=>{
+   const next=await h.command('contact.save',{name:'Cash refund browser payer '+suffix,email:['synthetic-mallet-'+suffix,'example.test'].join('@'),phone:'',communication:'none',notes:''})
+   const current=(await h.state()).records.customerAccount.find(a=>a.id===account.id)
+   await h.command('customer.save',{...current,customerId:account.id,version:current.version,contactIds:[...current.contactIds,next.id],payerId:next.id,billingContactId:next.id})
+   const beforeRefusal=await refundReadSnapshot(h)
+   const denied=await p.request.get(h.origin+'/api/mallet/portal/billing');assert.equal(denied.status(),403)
+   const apiBody=await denied.text()
+   for(const secret of [...privateTexts,invoice.id,invoice.number,credit.id,credit.number,second.invoice.id,second.invoice.number,second.note.id,second.note.number,other.invoice.id,other.invoice.number,otherCredit.id,otherCredit.number])assert.ok(!apiBody.includes(secret),'Former payer API response excludes '+status+' refunds')
+   assert.deepEqual(await refundReadSnapshot(h),beforeRefusal,'Browser former-payer API refusal preserves records and exports in '+status+' state')
+   const deniedPage=await p.reload();assert.equal(deniedPage.status(),403)
+   const html=await deniedPage.text(),text=await p.locator('main').innerText();assert.ok(text.includes('Billing unavailable'))
+   for(const body of [text,html])for(const secret of [...privateTexts,invoice.id,invoice.number,credit.id,credit.number,second.invoice.id,second.invoice.number,second.note.id,second.note.number,other.invoice.id,other.invoice.number,otherCredit.id,otherCredit.number])assert.ok(!body.includes(secret),'Former payer page excludes '+status+' refunds')
+   assert.deepEqual(await refundReadSnapshot(h),beforeRefusal,'Browser former-payer page refusal independently preserves records and exports in '+status+' state')
+   await shot('13a-former-cash-payer-'+status)
+   await usePayer(next.email)
+   await checkCashStatement(status,0,541,'13b-current-cash-payer-'+status)
+  }
   await checkCashStatement('unsubmitted',0,541,'12-payer-pending-refund')
+  await replaceCashPayer('unsubmitted',340)
   for(const [n,status]of ['failed','disputed','refunded'].entries()){
    refund=await h.command('refund.record',{refundId:refund.id,version:refund.version,status,reference:'synthetic-mallet-'+(142+n),evidence:cashRefundPrivateText.outcomeEvidence+' '+status,confirm:'record-refund'})
    await checkCashStatement(status,status==='refunded'?109:0,status==='refunded'?432:541,'13-payer-refund-'+status)
+   if(status!=='refunded')await replaceCashPayer(status,341+n)
   }
   const nextPayer=await h.command('contact.save',{name:'Replacement refund payer',email:['synthetic-mallet-316','example.test'].join('@'),phone:'',communication:'none',notes:''}),currentAccount=(await h.state()).records.customerAccount.find(a=>a.id===account.id)
   const changed=await h.command('customer.save',{...currentAccount,customerId:account.id,version:currentAccount.version,contactIds:[...currentAccount.contactIds,nextPayer.id],payerId:nextPayer.id,billingContactId:nextPayer.id})
@@ -149,9 +170,15 @@ export async function refundsBrowser(){
   assert.deepEqual(await refundReadSnapshot(h),beforeRefusal,'Former payer page refusal independently preserves records and saved exports')
   await shot('13a-former-refund-payer-denied')
   assert.deepEqual(await refundReadSnapshot(h),beforeRefusal,'Former payer page refusal has no financial effect')
-  const usePayer=async(email)=>{const login=await portalSignIn(h,email,account.name);await context.clearCookies();await context.addCookies(login.cookie.split('; ').map(pair=>({name:pair.slice(0,pair.indexOf('=')),value:pair.slice(pair.indexOf('=')+1),url:h.origin})));await p.goto(h.origin+'/portal/billing')}
   await usePayer(nextPayer.email);await checkCashStatement('refunded',109,432,'13b-current-refund-payer')
   Object.assign(account,await h.command('customer.save',{...changed,customerId:account.id,version:changed.version,payerId:contact.id,billingContactId:contact.id}))
+  const beforeReplay=await refundReadSnapshot(h)
+  for(const path of ['/api/mallet/portal/billing','/portal/billing']){
+   const response=await h.request(path,{as:originalPayerCookie});assert.equal(response.status,403)
+   const body=await response.text()
+   for(const secret of [...privateTexts,invoice.id,invoice.number,credit.id,credit.number,second.invoice.id,second.invoice.number,second.note.id,second.note.number])assert.ok(!body.includes(secret),'Returning the payer role never revives its original browser session')
+   assert.deepEqual(await refundReadSnapshot(h),beforeReplay,'Original browser-session replay preserves records and exports at each billing door')
+  }
   await usePayer(contact.email)
   const held=await issueCredit(h,creditInput(invoice,null,'synthetic-mallet-145',invoice.lines[0],2));await p.reload();assert.ok((await p.locator('main').innerText()).includes(held.number));assert.ok((await p.locator('main').innerText()).includes('Customer account credit'));await shot('14-payer-account-credit')
   await h.command('credit.exchange',{creditNoteId:held.id,invoiceId:replacement.invoice.id,version:replacement.invoice.version,amountCents:held.totals.totalCents,reference:'synthetic-mallet-146',reason:'Customer selected the separately authorized replacement accessory',confirm:'apply-credit'})
