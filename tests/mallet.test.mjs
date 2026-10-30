@@ -35,7 +35,7 @@ import {supplementJourney} from './support/supplement-journey.mjs'
 import {qualityReady} from './support/quality-ready.mjs'
 import {test} from 'node:test'
 import assert from 'node:assert/strict'
-import {portableRepair} from './support/portable-repair.mjs'
+import {portableRepair,populatedRepair} from './support/portable-repair.mjs'
 import {connectorJourney} from './support/connector-journey.mjs'
 import {securityBrowser} from './security-browser.mjs'
 import {linkProtectionJourney} from './support/link-protection-journey.mjs'
@@ -147,17 +147,56 @@ test('import undo preserves an asset once it has a native repair visit',()=>run(
 
 test('OPS-001: complete native archive restores every current record and finishes repair under fresh authority',()=>run(portableRepair))
 
-test('DATA-001: native erasure fences known old archives and labels unknown fresh recovery',()=>run(async h=>{
+test('DATA-001: populated history and saved exports recover exactly; refused restore and erasure change nothing',()=>run(async h=>{
+ const fixture=await populatedRepair(h),source=(await h.state()),original=source.records
+ const active=original.job.find(j=>j.id===fixture.job.id),quote=original.estimate.find(q=>q.id===fixture.q.id),billed=original.invoice.find(i=>i.id===fixture.invoice.id)
+ assert.equal(original.job.length,2,'DATA-001: the archive contains active and invoiced repair history')
+ assert.deepEqual(quote.revisions[0].lines.map(l=>[l.kind,l.quantityMilli,l.unitCents]),[['part',2000,2500],['labor',1500,12000]])
+ assert.deepEqual(quote.authorisation.lineIds,[quote.revisions[0].lines[0].id])
+ assert.equal(quote.authorisation.revision,1);assert.equal(quote.authorisation.customerName,'Cedar Bikes')
+ assert.equal(quote.authorisation.evidence,'Signed paper estimate in workshop custody, reference CB-20')
+ assert.deepEqual(active.actuals.map(a=>[a.estimateId,a.revision,a.lineId,a.quantityMilli,a.by.id]),[[quote.id,1,quote.revisions[0].lines[0].id,1000,source.actor.id]])
+ assert.equal(billed.estimateId,fixture.oldQuote.id);assert.equal(billed.estimateRevision,1)
+ assert.equal(billed.customerAuthorisation.revision,1);assert.equal(billed.approval.by.id,source.actor.id)
+ assert.deepEqual(billed.lines.map(l=>[l.kind,l.quantityMilli,l.unitCents,l.totalCents]),[['labor',1000,12000,12000]])
+ assert.match(fixture.savedBytes,/"1","120.00","120.00","0.00","120.00","USD"/)
+ const populated=await archive(h),recovered=await installation({bindings:{OWNER_EMAIL:['synthetic-mallet-recovery','example.test'].join('@')}})
+ try{
+  const destinationActor=(await recovered.state()).actor
+  assert.notEqual(destinationActor.id,source.actor.id)
+  await restore(recovered,populated)
+  const restored=(await recovered.state()).records
+  assert.deepEqual(restored,original,'DATA-001: source identities, revisions, actuals, approval snapshots and all populated history survive')
+  assert.deepEqual(await recovered.api('/api/mallet/imports/journal?id='+fixture.imported.id),await h.api('/api/mallet/imports/journal?id='+fixture.imported.id),'DATA-001: original import custody survives')
+  const downloaded=await recovered.request('/api/mallet/exports/'+fixture.saved.id)
+  assert.equal(downloaded.status,200)
+  assert.deepEqual(Buffer.from(await downloaded.arrayBuffer()),Buffer.from(fixture.savedBytes),'DATA-001: saved invoice download bytes survive exactly')
+  await recovered.state({as:h.owner,status:401})
+  await recovered.state({as:'',headers:{authorization:'Bearer '+fixture.key.token},status:401})
+  const beforeRefused=(await recovered.state()).records
+  const refused=await restore(recovered,populated,{status:409})
+  assert.ok(refused.error)
+  assert.deepEqual((await recovered.state()).records,beforeRefused,'DATA-001: refused populated restore preserves every business record and successful event')
+  assert.deepEqual(Buffer.from(await (await recovered.request('/api/mallet/exports/'+fixture.saved.id)).arrayBuffer()),Buffer.from(fixture.savedBytes))
+  assert.equal((await recovered.state()).actor.id,destinationActor.id)
+  assert.deepEqual((await h.state()).records,original,'DATA-001: recovery leaves the source shop unchanged')
+ }finally{await recovered.close()}
  const input=await snapshots(),plan=await h.api('/api/mallet/imports/preview',input),job=await h.api('/api/mallet/imports/apply',{...input,fingerprint:plan.fingerprint}),old=await archive(h)
- const asset=(await h.state()).records.asset[0],member=await h.person('tech@example.test')
+ const asset=(await h.state()).records.asset.find(a=>!original.asset.some(before=>before.id===a.id)),member=await h.person(['synthetic-mallet-member','example.test'].join('@'))
+ const beforeDenied=(await h.state()).records,beforeFence=await archive(h)
  await h.command('asset.erase',{assetId:asset.id,confirm:'ERASE'},{as:member.cookie,status:403})
+ assert.deepEqual((await h.state()).records,beforeDenied,'DATA-001: unauthorized erasure preserves identities, repair history, decisions, exports and successful events')
+ const afterDenied=await archive(h)
+ assert.deepEqual([afterDenied[0].epoch,afterDenied[0].journal],[beforeFence[0].epoch,beforeFence[0].journal],'DATA-001: unauthorized erasure writes no erasure checkpoint')
+ await h.command('asset.erase',{assetId:fixture.asset.id,confirm:'ERASE'},{status:409})
+ assert.deepEqual((await h.state()).records,beforeDenied,'DATA-001: an asset with visits retains its exact history')
  await h.command('asset.erase',{assetId:asset.id,confirm:'no'},{status:400})
  await h.command('asset.erase',{assetId:asset.id,confirm:'ERASE'})
  assert.ok(!(await h.state()).records.asset?.some(a=>a.id===asset.id))
  const later=await archive(h),fresh=await installation()
  try{const failed=await restore(fresh,old,{status:400,laterJournal:{sourceIdentity:later[0].sourceIdentity,epoch:later[0].epoch,journal:later[0].journal}});assert.ok(failed.error)}finally{await fresh.close()}
  const unknown=await installation(),current=await installation()
- try{const restored=await restore(unknown,old);assert.equal(restored.erasureHistory,'unverified');assert.match(restored.erasureNotice,/Erasure history unverified/);assert.ok((await unknown.state()).records.asset.some(a=>a.id===asset.id));const verified=await restore(current,later,{laterJournal:{sourceIdentity:later[0].sourceIdentity,epoch:later[0].epoch,journal:later[0].journal}});assert.equal(verified.erasureHistory,'journal-supplied');assert.ok(!(await current.state()).records.asset?.some(a=>a.id===asset.id))}finally{await unknown.close();await current.close()}
+ try{const restored=await restore(unknown,old);assert.equal(restored.erasureHistory,'unverified');assert.match(restored.erasureNotice,/Erasure history unverified/);assert.ok((await unknown.state()).records.asset.some(a=>a.id===asset.id));const verified=await restore(current,later,{laterJournal:{sourceIdentity:later[0].sourceIdentity,epoch:later[0].epoch,journal:later[0].journal}});assert.equal(verified.erasureHistory,'journal-supplied');assert.ok(!(await current.state()).records.asset?.some(a=>a.id===asset.id));assert.deepEqual((await current.state()).records,(await h.state()).records,'DATA-001: post-erasure recovery retains all eligible populated history')}finally{await unknown.close();await current.close()}
  await h.api('/api/mallet/imports/undo',{id:job.id})
  assert.ok(!(await h.state()).records.asset?.some(a=>a.id===asset.id))
 }))

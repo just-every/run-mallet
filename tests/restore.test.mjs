@@ -1,17 +1,19 @@
 import {test} from 'node:test'
 import assert from 'node:assert/strict'
 import {chromium} from '@playwright/test'
-import {mkdir} from 'node:fs/promises'
+import {mkdir,readFile} from 'node:fs/promises'
+import {populatedRepair} from './support/portable-repair.mjs'
 import {installation,assetInput,archive} from './harness.mjs'
 
 test('DATA-001: fresh restore asks for the latest journal before acceptance and labels missing evidence honestly',async()=>{
  const source=await installation();let fresh,browser
  try{
-  const asset=await source.command('asset.create',assetInput('restore-screen')),old=await archive(source)
+  const fixture=await populatedRepair(source)
+  const asset=await source.command('asset.create',assetInput('restore-screen')),expected=(await source.state()).records,old=await archive(source)
   await source.command('asset.erase',{assetId:asset.id,confirm:'ERASE'})
   const later=await archive(source)
-  fresh=await installation({network:true,assets:true,bindings:{AUTH_LOCAL:'true',OWNER_EMAIL:'restored-owner@example.test'}})
-  browser=await chromium.launch({headless:true,args:['--use-mock-keychain','--password-store=basic']})
+  fresh=await installation({network:true,assets:true,bindings:{AUTH_LOCAL:'true',OWNER_EMAIL:['synthetic-mallet-restored-owner','example.test'].join('@')}})
+  browser=await chromium.launch({headless:true,...(process.platform==='linux'?{executablePath:'/usr/bin/chromium'}:{}),args:['--use-mock-keychain','--password-store=basic',...(process.platform==='linux'?['--no-sandbox']:[])]})
   const context=await browser.newContext({viewport:{width:1440,height:1000},locale:'en-US',timezoneId:'America/New_York'})
   await context.addCookies(fresh.owner.split('; ').map(pair=>({name:pair.slice(0,pair.indexOf('=')),value:pair.slice(pair.indexOf('=')+1),url:fresh.origin})))
   const page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message))
@@ -35,12 +37,43 @@ test('DATA-001: fresh restore asks for the latest journal before acceptance and 
   await page.getByRole('button',{name:'Verify and restore workshop'}).click()
   await page.getByRole('status').filter({hasText:'Restored. Erasure history unverified: supply your latest archive as the journal.'}).waitFor()
   assert.ok((await fresh.state()).records.asset.some(a=>a.id===asset.id))
+  assert.deepEqual((await fresh.state()).records,expected,'DATA-001: the restore screen persists every populated record before destination setup')
   assert.notEqual((await fresh.state()).actor.id,(await source.state()).actor.id)
   await shot('05-unverified-restored')
   await page.getByRole('link',{name:'Review the restored shop and finish setup'}).click()
   await page.getByLabel('Sales tax rate (%)').fill('7.5');await page.getByRole('checkbox',{name:'I confirm this owner account is ready to use.'}).check();await page.getByRole('button',{name:'Finish setup',exact:true}).click()
   await page.goto(fresh.origin+'/app/data');await shot('06-data-restore-guidance')
   assert.equal(await page.getByRole('link',{name:'Open the restore screen'}).count(),1)
+  await page.reload()
+  const persisted=await (await context.request.get(fresh.origin+'/api/mallet/state')).json()
+  for(const kind of ['asset','job','estimate','approval','invoice','export','event'])assert.deepEqual(persisted.records[kind],expected[kind],'DATA-001: destination setup preserves recovered '+kind+' history')
+  assert.notEqual(persisted.actor.id,(await source.state()).actor.id)
+  await page.goto(fresh.origin+'/app/jobs/'+fixture.job.id)
+  await page.reload()
+  const estimate=page.locator('section.card').filter({has:page.getByRole('heading',{name:'Estimate & customer authorization',exact:true})})
+  assert.match(await estimate.innerText(),/Revision 1/)
+  assert.match(await estimate.getByRole('row').filter({hasText:'Brake pads'}).innerText(),/Authorized/)
+  assert.match(await estimate.getByRole('row').filter({hasText:'Replace and tune'}).innerText(),/Declined/)
+  assert.match(await estimate.innerText(),/Authorized total: \$53\.75/)
+  assert.match(await estimate.innerText(),/Signed paper estimate in workshop custody, reference CB-20/)
+  const actuals=page.locator('section.card').filter({has:page.getByRole('heading',{name:'Parts & labor',exact:true})})
+  assert.equal(await actuals.locator('ul.list li').count(),1)
+  assert.match(await actuals.locator('ul.list').innerText(),/Brake pads/)
+  assert.ok((await actuals.locator('ul.list').innerText()).includes('1 · '+(await source.state()).actor.name+' · revision 1'))
+  await shot('07-recovered-decision-and-actuals')
+  await page.goto(fresh.origin+'/app/jobs/'+fixture.prior.id)
+  await page.reload()
+  const invoice=page.locator('section.card').filter({has:page.getByRole('heading',{name:'Handover invoice',exact:true})})
+  assert.ok((await invoice.innerText()).includes(fixture.invoice.number))
+  assert.match(await invoice.locator('ul.list').innerText(),/Replace and tune/)
+  assert.match(await invoice.locator('ul.list').innerText(),/1 × \$120\.00/)
+  assert.match(await invoice.innerText(),/Original estimate · revision 1/)
+  const downloading=page.waitForEvent('download')
+  await invoice.getByRole('link',{name:'Download saved invoice CSV',exact:true}).click()
+  const downloaded=await downloading
+  assert.deepEqual(await readFile(await downloaded.path()),Buffer.from(fixture.savedBytes),'DATA-001: the restored native download retains exact saved invoice bytes')
+  assert.deepEqual((await fresh.state()).records,persisted.records,'DATA-001: rendering and downloading do not mutate recovered history')
+  await shot('08-recovered-invoice-and-download')
   assert.deepEqual(errors,[])
  }finally{await browser?.close();await fresh?.close();await source.close()}
 })

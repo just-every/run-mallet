@@ -18,7 +18,7 @@ export function publicDoor(origin,owner) {
  return {origin,owner,request,api,person,command:(command,input,options)=>api('/api/mallet/commands',{command,input},options),state:options=>api('/api/mallet/state',undefined,options)}
 }
 
-export async function portableRepair(source) {
+export async function populatedRepair(source) {
  // Import original source captures through the real reviewed door, independently
  // of any move-in performed earlier by the browser journey.
  const input=await snapshots()
@@ -55,6 +55,11 @@ export async function portableRepair(source) {
  invoice=await source.command('invoice.approve',{invoiceId:invoice.id,version:invoice.version})
  const saved=await source.command('invoice.export',{invoiceId:invoice.id,version:invoice.version})
  const savedBytes=await (await source.request('/api/mallet/exports/'+saved.id)).text()
+ return {asset,job,q,priorAsset,prior,oldQuote,invoice,saved,savedBytes,imported,key}
+}
+
+export async function portableRepair(source) {
+ const {job,q,imported,key,saved,savedBytes}=await populatedRepair(source)
  const original=(await source.state()).records,backup=await archive(source)
  for(const table of backup[0].tables)assert.ok(!/^oa_|^mallet_agent_keys$|^mallet_customer_links$|^mallet_approval_links$/.test(table.name),'OPS-001: identity and access keys are excluded')
  assert.equal(backup[0].objects.length,0,'OPS-001: current capabilities have no object-store media')

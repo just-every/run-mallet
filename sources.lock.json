@@ -4896,7 +4896,7 @@
       "executable": false
     },
     "tests/mallet.test.mjs": {
-      "sha256": "8c2cc43806fd417ccc9f4c97f68e763bdc0bdd7ee9a7d5b65fa42a589e34e33f",
+      "sha256": "b48144163a28d1b103b4a97741f0342aed4811406fc80d70cc69b7bc45ab6e28",
       "executable": false
     },
     "tests/media-browser.mjs": {
@@ -4952,7 +4952,7 @@
       "executable": false
     },
     "tests/restore.test.mjs": {
-      "sha256": "f95ce5875052b9e9abf7d0ef574d9ee4c0f545739f4121dbb8877c09b352ed56",
+      "sha256": "77f4e94a4ca1528eace7995aabaa3dd817acda0a4f91eae4dc6bc71dbc9d0355",
       "executable": false
     },
     "tests/retention-browser.mjs": {
@@ -5220,7 +5220,7 @@
       "executable": false
     },
     "tests/support/portable-repair.mjs": {
-      "sha256": "b34118be2e38043303e374e7776d2f26f5c08a73660781f6babaa820936c0b46",
+      "sha256": "347b27c4d1d4661a3979f67cbe1f9fa63b6637cdbae7caaf1e0dbac0e5abbb18",
       "executable": false
     },
     "tests/support/portal-journey.mjs": {
