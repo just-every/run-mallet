@@ -8,12 +8,12 @@ The primary journey: check in the customer and asset, diagnose and inspect, pric
 
 | Tier | Done | Partial | Missing | Total |
 | --- | ---: | ---: | ---: | ---: |
-| Core | 22 | 76 | 54 | 152 |
+| Core | 23 | 75 | 54 | 152 |
 | Agent surface | 0 | 0 | 5 | 5 |
 | Later | 0 | 0 | 0 | 0 |
-| Full target | 22 | 76 | 59 | 157 |
+| Full target | 23 | 75 | 59 | 157 |
 
-Judged from the code and tests at commit `0c4b8e0be86462c713e63dc7875074220be9e636` (28 October 2026). Field proof register: 12 rows; 0 passed, 0 failed, 12 not run.
+Judged from the code and tests at commit `040aa53fb7e46b2990273c9e93ca63de92d97ec6` (30 October 2026). Field proof register: 12 rows; 0 passed, 0 failed, 12 not run.
 
 ## Core
 
@@ -214,15 +214,15 @@ Core · target · **partial** · From INTAKE-001 · Cites BASE-ROLE-001, BASE-AU
 
 #### INTAKE-002 — Custom forms and signed shop terms
 
-Core · target · **partial** · Cites BASE-ROLE-001, BASE-MAIL-001, BASE-OPS-003, BASE-OPS-004 · Rules D-1, D-2, D-3
+Core · target · **done** · Cites BASE-ROLE-001, BASE-MAIL-001, BASE-OPS-003, BASE-OPS-004 · Rules D-1, D-2, D-3
 
 **Requirement.** Configure forms by vehicle/device type, capture symptom, diagnostic fee, storage/teardown terms and customer consent with exact version, signature and delivery copy; flag missing required fields without losing a draft. Owner/admin publish versioned vehicle/device templates with required/optional custom text fields, a whole-cent USD diagnostic fee, storage and teardown terms. Each issued form snapshots its exact terms and visit; later template edits never alter a draft or signed receipt. Only the issued, seven-day, revocable form link can save that customer’s draft or typed-name acknowledgment; it grants no account, repair or payment authority and is excluded from archives. Missing required fields are named while all valid draft answers remain saved. Signing explicitly consents to those exact terms and electronic signing/receipt with paper-copy instructions and requests one copy at the snapshotted customer email. The immutable receipt contains a content digest, is immediately readable/downloadable on the same link, and remains privately retrievable by staff after a template change. One email claim precedes the provider call; a failed or uncertain attempt never hides or replaces the signed copy. No customer identity verification or automatic retry is claimed. GOV-007 and INTAKE-003 govern customer-link/identity and intake authority before shipping. Before consent the form states the ESIGN consumer disclosures: the right to a paper copy and any fee, the right to withdraw consent and its effect, that consent covers this intake only, the hardware and software needed, and how to update the email. Opening the signed copy records demonstrated access. The emailed and downloadable copy is a readable, printable document of the exact terms, answers, typed name, time and content digest, with the JSON attached. Templates may require separately ticked acknowledgments (liability waiver, device data-loss and backup, storage charges), each recorded in the receipt. Technical formats and custody parameters are in [contract mechanisms](docs/contract-mechanisms.md#intake-002).
 
 **Acceptance.**
 1. Publish two intake templates, change shop terms after an intake and retrieve its original signed version; a customer completes required fields by phone and receives a copy.
 
-**Evidence.** `tests/media.test.mjs`; `tests/intake-forms-browser.mjs`
-**Gap.** Not asserted in the old cited evidence: Two published templates are both read back. Asserted: Original terms survive template change; Staff retrieve the original signed version; Required phone fields retain saved answers; Exact readable copy is downloadable. Additional vehicle/device-template and delivered-copy assertions live in uncited tests/support/intake-forms-journey.mjs.
+**Evidence.** `tests/media.test.mjs` INTAKE-002 registrations; `tests/intake-forms-browser.mjs` intakeFormsBrowser: both published template identities and exact revisions, retained phone draft, original signed copy after changed terms; `tests/support/intake-forms-journey.mjs` intakeFormsJourney: exact delivered copy, replay refusal and fresh-owner recovery
+**Gap.** None.
 
 #### INTAKE-003 — Counter and after-hours check-in
 

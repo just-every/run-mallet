@@ -1876,13 +1876,13 @@ Provider sandboxes, official-schema fakes, run-auth and seeded capacity runs rem
 
 ## Status
 
-Judged from the code and tests at commit `0c4b8e0be86462c713e63dc7875074220be9e636` (28 October 2026).
+Judged from the code and tests at commit `040aa53fb7e46b2990273c9e93ca63de92d97ec6` (30 October 2026).
 
 | Clauses | Done | Partial | Missing | Total |
 | --- | ---: | ---: | ---: | ---: |
 | Published | 1 | 8 | 0 | 9 |
-| Target and push further | 21 | 68 | 59 | 148 |
-| All | 22 | 76 | 59 | 157 |
+| Target and push further | 22 | 67 | 59 | 148 |
+| All | 23 | 75 | 59 | 157 |
 
 | Clause | Title | Kind | Status | Evidence | Gap |
 | --- | --- | --- | --- | --- | --- |
@@ -1901,7 +1901,7 @@ Judged from the code and tests at commit `0c4b8e0be86462c713e63dc7875074220be9e6
 | `VEH-003` | CARFAX service history exchange | target | missing |  | No CARFAX history or service reporting integration; account/program approval is required engineering work. |
 | `INTAKE-001` | Condition media and custody | target | partial | `tests/media.test.mjs`; `tests/intake-browser.mjs` | Not asserted in the old cited evidence: Vehicle damage condition is read back; Signed custody receipt fields are read back. Asserted: Vehicle key checklist is visible; Device charger checklist is visible; Photos remain attached; Actual returned checklist is compared. Additional signed-checklist and condition assertions live in uncited tests/support/intake-journey.mjs. |
 | `INTAKE-004` | Temporary unlock custody | target | partial | `tests/media.test.mjs`; `tests/intake-browser.mjs` | Not asserted in the old cited evidence: No material is copied to public state; No material is copied to audit; No material is copied to archives; Purpose end destroys readability; Lifetime expiry destroys readability; Older database cannot recover the secret; Destination authority is fresh. Asserted: Consented material is readable only through the authorized vault; Customer erasure removes reveal; Non-secret custody history restores exactly. Additional vault, state/audit/archive absence and recovery assertions live in uncited tests/support/intake-journey.mjs. |
-| `INTAKE-002` | Custom forms and signed shop terms | target | partial | `tests/media.test.mjs`; `tests/intake-forms-browser.mjs` | Not asserted in the old cited evidence: Two published templates are both read back. Asserted: Original terms survive template change; Staff retrieve the original signed version; Required phone fields retain saved answers; Exact readable copy is downloadable. Additional vehicle/device-template and delivered-copy assertions live in uncited tests/support/intake-forms-journey.mjs. |
+| `INTAKE-002` | Custom forms and signed shop terms | target | done | `tests/media.test.mjs` INTAKE-002 registrations; `tests/intake-forms-browser.mjs` intakeFormsBrowser: both published template identities and exact revisions, retained phone draft, original signed copy after changed terms; `tests/support/intake-forms-journey.mjs` intakeFormsJourney: exact delivered copy, replay refusal and fresh-owner recovery |  |
 | `INTAKE-003` | Counter and after-hours check-in | target | done | `tests/media.test.mjs`; `tests/support/check-in-journey.mjs`; `tests/check-in-browser.mjs` |  |
 | `BOOK-001` | Online appointment booking | target | partial | `tests/mallet.test.mjs` | Not asserted in the old cited evidence: Embedded booking form; Phone service selection; Last-bay contention result; Exactly one confirmed appointment is sent; Cancellation frees the claimed capacity. The native journeys exercise the workflow, but their title, performed step or uncited helper is not a point-level assertion here. Additional booking assertions live in uncited tests/support/booking-journey.mjs and tests/bookings-browser.mjs. |
 | `BOOK-002` | Resource calendars and recurring reservations | target | partial | `tests/mallet.test.mjs`; `tests/support/calendar-journey.mjs`; `tests/support/waitlist-journey.mjs`; `tests/calendar-browser.mjs` | Native resource calendars, qualifications, absences and dated recurring reservations are asserted. Point-level completion proof for every resource, competing-dispatch and recurring-DST outcome remains unestablished. |
