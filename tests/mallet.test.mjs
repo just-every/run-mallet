@@ -231,6 +231,7 @@ test('RepairShopr dry run, reviewed fingerprint, original custody, replay and un
  const input=await snapshots()
  input.assets.assets=Array.from({length:14},(_,i)=>({...input.assets.assets[0],id:1000+i,asset_serial:'BATCH-'+i}))
  const plan=await h.api('/api/mallet/imports/preview',input)
+ assert.equal(plan.links.length,input.assets.assets.length)
  assert.equal((await h.state()).records.asset,undefined)
  await h.api('/api/mallet/imports/apply',{...input,fingerprint:'0'.repeat(64)},{status:409})
  const checkpoints=[]
@@ -238,6 +239,7 @@ test('RepairShopr dry run, reviewed fingerprint, original custody, replay and un
   const position=checkpoints.at(-1)?.checkpoint??0
   assert.equal(current.total,plan.plan.entries.length)
   assert.equal(current.fingerprint,plan.fingerprint)
+  assert.equal(current.id,checkpoints[0]?.id??current.id)
   assert.ok(current.checkpoint>position,'each continuation advances the reviewed plan')
   assert.equal(current.fence,(checkpoints.at(-1)?.fence??0)+1)
   checkpoints.push(current)
@@ -271,6 +273,13 @@ test('RepairShopr dry run, reviewed fingerprint, original custody, replay and un
   assert.equal(Buffer.from(original.original.base64,'base64').toString('utf8'),JSON.stringify(snapshot))
  }
  assert.equal((await h.state()).records.asset.length,plan.links.length)
+ for(const source of input.assets.assets){
+  const link=journal.links.find(item=>item.assetSourceId===String(source.id))
+  const asset=(await h.state()).records.asset.find(item=>item.id===link.targetId)
+  assert.equal(link.customerSourceId,String(source.customer_id))
+  assert.equal(asset.identifier,source.asset_serial);assert.equal(asset.label,source.name)
+  assert.equal(asset.version,1);assert.deepEqual(asset.visits,[])
+ }
  let undone=await h.api('/api/mallet/imports/undo',{id:job.id})
  while(undone.state!=='undone')undone=await h.api('/api/mallet/imports/undo',{id:job.id})
  assert.equal((await h.state()).records.asset,undefined)
