@@ -15,6 +15,7 @@ const chunk=(bytes,index)=>{const b=bytes.subarray(index*65536,Math.min(bytes.le
 
 test('DVI-002 and OPS-001: private original and shared custody, interrupted upload, exact replay, assignment and revocation and full archive recovery',()=>run(async h=>{
  const tech=await h.person('brake-tech@example.test'),other=await h.person('other-tech@example.test')
+ const unassigned=await h.person(tech.session.operator.email.replace('brake-tech','synthetic-mallet-3'))
  let {job}=await booking(h,{technicianId:tech.id})
  const started=Date.now(),input={jobId:job.id,clientId:randomUUID(),title:'Front brake pad wear',capturedAt:'2026-10-01T09:15:00-04:00'}
  await h.api(path+'/findings',input,{as:'',status:401})
@@ -45,8 +46,6 @@ test('DVI-002 and OPS-001: private original and shared custody, interrupted uplo
  await h.command('dispatch.approve',{proposalId:proposal.id,version:proposal.version})
  await h.api(path+'/uploads/'+upload.id,undefined,{as:tech.cookie,status:404})
  await h.api(path+'/uploads/'+upload.id+'/chunks/1',chunk(photo,1),{method:'PUT',as:tech.cookie,status:404})
- await h.api('/auth/operator/status',{operatorId:other.id,status:'inactive'})
- await h.api(path+'/uploads/'+upload.id,undefined,{as:other.cookie,status:401})
  // Explicit resume reads stored progress; only unconfirmed chunks are submitted.
  upload=await h.api(path+'/uploads',originalInput)
  assert.deepEqual(upload.received,[0])
@@ -58,7 +57,29 @@ test('DVI-002 and OPS-001: private original and shared custody, interrupted uplo
  const duplicate=await h.api(path+'/uploads',{...originalInput,clientId:randomUUID()});assert.equal(duplicate.id,upload.id)
  await h.api(path+'/uploads',{...originalInput,filename:'changed.png'},{status:409})
  assert.deepEqual(await h.api(path+'/uploads/'+upload.id+'/complete',{}),upload)
- assert.deepEqual(Buffer.from(await (await h.request(upload.contentUrl)).arrayBuffer()),photo)
+ for(const as of [h.owner,other.cookie]){
+  const response=await h.request(upload.contentUrl,{as});assert.equal(response.status,200)
+  const bytes=Buffer.from(await response.arrayBuffer());assert.deepEqual(bytes,photo);assert.equal(hash(bytes),originalInput.sha256)
+  const ranged=await h.request(upload.contentUrl,{as,headers:{Range:'bytes=65530-65550'}});assert.equal(ranged.status,206)
+  assert.deepEqual(Buffer.from(await ranged.arrayBuffer()),photo.subarray(65530,65551))
+ }
+ await h.api('/auth/operator/status',{operatorId:other.id,status:'inactive'})
+ await h.api(path+'/uploads/'+upload.id,undefined,{as:other.cookie,status:401})
+ // Read the raw refusal, including range requests, so a denial status cannot
+ // conceal an original or a fragment of its bytes in the response body.
+ for(const [label,as,status] of [['signed out','',401],['unassigned',unassigned.cookie,404],['reassigned',tech.cookie,404],['revoked',other.cookie,401]]){
+  for(const range of [null,'bytes=0-63','bytes=65530-65550','bytes=-32']){
+   const response=await h.request(upload.contentUrl,{as,headers:range?{Range:range}:{}}),bytes=Buffer.from(await response.arrayBuffer())
+   const context=label+' '+(range??'full original')
+   assert.equal(response.status,status,context);assert.match(response.headers.get('content-type'),/^application\/json\b/,context)
+   assert.equal(response.headers.get('content-range'),null,context)
+   assert.equal(bytes.includes(photo),false,context+' discloses no original')
+   for(let offset=0;offset+16<=bytes.length;offset++)assert.equal(photo.includes(bytes.subarray(offset,offset+16)),false,context+' discloses no source fragment')
+   const refusal=JSON.parse(bytes.toString('utf8'));assert.equal(refusal.error,status===401?'sign_in_required':'NOT_FOUND',context)
+   assert.equal(refusal.details??null,null,context)
+  }
+ }
+ const retained=await h.request(upload.contentUrl);assert.equal(retained.status,200);assert.equal(hash(Buffer.from(await retained.arrayBuffer())),originalInput.sha256)
  await h.api(upload.contentUrl,undefined,{as:tech.cookie,status:404})
  await h.api(upload.contentUrl,undefined,{method:'DELETE',status:405})
  const range=await h.request(upload.contentUrl,{headers:{Range:'bytes=65530-65550'}});assert.equal(range.status,206);assert.deepEqual(Buffer.from(await range.arrayBuffer()),photo.subarray(65530,65551))

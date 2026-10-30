@@ -4904,7 +4904,7 @@
       "executable": false
     },
     "tests/media.test.mjs": {
-      "sha256": "14e2c60e8d6e89fbf5dc4e24490112c864dde92166e4c40eb6d4c36b38b75391",
+      "sha256": "a16521f5e1fc03d52796fd7d737af5663058c60442887bf302e26a2315da3dc5",
       "executable": false
     },
     "tests/open-source-journey.mjs": {
