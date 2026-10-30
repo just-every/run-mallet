@@ -146,6 +146,16 @@ export async function returnJourney(){
      await recovered.command('flow.collect',pickup,{as:advisor.cookie,status:401});await recovered.command('flow.collect',pickup,{...bearer,status:401})
      await recovered.command('return.delegate',authorization,{status:409});await recovered.command('flow.collect',pickup,{status:409})
      assert.deepEqual((await recovered.state()).records,restored.records,'Recovered history restores neither old credentials nor permission to replace a collection')
+     const tax=restored.records.taxSettings.find(r=>r.id==='shop-tax'),setupFields=new URLSearchParams({confirm:'yes',ratePercent:String(tax.ratePercent),...(tax.partsTaxable?{partsTaxable:'yes'}:{}),...(tax.laborTaxable?{laborTaxable:'yes'}:{})})
+     const confirmed=await recovered.mf.dispatchFetch(recovered.origin+'/setup',{method:'POST',redirect:'manual',headers:{origin:recovered.origin,cookie:recovered.owner,'content-type':'application/x-www-form-urlencoded'},body:setupFields.toString()});assert.equal(confirmed.status,303)
+     const beforePrint=(await recovered.state()).records
+     const recoveredPrint=await recovered.request('/app/handovers/'+saved.id+'/print');assert.equal(recoveredPrint.status,200)
+     const recoveredCopy=await recoveredPrint.text()
+     for(const text of [authorization.customerName,authorization.delegateName,authorization.evidence,pickup.identityEvidence,recorder.name])assert.ok(recoveredCopy.includes(text),'The fresh owner can print the exact retained cash evidence')
+     const deniedCopy=await recovered.request('/app/handovers/'+saved.id+'/print',{as:advisor.cookie});assert.equal(deniedCopy.status,303)
+     assert.equal((await deniedCopy.text()).includes(authorization.evidence),false,'An archived staff credential cannot expose the recovered receipt')
+     assert.deepEqual((await recovered.state()).records,beforePrint,'Printing and a denied archived session change no recovered records')
+     assert.deepEqual(beforePrint.handover,immutable.handover,'Fresh owner setup never rewrites retained handover evidence')
     }finally{await recovered.close()}
    }
   }
