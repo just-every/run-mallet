@@ -5,12 +5,14 @@ import {chromium} from '@playwright/test'
 import {mkdir,readFile} from 'node:fs/promises'
 import {join} from 'node:path'
 
-export async function browserJourney(openUrl,{directory='.cache/browser',fixtures='tests/fixtures/repairshopr',fresh=false,paywall}={}) {
+export async function browserJourney(openUrl,{directory='.cache/browser',fixtures='tests/fixtures/repairshopr',fresh=false,paywall,cookie}={}) {
  await mkdir(directory,{recursive:true})
- const browser=await chromium.launch({headless:true,args:['--disable-gpu','--use-mock-keychain','--password-store=basic']})
+ const browser=await chromium.launch({headless:true,...(process.env.MALLET_CHROMIUM?{executablePath:process.env.MALLET_CHROMIUM}:{}),args:['--no-sandbox','--disable-gpu','--use-mock-keychain','--password-store=basic']})
  let stage='open app'
  try {
-  const page=await browser.newPage({viewport:{width:1440,height:1000},timezoneId:'America/New_York'})
+  const context=await browser.newContext({viewport:{width:1440,height:1000},timezoneId:'America/New_York'})
+  if(cookie)await context.addCookies(cookie.split('; ').map(pair=>({name:pair.slice(0,pair.indexOf('=')),value:pair.slice(pair.indexOf('=')+1),url:new URL(openUrl).origin})))
+  const page=await context.newPage()
   await page.goto(openUrl)
   await page.waitForURL(url=>['/setup','/app'].includes(url.pathname))
   if(fresh){assert.equal(new URL(page.url()).pathname,'/setup','OPEN-001: published install starts at first-run setup');for(const width of [1440,390]){await page.setViewportSize({width,height:1000});await page.screenshot({path:join(directory,`00-setup-${width}.png`),fullPage:true})}}
@@ -32,7 +34,7 @@ export async function browserJourney(openUrl,{directory='.cache/browser',fixture
   await page.getByRole('link',{name:'New repair order'}).first().click();await page.waitForURL(url=>url.pathname==='/app/customers')
   await page.getByLabel('Customer name',{exact:true}).fill('Northside Cycles')
   await page.getByLabel('Customer email').fill('service@northside.example')
-  await page.getByLabel('Vehicle').fill('2019 Trek FX 3')
+  await page.getByLabel('Vehicle',{exact:true}).fill('2019 Trek FX 3')
   await page.getByLabel('Plate or VIN').fill('TREK-FX3-2019')
   await click('Add vehicle');const assetUrl=page.url();await shot('02-asset')
   await page.getByLabel('Repair request').fill('Brake pads and safety inspection')
@@ -61,12 +63,41 @@ export async function browserJourney(openUrl,{directory='.cache/browser',fixture
   await click('Record parts or labor');await shot('09-work-recorded')
   const qualityDoor=publicDoor(origin,(await page.context().cookies(origin)).map(c=>c.name+'='+c.value).join('; ')),qualityJob=(await qualityDoor.state()).records.job.find(j=>jobUrl.endsWith('/'+j.id));await qualityReady(qualityDoor,qualityJob);await page.reload();
   await click('Complete repair');await shot('10-completed')
+  await page.setViewportSize({width:1440,height:1000})
+  const beforeInvoice=await qualityDoor.state(),sourceJob=beforeInvoice.records.job.find(j=>jobUrl.endsWith('/'+j.id)),sourceEstimate=beforeInvoice.records.estimate.find(q=>q.id===sourceJob.estimateId)
+  const expectedLines=[{id:sourceEstimate.revisions[0].lines[0].id,kind:'part',description:'Shimano B05S brake pads',quantity:1,quantityMilli:1000,unitCents:3250,taxable:true,taxRatePercent:10,taxRateMillionths:100000,pierItemId:null,subtotalCents:3250,salesTaxCents:325,totalCents:3575,sourceEstimateId:sourceEstimate.id,sourceRevision:1}]
+  const invoicePanel=page.locator('section').filter({has:page.getByRole('heading',{name:'Handover invoice',exact:true})})
   await click('Prepare invoice');await shot('11-invoice-draft')
+  let savedInvoice=(await qualityDoor.state()).records.invoice.find(i=>i.jobId===sourceJob.id)
+  assert.deepEqual(savedInvoice.lines,expectedLines,'Native invoice freezes only actual authorized parts, excluding deferred labor')
+  assert.deepEqual(savedInvoice.totals,{currency:'USD',subtotalCents:3250,salesTaxCents:325,totalCents:3575})
   await click('Approve invoice');await shot('12-invoice-approved')
+  const decided=await qualityDoor.state(),approvalHistory=decided.records.approval
+  savedInvoice=decided.records.invoice.find(i=>i.id===savedInvoice.id)
+  assert.deepEqual(savedInvoice.approval.by,decided.actor);assert.equal(savedInvoice.approval.revision,1)
+  assert.deepEqual(approvalHistory.filter(a=>a.subjectKind==='invoice').map(a=>({subjectId:a.subjectId,revision:a.revision,subjectVersion:a.subjectVersion,approvedBy:a.approvedBy})),[{subjectId:savedInvoice.id,revision:1,subjectVersion:savedInvoice.version,approvedBy:decided.actor}])
   await click('Export invoice once');await shot('13-invoice-exported')
+  await page.setViewportSize({width:1440,height:1000});await page.reload()
+  const exportedState=await qualityDoor.state(),savedExport=exportedState.records.export.find(e=>e.invoiceId===savedInvoice.id)
+  savedInvoice=exportedState.records.invoice.find(i=>i.id===savedInvoice.id)
+  assert.deepEqual(savedInvoice.lines,expectedLines);assert.deepEqual(savedExport.lines,expectedLines)
+  assert.equal(exportedState.records.export.filter(e=>e.invoiceId===savedInvoice.id).length,1)
+  assert.deepEqual(exportedState.records.approval,approvalHistory)
+  assert.match(await invoicePanel.innerText(),/Shimano B05S brake pads[\s\S]*1 × \$32\.50[\s\S]*\$35\.75[\s\S]*Original estimate · revision 1/)
+  assert.doesNotMatch(await invoicePanel.innerText(),/Replace pads, adjust brakes and safety inspection/)
+  assert.ok((await invoicePanel.innerText()).includes('Approved by '+decided.actor.name))
   const [download]=await Promise.all([page.waitForEvent('download'),page.getByRole('link',{name:'Download saved invoice CSV'}).click()])
   await download.saveAs(join(directory,'invoice.csv'))
   assert.match(await readFile(join(directory,'invoice.csv'),'utf8'),/35.75/)
+  const expectedCsv='"InvoiceNumber","CustomerName","CustomerEmail","Vehicle","Identifier","JobId","EstimateRevision","Description","Kind","Quantity","UnitUSD","SubtotalUSD","SalesTaxUSD","TotalUSD","Currency","EstimateId"\r\n'+
+   [`"${savedInvoice.number}"`,'"Northside Cycles"',`"${savedInvoice.customer.customerEmail}"`,'"2019 Trek FX 3"','"TREK-FX3-2019"',`"${sourceJob.id}"`,'"1"','"Shimano B05S brake pads"','"part"','"1"','"32.50"','"32.50"','"3.25"','"35.75"','"USD"',`"${sourceEstimate.id}"`].join(',')+'\r\n'
+  assert.equal(await readFile(join(directory,'invoice.csv'),'utf8'),expectedCsv,'Downloaded CSV contains the independently priced actual-work row')
+  assert.equal(savedExport.csv,expectedCsv)
+  for(const version of [savedInvoice.version,savedInvoice.version-1])assert.deepEqual(await qualityDoor.command('invoice.export',{invoiceId:savedInvoice.id,version}),savedExport)
+  assert.equal(await (await page.request.get(origin+'/api/mallet/exports/'+savedExport.id)).text(),expectedCsv)
+  assert.deepEqual((await qualityDoor.state()).records.approval,approvalHistory)
+  await shot('13-invoice-readback')
+  console.log('PROBE INVOICE-001 browser: native prepare, approve, export and downloaded CSV -> exact authorized line, tax, person and revision; retained invoice shown at 1440 and 390')
   await page.goto(assetUrl);await shot('14-service-history')
   await page.getByLabel('Repair request').fill('Follow-up wheel alignment')
   await page.getByLabel('Start (with timezone)').fill('2026-11-02T09:00:00-05:00')
@@ -95,7 +126,7 @@ export async function browserJourney(openUrl,{directory='.cache/browser',fixture
   await page.goto(origin+'/app/data');await click('Revoke key');await shot('21-key-revoked')
   await page.goto(origin+'/app/customers')
   await page.getByLabel('Customer name',{exact:true}).fill('Unused intake')
-  await page.getByLabel('Vehicle').fill('Unbooked inspection request')
+  await page.getByLabel('Vehicle',{exact:true}).fill('Unbooked inspection request')
   await page.getByLabel('Plate or VIN').fill('UNUSED-INTAKE')
   await click('Add vehicle');await shot('22-unused-asset')
   await page.getByLabel('Type ERASE to confirm').fill('ERASE');await click('Erase unused vehicle')
