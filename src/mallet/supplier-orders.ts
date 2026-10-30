@@ -1,6 +1,7 @@
 import {bump,event,expectVersion,fail,find,put,rows,text,who,type Handler,type State,type Row} from './model'
 import {amount} from './inventory'
 import {purchasing} from './purchasing'
+import {assertReplenishment,replenishmentBasis,replenishmentSource} from './stock-replenishment'
 export const supplierOrderCommands=['purchase.retainComparison','purchase.cart','purchase.claimOrder','purchase.claimAction','purchase.orderOutcome']
 export const internalSupplierCommands=['purchase.retainComparison','purchase.claimOrder','purchase.claimAction','purchase.orderOutcome']
 export function supplierSubmission(s:State,poId:string){return rows(s,'purchaseSubmission').find(r=>r.purchaseId===poId)}
@@ -8,7 +9,7 @@ export function assertSupplierCart(s:State,po:Row,now:string){
  if(!po.supplierQuote)return
  const quote=po.supplierQuote
  if(!quote.compatible||quote.availableMilli<po.lines[0].quantityMilli||quote.expiresAt<=now||quote.cutoffAt<=now)fail('SUPPLIER_QUOTE_STALE','This quote is incompatible, unavailable or past its expiry/cutoff. Compare suppliers again before approval or submission.')
- if(po.totalCents!==quote.totalCents||po.supplier!==quote.supplierName||po.lines[0].unitCents!==quote.unitCents)fail('SUPPLIER_CART_CHANGED','The exact supplier quote and approved cart must agree.')
+ if(po.lines.length!==1||po.lines[0].quantityMilli!==quote.quantityMilli||po.lines[0].sku!==quote.sku||po.lines[0].unit!==quote.unit||po.taxCents!==quote.taxCents||po.freightCents!==quote.freightCents||po.totalCents!==quote.totalCents||po.supplier!==quote.supplierName||po.lines[0].unitCents!==quote.unitCents)fail('SUPPLIER_CART_CHANGED','The exact supplier quote and approved cart must agree.')
 }
 export function supplierOrderReport(s:State):{comparisons:Row[];orders:Row[]}{return {comparisons:rows(s,'purchaseComparison'),orders:rows(s,'purchaseOrder').filter(p=>p.supplierQuote).map(po=>({...po,submission:supplierSubmission(s,po.id)??null}))}}
 export const supplierOrders:Handler=(c,command,p)=>{
@@ -17,14 +18,24 @@ export const supplierOrders:Handler=(c,command,p)=>{
  if(command==='purchase.retainComparison'){
   const item=find(c.s,'stockItem',p.itemId),quantityMilli=amount(p.quantity),jobId=p.jobId?find(c.s,'job',p.jobId).id:null
   if(jobId&&!['booked','working'].includes(find(c.s,'job',jobId).status))fail('JOB_STATE','Source parts only for an open repair.')
-  const row=put(c.s,'purchaseComparison',{itemId:item.id,sku:item.sku,unit:item.unit,quantityMilli,jobId,origin:p.origin,offers:p.offers,observedAt:c.now,by:who(c),at:c.now});event(c,command,jobId,row.id,{offerCount:row.offers.length});return row
+  const source=p.replenishmentPurchaseId?replenishmentSource(c.s,p.replenishmentPurchaseId,p.replenishmentPurchaseVersion):null
+  if(source&&(source.lines[0].itemId!==item.id||source.lines[0].quantityMilli!==quantityMilli||jobId))fail('REPLENISHMENT_SOURCE','Compare the exact replenishment part and unmet stock quantity.')
+  const row=put(c.s,'purchaseComparison',{...(source?{replenishmentSource:{purchaseId:source.id,purchaseVersion:source.version,policyId:source.replenishmentId,policyVersion:source.policyVersion,binId:source.binId,calculation:structuredClone(source.calculation),basis:replenishmentBasis(c.s,source)}}:{}),itemId:item.id,sku:item.sku,unit:item.unit,quantityMilli,jobId,origin:p.origin,offers:p.offers,observedAt:c.now,by:who(c),at:c.now});event(c,command,jobId,row.id,{offerCount:row.offers.length});return row
  }
  if(command==='purchase.cart'){
   const comparison=find(c.s,'purchaseComparison',p.comparisonId),offer=comparison.offers.find((o:any)=>o.quoteId===p.quoteId)
   if(!offer)fail('SUPPLIER_QUOTE','Choose a supplier quote from this comparison.')
   if(rows(c.s,'purchaseOrder').some(po=>po.comparisonId===comparison.id))fail('DUPLICATE','This comparison already has a cart; review its existing order.')
+  const lineage=comparison.replenishmentSource,source=lineage?replenishmentSource(c.s,lineage.purchaseId,lineage.purchaseVersion):null
+  if(source&&JSON.stringify(lineage.basis)!==JSON.stringify(replenishmentBasis(c.s,source)))fail('STALE_REPLENISHMENT','Replenishment inputs changed after supplier comparison.')
+  if(source&&(p.binId!==source.binId||p.shipTo!==source.shipTo))fail('REPLENISHMENT_SOURCE','Keep the reviewed replenishment destination and ship-to address.')
   const po=purchasing(c,'purchase.create',{reference:text(p.reference,'PO reference'),supplier:offer.supplierName,shipTo:p.shipTo,expectedAt:offer.etaAt,taxCents:offer.taxCents,freightCents:offer.freightCents,binId:p.binId,lines:[{itemId:comparison.itemId,quantity:comparison.quantityMilli/1000,unitCents:offer.unitCents,jobId:comparison.jobId}]})
   po.comparisonId=comparison.id;po.supplierOrigin=comparison.origin;po.supplierQuote={...offer,quantityMilli:comparison.quantityMilli,sku:comparison.sku,unit:comparison.unit}
+  if(source){
+   bump(c.s,'purchaseOrder',source,{status:'superseded',quotedPurchaseId:po.id})
+   po.replenishmentId=source.replenishmentId;po.policyVersion=source.policyVersion;po.calculation=structuredClone(source.calculation);po.replenishmentSource=structuredClone(lineage);po.replenishmentBasis=replenishmentBasis(c.s,po)
+   assertReplenishment(c.s,po)
+  }
   assertSupplierCart(c.s,po,c.now);return po
  }
  const po=find(c.s,'purchaseOrder',p.purchaseId)
@@ -34,7 +45,8 @@ export const supplierOrders:Handler=(c,command,p)=>{
   expectVersion(po,p.version)
   if(!po.approval||!po.supplierQuote||po.closed||po.shortClose)fail('SUPPLIER_APPROVAL','Approve the exact supplier/cart/amount before one submission.')
   assertSupplierCart(c.s,po,c.now)
-  const row=put(c.s,'purchaseSubmission',{purchaseId:po.id,claimNonce:p.claimNonce,jobId:po.lines[0].jobId,status:'claimed',clientReference:po.id,origin:po.supplierOrigin,approval:structuredClone(po.approval),cart:{supplierId:po.supplierQuote.supplierId,quoteId:po.supplierQuote.quoteId,currency:'USD',totalCents:po.totalCents,shipTo:po.shipTo,lines:[{sku:po.supplierQuote.sku,grade:po.supplierQuote.grade,unit:po.supplierQuote.unit,quantityMilli:po.lines[0].quantityMilli,unitCents:po.lines[0].unitCents}]},orderId:null,history:[],actions:[],by:who(c),at:c.now})
+  assertReplenishment(c.s,po)
+  const row=put(c.s,'purchaseSubmission',{...(po.replenishmentSource?{replenishmentSource:structuredClone(po.replenishmentSource),replenishmentId:po.replenishmentId,policyVersion:po.policyVersion,binId:po.binId,calculation:structuredClone(po.calculation)}:{}),purchaseId:po.id,claimNonce:p.claimNonce,jobId:po.lines[0].jobId,status:'claimed',clientReference:po.id,origin:po.supplierOrigin,approval:structuredClone(po.approval),cart:{supplierId:po.supplierQuote.supplierId,quoteId:po.supplierQuote.quoteId,currency:'USD',totalCents:po.totalCents,shipTo:po.shipTo,lines:[{sku:po.supplierQuote.sku,grade:po.supplierQuote.grade,unit:po.supplierQuote.unit,quantityMilli:po.lines[0].quantityMilli,unitCents:po.lines[0].unitCents}]},orderId:null,history:[],actions:[],by:who(c),at:c.now})
   event(c,command,row.jobId,row.id,{purchaseId:po.id,totalCents:po.totalCents});return row
  }
  const submission=supplierSubmission(c.s,po.id)

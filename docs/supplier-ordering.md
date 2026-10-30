@@ -62,3 +62,20 @@ lookup-only. Owners/admins can review recovery and explicitly request another
 lookup through the native screen. BUY-003/004/005 and future supplier adapters
 inherit exact approval, idempotency, custody and honest outcome requirements;
 GOV-001 retains finer purchaser roles and limits, BOOKS-003 connected posting.
+
+Low-stock replenishment uses the same quote and submission doors. From the
+replenishment screen, compare suppliers for the current source draft. The
+comparison retains its purchase identity and revision, policy identity and
+revision, item, bin, exact unmet quantity and stock calculation. Preparing the
+quoted cart supersedes the source draft and links both records; the source's
+original approval remains evidence and does not approve the quoted spend.
+Approve the exact quoted supplier, grade, quantity, ship-to, tax, freight and
+amount separately, then explicitly submit with fresh human confirmation.
+
+Before the first submission claim, Mallet rechecks the replenishment sources
+and current quote. Changed stock movements, reservations, demand policy or
+outstanding orders require refreshed preparation and approval, even when
+compensating changes leave the same quantity. A source draft and its quoted
+replacement contribute only one outstanding order. After a durable claim,
+timeout, restart and archive recovery permit client-reference lookup only;
+changed demand or an expired quote never authorizes a second POST.

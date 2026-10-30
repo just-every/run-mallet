@@ -1,8 +1,9 @@
 import assert from 'node:assert/strict'
-export function supplierEdge(){
+export function supplierEdge({now}={}){
  const calls=[],orders=new Map(),actions=new Set();let mode='timeout',quoteMode='normal',held=null
  const origin='https://supplier.example.test',key='synthetic-mallet-200'
- const offers=quantityMilli=>['Cedar Parts','Maple Parts'].map((supplierName,n)=>({quoteId:'synthetic-mallet-'+(201+n),supplierId:'synthetic-mallet-'+(203+n),supplierName,grade:n?'Remanufactured':'OE-equivalent',compatible:quoteMode!=='incompatible',availableMilli:quoteMode==='short'?0:10000,quantityMilli,unitCents:n?900:1000,freightCents:n?500:200,taxCents:n?90:100,currency:'USD',observedAt:new Date().toISOString(),cutoffAt:new Date(Date.now()+(quoteMode==='expired'?-3600000:3600000)).toISOString(),etaAt:new Date(Date.now()+3*3600000).toISOString(),expiresAt:new Date(Date.now()+3600000).toISOString()}))
+ const time=()=>now??Date.now()
+ const offers=quantityMilli=>['Cedar Parts','Maple Parts'].map((supplierName,n)=>({quoteId:'synthetic-mallet-'+(201+n),supplierId:'synthetic-mallet-'+(203+n),supplierName,grade:n?'Remanufactured':'OE-equivalent',compatible:quoteMode!=='incompatible',availableMilli:quoteMode==='short'?0:10000,quantityMilli,unitCents:n?900:1000,freightCents:n?500:200,taxCents:n?90:100,currency:'USD',observedAt:new Date(time()).toISOString(),cutoffAt:new Date(time()+(quoteMode==='expired'?-3600000:3600000)).toISOString(),etaAt:new Date(time()+3*3600000).toISOString(),expiresAt:new Date(time()+3600000).toISOString()}))
  const fetch=async request=>{
  const url=new URL(request.url);assert.equal(url.origin,origin);assert.equal(request.headers.get('authorization'),'Bearer '+key)
  const body=request.method==='POST'?await request.json():null;calls.push({path:url.pathname,query:Object.fromEntries(url.searchParams),method:request.method,body,key:request.headers.get('idempotency-key')})

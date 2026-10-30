@@ -20,10 +20,26 @@ export function replenishmentReport(s:State,excludePurchaseId?:string):Row[]{
   return {...policy,...balance,openOrderMilli,projectedMilli,low,suggestedMilli:low?Math.max(0,policy.maxMilli-projectedMilli):0}
  })
 }
+// Retain source revisions as well as totals: compensating changes still require
+// another human review before the first supplier commitment.
+export function replenishmentBasis(s:State,po:Row){
+ const policy=find(s,'stockReplenishment',po.replenishmentId),itemId=policy.itemId,binId=policy.binId
+ const revisions=(kind:string,predicate:(r:Row)=>boolean)=>rows(s,kind).filter(predicate).map(r=>[r.id,r.version]).sort((a,b)=>String(a[0]).localeCompare(String(b[0])))
+ return {policyVersion:policy.version,...stockBalance(s,itemId,binId),
+  policies:revisions('stockReplenishment',r=>r.itemId===itemId),
+  movements:revisions('stockMovement',r=>r.itemId===itemId&&r.binId===binId),
+  reservations:revisions('stockReservation',r=>r.itemId===itemId&&r.binId===binId),
+  orders:rows(s,'purchaseOrder').filter(r=>r.id!==po.id&&r.status!=='superseded'&&!r.closed&&(!r.binId||r.binId===binId)&&r.lines.some((l:any)=>l.itemId===itemId&&!l.jobId)).map(r=>({id:r.id,version:r.version,submissionVersion:supplierSubmission(s,r.id)?.version??null,receipts:revisions('purchaseReceipt',receipt=>receipt.purchaseId===r.id)})).sort((a,b)=>a.id.localeCompare(b.id))}
+}
 export function assertReplenishment(s:State,po:Row){
  if(!po.replenishmentId)return
  const current=replenishmentReport(s,po.id).find(r=>r.id===po.replenishmentId)
- if(!current||current.version!==po.policyVersion||current.suggestedMilli!==po.lines[0].quantityMilli||!current.suggestedMilli)fail('STALE_REPLENISHMENT','Stock, demand, policy or outstanding orders changed. Run replenishment and review the refreshed draft.')
+ if(po.status==='superseded'||!current||current.itemId!==po.lines[0].itemId||current.binId!==po.binId||current.version!==po.policyVersion||current.suggestedMilli!==po.lines[0].quantityMilli||!current.suggestedMilli||po.replenishmentBasis&&JSON.stringify(po.replenishmentBasis)!==JSON.stringify(replenishmentBasis(s,po)))fail('STALE_REPLENISHMENT','Stock, reservations, demand, policy or outstanding orders changed. Run replenishment and review the refreshed draft.')
+}
+export function replenishmentSource(s:State,purchaseId:unknown,version:unknown){
+ const po=find(s,'purchaseOrder',purchaseId);expectVersion(po,version)
+ if(!po.replenishmentId||po.supplierQuote||po.closed||po.shortClose||!['draft','approved'].includes(po.status)||supplierSubmission(s,po.id))fail('REPLENISHMENT_SOURCE','Choose the current unquoted replenishment draft.')
+ assertReplenishment(s,po);return po
 }
 export const replenishment:Handler=(c,command,p)=>{
  if(!replenishmentCommands.includes(command))return
@@ -39,12 +55,13 @@ export const replenishment:Handler=(c,command,p)=>{
  }
  const results=[]
  for(const policy of [...rows(c.s,'stockReplenishment')].sort((a,b)=>a.binId.localeCompare(b.binId)||a.id.localeCompare(b.id))){
-  const draft=rows(c.s,'purchaseOrder').find(po=>po.replenishmentId===policy.id&&po.status==='draft'),need=replenishmentReport(c.s,draft?.id).find(r=>r.id===policy.id)!
+  const draft=rows(c.s,'purchaseOrder').find(po=>po.replenishmentId===policy.id&&['draft','approved'].includes(po.status)&&!supplierSubmission(c.s,po.id)),need=replenishmentReport(c.s,draft?.id).find(r=>r.id===policy.id)!
   if(!need.suggestedMilli){if(draft)bump(c.s,'purchaseOrder',draft,{status:'superseded'});continue}
-  if(draft&&draft.policyVersion===policy.version&&draft.lines[0].quantityMilli===need.suggestedMilli){results.push(draft);continue}
+  if(draft&&draft.policyVersion===policy.version&&draft.lines[0].quantityMilli===need.suggestedMilli&&(!draft.replenishmentBasis||JSON.stringify(draft.replenishmentBasis)===JSON.stringify(replenishmentBasis(c.s,draft)))&&(!draft.supplierQuote||draft.supplierQuote.expiresAt>c.now&&draft.supplierQuote.cutoffAt>c.now)){if(draft.status==='draft')results.push(draft);continue}
   if(draft)bump(c.s,'purchaseOrder',draft,{status:'superseded'})
   const po=purchasing(c,'purchase.create',{reference:'Replenishment '+crypto.randomUUID(),supplier:policy.supplier,shipTo:policy.shipTo,expectedAt:policy.expectedAt,taxCents:0,freightCents:0,binId:policy.binId,lines:[{itemId:policy.itemId,quantity:need.suggestedMilli/1000,unitCents:policy.unitCents}]})
   po.replenishmentId=policy.id;po.policyVersion=policy.version;po.calculation={availableMilli:need.availableMilli,openOrderMilli:need.openOrderMilli,demandMilli:need.demandMilli,minMilli:need.minMilli,maxMilli:need.maxMilli}
+  po.replenishmentBasis=replenishmentBasis(c.s,po)
   results.push(po)
  }
  event(c,command,null,c.actor.id,{draftIds:results.map(r=>r.id)});return {drafts:results,placed:false}

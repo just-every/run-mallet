@@ -1,6 +1,7 @@
 import type {Bindings} from '../auth.server'
 import type {Actor,Authority} from './auth'
 import {execute,expectVersion,fail,find,integer,load,text} from './model'
+import {replenishmentSource} from './stock-replenishment'
 import {supplierSubmission,assertSupplierCart} from './supplier-orders'
 import {connectorSecret} from './connectors/secrets'
 const instant=(value:unknown,label:string)=>{const raw=text(value,label,80);if(!/^\d{4}-\d\d-\d\dT.*(?:Z|[+-]\d\d:\d\d)$/.test(raw)||!Number.isFinite(Date.parse(raw)))fail('SUPPLIER_RESPONSE','Supplier times must identify an exact UTC instant.',null,502);return new Date(raw).toISOString()}
@@ -51,6 +52,8 @@ export async function supplierDoor(env:Bindings,actor:Actor,authority:Authority,
  if(!['owner','admin'].includes(actor.role))fail('FORBIDDEN','Only owner and admin operators contact suppliers.',null,403)
  const config=await settings(env),s=await load(env.DB)
  if(command==='purchase.compare'){
+  const source=p.replenishmentPurchaseId?replenishmentSource(s,p.replenishmentPurchaseId,p.replenishmentPurchaseVersion):null
+  if(source&&(source.lines[0].itemId!==p.itemId||source.lines[0].quantityMilli!==Math.round(Number(p.quantity)*1000)||p.jobId))fail('REPLENISHMENT_SOURCE','Compare only the exact reviewed replenishment demand.')
   const item=find(s,'stockItem',p.itemId),quantityMilli=Math.round(Number(p.quantity)*1000)
   // Validate quantity through the same domain parser before making a request.
   const {amount}=await import('./inventory');amount(p.quantity)
