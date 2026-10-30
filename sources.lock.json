@@ -572,7 +572,7 @@
       "executable": false
     },
     "ACCEPTANCE.md": {
-      "sha256": "299c8ac55436d45aa727f479f674ffe71d3c0f01f69dfb33cb7f2177000e490a",
+      "sha256": "9eea3fa9061edc883d51f6a0d746d9e8932c968daef123152e0d789a0f0e0f7e",
       "executable": false
     },
     "AGENTS.md": {
@@ -588,7 +588,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "b84351a0e8fa418266c848bc86d4a0d733a1f3f0304c2531183bcf0f681f78df",
+      "sha256": "bdb77054162185fa360c7746935fac469a21ff4843f450ad4dc7f23f163af5c7",
       "executable": false
     },
     "deploy-demo.json": {
@@ -620,7 +620,7 @@
       "executable": false
     },
     "docs/CLAIMS.md": {
-      "sha256": "9b9bf0085524731a1bf438c77d6bfbf9924433aff284feae668b303f0473d380",
+      "sha256": "3a1f1aa2ed0127ea955fd7b3b4ba7f4df229fab0e34e5f9682c94abf1a992857",
       "executable": false
     },
     "docs/complete-a-repair.md": {
@@ -4756,7 +4756,7 @@
       "executable": false
     },
     "tests/browser-journey.mjs": {
-      "sha256": "676e8168bfd50c6e177c7517ae0eeda77cfe714bb344cfe09f88904f63ed79ef",
+      "sha256": "8febeaa5aefbc2c6f3c9f3511703835211bf54f62f5b62faf3c1c85e0def7518",
       "executable": false
     },
     "tests/calendar-browser.mjs": {

@@ -8,12 +8,12 @@ The primary journey: check in the customer and asset, diagnose and inspect, pric
 
 | Tier | Done | Partial | Missing | Total |
 | --- | ---: | ---: | ---: | ---: |
-| Core | 23 | 75 | 54 | 152 |
+| Core | 24 | 74 | 54 | 152 |
 | Agent surface | 0 | 0 | 5 | 5 |
 | Later | 0 | 0 | 0 | 0 |
-| Full target | 23 | 75 | 59 | 157 |
+| Full target | 24 | 74 | 59 | 157 |
 
-Judged from the code and tests at commit `b0ddaeaca5452fcbce6deee58d5f975d4f24438c` (30 October 2026). Field proof register: 12 rows; 0 passed, 0 failed, 12 not run.
+Judged from the code and tests at commit `0bb97caf580c2cbb00cbfe75f816f42df49ba026` (30 October 2026). Field proof register: 12 rows; 0 passed, 0 failed, 12 not run.
 
 ## Core
 
@@ -69,15 +69,15 @@ Core · published · **partial** · Cites BASE-ROLE-001 · Rules D-1, D-2, D-3
 
 #### INVOICE-001 — One saved export
 
-Core · published · **partial** · Rules D-1, D-2, D-3
+Core · published · **done** · Rules D-1, D-2, D-3
 
 **Requirement.** An invoice freezes authorized prices and actual quantities after completion and requires a person to approve before export. Repeated export retrieves the same saved invoice and journal entry. Saved exports use USD unit, subtotal, sales tax and total columns. Migration preserves original cent amounts, export identities and approvals while updating legacy labels; subsequent downloads return the same saved export.
 
 **Acceptance.**
 1. Complete authorized work, prepare and approve the invoice through the app, export twice with current and preceding versions, and compare saved identity, lines, totals and approval history.
 
-**Evidence.** `src/mallet/invoices.ts`; `tests/mallet.test.mjs`; `tests/browser-journey.mjs`
-**Gap.** Not asserted in the old cited evidence: Approval history retains exact deciding actor and revision; Retry using the preceding version returns the same saved export; Actual-work invoice has the expected lines. Asserted: Exact invoice cent total; Repeated export identity is equal; Exactly one saved export; Exact approval history count.
+**Evidence.** `tests/mallet.test.mjs` — agent prepares, person approves, immutable actual-work invoice exports once; `tests/browser-journey.mjs` — counterInvoice and savedInvoiceReadback, invoked by workshopBrowser in the WORKSHOP-001 and INVOICE-001 native registration journey in `tests/mallet.test.mjs`
+**Gap.** None.
 
 #### AGENT-001 — Scoped preparation keys
 

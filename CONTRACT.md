@@ -1876,13 +1876,13 @@ Provider sandboxes, official-schema fakes, run-auth and seeded capacity runs rem
 
 ## Status
 
-Judged from the code and tests at commit `b0ddaeaca5452fcbce6deee58d5f975d4f24438c` (30 October 2026).
+Judged from the code and tests at commit `0bb97caf580c2cbb00cbfe75f816f42df49ba026` (30 October 2026).
 
 | Clauses | Done | Partial | Missing | Total |
 | --- | ---: | ---: | ---: | ---: |
-| Published | 2 | 7 | 0 | 9 |
+| Published | 3 | 6 | 0 | 9 |
 | Target and push further | 21 | 68 | 59 | 148 |
-| All | 23 | 75 | 59 | 157 |
+| All | 24 | 74 | 59 | 157 |
 
 | Clause | Title | Kind | Status | Evidence | Gap |
 | --- | --- | --- | --- | --- | --- |
@@ -1890,7 +1890,7 @@ Judged from the code and tests at commit `b0ddaeaca5452fcbce6deee58d5f975d4f2443
 | `WORKSHOP-001` | Register and visits | published | done | `tests/mallet.test.mjs` — booking rejects bay and technician collisions and keeps every asset visit; `tests/browser-journey.mjs` — workshopBrowser, registered as WORKSHOP-001 and INVOICE-001: native registration, repeat visits and exact saved invoice at 1440 and 390 in `tests/mallet.test.mjs` | |
 | `ESTIMATE-001` | Exact decision | published | partial | `src/mallet/estimates.ts`; `tests/mallet.test.mjs`; `tests/browser-journey.mjs` | Not asserted in the old cited evidence: Prepared and revised exact API content; Stale approval refusal outcome; Printed handoff is read back; Accepted lines cannot be changed; Unapproved line refusal; Excess quantity refusal. Asserted: Partial authorization retains exact total. |
 | `WORK-001` | Authorized actuals | published | partial | `src/mallet/workshop.ts`; `src/mallet/model.ts`; `tests/mallet.test.mjs` | Not asserted in the old cited evidence: Assigned member actual is read back; Another-job refusal has unchanged actuals; Unapproved-line refusal has unchanged actuals; Excess-quantity refusal has unchanged actuals; Completed job retains actual actor; Completed job retains exact source revision. The native journeys exercise the workflow, but their title, performed step or uncited helper is not a point-level assertion here. |
-| `INVOICE-001` | One saved export | published | partial | `src/mallet/invoices.ts`; `tests/mallet.test.mjs`; `tests/browser-journey.mjs` | Not asserted in the old cited evidence: Approval history retains exact deciding actor and revision; Retry using the preceding version returns the same saved export; Actual-work invoice has the expected lines. Asserted: Exact invoice cent total; Repeated export identity is equal; Exactly one saved export; Exact approval history count. |
+| `INVOICE-001` | One saved export | published | done | `tests/mallet.test.mjs` — agent prepares, person approves, immutable actual-work invoice exports once; `tests/browser-journey.mjs` — counterInvoice and savedInvoiceReadback, invoked by workshopBrowser in the WORKSHOP-001 and INVOICE-001 native registration journey in `tests/mallet.test.mjs` | |
 | `AGENT-001` | Scoped preparation keys | published | partial | `src/mallet/auth.ts`; `src/mallet/model.ts`; `tests/mallet.test.mjs` | Not asserted in the old cited evidence: Native issuance returns a key (assertion is in uncited tests/browser-journey.mjs); Preparation succeeds with exact draft content; Preparation scope refuses approval; Preparation scope refuses sharing; Preparation scope refuses customer authorization; Preparation scope refuses invoice export; Preparation scope refuses erasure; Preparation scope refuses access management; Person decision is retained with attribution; Revoked key cannot write; Concurrent revoked write changes nothing. The native journeys exercise the workflow, but their title, performed step or uncited helper is not a point-level assertion here. |
 | `IMPORT-001` | Reviewed register move | published | partial | `src/mallet/imports/service.ts`; `src/mallet/imports/snapshots.ts`; `tests/mallet.test.mjs` | Not asserted in the old cited evidence: An asset with a native visit itself survives undo; Journal retains resumed batches. Asserted: Preview leaves the asset population absent; Exact reviewed import population; Apply replay has one job identity; Journal retains originals; Undo removes untouched assets. |
 | `DATA-001` | Custody and erasure | published | partial | `src/mallet/archive-policy.mjs`; `src/mallet/imports/portability.ts`; `src/mallet/imports/erasure.ts`; `tests/mallet.test.mjs`; `src/mallet/restore/notice.mjs`; `src/mallet/ui/restore.ts`; `tests/restore.test.mjs` | Not asserted in the old cited evidence: Populated repair history compares after empty-destination recovery; Populated restore has no effect; Unauthorized erasure has no effect. Asserted: Known pre-erasure archive leaves destination unpopulated; Current post-erasure archive excludes erased asset. Matching repair-history and populated-restore assertions exist in uncited tests/support/portable-repair.mjs; they cannot be added to this carried evidence set. |
