@@ -3,8 +3,8 @@
 (()=>{
  let board=document.querySelector('#board'),empty=document.querySelector('.empty-board')
  if(!board&&!empty)return
- let version=(board??empty).dataset.boardVersion??null,timer,controller,stopped=false
- const interval=500
+ let version=(board??empty).dataset.boardVersion??null,timer,controller,stopped=false,refreshedAt=performance.now()
+ const interval=500,refreshInterval=60000
  function status(failed){
   let message=document.querySelector('[data-board-live-status]')
   if(!failed){message?.remove();return}
@@ -43,17 +43,18 @@
   try{
    const revision=await(await read('/api/mallet/board-revision',controller.signal)).json()
    if(!Number.isSafeInteger(revision.version)||revision.version<0)throw Error('Invalid board revision')
-   if(String(revision.version)!==version){
+   // Promise status changes with elapsed time even when no record is written.
+   if(String(revision.version)!==version||performance.now()-refreshedAt>=refreshInterval){
     const response=await read(location.pathname+location.search,controller.signal),html=new DOMParser().parseFromString(await response.text(),'text/html'),incoming=html.querySelector('#board'),nextEmpty=html.querySelector('.empty-board'),nextVersion=(incoming??nextEmpty)?.dataset.boardVersion
     if((!incoming&&!nextEmpty)||!nextVersion||!Number.isSafeInteger(Number(nextVersion))||Number(nextVersion)<revision.version)throw Error('Board projection changed while reading')
     if(!board){
-     if(!incoming){version=nextVersion;empty.dataset.boardVersion=nextVersion;status(false);return}
+     if(!incoming){version=nextVersion;refreshedAt=performance.now();empty.dataset.boardVersion=nextVersion;status(false);return}
      // The first repair replaces the existing empty projection, never a staff form.
      const nodes=[...html.querySelectorAll('.main > .bays,.main > .advisor,.main > .board-filters,.main > #board,.main > .bottom')]
      if(!nodes.includes(incoming))throw Error('First board projection unavailable')
      empty.replaceWith(...nodes);empty=null;board=document.querySelector('#board')
      const heading=document.querySelector('.main > .heading'),nextHeading=html.querySelector('.main > .heading');if(heading&&nextHeading)heading.replaceChildren(...nextHeading.childNodes)
-     version=nextVersion;board.dataset.boardVersion=nextVersion;document.dispatchEvent(new CustomEvent('mallet:board-updated',{detail:{version:Number(nextVersion)}}));status(false);return
+     version=nextVersion;refreshedAt=performance.now();board.dataset.boardVersion=nextVersion;document.dispatchEvent(new CustomEvent('mallet:board-updated',{detail:{version:Number(nextVersion)}}));status(false);return
     }
     if(!incoming)throw Error('Board projection unavailable')
     const currentColumns=[...board.children].filter(node=>node.matches('.column[data-stage]')),nextColumns=[...incoming.children].filter(node=>node.matches('.column[data-stage]'))
@@ -69,7 +70,7 @@
     // temporarily missing (for example while an owner changes a filter).
     if(!complete)throw Error('An active form prevents board replacement')
     restoreFocus(boardFocus,board);board.scrollLeft=left;board.scrollTop=top;window.scrollTo(x,y)
-    version=nextVersion;board.dataset.boardVersion=nextVersion
+    version=nextVersion;refreshedAt=performance.now();board.dataset.boardVersion=nextVersion
     document.dispatchEvent(new CustomEvent('mallet:board-updated',{detail:{version:Number(nextVersion)}}))
    }
    status(false)
