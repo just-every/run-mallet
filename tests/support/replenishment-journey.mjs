@@ -42,6 +42,25 @@ export async function replenishmentJourney(h){
  report=await h.api('/api/mallet/replenishment');assert.equal(report.reduce((n,r)=>n+r.openOrderMilli,0),12000)
 }
 
+// An approved native PO remains outstanding when later repair demand changes.
+export async function approvedReplenishmentJourney(h){
+ const f=await replenishmentFixture(h)
+ await h.command('stock.replenishment',f.policy)
+ const draft=(await h.command('stock.replenish')).drafts[0]
+ assert.equal(draft.lines[0].quantityMilli,8000)
+ const approved=await h.command('purchase.approve',{purchaseId:draft.id,version:draft.version,reason:'Approve the eight-unit stock order'})
+ await h.command('stock.reserve',{...f.scans,jobId:f.job.id,quantity:1,reference:'synthetic-mallet-340'})
+ const before=(await h.state()).records.purchaseOrder
+ for(let replay=0;replay<2;replay++){
+  assert.deepEqual((await h.command('stock.replenish')).drafts,[],'Approved outstanding stock must be deducted after demand changes')
+  assert.deepEqual((await h.state()).records.purchaseOrder,before,'Preparing drafts must preserve the approved order and its exact approval')
+ }
+ assert.deepEqual((await h.state()).records.purchaseOrder.find(po=>po.id===approved.id),approved)
+ const report=await h.api('/api/mallet/replenishment')
+ assert.deepEqual(report.map(r=>[r.availableMilli,r.openOrderMilli,r.projectedMilli,r.suggestedMilli]),[[0,10000,9000,0]])
+ console.log('PROBE PART-007 A: approve 8 units, reserve 1, POST stock.replenish twice -> no drafts; approved PO unchanged; open orders 10, projected stock 9, maximum 10')
+}
+
 // Exercise the actual supplier transport while replacing only its network edge.
 export async function replenishmentOrderingJourney(){
  const {supplierEdge}=await import('./supplier-edge.mjs'),clock='2026-10-30T12:00:00Z',edge=supplierEdge({now:Date.parse(clock)}),options={clock,bindings:{MALLET_SUPPLIER_ORIGIN:edge.origin,MALLET_SUPPLIER_KEY:edge.key},outboundService:edge.fetch},h=await installation(options)

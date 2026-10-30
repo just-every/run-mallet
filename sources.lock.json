@@ -2476,7 +2476,7 @@
       "executable": false
     },
     "src/mallet/stock-replenishment.ts": {
-      "sha256": "8f879c93d2eb489d71bdf4c04f50efdd2157656d89494aed96dcdb697032c2fc",
+      "sha256": "26a68b0ce507259734246605387f0359bf58cf5f87b5d7762e6c97242c289e20",
       "executable": false
     },
     "src/mallet/stock-trace.ts": {
@@ -5376,7 +5376,7 @@
       "executable": false
     },
     "tests/mallet.test.mjs": {
-      "sha256": "a05ce86c46e0a8538238e5fe8e8e4f84fbf2f4f3584579aa57d7b5c7aaaa253a",
+      "sha256": "04d138f8ccb31cd5da0d4f85ddd710c6241549d904a1e84cfc97c17df5a25f6c",
       "executable": false
     },
     "tests/media-browser.mjs": {
@@ -5760,7 +5760,7 @@
       "executable": false
     },
     "tests/support/replenishment-journey.mjs": {
-      "sha256": "8b0443a18647d939ec4d2773bfec6245d9bff0657f125c06ba26ed7eac96b6ab",
+      "sha256": "9d0492b948af1219d4990ddd7d20c70eb8a9b7eec28b448b7aacf46a0ab7c199",
       "executable": false
     },
     "tests/support/report-csv.mjs": {

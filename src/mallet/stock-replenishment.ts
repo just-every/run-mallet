@@ -55,7 +55,9 @@ export const replenishment:Handler=(c,command,p)=>{
  }
  const results=[]
  for(const policy of [...rows(c.s,'stockReplenishment')].sort((a,b)=>a.binId.localeCompare(b.binId)||a.id.localeCompare(b.id))){
-  const draft=rows(c.s,'purchaseOrder').find(po=>po.replenishmentId===policy.id&&['draft','approved'].includes(po.status)&&!supplierSubmission(c.s,po.id)),need=replenishmentReport(c.s,draft?.id).find(r=>r.id===policy.id)!
+  // Approved native POs stay outstanding. Only unsubmitted supplier quotes can
+  // be refreshed after their exact replenishment basis becomes stale.
+  const draft=rows(c.s,'purchaseOrder').find(po=>po.replenishmentId===policy.id&&(po.status==='draft'||po.status==='approved'&&po.supplierQuote)&&!supplierSubmission(c.s,po.id)),need=replenishmentReport(c.s,draft?.id).find(r=>r.id===policy.id)!
   if(!need.suggestedMilli){if(draft)bump(c.s,'purchaseOrder',draft,{status:'superseded'});continue}
   if(draft&&draft.policyVersion===policy.version&&draft.lines[0].quantityMilli===need.suggestedMilli&&(!draft.replenishmentBasis||JSON.stringify(draft.replenishmentBasis)===JSON.stringify(replenishmentBasis(c.s,draft)))&&(!draft.supplierQuote||draft.supplierQuote.expiresAt>c.now&&draft.supplierQuote.cutoffAt>c.now)){if(draft.status==='draft')results.push(draft);continue}
   if(draft)bump(c.s,'purchaseOrder',draft,{status:'superseded'})

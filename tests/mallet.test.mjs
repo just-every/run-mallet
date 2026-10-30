@@ -394,7 +394,7 @@ test('OPS-002: staff search phone and plate and page native account results at 1
 
 test('OPS-002: native peer boards update stages and priority while preserving drafts and focus at 1440/390',async()=>{const {boardLiveJourney}=await import('./support/board-live-journey.mjs');await boardLiveJourney()})
 
-test('PART-007 / OPS-001: consumed stock, location demand, open-order deduction, replay-safe drafts, stale approval and recovery',async()=>{const {replenishmentJourney,replenishmentOrderingJourney}=await import('./support/replenishment-journey.mjs');await run(replenishmentJourney);await replenishmentOrderingJourney()})
+test('PART-007 / OPS-001: consumed stock, location demand, open-order deduction, replay-safe drafts, stale approval and recovery',async()=>{const {replenishmentJourney,replenishmentOrderingJourney,approvedReplenishmentJourney}=await import('./support/replenishment-journey.mjs');await run(approvedReplenishmentJourney);await run(replenishmentJourney);await replenishmentOrderingJourney()})
 test('PART-007: low stock, repeated preparation and exact cart approval at 1440/390',async()=>{const {replenishmentBrowser}=await import('./replenishment-browser.mjs');await replenishmentBrowser()})
 test('PART-004 / OPS-001: separate taxed core deposit, tender, due alerts, returned condition, shipment, adjusted supplier credit and immutable invoice correction',async()=>{const {coresJourney}=await import('./support/cores-journey.mjs');await run(coresJourney)})
 test('PART-004: core deposit, expiry alert, shipment and adjusted credit correction at 1440/390',async()=>{const {coresBrowser}=await import('./cores-browser.mjs');await coresBrowser()})
