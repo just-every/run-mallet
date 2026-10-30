@@ -691,8 +691,8 @@ Core · target · **partial** · Rules D-1, D-2, D-3
 **Acceptance.**
 1. Approve a two-line PO, receive one line and part of another, retain the backorder and match a changed supplier bill as an exception.
 
-**Evidence.** `tests/mallet.test.mjs`; `tests/purchasing-browser.mjs`
-**Gap.** Not asserted in the old cited evidence: Two-line exact approved cart is read back; Full received quantity is read back separately. Asserted: Partial received quantity and backorder remain visible; Changed bill has a price exception; Changed bill has a quantity exception.
+**Evidence.** `tests/mallet.test.mjs` — "BUY-001 / OPS-001: approved spend, partial receipt, repair allocation, backorder, bill exceptions, closure and fresh recovery" (`tests/support/purchasing-journey.mjs`, purchasingJourney) proves exact saved and approved item identities, ordered thousandths, unit costs, tax, freight and total through public state and the purchasing report, distinct full and partial receipt identities and references, repair allocation, backorders, changed-bill exceptions, safe refusals, closure and exact fresh-owner recovery. "BUY-001: two-line spend approval, partial receiving, backorder and changed bill exception through native forms at 1440/390" (`tests/purchasing-browser.mjs`, purchasingBrowser) proves reloaded native approval, both exact receipt records and rendered quantities, retained exceptions and closure, with both release-width screens.
+**Gap.** Not asserted in the old cited evidence: Two-line exact approved cart is read back; Full received quantity is read back separately. Asserted: Partial received quantity and backorder remain visible; Changed bill has a price exception; Changed bill has a quantity exception. Candidate assertions now cover the exact approved cart and separate full receipt described above; BUY-001 remains PARTIAL pending acceptance of this added evidence.
 
 #### BUY-002 — Supplier stock and approved ordering
 
