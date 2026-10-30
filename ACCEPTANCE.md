@@ -8,12 +8,12 @@ The primary journey: check in the customer and asset, diagnose and inspect, pric
 
 | Tier | Done | Partial | Missing | Total |
 | --- | ---: | ---: | ---: | ---: |
-| Core | 22 | 76 | 54 | 152 |
+| Core | 23 | 75 | 54 | 152 |
 | Agent surface | 0 | 0 | 5 | 5 |
 | Later | 0 | 0 | 0 | 0 |
-| Full target | 22 | 76 | 59 | 157 |
+| Full target | 23 | 75 | 59 | 157 |
 
-Judged from the code and tests at commit `0c4b8e0be86462c713e63dc7875074220be9e636` (28 October 2026). Field proof register: 12 rows; 0 passed, 0 failed, 12 not run.
+Judged from the code and tests at commit `af98fef28ee2f76e0bcc992b973b742f7d64fbab` (30 October 2026); PART-001 receipt quantities and lot isolation rechecked on the candidate with the same code and tests. Field proof register: 12 rows; 0 passed, 0 failed, 12 not run.
 
 ## Core
 
@@ -648,15 +648,15 @@ Core · target · **missing** · From FLEET-001, FLEET-002 · Rules D-1, D-2, D-
 
 #### PART-001 — Shop parts catalog and traceability
 
-Core · target · **partial** · Cites BASE-ROLE-001 · Rules D-1, D-2, D-3
+Core · target · **done** · Cites BASE-ROLE-001 · Rules D-1, D-2, D-3
 
 **Requirement.** Maintain SKU, supplier/OEM cross-references, vehicle fitment, unit, locations, serial/lot, cost, selling price, warranty and supersession; trace a consumed lot or serial from receiving to repair and customer. Catalog cross-references, fitment and warranty are shop declarations, not supplier/OEM verification. Receiving freezes its catalog, supplier lot/serial, bin, unit cost and source evidence. Owner/admin identifies a physical lot against already recorded customer-authorized part actuals, without adding a customer charge; usage is bounded by both that actual and remaining lot quantity and appends the negative stock movement. Recorded receipt unit cost is extended half-up to USD cents; later catalog changes never rewrite received provenance or installed cost. A serial represents one whole unit. Count variance for tracked stock identifies the affected lot and cannot make a serial fractional. PART-003 retains atomic work/reservation consumption, cancellation releases, returns and the separate Pier movement authority; PART-005 retains supplier returns/RMAs and BOOKS-003 retains accounting journals.
 
 **Acceptance.**
 1. Receive two lots of the same SKU, install one and search the supplier lot; only affected ROs and vehicles appear.
 
-**Evidence.** `tests/mallet.test.mjs`; `tests/stock-trace-browser.mjs`
-**Gap.** Not asserted in the old cited evidence: Both received lot quantities are independently asserted. Asserted: Installed lot use is read back; Installed use retains exact repair identity; Consumed supplier-lot search shows the repair; Unconsumed supplier-lot search excludes that repair.
+**Evidence.** `tests/support/stock-trace-journey.mjs` traceJourney; `tests/stock-trace-browser.mjs` traceBrowser (both registered in `tests/mallet.test.mjs`)
+**Gap.** None.
 
 #### PART-002 — Barcode receiving and stock counts
 
