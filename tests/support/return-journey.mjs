@@ -4,11 +4,38 @@ import {qualityReady} from './quality-ready.mjs'
 import {shopSetup} from './diagnosis-journey.mjs'
 import {handoverInput} from './handover-input.mjs'
 import {refuseChangedReturnRevision} from './return-revision.mjs'
-export async function readyInvoice(h,{asset,reviewer,technicianId,free=false}={}){
+export async function readyInvoice(h,{asset,reviewer,technicianId,free=false,failedQuality=false,onFailed}={}){
  let {job}=await booking(h,{asset,technicianId}),q=await authorise(h,free?await h.command('estimate.prepare',{jobId:job.id,version:job.version,lines:[{kind:'labor',description:'Covered no-charge labor',quantity:1,unitCents:0}]}):await estimate(h,job));job=(await h.state()).records.job.find(j=>j.id===job.id)
  job=await h.command('work.record',{jobId:job.id,version:job.version,lineId:q.revisions[0].lines[0].id,quantity:1})
  await h.command('job.complete',{jobId:job.id,version:job.version},{status:409})
- await qualityReady(h,job,{reviewer});job=await h.command('job.complete',{jobId:job.id,version:job.version})
+ if(failedQuality){
+  assert.ok(reviewer,'An independent reviewer is required for the failed-quality collection journey')
+  let quality
+  const check=(command,more={},options={})=>h.command(command,{jobId:job.id,version:job.version,qualityVersion:quality?.version??0,...more},options)
+  quality=await check('quality.configure',{reason:'Physical checks before cash collection',items:[{label:'Before-work condition',stage:'pre',required:true,critical:false},{label:'Post-work brake function',stage:'post',required:true,critical:true}]})
+  const [pre,post]=quality.revisions.at(-1).items
+  quality=await check('quality.record',{itemId:pre.id,outcome:'pass',note:'Condition inspected before the recorded work'})
+  quality=await check('quality.record',{itemId:post.id,outcome:'fail',note:'Brake function failed the physical collection check'})
+  const failed=structuredClone(quality.results.at(-1))
+  const signTechnician=()=>check('quality.signTechnician',{qualification:'Qualified repair technician',note:'Personally inspected the current work and brake function'})
+  const signQuality=safetyDecision=>check('quality.signQuality',{qualification:'Independent qualified shop reviewer',note:'Independent physical collection inspection',safetyDecision},{as:reviewer.cookie})
+  quality=await signTechnician();quality=await signQuality('unsafe')
+  const before=await h.state(),board=await h.api('/api/mallet/board'),input={jobId:job.id,version:job.version,flowVersion:before.records.flow?.find(f=>f.jobId===job.id)?.version??0,collectorName:job.asset.customerName}
+  assert.equal((await h.command('job.complete',{jobId:job.id,version:job.version},{status:409})).error,'QUALITY_BLOCKED')
+  assert.equal((await h.command('flow.collect',input,{status:409})).error,'NOT_READY')
+  assert.deepEqual((await h.state()).records,before.records,'Failed quality and unpaid collection preserve work, quality, payment and handover history')
+  assert.deepEqual(await h.api('/api/mallet/board'),board,'Refused collection leaves the failed repair on its prior board stage')
+  assert.equal(before.records.invoice?.some(i=>i.jobId===job.id)??false,false)
+  assert.equal(before.records.handover?.some(r=>r.jobId===job.id)??false,false)
+  await onFailed?.({job,quality,failed,input})
+  job=await h.command('work.record',{jobId:job.id,version:job.version,lineId:q.revisions[0].lines[0].id,quantity:1,note:'Authorized corrective brake work after the failed check'})
+  quality=await check('quality.correct',{failedResultId:failed.id,workId:job.actuals.at(-1).id,reason:'Corrected the failed brake function before any collection'})
+  quality=await check('quality.record',{itemId:post.id,outcome:'pass',note:'Physical brake retest passed after the recorded correction'})
+  quality=await signTechnician();quality=await signQuality('safe')
+  assert.deepEqual(quality.results.find(r=>r.id===failed.id),failed,'Correction retains the original failed quality evidence')
+  assert.equal(quality.corrections.at(-1).failedResultId,failed.id)
+ }else await qualityReady(h,job,{reviewer})
+ job=await h.command('job.complete',{jobId:job.id,version:job.version})
  let invoice=await h.command('invoice.prepare',{jobId:job.id,version:job.version});invoice=await h.command('invoice.approve',{invoiceId:invoice.id,version:invoice.version})
  job=(await h.state()).records.job.find(j=>j.id===job.id);return {job,invoice}
 }
@@ -79,7 +106,7 @@ export async function returnJourney(){
   try{await restore(destination,pendingArchive);await destination.command('flow.collect',unpaid,{status:409});assert.equal((await destination.state()).records.handover.length,1,'An archived owner exception grants no fresh-installation authority')}finally{await destination.close()}
   const overridden=await h.command('flow.collect',unpaid),r=(await h.state()).records.handover.find(r=>r.id===overridden.collection.handoverId);assert.equal(r.invoice.billing,undefined);assert.ok(!(await h.state({as:advisor.cookie})).records.handover.some(r=>r.invoice.billing));assert.equal(r.settlement.verifiedCents,0);assert.equal(r.settlement.override.id,unpaid.overrideId);assert.match(r.settlement.label,/not verified/);assert.match(r.settlement.label,/possessory lien/)
   for(const [n,method]of ['cash','check','other'].entries()){
-   const asset=await h.command('asset.create',{customerName:'Tender customer '+method,label:'Tender pickup',identifier:'synthetic-mallet-'+(103+n)}),manual=await readyInvoice(h,{asset}),pickup=await handoverInput(h,manual.job.id,method==='cash'?'Cash-authorized collector':asset.customerName);delete pickup.overrideId
+   const asset=await h.command('asset.create',{customerName:'Tender customer '+method,label:'Tender pickup',identifier:'synthetic-mallet-'+(103+n)}),manual=await readyInvoice(h,{asset,reviewer:advisor,failedQuality:method==='cash'}),pickup=await handoverInput(h,manual.job.id,method==='cash'?'Cash-authorized collector':asset.customerName);delete pickup.overrideId
    const recorder=(await h.state({as:advisor.cookie})).actor
    let authorization,delegateBefore,delegateAfter,savedDelegate
    if(method==='cash'){
@@ -114,7 +141,7 @@ export async function returnJourney(){
     try{
      const freshOwner=(await recovered.state()).actor;await restore(recovered,await archive(h));const restored=await recovered.state()
      assert.equal(restored.actor.id,freshOwner.id);assert.notEqual(restored.actor.id,recorder.id)
-     for(const kind of ['handover','returnDelegate','returnOverride','payment','flow'])assert.deepEqual(restored.records[kind],immutable[kind],'Fresh-owner recovery retains exact '+kind+' evidence')
+     for(const kind of ['handover','returnDelegate','returnOverride','payment','flow','quality'])assert.deepEqual(restored.records[kind],immutable[kind],'Fresh-owner recovery retains exact '+kind+' evidence')
      const recoveredReceipt=restored.records.handover.find(r=>r.id===saved.id);assert.deepEqual(recoveredReceipt,saved)
      await recovered.command('flow.collect',pickup,{as:advisor.cookie,status:401});await recovered.command('flow.collect',pickup,{...bearer,status:401})
      await recovered.command('return.delegate',authorization,{status:409});await recovered.command('flow.collect',pickup,{status:409})
