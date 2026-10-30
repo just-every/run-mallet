@@ -280,9 +280,9 @@ test('EST-003: emailed approval link, signed line decision, replay, stale and re
 
 test('EST-003: customer approves and declines lines on a phone with a signed receipt at 390/1440',approvalBrowser)
 
-test('EST-006 / EST-007: scheduled reminders chase only the current undecided revision; reply, decision and opt-out stop them; failures and silence open advisor tasks',chaseJourney)
+test('EST-006 / EST-007: scheduled reminders chase only the current undecided revision; reply, decision and opt-out stop them; rejected and interrupted sends and silence retain one attributable advisor task',chaseJourney)
 
-test('EST-006 / EST-007: native chase policy, reminder history, customer opt-out and advisor task at 1440/390',chaseBrowser)
+test('EST-006 / EST-007: native chase policy, reminder history, customer opt-out and uncertain-task resolution at 1440/390',chaseBrowser)
 
 
 test('FLOW-002: delayed required parts, resource/labor plan, advisor promise notices and archive recovery',()=>run(promiseJourney))
