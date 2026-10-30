@@ -554,8 +554,8 @@ Core · target · **partial** · Cites BASE-ROLE-001, BASE-AGENT-005, BASE-AGENT
 **Acceptance.**
 1. Clock in, run two jobs with a break, correct a missed stop with manager approval and compare attendance, actual and sold hours; a member cannot alter a colleague’s time.
 
-**Evidence.** `src/mallet/time.ts`; `src/mallet/ui/time.ts`; `src/mallet/http.ts`; `tests/mallet.test.mjs`; `tests/support/time-journey.mjs`; `tests/time-browser.mjs`
-**Gap.** Not asserted in the old cited evidence: A member’s attempt leaves a colleague’s original time unchanged. Asserted: Attendance is computed from clock events; Breaks remain separate; Actual nonbillable and rework time remains separate; Sold hours are independently displayed; Approved correction retains original intervals; Correction retains manager and reason.
+**Evidence.** `tests/support/time-journey.mjs` timeJourney (registered in `tests/mallet.test.mjs` as "TIME-001: two assigned job timers, breaks, approved corrections, isolation and recovery"): attendance, separate breaks and job categories, authorized sold hours, immutable owner-approved correction history and immediate unchanged colleague entry and correction readback; `tests/time-browser.mjs` timeBrowser ("TIME-001: native clocks, reasoned correction decisions and actual board time at 1440/390"): native clock forms, exact self-proposal and owner decision, elapsed board time and retained history at both widths.
+**Gap.** Not asserted in the old cited evidence: A member’s attempt leaves a colleague’s original time unchanged. Asserted: Attendance is computed from clock events; Breaks remain separate; Actual nonbillable and rework time remains separate; Sold hours are independently displayed; Approved correction retains original intervals; Correction retains manager and reason. Candidate assertions now read back the unchanged colleague entry and every correction record after refusal, including an existing self-proposal. Main’s partial judgment is retained pending clause review; this replay does not promote acceptance.
 
 #### FLOW-004 — Technician crews and subtasks
 

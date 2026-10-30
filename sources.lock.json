@@ -572,7 +572,7 @@
       "executable": false
     },
     "ACCEPTANCE.md": {
-      "sha256": "923bf63a7c8456dd6963d5416f92f8a1a998d36168f48b480cdb9106050f44cd",
+      "sha256": "6d874bb70e16fd71129abd6297b95a2a0fa1fbe61292ab416e548c5cae59b5d9",
       "executable": false
     },
     "AGENTS.md": {
@@ -588,7 +588,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "c69dab5057e7dd10f8271b89e2fdef749050a58e10f8878d48844f736c06b9c9",
+      "sha256": "1cafc616c80bcff00f021230f5524e75e7218354612f77424838885559333b5d",
       "executable": false
     },
     "deploy-demo.json": {
@@ -5404,7 +5404,7 @@
       "executable": false
     },
     "tests/support/time-journey.mjs": {
-      "sha256": "5ac1ebbd3400937a678ac2326e14f11d85302c56c63bf9945187b45a93337b5b",
+      "sha256": "3a6d9baf4241b306f231b370276e66de5f4c1eebd3b854eeaec72b6b0363e035",
       "executable": false
     },
     "tests/support/transfers-journey.mjs": {
