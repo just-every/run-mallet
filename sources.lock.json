@@ -4756,7 +4756,7 @@
       "executable": false
     },
     "tests/browser-journey.mjs": {
-      "sha256": "22d8029358a919d0cc5a8777b2c851652959138a5820428597b3f126b23af7ce",
+      "sha256": "eeaea7bc28e6f7842cdba1b621274600f0b049d1fdf2396ced953d62b90094fd",
       "executable": false
     },
     "tests/calendar-browser.mjs": {
@@ -4896,7 +4896,7 @@
       "executable": false
     },
     "tests/mallet.test.mjs": {
-      "sha256": "8c2cc43806fd417ccc9f4c97f68e763bdc0bdd7ee9a7d5b65fa42a589e34e33f",
+      "sha256": "ff07be203f65726dc30375171e52dfb6d82a1e051691f73122ac8f06edfc868f",
       "executable": false
     },
     "tests/media-browser.mjs": {

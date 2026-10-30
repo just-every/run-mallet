@@ -33,9 +33,10 @@ import {inspectionJourney} from './support/inspection-journey.mjs'
 import {inspectionBrowser} from './inspection-browser.mjs'
 import {supplementJourney} from './support/supplement-journey.mjs'
 import {qualityReady} from './support/quality-ready.mjs'
+import {browserJourney} from './browser-journey.mjs'
 import {test} from 'node:test'
 import assert from 'node:assert/strict'
-import {portableRepair} from './support/portable-repair.mjs'
+import {portableRepair,publicDoor} from './support/portable-repair.mjs'
 import {connectorJourney} from './support/connector-journey.mjs'
 import {securityBrowser} from './security-browser.mjs'
 import {linkProtectionJourney} from './support/link-protection-journey.mjs'
@@ -50,11 +51,49 @@ test('native sign-in, CSRF, member isolation and immediate session revocation',(
  const tech=await h.person('alex@example.test'),other=await h.person('sam@example.test')
  await h.command('asset.create',assetInput(),{as:tech.cookie,status:403})
  await h.command('asset.create',assetInput(),{headers:{origin:'https://elsewhere.test'},status:403})
- const {job}=await booking(h,{technicianId:tech.id}),q=await authorise(h,await estimate(h,job))
- let current=(await h.state()).records.job[0]
- await h.command('work.record',{jobId:job.id,version:current.version,lineId:q.revisions[0].lines[0].id,quantity:1},{as:other.cookie,status:403})
- assert.equal((await h.state({as:other.cookie})).records.job.length,0)
- await h.command('work.record',{jobId:job.id,version:current.version,lineId:q.revisions[0].lines[0].id,quantity:1},{as:tech.cookie})
+ const {job}=await booking(h,{technicianId:tech.id});let q=await estimate(h,job)
+ q=await h.command('estimate.revise',{estimateId:q.id,version:q.version,revision:1,lines:q.revisions[0].lines.map(l=>({kind:l.kind,description:l.description+' reviewed',quantity:l.quantity,unitCents:l.unitCents}))})
+ q=await h.command('estimate.approve',{estimateId:q.id,version:q.version,revision:2})
+ q=await h.command('estimate.markSent',{estimateId:q.id,version:q.version,revision:2,method:'printed'})
+ const line=q.revisions[1].lines[0]
+ q=await h.command('estimate.authorise',{estimateId:q.id,version:q.version,revision:2,lineIds:[line.id],customerName:'Cedar Bikes',method:'signed',evidence:'Signed exact revised parts scope, synthetic-mallet-56'})
+ const secondAsset=await h.command('asset.create',assetInput('2')),{job:second}=await booking(h,{asset:secondAsset,technicianId:other.id,bayId:'Bay 2'}),secondQuote=await authorise(h,await estimate(h,second))
+ const currentJob=async(id,options)=>(await h.state(options)).records.job.find(j=>j.id===id)
+ await h.command('work.record',{jobId:second.id,version:(await currentJob(second.id)).version,lineId:secondQuote.revisions[0].lines[0].id,quantity:1},{as:other.cookie})
+ const workSnapshot=async()=>{const s=await h.state();return {jobs:s.records.job,events:s.records.event.filter(e=>e.kind==='work.record')}}
+ let current=await currentJob(job.id),before=await workSnapshot()
+ await h.command('work.record',{jobId:job.id,version:current.version,lineId:line.id,quantity:1},{as:other.cookie,status:403})
+ assert.deepEqual(await workSnapshot(),before,'Another-job refusal preserves both repairs, versions, actuals and successful work events')
+ before=await workSnapshot()
+ await h.command('work.record',{jobId:second.id,version:(await currentJob(second.id)).version,lineId:secondQuote.revisions[0].lines[0].id,quantity:1},{as:tech.cookie,status:403})
+ assert.deepEqual(await workSnapshot(),before,'Assigned technician cannot change a colleague’s repair')
+ assert.equal((await h.state({as:other.cookie})).records.job.length,1)
+ assert.equal((await h.state({as:other.cookie})).records.job[0].id,second.id)
+ assert.equal((await h.state({as:other.cookie})).records.job.filter(j=>j.id===job.id).length,0)
+ await h.command('work.record',{jobId:job.id,version:current.version,lineId:line.id,quantity:1},{as:tech.cookie})
+ current=await currentJob(job.id,{as:tech.cookie})
+ const expectedActor={id:tech.id,name:'alex',role:'member'}
+ assert.equal(current.actuals.length,1)
+ const actual=current.actuals[0]
+ assert.deepEqual({by:actual.by,estimateId:actual.estimateId,revision:actual.revision,lineId:actual.lineId,kind:actual.kind,quantity:actual.quantity,quantityMilli:actual.quantityMilli},{by:expectedActor,estimateId:q.id,revision:2,lineId:line.id,kind:'part',quantity:1,quantityMilli:1000},'Assigned member reads back exact actor and authorized revised source')
+ assert.ok(q.revisions[1].approval)
+ assert.equal((await h.state()).records.approval.find(a=>a.subjectId===q.id).revision,2)
+ assert.equal(q.authorisation.revision,2)
+ const successful=(await workSnapshot()).events
+ assert.equal(successful.length,2)
+ assert.deepEqual(successful.find(e=>e.jobId===job.id).data,actual)
+ for(const [lineId,quantity,error]of [[q.revisions[1].lines[1].id,1,'NOT_AUTHORISED'],[line.id,2,'QUANTITY_EXCEEDED']]){
+  before=await workSnapshot()
+  assert.equal((await h.command('work.record',{jobId:job.id,version:current.version,lineId,quantity},{as:tech.cookie,status:409})).error,error)
+  assert.deepEqual(await workSnapshot(),before,error+' preserves both repairs, versions, actuals and successful work events')
+ }
+ await qualityReady(h,current,{technician:tech})
+ await h.command('job.complete',{jobId:job.id,version:current.version})
+ const completed=await currentJob(job.id,{as:tech.cookie})
+ assert.equal(completed.status,'completed');assert.ok(completed.completedAt)
+ assert.deepEqual(completed.actuals,[actual],'Completion retains original assigned actor and exact source revision')
+ assert.deepEqual(completed.actuals[0].by,expectedActor);assert.equal(completed.actuals[0].revision,2)
+ assert.deepEqual((await workSnapshot()).events,successful,'Completion does not manufacture recorded work')
  await h.api('/auth/operator/status',{operatorId:tech.id,status:'inactive'})
  await h.state({as:tech.cookie,status:401})
 }))
@@ -82,12 +121,25 @@ test('exact revision, partial authorisation and quantity ceilings protect custom
  q=await authorise(h,q,[q.revisions[0].lines[0].id])
  await h.command('estimate.revise',{estimateId:q.id,version:q.version,revision:1,lines:q.revisions[0].lines},{status:409})
  let j=(await h.state()).records.job[0]
+ const workSnapshot=async()=>{const s=await h.state();return {jobs:s.records.job,events:s.records.event.filter(e=>e.kind==='work.record')}}
+ let before=await workSnapshot()
  await h.command('work.record',{jobId:j.id,version:j.version,lineId:q.revisions[0].lines[1].id,quantity:1},{status:409})
+ assert.deepEqual(await workSnapshot(),before,'Unapproved line leaves actuals, job versions and work events unchanged')
+ before=await workSnapshot()
  await h.command('work.record',{jobId:j.id,version:j.version,lineId:q.revisions[0].lines[0].id,quantity:3},{status:409})
+ assert.deepEqual(await workSnapshot(),before,'Excess quantity leaves actuals, job versions and work events unchanged')
  j=await h.command('work.record',{jobId:j.id,version:j.version,lineId:q.revisions[0].lines[0].id,quantity:2})
+ const saved=(await h.state()).records.job.find(x=>x.id===j.id)
+ assert.equal(saved.actuals.length,1);assert.equal(saved.actuals[0].quantityMilli,2000)
+ assert.equal((await workSnapshot()).events.length,1)
  await h.command('job.complete',{jobId:j.id,version:j.version-1},{status:409})
  assert.equal(q.authorisation.totals.totalCents,5500)
 }))
+
+test('WORK-001: native authorized actuals retain actor and source after completion at 1440 and 390',()=>run(async h=>{
+ await h.stepUp()
+ await browserJourney(h.origin+'/app',{door:{...h,person:publicDoor(h.origin,h.owner).person},directory:process.env.MALLET_SCREENSHOTS??'.cache/work-browser'})
+},{entry:'tests/dev-worker.ts',network:true,assets:true,bindings:{AUTH_LOCAL:'true',RER_DEV_KEY:randomBytes(32).toString('base64url')}}))
 
 test('agent prepares, person approves, immutable actual-work invoice exports once',()=>run(async h=>{
  const {job}=await booking(h),key=await h.command('agent.create',{label:'Workshop assistant'}),agent={as:'',headers:{authorization:`Bearer ${key.token}`}}

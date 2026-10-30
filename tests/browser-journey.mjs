@@ -5,12 +5,14 @@ import {chromium} from '@playwright/test'
 import {mkdir,readFile} from 'node:fs/promises'
 import {join} from 'node:path'
 
-export async function browserJourney(openUrl,{directory='.cache/browser',fixtures='tests/fixtures/repairshopr',fresh=false,paywall}={}) {
+export async function browserJourney(openUrl,{directory='.cache/browser',fixtures='tests/fixtures/repairshopr',fresh=false,paywall,door}={}) {
  await mkdir(directory,{recursive:true})
- const browser=await chromium.launch({headless:true,args:['--disable-gpu','--use-mock-keychain','--password-store=basic']})
+ const browser=await chromium.launch({headless:true,...(process.env.MALLET_CHROMIUM?{executablePath:process.env.MALLET_CHROMIUM}:{}),args:['--no-sandbox','--disable-gpu','--use-mock-keychain','--password-store=basic']})
  let stage='open app'
  try {
-  const page=await browser.newPage({viewport:{width:1440,height:1000},timezoneId:'America/New_York'})
+  const context=await browser.newContext({viewport:{width:1440,height:1000},timezoneId:'America/New_York'})
+  if(door)await context.addCookies(door.owner.split('; ').map(pair=>({name:pair.slice(0,pair.indexOf('=')),value:pair.slice(pair.indexOf('=')+1),url:door.origin})))
+  const page=await context.newPage()
   await page.goto(openUrl)
   await page.waitForURL(url=>['/setup','/app'].includes(url.pathname))
   if(fresh){assert.equal(new URL(page.url()).pathname,'/setup','OPEN-001: published install starts at first-run setup');for(const width of [1440,390]){await page.setViewportSize({width,height:1000});await page.screenshot({path:join(directory,`00-setup-${width}.png`),fullPage:true})}}
@@ -32,7 +34,7 @@ export async function browserJourney(openUrl,{directory='.cache/browser',fixture
   await page.getByRole('link',{name:'New repair order'}).first().click();await page.waitForURL(url=>url.pathname==='/app/customers')
   await page.getByLabel('Customer name',{exact:true}).fill('Northside Cycles')
   await page.getByLabel('Customer email').fill('service@northside.example')
-  await page.getByLabel('Vehicle').fill('2019 Trek FX 3')
+  await page.getByLabel('Vehicle',{exact:true}).fill('2019 Trek FX 3')
   await page.getByLabel('Plate or VIN').fill('TREK-FX3-2019')
   await click('Add vehicle');const assetUrl=page.url();await shot('02-asset')
   await page.getByLabel('Repair request').fill('Brake pads and safety inspection')
@@ -58,9 +60,28 @@ export async function browserJourney(openUrl,{directory='.cache/browser',fixture
   await page.getByLabel('Authorization evidence / reference').fill('Customer signed line 1 only on paper estimate NS-104. Labor deferred.')
   await click('Record customer authorization');await shot('08-partial-authorisation')
   await page.getByLabel('Work note').fill('Pads supplied over the counter. Labor not authorized.')
-  await click('Record parts or labor');await shot('09-work-recorded')
-  const qualityDoor=publicDoor(origin,(await page.context().cookies(origin)).map(c=>c.name+'='+c.value).join('; ')),qualityJob=(await qualityDoor.state()).records.job.find(j=>jobUrl.endsWith('/'+j.id));await qualityReady(qualityDoor,qualityJob);await page.reload();
-  await click('Complete repair');await shot('10-completed')
+  await click('Record parts or labor');await page.reload()
+  const qualityDoor=door??publicDoor(origin,(await page.context().cookies(origin)).map(c=>c.name+'='+c.value).join('; '))
+  const recorded=await qualityDoor.state(),qualityJob=recorded.records.job.find(j=>jobUrl.endsWith('/'+j.id)),source=recorded.records.estimate.find(q=>q.id===qualityJob.estimateId)
+  assert.equal(qualityJob.actuals.length,1)
+  const actual=qualityJob.actuals[0],part=source.revisions[0].lines[0]
+  assert.equal(source.revisions[0].n,1);assert.ok(source.revisions[0].approval);assert.equal(source.authorisation.revision,1)
+  assert.deepEqual(source.authorisation.lineIds,[part.id])
+  assert.equal(part.description,'Shimano B05S brake pads')
+  assert.deepEqual({by:actual.by,estimateId:actual.estimateId,revision:actual.revision,lineId:actual.lineId,kind:actual.kind,quantity:actual.quantity,quantityMilli:actual.quantityMilli},{by:recorded.actor,estimateId:source.id,revision:1,lineId:part.id,kind:'part',quantity:1,quantityMilli:1000},'Persisted actual retains the entered quantity, actor and exact approved source')
+  const renderedActual=async()=>{
+   const row=page.locator('section.card').filter({has:page.getByRole('heading',{name:'Parts & labor',exact:true})}).locator('ul.list > li')
+   assert.equal(await row.count(),1)
+   assert.equal(await row.locator('.row-name').innerText(),'Shimano B05S brake pads')
+   assert.equal(await row.locator('.row-meta').innerText(),`1 · ${recorded.actor.name} · revision 1`)
+  }
+  await renderedActual();await shot('09-work-recorded')
+  await qualityReady(qualityDoor,qualityJob);await page.reload()
+  await click('Complete repair');await page.reload()
+  const completed=(await qualityDoor.state()).records.job.find(j=>j.id===qualityJob.id)
+  assert.equal(completed.status,'completed');assert.ok(completed.completedAt)
+  assert.deepEqual(completed.actuals,[actual],'Completed repair preserves the original work actor and source')
+  await renderedActual();await shot('10-completed')
   await click('Prepare invoice');await shot('11-invoice-draft')
   await click('Approve invoice');await shot('12-invoice-approved')
   await click('Export invoice once');await shot('13-invoice-exported')
@@ -95,7 +116,7 @@ export async function browserJourney(openUrl,{directory='.cache/browser',fixture
   await page.goto(origin+'/app/data');await click('Revoke key');await shot('21-key-revoked')
   await page.goto(origin+'/app/customers')
   await page.getByLabel('Customer name',{exact:true}).fill('Unused intake')
-  await page.getByLabel('Vehicle').fill('Unbooked inspection request')
+  await page.getByLabel('Vehicle',{exact:true}).fill('Unbooked inspection request')
   await page.getByLabel('Plate or VIN').fill('UNUSED-INTAKE')
   await click('Add vehicle');await shot('22-unused-asset')
   await page.getByLabel('Type ERASE to confirm').fill('ERASE');await click('Erase unused vehicle')
