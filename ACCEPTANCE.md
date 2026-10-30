@@ -8,12 +8,12 @@ The primary journey: check in the customer and asset, diagnose and inspect, pric
 
 | Tier | Done | Partial | Missing | Total |
 | --- | ---: | ---: | ---: | ---: |
-| Core | 22 | 76 | 54 | 152 |
+| Core | 23 | 75 | 54 | 152 |
 | Agent surface | 0 | 0 | 5 | 5 |
 | Later | 0 | 0 | 0 | 0 |
-| Full target | 22 | 76 | 59 | 157 |
+| Full target | 23 | 75 | 59 | 157 |
 
-Judged from the code and tests at commit `0c4b8e0be86462c713e63dc7875074220be9e636` (28 October 2026). Field proof register: 12 rows; 0 passed, 0 failed, 12 not run.
+Judged from the code and tests at commit `0c4b8e0be86462c713e63dc7875074220be9e636` (28 October 2026). IMPORT-001 is rechecked in the current candidate with the two named public-door journeys; all other clause judgments retain their recorded provenance. Field proof register: 12 rows; 0 passed, 0 failed, 12 not run.
 
 ## Core
 
@@ -95,15 +95,15 @@ Core · published · **partial** · Cites BASE-AGENT-004, BASE-AGENT-005, BASE-A
 
 #### IMPORT-001 — Reviewed register move
 
-Core · published · **partial** · Cites BASE-INPUT-003, BASE-OPS-003, BASE-OPS-004 · Rules D-1, D-2, D-3
+Core · published · **done** · Cites BASE-INPUT-003, BASE-OPS-003, BASE-OPS-004 · Rules D-1, D-2, D-3
 
 **Requirement.** Saved RepairShopr customer and asset JSON snapshots use the Base import kit. Preview writes no business records; apply requires the reviewed fingerprint, retains originals, source links and a journal, and supports bounded continuation. Undo refuses changed or used records. MOVE-009 extends the existing register move to repair history.
 
 **Acceptance.**
 1. Upload customers and customer-assets API snapshots, preview and apply the fingerprint, replay, resume and undo; inspect originals and journal, and prove an asset used by a new visit survives undo.
 
-**Evidence.** `src/mallet/imports/service.ts`; `src/mallet/imports/snapshots.ts`; `tests/mallet.test.mjs`
-**Gap.** Not asserted in the old cited evidence: An asset with a native visit itself survives undo; Journal retains resumed batches. Asserted: Preview leaves the asset population absent; Exact reviewed import population; Apply replay has one job identity; Journal retains originals; Undo removes untouched assets.
+**Evidence.** `tests/mallet.test.mjs` — "RepairShopr dry run, reviewed fingerprint, original custody, replay and undo" proves preview without native writes, reviewed apply, exact source-linked asset effects, each bounded continuation checkpoint and its ordered journal positions and fences, exact retained snapshot bytes, inert completed replay and untouched-asset undo. "import undo preserves an asset once it has a native repair visit" snapshots and compares the used asset and linked visit, including identities, versions, all fields and visit linkage, immediately across denied undo. Implementation: `src/mallet/imports/service.ts`; `src/mallet/imports/snapshots.ts`; `src/mallet/imports/context.ts`.
+**Gap.** None.
 
 #### DATA-001 — Custody and erasure
 

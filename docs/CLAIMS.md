@@ -60,7 +60,7 @@ A claim is done when every clause behind it is done, missing when every one is m
 | 52 | "Every number opens the repair orders behind it" | `REPORT-001` partial; `REPORT-007` partial | partial |
 | 53 | "31,906 Tekmetric repair orders, all searchable" | `MOVE-001` missing | missing |
 | 54 | "Customers, vehicles, history, canned jobs and open work come across before cutover" | `MOVE-001` missing; `MOVE-012` missing; `MOVE-013` missing | missing |
-| 55 | Reviewed import (preview, apply what was reviewed) | `MOVE-010` partial; `IMPORT-001` partial | partial |
+| 55 | Reviewed import (preview, apply what was reviewed) | `MOVE-010` partial; `IMPORT-001` done | partial |
 | 56 | Shadow compare RO 3987 and cutover | `MOVE-012` missing | missing |
 | 57 | "Run it yourself with one line" (`npx -y @runeditrun/rer dev just-every/run-mallet`) | `OPS-001` done | done |
 | 58 | "100% free and open source. MIT licensed." | `OPEN-001` done | done |
