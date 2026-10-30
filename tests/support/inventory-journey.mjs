@@ -60,6 +60,8 @@ export async function inventoryJourney(h){
  assert.ok(Date.parse(report.counts[0].approval.at)>=approvedAfter&&Date.parse(report.counts[0].approval.at)<=Date.now())
  await h.command('stock.approveCount',{countId:count.id,version:count.version,reason:'Cannot apply twice'},{status:409})
  assert.deepEqual(await h.api('/api/mallet/inventory'),report,'Duplicate approval preserves both reports and every movement')
+ await h.command('stock.receive',receive,{status:409})
+ assert.deepEqual(await h.api('/api/mallet/inventory'),report,'Duplicate receipt after approval preserves the populated variance report and both movements')
  let cycle=await h.command('stock.count',{...scans,mode:'cycle',quantity:1,reason:'Would destroy reserved stock'})
  const beforeLow=await h.api('/api/mallet/inventory')
  await h.command('stock.approveCount',{countId:cycle.id,version:cycle.version,reason:'Too low'},{status:409})

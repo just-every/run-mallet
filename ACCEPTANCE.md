@@ -8,10 +8,10 @@ The primary journey: check in the customer and asset, diagnose and inspect, pric
 
 | Tier | Done | Partial | Missing | Total |
 | --- | ---: | ---: | ---: | ---: |
-| Core | 22 | 76 | 54 | 152 |
+| Core | 23 | 75 | 54 | 152 |
 | Agent surface | 0 | 0 | 5 | 5 |
 | Later | 0 | 0 | 0 | 0 |
-| Full target | 22 | 76 | 59 | 157 |
+| Full target | 23 | 75 | 59 | 157 |
 
 Judged from the code and tests at commit `0c4b8e0be86462c713e63dc7875074220be9e636` (28 October 2026). Field proof register: 12 rows; 0 passed, 0 failed, 12 not run.
 
@@ -660,15 +660,15 @@ Core · target · **partial** · Cites BASE-ROLE-001 · Rules D-1, D-2, D-3
 
 #### PART-002 — Barcode receiving and stock counts
 
-Core · target · **partial** · Rules D-1, D-2, D-3
+Core · target · **done** · Rules D-1, D-2, D-3
 
 **Requirement.** Identify parts and storage bins by scanned or entered barcode, receive labeled quantities, run blind/cycle counts and approve variance adjustments with reasons; track on-hand, reserved and available separately and prevent silent negative stock. Part and bin identification accepts a scanned or entered barcode. Stock quantities use integer thousandths of each part’s declared unit without conversion. The append-only movement ledger derives on-hand; active repair reservations are separate and available is on-hand minus reserved. Barcode receiving retains labeled and physically received quantities and their shortage; a unique receipt reference prevents repeated receipt. Blind and cycle count entry screens withhold expected balances; submitting a count proposes no movement. Owner/admin approval retains a reason, actor and UTC time, refuses intervening stock movements or a result below reserved stock, and appends the variance once. GOV-001 governs purchasing roles and limits; PART-003 governs consumption and cost allocation, PART-008 transfers and BOOKS-003 journal posting.
 
 **Acceptance.**
 1. Scan a shipment and bins, count a shortage and approve its adjustment; stock ledger and receiving/variance reports reconcile.
 
-**Evidence.** `tests/mallet.test.mjs`; `tests/inventory-browser.mjs`
-**Gap.** Not asserted in the old cited evidence: Stock movement ledger reconciles every receipt and variance; Receiving report reconciles to movement totals; Variance report reconciles to movement totals. Asserted: Receipt shortage is exact; Approved variance changes stock to the expected quantity.
+**Evidence.** `tests/mallet.test.mjs`: PART-002 and OPS-001 exact receipt and variance movements, duplicate preservation, separate balances, approval fences and fresh recovery; `tests/support/inventory-journey.mjs`: inventoryJourney and assertInventoryReconciliation; `tests/inventory-browser.mjs`: inventoryBrowser, exact receipt and count reconciliation with duplicate refusals through native forms at 1440 and 390.
+**Gap.** None.
 
 #### PART-003 — Repair reservations and consumption
 
