@@ -7,7 +7,7 @@ import {join} from 'node:path'
 
 export async function browserJourney(openUrl,{directory='.cache/browser',fixtures='tests/fixtures/repairshopr',fresh=false,paywall}={}) {
  await mkdir(directory,{recursive:true})
- const browser=await chromium.launch({headless:true,args:['--disable-gpu','--use-mock-keychain','--password-store=basic']})
+ const browser=await chromium.launch({headless:true,...(process.env.MALLET_CHROMIUM?{executablePath:process.env.MALLET_CHROMIUM}:{}),args:['--no-sandbox','--disable-gpu','--use-mock-keychain','--password-store=basic']})
  let stage='open app'
  try {
   const page=await browser.newPage({viewport:{width:1440,height:1000},timezoneId:'America/New_York'})

@@ -46,17 +46,71 @@ test('ADV-003: source-cited blockers require actual evidence, exact consent and 
 test('ADV-003: native blocker packet, handlers and proposal review at 1440 and 390',blockerBrowser)
 
 test('native sign-in, CSRF, member isolation and immediate session revocation',()=>run(async h=>{
- await h.state({as:'',status:401})
- const tech=await h.person('alex@example.test'),other=await h.person('sam@example.test')
- await h.command('asset.create',assetInput(),{as:tech.cookie,status:403})
- await h.command('asset.create',assetInput(),{headers:{origin:'https://elsewhere.test'},status:403})
- const {job}=await booking(h,{technicianId:tech.id}),q=await authorise(h,await estimate(h,job))
+ await shopSetup(h)
+ const address=name=>name+String.fromCharCode(64)+'example.test'
+ const tech=await h.person(address('synthetic-mallet-531')),other=await h.person(address('synthetic-mallet-532'))
+ const privateAsset={customerName:'synthetic-mallet-531-private-customer',customerEmail:'',label:'synthetic-mallet-531-private-vehicle',identifier:'synthetic-mallet-531-private-identifier'}
+ const asset=await h.command('asset.create',privateAsset)
+ const {job}=await booking(h,{asset,technicianId:tech.id}),q=await authorise(h,await estimate(h,job))
+ const privateContent=[...Object.values(privateAsset).filter(Boolean),job.id,'Brake pads','Replace and tune']
+ // Read the business records immediately around each unsafe public request.
+ // Auth audit and session revocation are separate from workshop business data.
+ const refused=async(path,options,status,error)=>{
+  const before=(await h.state()).records
+  const response=options.unconfiguredHost?await h.mf.dispatchFetch('https://unconfigured.test'+path,{method:options.method??'GET',redirect:'manual',headers:{origin:h.origin,cookie:h.owner,'content-type':'application/json'},...(options.body?{body:JSON.stringify(options.body)}:{})}):await h.request(path,options),body=await response.text()
+  assert.equal(response.status,status,path)
+  for(const value of privateContent)assert.ok(!body.includes(value),`${path} refuses private fixture content`)
+  if(error&&path.startsWith('/api/'))assert.equal(JSON.parse(body).error,error)
+  if(status===303)assert.equal(new URL(response.headers.get('location'),h.origin).pathname,'/signin')
+  assert.deepEqual((await h.state()).records,before,`${path} refusal preserves every business record`)
+ }
+ const mutation={method:'POST',body:{command:'asset.create',input:{customerName:'synthetic-mallet-533-customer',customerEmail:'',label:'synthetic-mallet-533-vehicle',identifier:'synthetic-mallet-533'}}}
+ await refused('/api/mallet/commands',{...mutation,as:tech.cookie},403)
+ await refused('/api/mallet/commands',{...mutation,headers:{origin:'https://elsewhere.test'}},403,'invalid_origin')
  let current=(await h.state()).records.job[0]
- await h.command('work.record',{jobId:job.id,version:current.version,lineId:q.revisions[0].lines[0].id,quantity:1},{as:other.cookie,status:403})
+ await refused('/api/mallet/commands',{as:other.cookie,method:'POST',body:{command:'work.record',input:{jobId:job.id,version:current.version,lineId:q.revisions[0].lines[0].id,quantity:1}}},403)
  assert.equal((await h.state({as:other.cookie})).records.job.length,0)
- await h.command('work.record',{jobId:job.id,version:current.version,lineId:q.revisions[0].lines[0].id,quantity:1},{as:tech.cookie})
+ current=await h.command('work.record',{jobId:job.id,version:current.version,lineId:q.revisions[0].lines[0].id,quantity:1},{as:tech.cookie})
+ const permitted=(await h.state({as:tech.cookie})).records.job.find(j=>j.id===job.id)
+ assert.equal(permitted.actuals.length,1)
+ assert.equal(permitted.actuals[0].quantity,1)
+ assert.equal(permitted.actuals[0].by.id,tech.id)
+ await qualityReady(h,current,{technician:tech})
+ current=await h.command('job.complete',{jobId:job.id,version:current.version})
+ let invoice=await h.command('invoice.prepare',{jobId:job.id,version:current.version})
+ invoice=await h.command('invoice.approve',{invoiceId:invoice.id,version:invoice.version,revision:1})
+ const saved=await h.command('invoice.export',{invoiceId:invoice.id,version:invoice.version})
+ const pagePath='/app/jobs/'+job.id,exportPath='/api/mallet/exports/'+saved.id
+ const doors=[{path:pagePath,status:303},{path:'/api/mallet/state',status:401},{path:'/api/mallet/commands',...mutation,status:401},{path:exportPath,status:401}]
+ for(const {path,status,...options} of doors)await refused(path,{...options,as:''},status,status===401?'sign_in_required':undefined)
+ await refused(pagePath,{as:other.cookie},404)
+ const isolated=await h.request('/api/mallet/state',{as:other.cookie}),isolatedBody=await isolated.text()
+ assert.equal(isolated.status,200)
+ assert.equal(JSON.parse(isolatedBody).records.job.length,0)
+ for(const value of privateContent)assert.ok(!isolatedBody.includes(value),'unassigned state excludes populated private repair')
+ await refused(exportPath,{as:other.cookie},403,'manager_required')
+ // Cross-site reads and mutations are refused even with the live owner cookie.
+ for(const {path,status,...options} of doors)await refused(path,{...options,headers:{origin:'https://elsewhere.test','sec-fetch-site':'cross-site'}},403,'invalid_origin')
+ for(const {path,status,...options} of doors)await refused(path,{...options,unconfiguredHost:true},403,'invalid_host')
  await h.api('/auth/operator/status',{operatorId:tech.id,status:'inactive'})
- await h.state({as:tech.cookie,status:401})
+ for(const {path,status,...options} of doors)await refused(path,{...options,as:tech.cookie},status,status===401?'sign_in_required':undefined)
+ // The same populated doors still work for the current authorized owner.
+ const page=await h.request(pagePath),html=await page.text()
+ assert.equal(page.status,200)
+ for(const value of [privateAsset.customerName,privateAsset.label,privateAsset.identifier])assert.ok(html.includes(value),'authorized repair page contains private fixture')
+ const state=await h.state()
+ assert.equal(state.records.job.find(j=>j.id===job.id).asset.identifier,privateAsset.identifier)
+ assert.equal(state.records.export.find(x=>x.id===saved.id).csv,saved.csv)
+ const exported=await h.request(exportPath)
+ assert.equal(exported.status,200)
+ assert.equal(await exported.text(),saved.csv)
+ assert.ok(saved.csv.includes(privateAsset.customerName))
+ const created=await h.api('/api/mallet/commands',mutation.body)
+ const readback=(await h.state()).records.asset.find(a=>a.id===created.id)
+ for(const [key,value] of Object.entries(mutation.body.input))assert.equal(readback[key],value)
+ assert.equal((await h.state()).records.asset.filter(a=>a.identifier===mutation.body.input.identifier).length,1)
+ await refused('/app/synthetic-mallet-unknown',{},404)
+ await refused('/api/mallet/synthetic-mallet-unknown',{},404,'not_found')
 }))
 
 test('booking rejects bay and technician collisions and keeps every asset visit',()=>run(async h=>{
