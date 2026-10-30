@@ -221,7 +221,7 @@ Core · target · **partial** · Cites BASE-ROLE-001, BASE-MAIL-001, BASE-OPS-00
 **Acceptance.**
 1. Publish two intake templates, change shop terms after an intake and retrieve its original signed version; a customer completes required fields by phone and receives a copy.
 
-**Evidence.** `tests/media.test.mjs`; `tests/intake-forms-browser.mjs`
+**Evidence.** `tests/media.test.mjs`; `tests/intake-forms-browser.mjs` intakeFormsBrowser now reads both published template identities and exact revisions, retained phone draft and original signed copy after changed terms; `tests/support/intake-forms-journey.mjs` intakeFormsJourney asserts exact delivered copy, replay refusal and fresh-owner recovery
 **Gap.** Not asserted in the old cited evidence: Two published templates are both read back. Asserted: Original terms survive template change; Staff retrieve the original signed version; Required phone fields retain saved answers; Exact readable copy is downloadable. Additional vehicle/device-template and delivered-copy assertions live in uncited tests/support/intake-forms-journey.mjs.
 
 #### INTAKE-003 — Counter and after-hours check-in
