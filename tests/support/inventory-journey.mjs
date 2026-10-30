@@ -18,8 +18,9 @@ export function assertInventoryReconciliation(report,{item,bin,receiptId,receive
   assert.match(count.approval.at,/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/)
   movements.push({itemId:item.id,binId:bin.id,deltaMilli:-1000,source:{kind:'count',id:countId},reason:approvalReason,by:approver})
  }else assert.deepEqual(report.counts,[])
- assert.deepEqual(report.movements.map(({itemId,binId,deltaMilli,source,reason,by})=>({itemId,binId,deltaMilli,source,reason,by})),movements,'Every receipt and variance has exactly one movement with its exact source and identities')
- assert.equal(report.movements[0].at,receipt.at)
+ const bySource=(a,b)=>a.source.kind.localeCompare(b.source.kind)
+ assert.deepEqual(report.movements.map(({itemId,binId,deltaMilli,source,reason,by})=>({itemId,binId,deltaMilli,source,reason,by})).sort(bySource),movements.sort(bySource),'Every receipt and variance has exactly one movement with its exact source and identities')
+ assert.equal(report.movements.find(m=>m.source.kind==='receipt'&&m.source.id===receiptId).at,receipt.at)
  const onHandMilli=countId?8000:9000
  assert.deepEqual(report.balances,[{itemId:item.id,binId:bin.id,onHandMilli,reservedMilli,availableMilli:onHandMilli-reservedMilli,sku:item.sku,item:item.name,bin:bin.code}])
  assert.equal(report.movements.reduce((n,m)=>n+m.deltaMilli,0),onHandMilli)

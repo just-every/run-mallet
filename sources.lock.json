@@ -5188,7 +5188,7 @@
       "executable": false
     },
     "tests/support/inventory-journey.mjs": {
-      "sha256": "09440433fe01c40514157b6415a6536a42c0560f2debb60b3ff8d53d2221948e",
+      "sha256": "69806f8cd8f3a7f399c9134b0bcc36bf6abfd121d5378558b6eb09f2882fee18",
       "executable": false
     },
     "tests/support/invoice-documents-journey.mjs": {
