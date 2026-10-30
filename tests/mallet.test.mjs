@@ -339,7 +339,7 @@ test('PAY-005 / PAY-008: one approved Stripe refund, uncertain recovery and dupl
 
 test('PAY-005: full original cash, check and other manual refunds preserve issued invoices and zero the balance',async()=>{const {fullRefundJourney}=await import('./support/refunds-journey.mjs');await fullRefundJourney()})
 
-test('PAY-005: payer refund and credit statements at 1440/390',async()=>{const {refundsBrowser}=await import('./customers-browser.mjs');await refundsBrowser()})
+test('PAY-005 / PAY-008: payer refund privacy, current-payer refusal and credit statements at 1440 and 390',async()=>{const {refundsBrowser}=await import('./customers-browser.mjs');await refundsBrowser()})
 
 const {onlineBookingJourney,bookingAvailabilityJourney,bookingAbuseJourney}=await import('./support/booking-journey.mjs')
 const {bookingsBrowser}=await import('./bookings-browser.mjs')
