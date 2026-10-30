@@ -109,6 +109,14 @@ export async function collaborationJourney(h){
  for(const kind of ['job','subtask','timeEntry','timeCorrection'])assert.deepEqual(declined[kind],beforeDecline[kind],'FLOW-005 decline preserves '+kind)
  const page=await (await h.request('/app/jobs/'+job.id)).text();assert.match(page,/Handover receipt[\s\S]*Codes scanned[\s\S]*Road test/);assert.match(page,/morgan-crew[\s\S]*billable[\s\S]*rio-crew[\s\S]*rework|rio-crew[\s\S]*rework[\s\S]*morgan-crew[\s\S]*billable/)
  assert.ok(page.includes('Booked on another repair'),'FLOW-005 rendered history retains the exact decline reason')
+ // The owner can propose the existing keep-helper option without moving the lead early.
+ let kept=await h.command('handoff.propose',{jobId:job.id,version:(await current()).version,toId:lead.id,note:'Continue the road test with specialist support',keepHelper:true})
+ assert.equal((await current()).technicianId,specialist.id)
+ kept=await h.command('handoff.acknowledge',{handoffId:kept.id,version:kept.version},L)
+ assert.equal((await current()).technicianId,lead.id);assert.deepEqual((await current()).helpers,[specialist.id])
+ assert.equal(kept.receipt.previousLeadKept,true);assert.equal(kept.receipt.proposedBy.id,(await h.state()).actor.id)
+ assert.ok((await st(S)).job.some(j=>j.id===job.id),'FLOW-005 an explicitly retained former lead remains a helper')
+ assert.deepEqual((await st()).handoff.find(x=>x.id===handoff.id).receipt,frozen)
  await h.command('agent.revoke',{id:key.id});await h.state({as:'',headers:{authorization:`Bearer ${key.token}`},status:401})
  // OPS-001: crew, subtasks, notes, mentions, handoffs and time restore exactly.
  const state=await st(),backup=await archive(h),target=await installation()
