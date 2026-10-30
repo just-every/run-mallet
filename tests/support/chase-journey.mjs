@@ -81,12 +81,34 @@ export async function chaseJourney(){
   assert.equal((await chaseOf(chased.id)).stopReason,'opt-out');assert.equal((await h.request(chasedPath,{as:''})).status,200,'EST-006 an opt-out never closes the open link')
   await h.cron(at(chased.createdAt,2));assert.equal(reminders('jules@example.test').length,0,'EST-006 an opted-out customer gets no reminders')
   const optRow=(await st()).chaseOptOut.find(o=>o.email==='jules@example.test');assert.equal(optRow.source,'customer link')
-  await h.command('chaseOptOut.lift',{optOutId:optRow.id,version:optRow.version,reason:'Customer asked by phone to resume reminders'},ADV)
   await h.command('chaseOptOut.record',{email:'Riley@Example.test',note:'Asked in person for no reminder emails'},ADV);assert.equal((await chaseOf(resent.id)).stopReason,'opt-out','EST-006 a staff-recorded opt-out stops that customer’s chases')
   // Internal scheduler/customer commands are not reachable from the command door; agents see no chase records.
   for(const command of ['approvalChase.sweep','approvalChase.outcome','chaseOptOut.customer'])await h.command(command,{},{status:404})
   const key=await h.command('agent.create',{label:'Chase boundary'}),agentView=(await h.state({as:'',headers:{authorization:`Bearer ${key.token}`}})).records
   for(const kind of ['approvalChase','chaseTask','chaseOptOut'])assert.equal(agentView[kind],undefined)
+  // Withdrawal stops sending, while the unanswered repair still needs an advisor after expiry.
+  const beforeOptOutExpiry=h.messages.length
+  await h.cron(Date.parse(chased.expiresAt)+60_000)
+  const optedTask=(await st()).chaseTask.find(t=>t.linkId===chased.id)
+  assert.ok(optedTask,'An opted-out current revision that expires undecided reaches an advisor')
+  assert.deepEqual([optedTask.jobId,optedTask.linkId,optedTask.estimateId,optedTask.revision,optedTask.kind,optedTask.resolvedAt],[fifth.id,chased.id,q5.id,1,'unanswered',null])
+  await h.cron(Date.parse(chased.expiresAt)+2*DAY)
+  assert.deepEqual((await st()).chaseTask.filter(t=>t.linkId===chased.id),[optedTask],'Later scheduler runs neither duplicate nor close the unanswered task')
+  assert.equal(h.messages.length,beforeOptOutExpiry,'Expiry after opt-out never authorizes another handoff')
+  for(const path of ['/app/jobs/'+fifth.id,'/app/approvals'])assert.match(await (await h.request(path,ADV)).text(),/Estimate unanswered[\s\S]*expired undecided/)
+  const beforeRefusal=await st(),optedResolution={taskId:optedTask.id,version:optedTask.version,note:'Customer asked for no reminders; advisor recorded an in-person follow-up'}
+  await h.command('chaseTask.resolve',optedResolution,{...T,status:403})
+  await h.command('chaseTask.resolve',{...optedResolution,note:''},{...ADV,status:400})
+  assert.deepEqual(await st(),beforeRefusal,'A technician or a missing resolution note cannot close the opted-out task')
+  const optedResolved=await h.command('chaseTask.resolve',optedResolution,ADV)
+  assert.deepEqual([optedResolved.resolvedBy.id,optedResolved.resolvedBy.role,optedResolved.note],[advisor.id,'admin',optedResolution.note])
+  assert.ok(optedResolved.resolvedAt)
+  await h.command('chaseTask.resolve',{...optedResolution,note:'A replay must not replace the original resolution'},{...ADV,status:409})
+  await h.cron(Date.parse(chased.expiresAt)+3*DAY)
+  assert.deepEqual((await st()).chaseTask.filter(t=>t.linkId===chased.id),[optedResolved],'The first authorized resolution remains exact after replay')
+  assert.equal(h.messages.length,beforeOptOutExpiry)
+  assert.deepEqual((await st()).chaseOptOut.find(o=>o.id===optRow.id),optRow,'Expiry and task resolution preserve the customer withdrawal')
+  await h.command('chaseOptOut.lift',{optOutId:optRow.id,version:optRow.version,reason:'Customer asked by phone to resume reminders'},ADV)
   // An interrupted first handoff is distinct from a provider rejection, and never becomes a resend.
   const interruptedJob=(await booking(h,{asset:await h.command('asset.create',{...assetInput('synthetic-mallet-uncertain'),customerEmail:['synthetic-mallet-uncertain','example.test'].join('@')}),technicianId:tech.id,startAt:'2026-11-07T09:00:00Z',endAt:'2026-11-07T10:00:00Z'})).job
   const interruptedQuote=await quote(interruptedJob)
