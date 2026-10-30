@@ -2085,7 +2085,7 @@ See [the agent door's supported scope](docs/agent-door.md).
 
 ## Status
 
-Judged from the code and tests at commit `39e7b596fc2a2a9cd592c139276f47f1611565d0` (30 October 2026).
+Judged from the code and tests at commit `ef05bdd98623be2787920e14bf3aedb0d8d4f812` (30 October 2026).
 
 | Clauses | Done | Partial | Missing | Total |
 | --- | ---: | ---: | ---: | ---: |
