@@ -1,6 +1,22 @@
 import assert from 'node:assert/strict'
 import {archive,installation,restore} from '../harness.mjs'
 import {shopSetup} from './diagnosis-journey.mjs'
+import {makePart,ContentVerifier,ArchiveVerifier} from '@runeditrun/rer/modules/portability/format'
+
+async function changedArchive(lines,change){
+ const manifest=lines[0],content=new ContentVerifier(manifest),integrity=new ArchiveVerifier(manifest),parts=[]
+ let changed=false
+ for(const original of lines.filter(r=>r.kind==='part')){
+  const items=structuredClone(original.items)
+  for(const item of items)if(item.kind==='row'&&item.table==='mallet_records'){
+   const value=JSON.parse(item.row.value)
+   if(change(item.row.kind,value)){item.row.value=JSON.stringify(value);changed=true}
+  }
+  const part=await makePart(original.index,items);parts.push(part);integrity.add(part);for(const item of items)content.add(item)
+ }
+ assert.ok(changed,'The adversarial archive changes a real retained record')
+ return [manifest,...parts,{kind:'closing',partCount:parts.length,contentHash:content.digest(),archiveHash:integrity.digest()}]
+}
 export async function retailFixture(h){
  await shopSetup(h)
  await h.command('tax.configure',{ratePercent:7.5,partsTaxable:true,laborTaxable:false})
@@ -57,10 +73,28 @@ export async function retailJourney(h){
   inventory=await fresh.api('/api/mallet/inventory');assert.equal(inventory.balances.find(b=>b.itemId===f.item.id&&b.binId===f.bin.id).onHandMilli,5000)
   await fresh.command('retail.return',{...input,reference:'synthetic-mallet-retail-9'},{status:409})
  }finally{await fresh.close()}
+ // Each archive has valid format digests; the product graph must refuse it.
+ for(const [label,change] of [
+  ['receipt tax', (kind,r)=>{if(kind!=='retailSale')return false;r.salesTaxCents=0;r.totalCents=r.subtotalCents;r.changeCents=r.cashCents-r.totalCents;return true}],
+  ['return amount', (kind,r)=>{if(kind!=='retailReturn')return false;r.totalCents++;return true}],
+  ['stock quantity', (kind,r)=>{if(kind!=='stockMovement'||r.source.kind!=='retailSale')return false;r.deltaMilli=-1000;return true}],
+  ['excess return', (kind,r)=>{if(kind!=='retailReturn')return false;r.quantity=4;r.quantityMilli=4000;return true}],
+ ]){
+  const invalid=await changedArchive(saved,change),empty=await installation()
+  try{const result=await restore(empty,invalid,{status:409});assert.match(result.error,/mallet_graph:/,label);assert.equal((await empty.state()).records.retailSale,undefined,label+' restores no receipt');assert.equal((await empty.state()).records.stockMovement,undefined,label+' restores no stock')}
+  finally{await empty.close()}
+ }
  // A traced accessory consumes only its selected lot, with the same return custody.
  const lot=await h.command('stock.lot',{...f.scans,quantity:2,reference:'synthetic-mallet-retail-10',supplier:'Synthetic supplier',supplierLot:'synthetic-mallet-retail-11',unitCostCents:50,evidence:'Observed marked lot'})
  const traced=await h.command('retail.sell',{...f.sale,reference:'synthetic-mallet-retail-12',lotId:lot.id,quantity:2})
  assert.equal((await h.api('/api/mallet/trace?q='+lot.supplierLot)).lots[0].remainingMilli,0)
  await h.command('retail.return',{...input,saleId:traced.id,reference:'synthetic-mallet-retail-13'})
  assert.equal((await h.api('/api/mallet/trace?q='+lot.supplierLot)).lots[0].remainingMilli,1000)
+ const race={...f.sale,reference:'synthetic-mallet-retail-14',quantity:1}
+ const results=await Promise.all([h.request('/api/mallet/commands',{method:'POST',body:{command:'retail.sell',input:race}}),h.request('/api/mallet/commands',{method:'POST',body:{command:'retail.sell',input:race}})])
+ assert.ok(results.every(r=>[200,409].includes(r.status)))
+ assert.ok(results.some(r=>r.status===200))
+ await h.command('retail.sell',race)
+ assert.equal((await h.api('/api/mallet/retail')).sales.filter(r=>r.reference===race.reference).length,1,'Concurrent retry records one receipt')
+ assert.equal((await h.api('/api/mallet/inventory')).movements.filter(m=>m.source.kind==='retailSale'&&m.reason==='Counter sale '+race.reference).length,1,'Concurrent retry moves stock once')
 }
