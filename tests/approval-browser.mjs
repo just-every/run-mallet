@@ -89,7 +89,7 @@ async function uncertainTaskBrowser(browser){
    }
    await p.setViewportSize({width:1440,height:1000})
   }
-  await p.goto(h.origin+'/app/jobs/'+job.id);interrupted=true
+  await p.goto(h.origin+'/app/jobs/'+job.id);const beforeHandoff=h.messages.length;interrupted=true
   await p.locator('#approval-links').getByRole('button',{name:'Email approval link',exact:true}).click();await p.waitForLoadState('domcontentloaded');interrupted=false
   assert.equal(calls,1,'The native form reaches the interrupted mail edge once')
   assert.match(observed.text,/\/approve\//,'The transport observed the native approval-link request before interruption')
@@ -103,7 +103,7 @@ async function uncertainTaskBrowser(browser){
   assert.match(await tasks.innerText(),/Approval email failed[\s\S]*uncertain/);assert.equal(await tasks.getByRole('link',{name:job.title,exact:true}).getAttribute('href'),'/app/jobs/'+job.id+'#approval-links')
   await shot('08-uncertain-task')
   await h.cron(Date.parse(link.createdAt)+2*86400000+60000);await h.cron(Date.parse(link.createdAt)+5*86400000+60000)
-  records=await read();assert.deepEqual(records.chaseTask.filter(t=>t.linkId===link.id),[task]);assert.deepEqual(records.approvalLink.find(l=>l.id===link.id).delivery,link.delivery);assert.equal(calls,1)
+  records=await read();assert.deepEqual(records.chaseTask.filter(t=>t.linkId===link.id),[task]);assert.deepEqual(records.approvalLink.find(l=>l.id===link.id).delivery,link.delivery);assert.equal(calls,1);assert.equal(h.messages.length,beforeHandoff+1,'Every later handoff is counted, including an accepted resend')
   const snapshot=r=>Object.fromEntries(['chaseTask','approvalChase','approvalLink','estimate','job'].map(kind=>[kind,r[kind]])),beforeDenied=snapshot(records)
   const resolution={taskId:task.id,version:task.version,note:'Owner reviewed interrupted delivery and called customer; no resend'}
   // Exercise the real form transport with a forged technician submission.
@@ -116,7 +116,7 @@ async function uncertainTaskBrowser(browser){
   records=await read();const resolved=records.chaseTask.find(t=>t.id===task.id)
   assert.equal(resolved.note,resolution.note);assert.equal(resolved.resolvedBy.id,(await h.state()).actor.id);assert.equal(resolved.resolvedBy.role,'owner');assert.ok(resolved.resolvedAt)
   await h.cron(Date.parse(link.createdAt)+5*86400000+120000)
-  records=await read();assert.deepEqual(records.chaseTask.filter(t=>t.linkId===link.id),[resolved]);assert.deepEqual(records.approvalLink.find(l=>l.id===link.id).delivery,link.delivery);assert.equal(calls,1)
+  records=await read();assert.deepEqual(records.chaseTask.filter(t=>t.linkId===link.id),[resolved]);assert.deepEqual(records.approvalLink.find(l=>l.id===link.id).delivery,link.delivery);assert.equal(calls,1);assert.equal(h.messages.length,beforeHandoff+1,'Every later handoff is counted, including an accepted resend')
   assert.deepEqual(errors,[])
  }finally{await context?.close();await h.close()}
 }
