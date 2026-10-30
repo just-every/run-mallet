@@ -2082,13 +2082,13 @@ See [the agent door's supported scope](docs/agent-door.md).
 
 ## Status
 
-Judged from the code and tests at commit `39e7b596fc2a2a9cd592c139276f47f1611565d0` (30 October 2026).
+Judged from the code and tests at commit `a40a5d1364a41b165fed1491bf9ec63cd89ee4dc` (30 October 2026).
 
 | Clauses | Done | Partial | Missing | Total |
 | --- | ---: | ---: | ---: | ---: |
 | Published | 1 | 8 | 0 | 9 |
-| Target and push further | 22 | 80 | 59 | 161 |
-| All | 23 | 88 | 59 | 170 |
+| Target and push further | 23 | 79 | 59 | 161 |
+| All | 24 | 87 | 59 | 170 |
 
 | Clause | Title | Kind | Status | Evidence | Gap |
 | --- | --- | --- | --- | --- | --- |
@@ -2153,7 +2153,7 @@ Judged from the code and tests at commit `39e7b596fc2a2a9cd592c139276f47f1611565
 | `PART-004` | Core deposits and returns | target | partial | `tests/mallet.test.mjs`; `tests/support/cores-journey.mjs`; `tests/cores-browser.mjs` | Not asserted in the old cited evidence: Physical core shipment evidence is read back. Asserted: Core deposit has exact subtotal; Core deposit has exact tax; Core deposit is recorded; Adjusted supplier credit is exact; Customer correction reverses exact invoice tax; Original invoice remains unchanged. |
 | `PART-005` | Supplier RMAs and defective parts | target | partial | `tests/mallet.test.mjs`; `tests/support/supplier-returns-journey.mjs`; `tests/supplier-returns-browser.mjs` | Not asserted in the old cited evidence: RMA authorization and shipment evidence are read back. Asserted: Removed installed part retains repair and original use; Removed stock enters quarantine; Partial credit is exact; Remaining supplier credit exposure is exact; Net warranty cost is exact; Stock remains separately traceable. |
 | `PART-006` | ETA and special-order follow-through | target | done | `src/mallet/special-parts.ts`; `src/mallet/ui/special-parts.ts`; `src/mallet/promises.ts`; `src/mallet/workshop.ts`; `tests/support/special-part-journey.mjs`; `tests/special-part-browser.mjs` |  |
-| `PART-007` | Low-stock replenishment | target | partial | `tests/mallet.test.mjs`; `tests/support/replenishment-journey.mjs`; `tests/replenishment-browser.mjs` | Not asserted in the old cited evidence: Actual supplier order is placed exactly once. Asserted: Outstanding PO is subtracted from the demand; Repeated preparation keeps the same draft; Draft has exact unmet quantity; Approval retains exact cart. |
+| `PART-007` | Low-stock replenishment | target | done | `tests/support/replenishment-journey.mjs` — replenishmentJourney and replenishmentOrderingJourney, registered by the PART-007 command journey in `tests/mallet.test.mjs`: consume below minimum, deduct outstanding orders, prepare twice, preserve source lineage, approve exact quoted cents, refuse stale authority and submit once through timeout, concurrent replay, restart and fresh-owner recovery; `tests/replenishment-browser.mjs` — replenishmentBrowser: native replenishment, linked comparison, fresh quoted approval, stale refusal, one matching acknowledgment and once-counted demand at 1440 and 390 |  |
 | `PART-008` | Inter-store transfers | target | done | `tests/mallet.test.mjs`; `tests/support/transfers-journey.mjs`; `tests/transfers-browser.mjs` |  |
 | `BUY-006` | Supplier and warranty compensation reconciliation | target | missing |  | No supplier invoice or warranty-labor matching, remittance or exception workflow. |
 | `BUY-007` | MobileSentrix US parts | target | missing |  | No MobileSentrix connection or supplier cart/receipt handoff. |
