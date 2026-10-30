@@ -1716,7 +1716,7 @@
       "executable": false
     },
     "src/mallet/collaboration.ts": {
-      "sha256": "465490d66fa0a6cb4977281fc5951f699e057d6a52475e5565dd09c16e7a673b",
+      "sha256": "d55fa167e298b2be0f62a7f62659ae563c1a6bd2b6a33587f6c3ba57bbaf471b",
       "executable": false
     },
     "src/mallet/connectors/door.ts": {
@@ -5096,7 +5096,7 @@
       "executable": false
     },
     "tests/support/collaboration-journey.mjs": {
-      "sha256": "2e22d96d574d9ce7a4a980fe154ae0ae863dd23ef3c78f083c382eb086d67f7f",
+      "sha256": "61908dd326fd839dfc99d0a7809b5b831d5ccee848430b25c804ddaa0ac34426",
       "executable": false
     },
     "tests/support/connector-journey.mjs": {
