@@ -23,11 +23,13 @@ export async function browserJourney(openUrl,{directory='.cache/browser',fixture
   const shot=async name=>{
    stage=name
    if(paywall)assert.doesNotMatch(await page.locator('body').innerText(),paywall,'OPEN-001: no Mallet commercial gate on '+name)
+   const viewport=page.viewportSize()
    for(const width of [1440,390]) {
     await page.setViewportSize({width,height:1000})
     assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth),'Page fits its viewport')
     await page.screenshot({path:join(directory,`${name}-${width}.png`),fullPage:true,...(name==='21-key-created'?{mask:[page.locator('pre')]}:{})})
    }
+   await page.setViewportSize(viewport)
   }
   const click=async name=>{await page.getByRole('button',{name,exact:true}).click();await page.waitForLoadState('domcontentloaded')}
   await shot('01-board')
