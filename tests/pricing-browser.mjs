@@ -20,7 +20,12 @@ export async function pricingBrowser(){
    await page.getByText('Saved service pricing calculation',{exact:true}).click()
    const saved=page.getByRole('region',{name:'Inspection finding origin',exact:true})
    assert.equal(await saved.isVisible(),true,'The saved estimate exposes its finding origin')
-   for(const text of [job.id,origin.inspectionId,`version ${origin.inspectionVersion}`,`item ${origin.itemId}`,origin.result.id,origin.result.item.label,origin.mappedRecipe.id,`Mapped package: ${origin.mappedRecipe.snapshot.name} · revision ${origin.mappedRecipe.revision}`,`Priced package: ${origin.pricedRecipe.snapshot.name} · revision ${origin.pricedRecipe.revision}`])assert.ok((await saved.innerText()).includes(text),'Saved finding origin includes '+text)
+   assert.equal((await saved.innerText()).replace(/\s+/g,' ').trim(),[
+    `Repair ${job.id}`,`Inspection ${origin.inspectionId} · version ${origin.inspectionVersion}`,
+    `Finding: ${origin.result.item.label} · item ${origin.itemId}`,`Result ${origin.result.id}`,
+    `Mapped package: ${origin.mappedRecipe.snapshot.name} · revision ${origin.mappedRecipe.revision}`,origin.mappedRecipe.id,
+    `Priced package: ${origin.pricedRecipe.snapshot.name} · revision ${origin.pricedRecipe.revision}`,origin.pricedRecipe.id
+   ].join(' '),'The rendered origin matches the independently created finding and both exact package revisions')
    const reloaded=await page.request.get(base+'/api/mallet/repairs/'+job.id)
    assert.equal(reloaded.status(),200)
    assertFindingOrigin((await reloaded.json()).records.estimate.find(q=>q.id===quote.id),origin)

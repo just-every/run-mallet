@@ -8,12 +8,12 @@ The primary journey: check in the customer and asset, diagnose and inspect, pric
 
 | Tier | Done | Partial | Missing | Total |
 | --- | ---: | ---: | ---: | ---: |
-| Core | 22 | 76 | 54 | 152 |
+| Core | 23 | 75 | 54 | 152 |
 | Agent surface | 0 | 0 | 5 | 5 |
 | Later | 0 | 0 | 0 | 0 |
-| Full target | 22 | 76 | 59 | 157 |
+| Full target | 23 | 75 | 59 | 157 |
 
-Judged from the code and tests at commit `0c4b8e0be86462c713e63dc7875074220be9e636` (28 October 2026). Field proof register: 12 rows; 0 passed, 0 failed, 12 not run.
+Judged from the code and tests at commit `af10f466f6a6f3047392cdc47cb326d2e37e020f` (30 October 2026). Field proof register: 12 rows; 0 passed, 0 failed, 12 not run.
 
 ## Core
 
@@ -400,15 +400,15 @@ Core · target · **done** · Rules D-1, D-2, D-3
 
 #### EST-002 — Canned jobs and pricing matrices
 
-Core · target · **partial** · Rules D-1, D-2, D-3
+Core · target · **done** · Rules D-1, D-2, D-3
 
 **Requirement.** Version reusable service packages with parts, labor and inspection mappings; configure cost-based parts matrices, labor matrices, minimum charges and rounding, preserving the rule and override reason used on each estimate. Owner/admin version packages and part/labor cost matrices; the owner can record the manager’s reasoned price override when that role has no assigned person. Costs and minima are nonnegative USD cents per part unit or labor hour. Bands start at zero, have inclusive lower and exclusive upper bounds, meet without gaps and end unbounded. Cost plus basis-point markup rounds half-up to whole cents, then upward to the configured cent increment, then the minimum applies. Quantity is unchanged. Each saved draft freezes package, optional exact inspection-template assignment, cost, complete matrix revision, band, intermediate amounts, calculated price and any overriding actor/reason/time. Matrix or package changes affect future drafts only; no package preparation grants work or customer consent.
 
 **Acceptance.**
 1. Create an oil-service package and cost matrix, add it from a finding, override one price as a manager, then change the matrix; the old estimate remains reproducible.
 
-**Evidence.** `src/mallet/pricing.ts`; `src/mallet/inspections.ts`; `src/mallet/ui/pricing.ts`; `tests/mallet.test.mjs`; `tests/support/pricing-journey.mjs`; `tests/pricing-browser.mjs`
-**Gap.** Not asserted in the old cited evidence: Package originates from an inspection finding. Asserted: Cost matrix prices the package; Override reason and actor are retained; Matrix edits preserve the full old estimate.
+**Evidence.** `src/mallet/pricing.ts`; `src/mallet/inspections.ts`; `src/mallet/ui/pricing.ts`; `src/mallet/ui/estimates.ts`; `tests/mallet.test.mjs`; `tests/support/pricing-journey.mjs` pricingJourney proves the exact finding origin, cost calculation, reasoned override, immutable revisions and fresh-owner recovery; `tests/pricing-browser.mjs` pricingBrowser proves native package preparation and rendered origin readback at 1440 and 390
+**Gap.** None.
 
 #### EST-003 — Customer approval and decline by link
 

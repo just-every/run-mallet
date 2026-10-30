@@ -1876,13 +1876,13 @@ Provider sandboxes, official-schema fakes, run-auth and seeded capacity runs rem
 
 ## Status
 
-Judged from the code and tests at commit `0c4b8e0be86462c713e63dc7875074220be9e636` (28 October 2026).
+Judged from the code and tests at commit `af10f466f6a6f3047392cdc47cb326d2e37e020f` (30 October 2026).
 
 | Clauses | Done | Partial | Missing | Total |
 | --- | ---: | ---: | ---: | ---: |
 | Published | 1 | 8 | 0 | 9 |
-| Target and push further | 21 | 68 | 59 | 148 |
-| All | 22 | 76 | 59 | 157 |
+| Target and push further | 22 | 67 | 59 | 148 |
+| All | 23 | 75 | 59 | 157 |
 
 | Clause | Title | Kind | Status | Evidence | Gap |
 | --- | --- | --- | --- | --- | --- |
@@ -1916,7 +1916,7 @@ Judged from the code and tests at commit `0c4b8e0be86462c713e63dc7875074220be9e6
 | `DIAG-002` | Specialist diagnostics connections | target | partial | `tests/mallet.test.mjs`; `tests/support/diagnostic-results-journey.mjs`; `tests/diagnostic-results-browser.mjs`; `docs/diagnostic-results.md` | Phonecheck result-file intake is asserted; vehicle scan-tool and Blackbelt360 adapters, complete source schemas and all provider result cases remain unbuilt or unproved. RL-104 governs privacy and separate action authority. |
 | `DIAG-003` | OEM service information and recall context | target | missing |  | No automotive technical-data, TSB, recall or maintenance-schedule integration. |
 | `EST-001` | Parts and labor pricing | target | done | `tests/mallet.test.mjs`; `tests/support/estimate-pricing-journey.mjs`; `tests/estimate-pricing-browser.mjs` |  |
-| `EST-002` | Canned jobs and pricing matrices | target | partial | `src/mallet/pricing.ts`; `src/mallet/inspections.ts`; `src/mallet/ui/pricing.ts`; `tests/mallet.test.mjs`; `tests/support/pricing-journey.mjs`; `tests/pricing-browser.mjs` | Not asserted in the old cited evidence: Package originates from an inspection finding. Asserted: Cost matrix prices the package; Override reason and actor are retained; Matrix edits preserve the full old estimate. |
+| `EST-002` | Canned jobs and pricing matrices | target | done | `src/mallet/pricing.ts`; `src/mallet/inspections.ts`; `src/mallet/ui/pricing.ts`; `src/mallet/ui/estimates.ts`; `tests/mallet.test.mjs`; `tests/support/pricing-journey.mjs` pricingJourney proves the exact finding origin, cost calculation, reasoned override, immutable revisions and fresh-owner recovery; `tests/pricing-browser.mjs` pricingBrowser proves native package preparation and rendered origin readback at 1440 and 390 |  |
 | `EST-003` | Customer approval and decline by link | target | done | `src/mallet/approval-links.ts`; `src/mallet/approval-door.ts`; `src/mallet/ui/approval.ts`; `migrations/core/0022_approval_links.sql`; `tests/support/approval-journey.mjs`; `tests/approval-browser.mjs` |  |
 | `EST-004` | Supplemental approval on the same repair | target | done | `src/mallet/estimates.ts`; `src/mallet/supplement-scope.ts`; `src/mallet/workshop.ts`; `src/mallet/invoices.ts`; `src/mallet/ui/estimates.ts`; `tests/mallet.test.mjs`; `tests/support/supplement-journey.mjs`; `tests/supplement-browser.mjs` |  |
 | `EST-005` | Declined work register | target | done | `src/mallet/declined-work.ts`; `src/mallet/ui/declined-work.ts`; `tests/mallet.test.mjs` |  |
