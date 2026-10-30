@@ -89,8 +89,11 @@ export async function refundsBrowser(){
   const second=await secondCashRefund(h,account)
   browser=await chromium.launch({headless:true,...(process.env.MALLET_CHROMIUM?{executablePath:process.env.MALLET_CHROMIUM}:{}),args:['--no-sandbox','--use-mock-keychain','--password-store=basic']})
   const context=await browser.newContext({ignoreHTTPSErrors:true,viewport:{width:1440,height:1000}}),p=await context.newPage(),errors=[];p.on('pageerror',e=>errors.push(e.message))
+  const otherContext=await browser.newContext({ignoreHTTPSErrors:true,viewport:{width:1440,height:1000}})
+  await otherContext.addCookies(otherLogin.cookie.split('; ').map(pair=>({name:pair.slice(0,pair.indexOf('=')),value:pair.slice(pair.indexOf('=')+1),url:h.origin})))
+  const otherPage=await otherContext.newPage();otherPage.on('pageerror',e=>errors.push(e.message))
   const directory=process.env.MALLET_CUSTOMERS_PROOF_DIR??'.cache/customers-browser';await mkdir(directory,{recursive:true})
-  const shot=async(name)=>{for(const width of [1440,390]){await p.setViewportSize({width,height:1000});assert.ok(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),name+' no overflow at '+width);await p.locator('main').screenshot({path:join(directory,name+'-'+width+'.png')})}await p.setViewportSize({width:1440,height:1000})}
+  const shot=async(name,page=p)=>{for(const width of [1440,390]){await page.setViewportSize({width,height:1000});assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),name+' no overflow at '+width);await page.locator('main').screenshot({path:join(directory,name+'-'+width+'.png')})}await page.setViewportSize({width:1440,height:1000})}
   await p.goto(h.origin+'/portal');await p.getByLabel('Your email',{exact:true}).fill(contact.email);await p.getByRole('checkbox').check();await p.getByRole('button',{name:'Send sign-in email',exact:true}).click();await p.waitForLoadState('domcontentloaded')
   const message=await portalMail(h,contact.email,account.name),url=message.text.match(/https?:\/\/[^\s<>]+\/portal\/confirm\/[A-Za-z0-9_-]+/)[0]
   await p.goto(url);await p.getByRole('button',{name:'Confirm sign-in',exact:true}).click();await p.waitForLoadState('domcontentloaded');assert.ok((await p.locator('main').innerText()).includes(invoice.number))
@@ -99,7 +102,9 @@ export async function refundsBrowser(){
   const checkCashStatement=async(status,refundedCents,paidCents,name)=>{
    const beforeRead=await refundReadSnapshot(h)
    for(const text of [cashRefundPrivateText.reason,cashRefundPrivateText.consentEvidence,cashRefundPrivateText.paymentEvidence,cashRefundPrivateText.secondReason,cashRefundPrivateText.secondConsent,cashRefundPrivateText.secondEvidence,...(status==='unsubmitted'?[]:[cashRefundPrivateText.outcomeEvidence+' '+status])])assert.ok(JSON.stringify(beforeRead.records).includes(text),'Private evidence is populated before payer read')
-   await p.reload()
+   const pageResponse=await p.reload();assert.equal(pageResponse.status(),200)
+   const html=await pageResponse.text()
+   assert.deepEqual(await refundReadSnapshot(h),beforeRead,'Current payer page read independently preserves records and saved exports')
    const response=await p.request.get(h.origin+'/api/mallet/portal/billing');assert.equal(response.status(),200)
    const view=await response.json(),bill=view.invoices.find(i=>i.id===invoice.id),text=await p.locator('main').innerText()
    assert.equal(view.account.id,account.id);assert.deepEqual(bill.refunds,[{amountCents:109,method:'cash',status}])
@@ -111,11 +116,18 @@ export async function refundsBrowser(){
    assert.ok(secondText.includes(second.note.number));assert.ok(secondText.includes('Refund $2.15 · cash · refunded · Owner recorded; not verified by Mallet'));assert.ok(secondText.includes('Refunded $2.15'))
    const invoiceText=await p.getByRole('heading',{name:invoice.number,exact:true}).locator('..').innerText()
    assert.ok(text.includes(invoice.number));assert.ok(invoiceText.includes(credit.number));assert.ok(invoiceText.includes('Refund $1.09 · cash · '+status+' · Owner recorded; not verified by Mallet'));assert.ok(invoiceText.includes('Refunded $'+(refundedCents===109?'1.09':'0.00')))
-   for(const body of [JSON.stringify(view),text])for(const secret of [...privateTexts,other.invoice.id,other.invoice.number,otherCredit.id,otherCredit.number])assert.ok(!body.includes(secret),'Payer billing excludes private and other-account evidence: '+secret)
+   for(const body of [JSON.stringify(view),text,html])for(const secret of [...privateTexts,other.invoice.id,other.invoice.number,otherCredit.id,otherCredit.number])assert.ok(!body.includes(secret),'Payer billing excludes private and other-account evidence: '+secret)
    assert.deepEqual(await refundReadSnapshot(h),beforeRead,'Current payer browser and API reads immediately preserve records and saved exports')
    const otherView=await h.api('/api/mallet/portal/billing',undefined,{as:otherLogin.cookie})
    assert.equal(otherView.account.id,outsider.account.id);assert.deepEqual(otherView.invoices.find(i=>i.id===other.invoice.id).refunds,[{amountCents:215,method:'cash',status:'unsubmitted'}])
    for(const secret of [...privateTexts,invoice.id,invoice.number,credit.id,credit.number,second.invoice.id,second.invoice.number,second.note.id,second.note.number])assert.ok(!JSON.stringify(otherView).includes(secret))
+   assert.deepEqual(await refundReadSnapshot(h),beforeRead,'Other payer API read independently preserves records and saved exports')
+   const otherResponse=await otherPage.goto(h.origin+'/portal/billing');assert.equal(otherResponse.status(),200)
+   const otherText=await otherPage.locator('main').innerText(),otherHtml=await otherResponse.text()
+   assert.ok(otherText.includes(other.invoice.number));assert.ok(otherText.includes(otherCredit.number));assert.ok(otherText.includes('Refund $2.15 · cash · unsubmitted · Owner recorded; not verified by Mallet'));assert.ok(otherText.includes('Refunded $0.00'))
+   for(const body of [otherText,otherHtml])for(const secret of [...privateTexts,invoice.id,invoice.number,credit.id,credit.number,second.invoice.id,second.invoice.number,second.note.id,second.note.number])assert.ok(!body.includes(secret),'Other payer page excludes this account and every private narrative')
+   assert.deepEqual(await refundReadSnapshot(h),beforeRead,'Other payer browser read independently preserves records and saved exports')
+   if(status==='unsubmitted')await shot('12a-other-payer-private-statement',otherPage)
    await shot(name)
    assert.deepEqual(await refundReadSnapshot(h),beforeRead,'Rendered statements and API reads change no business record or saved export bytes')
   }
@@ -132,7 +144,9 @@ export async function refundsBrowser(){
   assert.deepEqual(await refundReadSnapshot(h),beforeRefusal,'Former payer API refusal has no financial effect')
   const deniedPage=await p.reload();assert.equal(deniedPage.status(),403)
   const deniedText=await p.locator('main').innerText();assert.ok(deniedText.includes('Billing unavailable'))
-  for(const secret of [...privateTexts,invoice.number,credit.number,second.invoice.number,second.note.number,other.invoice.number,otherCredit.number])assert.ok(!deniedText.includes(secret))
+  const deniedHtml=await deniedPage.text()
+  for(const body of [deniedText,deniedHtml])for(const secret of [...privateTexts,invoice.id,invoice.number,credit.id,credit.number,second.invoice.id,second.invoice.number,second.note.id,second.note.number,other.invoice.id,other.invoice.number,otherCredit.id,otherCredit.number])assert.ok(!body.includes(secret))
+  assert.deepEqual(await refundReadSnapshot(h),beforeRefusal,'Former payer page refusal independently preserves records and saved exports')
   await shot('13a-former-refund-payer-denied')
   assert.deepEqual(await refundReadSnapshot(h),beforeRefusal,'Former payer page refusal has no financial effect')
   const usePayer=async(email)=>{const login=await portalSignIn(h,email,account.name);await context.clearCookies();await context.addCookies(login.cookie.split('; ').map(pair=>({name:pair.slice(0,pair.indexOf('=')),value:pair.slice(pair.indexOf('=')+1),url:h.origin})));await p.goto(h.origin+'/portal/billing')}
@@ -157,6 +171,6 @@ export async function refundsBrowser(){
   await p.reload();assert.ok((await p.locator('main').innerText()).includes('cash · unsubmitted'));await shot('18-payer-redirected-manual-pending')
   await h.command('refund.record',{refundId:manual.id,version:manual.version,status:'refunded',reference:'synthetic-mallet-199',evidence:'Private owner record of cash handed over',confirm:'record-refund'})
   await p.reload();const recovered=await p.locator('main').innerText();assert.ok(recovered.includes('cash · refunded'));assert.ok(recovered.includes('Refunded $2.15'));assert.ok(recovered.includes('Staff-recorded manual refund'));assert.ok(!recovered.includes('Private'));await shot('19-payer-redirected-manual-refunded')
-  assert.deepEqual(errors,[]);await context.close()
+  assert.deepEqual(errors,[]);await otherContext.close();await context.close()
  }finally{await browser?.close();await h.close()}
 }
