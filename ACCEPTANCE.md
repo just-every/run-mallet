@@ -76,7 +76,7 @@ Core · published · **partial** · Rules D-1, D-2, D-3
 **Acceptance.**
 1. Complete authorized work, prepare and approve the invoice through the app, export twice with current and preceding versions, and compare saved identity, lines, totals and approval history.
 
-**Evidence.** `src/mallet/invoices.ts`; `tests/mallet.test.mjs`; `tests/browser-journey.mjs`
+**Evidence.** `tests/mallet.test.mjs` — agent prepares, person approves, immutable actual-work invoice exports once; `tests/browser-journey.mjs` — counterInvoice and savedInvoiceReadback, invoked by workshopBrowser in the WORKSHOP-001 and INVOICE-001 native registration journey in `tests/mallet.test.mjs`
 **Gap.** Not asserted in the old cited evidence: Approval history retains exact deciding actor and revision; Retry using the preceding version returns the same saved export; Actual-work invoice has the expected lines. Asserted: Exact invoice cent total; Repeated export identity is equal; Exactly one saved export; Exact approval history count.
 
 #### AGENT-001 — Scoped preparation keys
