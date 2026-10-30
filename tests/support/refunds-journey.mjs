@@ -22,7 +22,15 @@ export async function creditInvoice(h,account,suffix='1'){
 }
 export const creditInput=(invoice,payment,reference,line=invoice.lines[0],quantity=1)=>({invoiceId:invoice.id,version:invoice.version,paymentId:payment?.id,destination:payment?'original-tender':'account-credit',reference,reason:'Customer returned the accessory',consentEvidence:'Customer requested original tender or retained credit as reviewed',lines:[{lineId:line.id,sourceEstimateId:line.sourceEstimateId,sourceRevision:line.sourceRevision,quantity}]})
 export async function issueCredit(h,input){const review=await h.command('credit.preview',input);return h.command('credit.issue',{...input,review,confirm:'issue-credit'})}
-export const cashRefundPrivateText={reason:'synthetic-mallet-301 private return narrative',consentEvidence:'synthetic-mallet-302 private payer instruction',paymentEvidence:'synthetic-mallet-303 private cash custody',outcomeEvidence:'synthetic-mallet-304 private refund observation'}
+export const cashRefundPrivateText={reason:'synthetic-mallet-301 private return narrative',consentEvidence:'synthetic-mallet-302 private payer instruction',paymentEvidence:'synthetic-mallet-303 private cash custody',outcomeEvidence:'synthetic-mallet-304 private refund observation',secondReason:'synthetic-mallet-320 private second return',secondConsent:'synthetic-mallet-321 private second instruction',secondEvidence:'synthetic-mallet-322 private second cash observation'}
+export async function secondCashRefund(h,account){
+ const {invoice}=await creditInvoice(h,account,'6')
+ const payment=await h.command('payment.record',{invoiceId:invoice.id,version:invoice.version,amountCents:541,method:'cash',reference:'synthetic-mallet-317',evidence:cashRefundPrivateText.secondEvidence})
+ const note=await issueCredit(h,{...creditInput(invoice,payment,'synthetic-mallet-318',invoice.lines[1]),reason:cashRefundPrivateText.secondReason,consentEvidence:cashRefundPrivateText.secondConsent})
+ const refund=(await h.state()).records.refund.find(r=>r.creditNoteId===note.id)
+ await h.command('refund.record',{refundId:refund.id,version:refund.version,status:'refunded',reference:'synthetic-mallet-319',evidence:cashRefundPrivateText.secondEvidence,confirm:'record-refund'})
+ return {invoice,note}
+}
 export async function refundReadSnapshot(h){
  const records=(await h.state()).records,exports=[]
  for(const saved of records.export??[]){const response=await h.request('/api/mallet/exports/'+saved.id);assert.equal(response.status,200);exports.push({id:saved.id,bytes:await response.text()})}
@@ -45,6 +53,7 @@ export async function refundsJourney(){
   const otherCash=await creditInvoice(h,outsider.account,'4'),otherPayment=await h.command('payment.record',{invoiceId:otherCash.invoice.id,version:otherCash.invoice.version,amountCents:541,method:'cash',reference:'synthetic-mallet-305',evidence:'synthetic-mallet-306 other payer cash custody'})
   const otherNote=await issueCredit(h,{...creditInput(otherCash.invoice,otherPayment,'synthetic-mallet-307',otherCash.invoice.lines[1]),reason:'synthetic-mallet-308 other payer return narrative',consentEvidence:'synthetic-mallet-309 other payer instruction'})
   assert.equal(otherNote.totals.totalCents,215)
+  const second=await secondCashRefund(h,account)
   await h.command('tax.configure',{ratePercent:20,partsTaxable:true,laborTaxable:true})
   const input={...creditInput(invoice,payment,'synthetic-mallet-103'),reason:cashRefundPrivateText.reason,consentEvidence:cashRefundPrivateText.consentEvidence},admin=await h.person(['refund-admin','example.test'].join('@'),'admin'),member=await h.person(['refund-member','example.test'].join('@')),agent=await h.command('agent.create',{label:'No refund authority'}),bearer={as:'',headers:{authorization:'Bearer '+agent.token}}
   const before=(await h.state()).records
@@ -69,23 +78,26 @@ export async function refundsJourney(){
   const privateTexts=[...Object.values(cashRefundPrivateText),'synthetic-mallet-306 other payer cash custody','synthetic-mallet-308 other payer return narrative','synthetic-mallet-309 other payer instruction']
   const checkCashPayers=async(status,refundedCents,paidCents)=>{
    const beforeRead=await refundReadSnapshot(h)
-   for(const text of [cashRefundPrivateText.reason,cashRefundPrivateText.consentEvidence,cashRefundPrivateText.paymentEvidence,...(status==='unsubmitted'?[]:[cashRefundPrivateText.outcomeEvidence+' '+status])])assert.ok(JSON.stringify(beforeRead.records).includes(text),'Private evidence is populated before asserting its absence from payer reads')
+   for(const text of [cashRefundPrivateText.reason,cashRefundPrivateText.consentEvidence,cashRefundPrivateText.paymentEvidence,cashRefundPrivateText.secondReason,cashRefundPrivateText.secondConsent,cashRefundPrivateText.secondEvidence,...(status==='unsubmitted'?[]:[cashRefundPrivateText.outcomeEvidence+' '+status])])assert.ok(JSON.stringify(beforeRead.records).includes(text),'Private evidence is populated before asserting its absence from payer reads')
    const view=await h.api('/api/mallet/portal/billing',undefined,{as:payerLogin.cookie}),bill=view.invoices.find(i=>i.id===invoice.id)
    assert.equal(view.account.id,account.id)
    assert.deepEqual(bill.refunds,[{amountCents:109,method:'cash',status}])
    assert.equal(bill.refundedCents,refundedCents);assert.equal(bill.paidCents,paidCents);assert.equal(bill.creditedCents,109);assert.equal(bill.outstandingCents,0)
+   const secondBill=view.invoices.find(i=>i.id===second.invoice.id)
+   assert.deepEqual(secondBill.refunds,[{amountCents:215,method:'cash',status:'refunded'}],'Each refund stays with its own invoice while another refund changes state')
+   assert.equal(secondBill.creditedCents,215);assert.equal(secondBill.refundedCents,215);assert.equal(secondBill.paidCents,326);assert.equal(secondBill.outstandingCents,0)
    assert.ok(!view.invoices.some(i=>[other.invoice.id,otherCash.invoice.id].includes(i.id)))
    assert.deepEqual(await refundReadSnapshot(h),beforeRead,'Current payer billing read immediately preserves records and saved export bytes')
    const otherView=await h.api('/api/mallet/portal/billing',undefined,{as:otherLogin.cookie})
    assert.equal(otherView.account.id,outsider.account.id)
    assert.deepEqual(otherView.invoices.find(i=>i.id===otherCash.invoice.id).refunds,[{amountCents:215,method:'cash',status:'unsubmitted'}])
-   assert.ok(!otherView.invoices.some(i=>[invoice.id,replacement.invoice.id].includes(i.id)))
-   for(const [responseView,hidden]of [[view,[otherCash.invoice.id,otherCash.invoice.number,otherNote.id,otherNote.number]],[otherView,[invoice.id,invoice.number,note.id,note.number]]]){
+   assert.ok(!otherView.invoices.some(i=>[invoice.id,replacement.invoice.id,second.invoice.id].includes(i.id)))
+   for(const [responseView,hidden]of [[view,[otherCash.invoice.id,otherCash.invoice.number,otherNote.id,otherNote.number]],[otherView,[invoice.id,invoice.number,note.id,note.number,second.invoice.id,second.invoice.number,second.note.id,second.note.number]]]){
     const json=JSON.stringify(responseView)
     for(const text of [...privateTexts,...hidden])assert.ok(!json.includes(text),'Payer response excludes private narrative and other-account records: '+text)
    }
    assert.deepEqual(await refundReadSnapshot(h),beforeRead,'Payer reads preserve all business records and exact saved export bytes')
-   console.log('PROBE PAY-008 cash '+status+': portal billing -> cash refund 109 cents, refunded '+refundedCents+' cents; private narratives and other account excluded; records and exports unchanged')
+   console.log('PROBE PAY-008 cash '+status+': portal billing -> cash refund 109 cents, refunded '+refundedCents+' cents; separate invoice retains refunded cash 215 cents; private narratives and other account excluded; records and exports unchanged')
   }
   await checkCashPayers('unsubmitted',0,541)
   for(const [n,status]of ['failed','disputed','refunded'].entries()){
@@ -99,11 +111,12 @@ export async function refundsJourney(){
   const beforeRefusal=await refundReadSnapshot(h)
   for(const path of ['/api/mallet/portal/billing','/portal/billing']){
    const response=await h.request(path,{as:payerLogin.cookie});assert.equal(response.status,403)
-   const body=await response.text();for(const text of [...privateTexts,invoice.id,invoice.number,note.id,note.number])assert.ok(!body.includes(text),'Former payer refusal discloses no financial records')
+   const body=await response.text();for(const text of [...privateTexts,invoice.id,invoice.number,note.id,note.number,second.invoice.id,second.invoice.number,second.note.id,second.note.number])assert.ok(!body.includes(text),'Former payer refusal discloses no financial records')
    assert.deepEqual(await refundReadSnapshot(h),beforeRefusal,'Former payer refusal preserves records and exports immediately')
   }
   const nextLogin=await portalSignIn(h,nextPayer.email,account.name),currentView=await h.api('/api/mallet/portal/billing',undefined,{as:nextLogin.cookie})
   assert.deepEqual(currentView.invoices.find(i=>i.id===invoice.id).refunds,[{amountCents:109,method:'cash',status:'refunded'}])
+  assert.deepEqual(currentView.invoices.find(i=>i.id===second.invoice.id).refunds,[{amountCents:215,method:'cash',status:'refunded'}])
   assert.deepEqual(await refundReadSnapshot(h),beforeRefusal,'New current payer can read without financial effects')
   await h.command('customer.save',{...changed,customerId:account.id,version:changed.version,payerId:contact.id,billingContactId:contact.id})
   const beforeReplay=await refundReadSnapshot(h)

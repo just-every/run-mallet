@@ -592,7 +592,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "b8806743d3b570429b822b1e221cfff2e00c4c249d6c2af7b078e640be197562",
+      "sha256": "da7c61794ed3b7d0265ba064f36462fe946a159e8b51eb08ce8d5373cf5bfce5",
       "executable": false
     },
     "deploy-demo.json": {
@@ -5264,7 +5264,7 @@
       "executable": false
     },
     "tests/customers-browser.mjs": {
-      "sha256": "cb0c8cbedcb5b8dcd1a2f0707ba3c1669f23a3fe7a5e057a237a35d3ee92f226",
+      "sha256": "e22861138323e97cd093469dd71c25bdd9970b4c5a0c09cf74baa4d076508514",
       "executable": false
     },
     "tests/declined-work-review-browser.mjs": {
@@ -5752,7 +5752,7 @@
       "executable": false
     },
     "tests/support/refunds-journey.mjs": {
-      "sha256": "eafa255c853a47266ca388ef0ff0747a5e5dde86ecd036250ea26678c3fbbb4e",
+      "sha256": "b13acf2129993ce877e9f9ff41dbf6fd63c4dee9fbd9e3d6e382b2ca9d6e2469",
       "executable": false
     },
     "tests/support/repair-read-journey.mjs": {
