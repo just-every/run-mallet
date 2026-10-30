@@ -6,21 +6,124 @@ export const jobsClock='2026-10-30T12:00:00Z'
 
 /** Hold only reminder responses; invitation and initial approval mail still complete. */
 export function reminderMailEdge(other=async()=>Response.json({id:crypto.randomUUID()})){
- let enabled=false,active=0,maximum=0,release,entered
+ let enabled=false,active=0,maximum=0,release,entered,started
  const requests=[]
- let gate,four
+ let gate,four,one
  return {
-  requests,get active(){return active},get maximum(){return maximum},get four(){return four},
-  hold(){enabled=true;gate=new Promise(resolve=>{release=resolve});four=new Promise(resolve=>{entered=resolve})},
+  requests,get active(){return active},get maximum(){return maximum},get four(){return four},get one(){return one},
+  hold(){enabled=true;gate=new Promise(resolve=>{release=resolve});four=new Promise(resolve=>{entered=resolve});one=new Promise(resolve=>{started=resolve})},
   release(){release?.()},
   async send(message){
    if(!enabled||!message.subject.startsWith('Reminder:'))return other(message)
    const receipt='synthetic-mallet-reminder-'+(requests.length+1)
    requests.push({message,receipt});active++;maximum=Math.max(maximum,active)
+   started()
    if(active>=4)entered()
    try{await gate;return Response.json({id:receipt})}finally{active--}
   }
  }
+}
+
+/** A possible handoff crosses its lease boundary through the deployed cron,
+ * then only explicit owner resolution can close it. No job rows are injected. */
+export async function reminderLeaseRecovery(h,edge,inspect=async()=>{}){
+ const policy=(await h.state()).records.chasePolicy?.[0]
+ await h.command('chasePolicy.save',{...(policy?{version:policy.version}:{}),linkDays:7,reminderDays:[2]})
+ const title='synthetic-mallet-lease',asset=await h.command('asset.create',assetInput(title))
+ const {job:repair}=await booking(h,{asset,startAt:'2027-01-11T09:00:00Z',endAt:'2027-01-11T10:00:00Z'})
+ let quote=await estimate(h,repair);quote=await h.command('estimate.approve',{estimateId:quote.id,version:quote.version,revision:1})
+ const link=await h.command('approvalLink.create',{estimateId:quote.id,version:quote.version,revision:1})
+ assert.equal(link.delivery.status,'accepted')
+ const chase=(await h.state()).records.approvalChase.find(c=>c.linkId===link.id)
+ const at=Date.parse(link.createdAt)+2*86400000+1000,initialRequests=edge.requests.length
+ const read=async()=>{
+  const diagnostics=await h.api('/api/mallet/jobs')
+  const jobs=diagnostics.jobs.filter(j=>j.payload.linkId===link.id)
+  assert.equal(jobs.length,1,'The exact business event has one durable job')
+  const job=jobs[0]
+  assert.equal(job.event_key,`approval-reminder:${chase.id}:1`)
+  assert.deepEqual(job.payload,{chaseId:chase.id,step:1,linkId:link.id,jobId:repair.id})
+  return {job,recoveries:diagnostics.recoveries.filter(r=>r.job_id===job.id)}
+ }
+ let sweep,timer,dispatchArchive,uncertain
+ edge.hold()
+ try{
+  sweep=h.cron(at)
+  await Promise.race([edge.one,sweep.then(()=>{throw Error('Scheduler finished before the reminder reached the mail edge')}),new Promise((_,reject)=>{timer=setTimeout(()=>reject(Error('Reminder did not reach the mail edge')),15000)})])
+  clearTimeout(timer)
+  const outstanding=await read()
+  assert.equal(outstanding.job.status,'dispatching');assert.equal(outstanding.job.attempts,1)
+  assert.equal(outstanding.job.lease_until,at+60000)
+  assert.equal(outstanding.job.outcome,null)
+  dispatchArchive=await archive(h)
+  await h.cron(at+59999)
+  assert.deepEqual(await read(),outstanding,'An unexpired one-minute lease remains owned by the original dispatch')
+  assert.equal(edge.requests.length,initialRequests+1)
+  await h.cron(at+60000)
+  uncertain=await read()
+  assert.equal(uncertain.job.status,'uncertain');assert.equal(uncertain.job.attempts,1)
+  assert.equal(uncertain.job.lease_until,null)
+  assert.deepEqual(uncertain.job.outcome,{status:'uncertain',provider:'unknown',providerMessageId:null})
+  const records=(await h.state()).records
+  const projected=records.approvalChase.find(c=>c.id===chase.id)
+  assert.deepEqual(projected.steps.map(s=>[s.n,s.status]),[[1,'uncertain']])
+  const tasks=records.chaseTask.filter(t=>t.linkId===link.id)
+  assert.equal(tasks.length,1);assert.equal(tasks[0].kind,'delivery-failed')
+  assert.deepEqual([tasks[0].jobId,tasks[0].estimateId,tasks[0].revision],[repair.id,quote.id,1])
+  await inspect({phase:'uncertain',job:uncertain.job})
+  edge.release();await sweep
+  assert.deepEqual(await read(),uncertain,'A late provider success cannot overwrite an expired dispatch fence')
+ }finally{clearTimeout(timer);edge.release();await sweep}
+ await h.restart();await h.cron(at+61000)
+ assert.deepEqual(await read(),uncertain,'Restart retains the uncertain effect without resending')
+ assert.equal(edge.requests.length,initialRequests+1)
+ const input={id:uncertain.job.id,action:'resolve',reason:'synthetic-mallet-owner-inspected-uncertain-handoff'}
+ const member=await h.person(asset.customerEmail.replace('cedar','synthetic-mallet-lease-member'))
+ const admin=await h.person(asset.customerEmail.replace('cedar','synthetic-mallet-lease-admin'),'admin')
+ const key=await h.command('agent.create',{label:'synthetic-mallet-lease-agent'})
+ const denied=[{as:'',status:401},{as:member.cookie,status:403},{as:admin.cookie,status:403},{as:'',headers:{authorization:`Bearer ${key.token}`},status:403},{headers:{origin:'https://other.test'},status:403}]
+ for(const options of denied){
+  await h.api('/api/mallet/jobs/recover',input,options)
+  assert.deepEqual(await read(),uncertain,'A refused recovery changes neither the effect nor its history')
+ }
+ await h.api('/auth/operator/status',{operatorId:member.id,status:'inactive'})
+ await h.api('/api/mallet/jobs/recover',input,{as:member.cookie,status:401})
+ assert.deepEqual(await read(),uncertain,'A revoked actor cannot change the uncertain effect or its history')
+ await h.api('/api/mallet/jobs/recover',{...input,action:'replay'},{status:409})
+ assert.deepEqual(await read(),uncertain,'An uncertain outbound reminder cannot be replayed')
+ await h.stepUp()
+ const responses=await Promise.all([h.request('/api/mallet/jobs/recover',{method:'POST',body:input}),h.request('/api/mallet/jobs/recover',{method:'POST',body:input})])
+ assert.deepEqual(responses.map(r=>r.status).sort(),[200,409],'Only one concurrent owner resolution is recorded')
+ const resolved=await read(),owner=(await h.state()).actor
+ assert.equal(resolved.job.status,'resolved')
+ assert.deepEqual({...resolved.job,status:uncertain.job.status,updated_at:uncertain.job.updated_at},uncertain.job,'Resolution preserves the original uncertain effect and exact source')
+ assert.equal(resolved.recoveries.length,1)
+ const receipt=resolved.recoveries[0]
+ assert.equal(receipt.reason,input.reason);assert.equal(receipt.action,'resolve');assert.equal(receipt.previous_attempts,1)
+ assert.deepEqual(JSON.parse(receipt.previous_outcome),uncertain.job.outcome)
+ assert.deepEqual(JSON.parse(receipt.actor_json),{id:owner.id,name:owner.name,role:'owner'})
+ assert.equal(receipt.at,Date.parse(jobsClock))
+ await h.api('/api/mallet/jobs/recover',input,{status:409})
+ await h.restart();await h.cron(at+120000)
+ assert.deepEqual(await read(),resolved);assert.equal(edge.requests.length,initialRequests+1)
+ await inspect({phase:'resolved',job:resolved.job,receipt})
+ const resolvedArchive=await archive(h)
+ for(const [lines,status,outcome] of [[dispatchArchive,'uncertain',{status:'uncertain',provider:'restore',providerMessageId:null}],[resolvedArchive,'resolved',uncertain.job.outcome]]){
+  const fresh=await installation({clock:jobsClock})
+  try{
+   await restore(fresh,lines);await fresh.cron(at+180000)
+   const restored=(await fresh.api('/api/mallet/jobs')).jobs.find(j=>j.id===uncertain.job.id)
+   assert.equal(restored.status,status);assert.deepEqual(restored.payload,uncertain.job.payload)
+   assert.equal(restored.event_key,uncertain.job.event_key);assert.equal(restored.attempts,1)
+   assert.equal(restored.lease_until,null);assert.deepEqual(restored.outcome,outcome)
+   if(status==='resolved')assert.deepEqual((await fresh.api('/api/mallet/jobs')).recoveries.filter(r=>r.job_id===restored.id),resolved.recoveries)
+   else await fresh.api('/api/mallet/jobs/recover',{...input,action:'replay'},{status:409})
+   assert.equal(fresh.messages.filter(m=>m.subject.startsWith('Reminder:')).length,0)
+   assert.equal((await fresh.request(new URL(link.url).pathname,{as:''})).status,404,'Restored source history cannot recreate a customer capability')
+   await fresh.state({as:h.owner,status:401})
+  }finally{await fresh.close()}
+ }
+ return {job:resolved.job,receipt,leaseMs:60000,handoffs:edge.requests.length-initialRequests}
 }
 
 /** Contend through the deployed scheduler while four provider handoffs remain open. */
@@ -144,5 +247,6 @@ export async function jobsJourney(){
   assert.equal(final.jobs.find(j=>j.id===failed.id).status,'resolved')
   assert.equal(final.recoveries.filter(r=>r.job_id===failed.id).length,1)
   await reminderConcurrency(h,edge)
+  await reminderLeaseRecovery(h,edge)
  }finally{await h.close()}
 }

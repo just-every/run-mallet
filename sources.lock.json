@@ -592,7 +592,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "082a1a4d3365a868f3818e1738ea55f44678cabd56a96fd1c505d9b3204d58d7",
+      "sha256": "8be477f67db581a796945efe61f072964ab1a87205f5520c1ff83dad77ce9c77",
       "executable": false
     },
     "deploy-demo.json": {
@@ -5372,7 +5372,7 @@
       "executable": false
     },
     "tests/jobs-browser.mjs": {
-      "sha256": "2ab681bf8a58ebff4ec6340a1f8dd2915d8dc73ecdab30af0dd5c46c3e3f5c47",
+      "sha256": "5535079167e331b30ef2f15fe204c2a2bcc90b1efb94b32e6d656012666abcbb",
       "executable": false
     },
     "tests/mallet.test.mjs": {
@@ -5676,7 +5676,7 @@
       "executable": false
     },
     "tests/support/jobs-journey.mjs": {
-      "sha256": "21a09558e07a07677d10bfff7d433305087e395f0107144cc429f0e8d0bb0c7c",
+      "sha256": "68c8ea02ff592830ed340c591965f5045adc24ecb31d304d6c88e584c9714fa3",
       "executable": false
     },
     "tests/support/link-protection-journey.mjs": {
