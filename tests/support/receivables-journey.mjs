@@ -208,7 +208,13 @@ export async function receivablesJourney(h){
  assertPartialStatement(report,i1,i2)
  const savedExports=await savedReceivablesExports(h,[i1,i2]);reminderInput.version=i1.version;report=await statement(aged);assertPartialStatement(report,i1,i2)
  const partialInput={...reminderInput,outstandingCents:6000,reference:'synthetic-mallet-partial-manual',consentEvidence:'Billing contact separately requested this one USD 60 partial-balance email',evidence:'Current owner reviewed the exact partial balance and current billing recipient'}
+ const revokedOwner=await h.signInAs((await h.api('/auth/session')).operator.email)
+ assert.equal((await h.request('/auth/signout',{method:'POST',body:{},as:revokedOwner})).status,204)
  const partialState=await h.state(),partialMail=h.messages.length
+ for(const [outsider,status]of [[{as:admin.cookie},403],[{as:member.cookie},403],[agent,403],[{as:revokedOwner},401],[{as:''},401]]){
+  await h.command('ar.remind',partialInput,{...outsider,status})
+  assert.deepEqual(await h.state(),partialState,'A revoked or unprivileged credential cannot create a reminder or change financial history');assert.equal(h.messages.length,partialMail)
+ }
  await h.command('ar.remind',{...partialInput,outstandingCents:11000},{status:409})
  assert.deepEqual(await h.state(),partialState,'The stale full balance creates no reminder or financial mutation');assert.equal(h.messages.length,partialMail)
  await h.command('ar.remind',{...partialInput,invoiceId:i2.id,version:i2.version,outstandingCents:11000,reference:'synthetic-mallet-disputed-current-balance'},{status:409})
