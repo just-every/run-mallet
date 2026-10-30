@@ -2,6 +2,31 @@ import assert from 'node:assert/strict'
 import {archive,authorise,booking,estimate,installation,restore} from '../harness.mjs'
 import {shopSetup} from './diagnosis-journey.mjs'
 import {inspectionPhoto} from './inspection-photo.mjs'
+export const collaborationClock='2026-10-30T12:00:00.000Z'
+// Use the public timer and approved-correction doors, never storage writes or sleeps.
+export async function correctHandoffInterval(h,entry,person,startAt,endAt){
+ const proposal=await h.command('time.correct',{entryId:entry.id,entryVersion:entry.version,startAt,endAt,reason:'Paper shift record for diagnostic handoff'},{as:person.cookie})
+ await h.command('time.approveCorrection',{correctionId:proposal.id,correctionVersion:proposal.version})
+ return (await h.state()).records.timeEntry.find(e=>e.id===entry.id)
+}
+export async function recordHandoffTime(h,jobId,lead,specialist,whileRunning=async()=>{}){
+ const current=async()=>(await h.state()).records.job.find(j=>j.id===jobId)
+ for(const [person,intervals] of [
+  [lead,[['billable','08:00','08:18'],['rework','08:20','08:27'],['nonbillable','08:30','08:35'],['billable','08:40','08:47']]],
+  [specialist,[['billable','09:00','09:12'],['rework','09:15','09:39'],['nonbillable','09:40','09:49']]]
+ ]){
+  const as={as:person.cookie},attendance=await h.command('time.clockIn',{},as),stopped=[]
+  for(const [category,start,end] of intervals){
+   await h.command('time.start',{jobId,version:(await current()).version,category},as)
+   if(person===lead&&start==='08:40')await whileRunning()
+   const entry=await h.command('time.pause',{jobId},as)
+   stopped.push({entry,start,end})
+  }
+  const clock=await h.command('time.clockOut',{},as)
+  await correctHandoffInterval(h,clock,person,'2026-10-28T07:00:00Z',clock.revisions.at(-1).endAt)
+  for(const {entry,start,end} of stopped)await correctHandoffInterval(h,entry,person,'2026-10-28T'+start+':00Z','2026-10-28T'+end+':00Z')
+ }
+}
 // FLOW-004 / FLOW-005: a helper joins, dependent subtasks gate each other, a staff note mentions the advisor with media,
 // and the lead hands the diagnostic job to a specialist who must acknowledge; each person's time is kept.
 export async function collaborationJourney(h){
@@ -16,8 +41,10 @@ export async function collaborationJourney(h){
  await h.command('crew.add',{jobId:job.id,version:(await current()).version,technicianId:specialist.id},ADV)
  assert.ok((await st(S)).job.some(j=>j.id===job.id),'FLOW-004 a helper reads the repair');assert.equal((await st(O)).job.length,0,'FLOW-004 other technicians do not')
  // Per-person time: the lead and the helper each run their own timer; an outsider cannot.
- const timer=async(o,category)=>{await h.command('time.clockIn',{},o);await h.command('time.start',{jobId:job.id,version:(await current()).version,category},o);await h.command('time.pause',{jobId:job.id},o)}
- await timer(L,'billable');await timer(S,'rework');await h.command('time.clockIn',{},O)
+ await recordHandoffTime(h,job.id,lead,specialist,async()=>{
+  await h.command('handoff.propose',{jobId:job.id,version:(await current()).version,toId:specialist.id,note:'Codes scanned, coil replaced'},{...L,status:409})
+ })
+ await h.command('time.clockIn',{},O)
  await h.command('time.start',{jobId:job.id,version:(await current()).version,category:'billable'},{...O,status:403})
  // Dependent subtasks: the dependent one is refused until its dependency is complete.
  await h.command('subtask.create',{jobId:job.id,title:'Scan codes',assigneeId:lead.id},{...S,status:403})
@@ -40,27 +67,50 @@ export async function collaborationJourney(h){
  const key=await h.command('agent.create',{label:'Crew boundary'}),agentView=(await h.state({as:'',headers:{authorization:`Bearer ${key.token}`}})).records
  for(const kind of ['jobNote','subtask','handoff'])assert.equal(agentView[kind],undefined,'FLOW-004 / FLOW-005 agents never receive '+kind)
  // Handoff: refused while the lead's timer runs; it takes effect only when the specialist acknowledges.
- await h.command('time.start',{jobId:job.id,version:(await current()).version,category:'billable'},L)
- await h.command('handoff.propose',{jobId:job.id,version:(await current()).version,toId:specialist.id,note:'Codes scanned, coil replaced'},{...L,status:409})
- await h.command('time.pause',{jobId:job.id},L)
  await h.command('handoff.propose',{jobId:job.id,version:(await current()).version,toId:advisor.id,note:'x'},{...L,status:400})
  let handoff=await h.command('handoff.propose',{jobId:job.id,version:(await current()).version,toId:specialist.id,note:'Codes scanned, coil replaced; road test and harness quote left'},L)
  await h.command('handoff.propose',{jobId:job.id,version:(await current()).version,toId:specialist.id,note:'again'},{...L,status:409})
+ const proposed=structuredClone(handoff),beforeAcknowledgment=await st()
  assert.equal((await current()).technicianId,lead.id,'FLOW-005 a proposal alone changes nothing')
  await h.command('handoff.acknowledge',{handoffId:handoff.id,version:handoff.version},{...O,status:403});await h.command('handoff.acknowledge',{handoffId:handoff.id,version:handoff.version},{...L,status:403})
+ for(const kind of ['job','subtask','timeEntry','timeCorrection','handoff'])assert.deepEqual((await st())[kind],beforeAcknowledgment[kind],'FLOW-005 refused acknowledgment changes no '+kind)
  handoff=await h.command('handoff.acknowledge',{handoffId:handoff.id,version:handoff.version},S)
  const now=await current();assert.equal(now.technicianId,specialist.id);assert.deepEqual(now.helpers,[],'FLOW-005 the previous lead leaves unless kept as a helper')
- const r=handoff.receipt;assert.equal(r.from.id,lead.id);assert.equal(r.to.id,specialist.id);assert.match(r.note,/road test/);assert.deepEqual(r.openSubtasks.map(t=>t.id),[road.id])
- assert.deepEqual(Object.keys(r.time).sort(),[lead.id,specialist.id].sort(),'FLOW-005 the receipt keeps both technicians’ time');assert.ok(r.time[specialist.id].rework>=0&&r.time[lead.id].billable>=0)
+ const r=handoff.receipt;assert.equal(r.jobId,job.id);assert.equal(r.from.id,lead.id);assert.equal(r.to.id,specialist.id);assert.match(r.note,/road test/)
+ assert.equal(r.note,'Codes scanned, coil replaced; road test and harness quote left')
+ assert.equal(r.proposedBy.id,lead.id);assert.equal(r.proposedAt,proposed.proposedAt);assert.equal(r.acknowledgedAt,collaborationClock);assert.equal(r.previousLeadKept,false)
+ assert.deepEqual(r.openSubtasks,[{id:road.id,title:'Road test',assigneeId:specialist.id}])
+ assert.deepEqual(Object.keys(r.time).sort(),[lead.id,specialist.id].sort(),'FLOW-005 the receipt keeps both technicians’ time')
+ // Literal totals are independent of crewTime and the persisted interval revisions.
+ assert.deepEqual(r.time,{
+  [lead.id]:{name:'morgan-crew',billable:1500,rework:420,nonbillable:300},
+  [specialist.id]:{name:'rio-crew',billable:720,rework:1440,nonbillable:540}
+ },'FLOW-005 exact per-person category seconds, including both lead billable intervals')
  const entries=(await st()).timeEntry.filter(e=>e.jobId===job.id);assert.deepEqual([...new Set(entries.map(e=>e.ownerId))].sort(),[lead.id,specialist.id].sort(),'FLOW-005 per-person time survives the handoff')
  // The previous lead is now an unassigned technician on a restricted job.
+ await h.command('time.clockIn',{},L)
  assert.equal((await st(L)).job.some(j=>j.id===job.id),false);await h.command('time.start',{jobId:job.id,version:now.version,category:'billable'},{...L,status:403});await h.command('note.add',{jobId:job.id,body:'late'},{...L,status:403})
- assert.equal((await st(L)).timeEntry.filter(e=>e.jobId===job.id).length,2,'FLOW-005 the previous lead keeps their own time records')
- // A declined handoff leaves the lead in place.
+ assert.equal((await st(L)).timeEntry.filter(e=>e.jobId===job.id).length,4,'FLOW-005 the previous lead keeps all four own time records')
+ // Later approved time and subtask changes cannot rewrite the acknowledged receipt.
+ const frozen=structuredClone(r),rework=(await st()).timeEntry.find(e=>e.jobId===job.id&&e.ownerId===specialist.id&&e.category==='rework')
+ await correctHandoffInterval(h,rework,specialist,'2026-10-28T09:15:00Z','2026-10-28T09:38:00Z')
+ await h.command('subtask.complete',{subtaskId:road.id,version:road.version},S)
+ assert.equal((await st()).timeEntry.find(e=>e.id===rework.id).revisions.at(-1).endAt,'2026-10-28T09:38:00.000Z')
+ assert.deepEqual((await st()).handoff.find(x=>x.id===handoff.id).receipt,frozen,'FLOW-005 receipt stays immutable after time and subtask changes')
+ await h.command('handoff.acknowledge',{handoffId:handoff.id,version:handoff.version},{...S,status:409})
+ assert.deepEqual((await st()).handoff.find(x=>x.id===handoff.id).receipt,frozen,'FLOW-005 replay cannot rewrite a receipt')
+ // A declined handoff retains the exact reason and changes no assignment, subtask or time.
  let back=await h.command('handoff.propose',{jobId:job.id,version:now.version,toId:outsider.id,note:'Need a second opinion'},S)
- back=await h.command('handoff.decline',{handoffId:back.id,version:back.version,reason:'Booked on another repair'},O);assert.equal(back.status,'declined');assert.equal((await current()).technicianId,specialist.id)
+ const beforeDecline=await st(),reason='Booked on another repair'
+ await h.command('handoff.decline',{handoffId:back.id,version:back.version,reason:''},{...O,status:400})
+ back=await h.command('handoff.decline',{handoffId:back.id,version:back.version,reason},O);assert.equal(back.status,'declined');assert.equal((await current()).technicianId,specialist.id)
+ const declined=await st()
+ assert.equal(declined.handoff.find(x=>x.id===back.id).reason,reason,'FLOW-005 decline reason survives public state reload')
+ for(const kind of ['job','subtask','timeEntry','timeCorrection'])assert.deepEqual(declined[kind],beforeDecline[kind],'FLOW-005 decline preserves '+kind)
  const page=await (await h.request('/app/jobs/'+job.id)).text();assert.match(page,/Handover receipt[\s\S]*Codes scanned[\s\S]*Road test/);assert.match(page,/morgan-crew[\s\S]*billable[\s\S]*rio-crew[\s\S]*rework|rio-crew[\s\S]*rework[\s\S]*morgan-crew[\s\S]*billable/)
- // OPS-001: crew, subtasks, notes, mentions and handoffs restore exactly.
+ assert.ok(page.includes('Booked on another repair'),'FLOW-005 rendered history retains the exact decline reason')
+ await h.command('agent.revoke',{id:key.id});await h.state({as:'',headers:{authorization:`Bearer ${key.token}`},status:401})
+ // OPS-001: crew, subtasks, notes, mentions, handoffs and time restore exactly.
  const state=await st(),backup=await archive(h),target=await installation()
- try{await restore(target,backup);const restored=(await target.state()).records;for(const kind of ['jobNote','subtask','handoff','job'])assert.deepEqual(restored[kind],state[kind],'FLOW-004 / FLOW-005 restores '+kind)}finally{await target.close()}
+ try{assert.notEqual((await target.state()).actor.id,(await h.state()).actor.id);await restore(target,backup);await target.state({as:lead.cookie,status:401});const restored=(await target.state()).records;for(const kind of ['jobNote','subtask','handoff','job','timeEntry','timeCorrection'])assert.deepEqual(restored[kind],state[kind],'FLOW-004 / FLOW-005 restores '+kind)}finally{await target.close()}
 }
