@@ -1,13 +1,13 @@
 import assert from 'node:assert/strict'
-import {mkdir} from 'node:fs/promises'
+import {mkdir,readFile} from 'node:fs/promises'
 import {join} from 'node:path'
 import {chromium} from '@playwright/test'
 import {installation} from './harness.mjs'
-import {prepareReport,reportDeliveryEvents} from './support/inspection-report-journey.mjs'
+import {prepareReport,reportDeliveryEvents,refuseReportBytes} from './support/inspection-report-journey.mjs'
 export async function inspectionReportBrowser(){
  const h=await installation({network:true,secureNetwork:true,assets:true});let browser
  try{
-  const ready=await prepareReport(h);browser=await chromium.launch({headless:true,args:['--use-mock-keychain','--password-store=basic']})
+  const ready=await prepareReport(h);browser=await chromium.launch({headless:true,executablePath:process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH,args:['--use-mock-keychain','--password-store=basic','--no-sandbox']})
   const owner=await browser.newContext({ignoreHTTPSErrors:true}),customer=await browser.newContext({ignoreHTTPSErrors:true,viewport:{width:390,height:1000}});await owner.addCookies(h.owner.split('; ').map(pair=>({name:pair.slice(0,pair.indexOf('=')),value:pair.slice(pair.indexOf('=')+1),url:h.origin})))
   const p=await owner.newPage(),c=await customer.newPage(),dir=process.env.MALLET_REPORT_PROOF_DIR??'.cache/inspection-report-browser';await mkdir(dir,{recursive:true})
   const shot=async(page,name,target=page.locator('main'),mask=[])=>{for(const width of [1440,390]){await page.setViewportSize({width,height:1000});await target.scrollIntoViewIfNeeded();assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),name+' fits '+width);await page.screenshot({path:join(dir,name+'-'+width+'.png'),fullPage:false,mask})}}
@@ -26,6 +26,9 @@ export async function inspectionReportBrowser(){
   await reportDeliveryEvents(h,delivery,explicitSend)
   await p.goto(h.origin+'/app/jobs/'+ready.job.id);await shot(p,'report-08-delivery-and-views',panel);assert.match(await panel.innerText(),/1 report views; views never authorize work/);assert.match(await panel.innerText(),/Last viewed/);assert.ok(Number.isFinite(Date.parse(after.records.diagnosisLinkView[0].at)),'The shown view retains its timestamp')
   await shot(p,'report-10-provider-delivered',panel.locator('p').filter({hasText:'Provider confirmed delivery'}));await shot(p,'report-11-provider-bounced',panel.locator('p').filter({hasText:'Email bounced'}))
+  const mediaGrant=await h.request(new URL(url).pathname+'/media/'+ready.sharedVideo.id,{as:''});assert.equal(mediaGrant.status,303);const issuedBytes=mediaGrant.headers.get('location')
   await panel.locator('form:has(input[name="linkId"][value="'+delivery.linkId+'"])').getByRole('button',{name:'Revoke report link'}).click();await p.waitForLoadState('domcontentloaded');assert.equal((await c.goto(url)).status(),404);await shot(c,'report-09-revoked')
+  await refuseReportBytes(h,issuedBytes,[await readFile('tests/fixtures/dvi/front-brake.png'),await readFile('tests/fixtures/dvi/synthetic-inspection.webm')],[ready.photo.id,ready.originalVideo.id,ready.sharedVideo.sha256,ready.asset.customerName],'browser-revoked issued media URL')
+  const revoked=await h.state();for(const kind of ['estimate','approval','job','inspection'])assert.deepEqual(revoked.records[kind],before.records[kind],'Revocation and denied byte replay change no '+kind)
  }finally{await browser?.close();await h.close()}
 }
