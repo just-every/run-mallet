@@ -4772,7 +4772,7 @@
       "executable": false
     },
     "tests/collaboration-browser.mjs": {
-      "sha256": "41e871aaf330cc3b677ffe90f9be3bdbdc9ad1905a3e52b50ab0c1e472dcc869",
+      "sha256": "cd01b2cc501b02ab191c92255c27ba4eb34aa2de131eacefe36f2ba825605b26",
       "executable": false
     },
     "tests/cores-browser.mjs": {
@@ -5096,7 +5096,7 @@
       "executable": false
     },
     "tests/support/collaboration-journey.mjs": {
-      "sha256": "402d9c5b27f1e408f892846ffcef8a5f9b756d3d9d921c9c2d83056264f8e943",
+      "sha256": "2e22d96d574d9ce7a4a980fe154ae0ae863dd23ef3c78f083c382eb086d67f7f",
       "executable": false
     },
     "tests/support/connector-journey.mjs": {
