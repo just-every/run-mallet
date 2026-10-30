@@ -3,7 +3,7 @@ import {runOutreach} from '../outreach-door'
 import {runtimeBindings,type Bindings} from '../../auth.server'
 import {operatorMail} from '../../mail.server.mjs'
 import {digest} from '../auth'
-import {execute,load,rows} from '../model'
+import {MalletError,execute,load,rows} from '../model'
 import {linkState} from '../approval-links'
 import {optedOut} from '../approval-chasing'
 import {enqueueReminder} from './store'
@@ -36,10 +36,20 @@ async function projectOutcomes(env:Bindings,now:string){
  const terminal=(await env.DB.prepare("SELECT id,payload,outcome FROM mallet_jobs WHERE kind='approval-reminder' AND status IN ('succeeded','failed','uncertain','resolved') AND outcome IS NOT NULL AND projected_at IS NULL ORDER BY updated_at,id LIMIT 100").all<{id:string;payload:string;outcome:string}>()).results
  for(const row of terminal){
   const p=JSON.parse(row.payload),outcome=JSON.parse(row.outcome);if(outcome.status==='skipped'){await env.DB.prepare('UPDATE mallet_jobs SET projected_at=? WHERE id=?').bind(Date.parse(now),row.id).run();continue}
-  const s=await load(env.DB),chase=rows(s,'approvalChase').find(c=>c.id===p.chaseId),step=chase?.steps.find((x:any)=>x.n===p.step)
-  if(step?.status!=='claimed'){await env.DB.prepare('UPDATE mallet_jobs SET projected_at=? WHERE id=?').bind(Date.parse(now),row.id).run();continue}
-  await execute(env.DB,SCHEDULER,'approvalChase.outcome',{chaseId:p.chaseId,step:p.step,...outcome},undefined,now)
-  await env.DB.prepare('UPDATE mallet_jobs SET projected_at=? WHERE id=?').bind(Date.parse(now),row.id).run()
+  // Other sweeps may project this same durable result while we await storage.
+  // Retry only the native optimistic conflict, never the provider handoff.
+  for(let attempt=0;attempt<4;attempt++){
+   const s=await load(env.DB),chase=rows(s,'approvalChase').find(c=>c.id===p.chaseId),step=chase?.steps.find((x:any)=>x.n===p.step)
+   if(step?.status==='claimed'){
+    try{await execute(env.DB,SCHEDULER,'approvalChase.outcome',{chaseId:p.chaseId,step:p.step,...outcome},undefined,now)}
+    catch(error){
+     if(error instanceof MalletError&&['CONCURRENT_CHANGE','STEP_STATE'].includes(error.code))continue
+     throw error
+    }
+   }
+   await env.DB.prepare('UPDATE mallet_jobs SET projected_at=? WHERE id=?').bind(Date.parse(now),row.id).run()
+   break
+  }
  }
 }
 

@@ -31,12 +31,16 @@ export async function jobsBrowser(){
    if(phase==='backlog'){
     assert.ok((await queue.innerText()).includes('dispatching: 4'))
     assert.ok((await queue.innerText()).includes('pending: 1'))
+   }else if(phase==='replenished'){
+    assert.ok((await queue.innerText()).includes('dispatching: 4'))
+    assert.ok((await queue.innerText()).includes('succeeded: 1'))
+    assert.ok(!(await queue.innerText()).includes('pending:'))
    }else assert.ok((await queue.innerText()).includes('succeeded: 5'))
    for(const job of jobs){
     const row=p.locator('li.plain').filter({hasText:job.id})
     assert.equal(await row.getByRole('heading',{name:`Estimate reminder · ${job.status}`,exact:true}).count(),1)
     assert.ok((await row.innerText()).includes(`${job.attempts} attempt`))
-    if(phase==='outcomes')assert.ok((await row.innerText()).includes(`Provider: resend · accepted · ${job.outcome.providerMessageId}`))
+    if(job.status==='succeeded')assert.ok((await row.innerText()).includes(`Provider: resend · accepted · ${job.outcome.providerMessageId}`))
    }
    await shot('jobs-07-'+phase,p.locator('main'),true)
   })

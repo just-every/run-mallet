@@ -6,20 +6,23 @@ export const jobsClock='2026-10-30T12:00:00Z'
 
 /** Hold only reminder responses; invitation and initial approval mail still complete. */
 export function reminderMailEdge(other=async()=>Response.json({id:crypto.randomUUID()})){
- let enabled=false,active=0,maximum=0,release,entered,started
- const requests=[]
- let gate,four,one
+ let enabled=false,active=0,maximum=0,release,entered,started,fifth
+ const requests=[],releases=new Map()
+ let gate,four,one,five,arrivals=0
  return {
-  requests,get active(){return active},get maximum(){return maximum},get four(){return four},get one(){return one},
-  hold(){enabled=true;gate=new Promise(resolve=>{release=resolve});four=new Promise(resolve=>{entered=resolve});one=new Promise(resolve=>{started=resolve})},
+  requests,get active(){return active},get maximum(){return maximum},get four(){return four},get one(){return one},get five(){return five},
+  hold(){enabled=true;arrivals=0;gate=new Promise(resolve=>{release=resolve});four=new Promise(resolve=>{entered=resolve});one=new Promise(resolve=>{started=resolve});five=new Promise(resolve=>{fifth=resolve})},
   release(){release?.()},
+  releaseOne(receipt){assert.ok(releases.has(receipt),'The selected response is still outstanding');releases.get(receipt)()},
   async send(message){
    if(!enabled||!message.subject.startsWith('Reminder:'))return other(message)
    const receipt='synthetic-mallet-reminder-'+(requests.length+1)
    requests.push({message,receipt});active++;maximum=Math.max(maximum,active)
+   const response=new Promise(resolve=>releases.set(receipt,resolve))
    started()
    if(active>=4)entered()
-   try{await gate;return Response.json({id:receipt})}finally{active--}
+   if(++arrivals===5)fifth()
+   try{await Promise.race([gate,response]);return Response.json({id:receipt})}finally{active--;releases.delete(receipt)}
   }
  }
 }
@@ -156,7 +159,7 @@ export async function reminderConcurrency(h,edge,inspect=async()=>{}){
    assert.equal(job.due_at,Date.parse(source.link.createdAt)+2*86400000)
   }
  }
- let sweep,timer
+ let sweep,replenish,timer
  edge.hold()
  try{
   sweep=h.cron(at)
@@ -176,7 +179,40 @@ export async function reminderConcurrency(h,edge,inspect=async()=>{}){
    if(job.status==='dispatching')assert.ok(job.lease_until>at+2000,'No lease has expired during the contention probe')
   }
   await inspect({phase:'backlog',jobs:held,sources})
-  edge.release();await sweep
+  const waiting=held.find(j=>j.status==='pending'),first=edge.requests[0]
+  edge.releaseOne(first.receipt)
+  const deadline=Date.now()+15000
+  let partial
+  do{
+   partial=selected(await h.api('/api/mallet/jobs'))
+   if(partial.some(j=>j.status==='succeeded'))break
+   assert.ok(Date.now()<deadline,'The released response gets a durable outcome')
+   await new Promise(resolve=>setTimeout(resolve,10))
+  }while(true)
+  assert.equal(edge.active,3,'Only the selected response was released')
+  assert.equal(partial.filter(j=>j.status==='succeeded').length,1)
+  assert.equal(partial.filter(j=>j.status==='pending').length,1)
+  const completed=partial.find(j=>j.status==='succeeded')
+  assert.deepEqual(completed.outcome,{status:'accepted',provider:'resend',providerMessageId:first.receipt})
+  replenish=h.cron(at+2500)
+  await Promise.race([edge.five,replenish.then(()=>{throw Error('Scheduler finished before the pending event reached the freed slot')}),new Promise((_,reject)=>{timer=setTimeout(()=>reject(Error('The pending event did not enter the freed slot')),15000)})])
+  clearTimeout(timer)
+  await Promise.all([h.cron(at+2600),h.cron(at+2700)])
+  assert.equal(edge.active,4);assert.equal(edge.maximum,4);assert.equal(edge.requests.length,5)
+  const refilled=selected(await h.api('/api/mallet/jobs'));checkSources(refilled)
+  assert.equal(refilled.filter(j=>j.status==='dispatching').length,4)
+  assert.equal(refilled.filter(j=>j.status==='pending').length,0)
+  assert.deepEqual({...refilled.find(j=>j.id===completed.id),projected_at:completed.projected_at},completed,'Other schedulers preserve the completed event while projecting its outcome')
+  for(const job of refilled){
+   assert.equal(job.attempts,1)
+   if(job.id===completed.id)continue
+   assert.equal(job.status,'dispatching');assert.equal(job.outcome,null)
+   assert.ok(job.lease_until>at+2700,'Refilling happens before any lease expires')
+   if(job.id===waiting.id)assert.deepEqual({...job,status:waiting.status,attempts:waiting.attempts,lease_until:waiting.lease_until,dispatched_at:waiting.dispatched_at,updated_at:waiting.updated_at},waiting,'The fifth retains its exact original durable identity and source')
+   else assert.deepEqual(job,held.find(original=>original.id===job.id),'The other three outstanding dispatches are unchanged')
+  }
+  await inspect({phase:'replenished',jobs:refilled,sources})
+  edge.release();await Promise.all([sweep,replenish])
   await h.cron(at+3000)
   const done=selected(await h.api('/api/mallet/jobs'));checkSources(done)
   assert.equal(edge.active,0);assert.equal(edge.maximum,4);assert.equal(edge.requests.length,5)
@@ -200,8 +236,8 @@ export async function reminderConcurrency(h,edge,inspect=async()=>{}){
   await h.restart();await h.cron(at+4000)
   assert.deepEqual(selected(await h.api('/api/mallet/jobs')),done,'Durable outcomes and source identities survive restart and scheduler replay')
   assert.equal(edge.requests.length,5,'Restart and replay do not create a sixth provider handoff')
-  return {events:5,maximum:edge.maximum,pendingWhileHeld:1,handoffs:edge.requests.length}
- }finally{clearTimeout(timer);edge.release();await sweep}
+  return {events:5,maximum:edge.maximum,pendingWhileHeld:1,activeAfterOneRelease:3,activeAfterRefill:4,handoffs:edge.requests.length}
+ }finally{clearTimeout(timer);edge.release();await Promise.allSettled([sweep,replenish])}
 }
 
 /** Real public reminder/jobs doors; only the mail provider is faked by installation(). */

@@ -592,7 +592,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "760f59a7a8358e9ccafcd722822273520e57cfa4ac5440d269d4bd4d5b3f0048",
+      "sha256": "5e1444c7acf4898ff8348014e9c3af40152aec0bd538c32a31095366eb3f06fa",
       "executable": false
     },
     "deploy-demo.json": {
@@ -2060,7 +2060,7 @@
       "executable": false
     },
     "src/mallet/jobs/reminders.ts": {
-      "sha256": "015faab16a235462970cc11074a6b4c858bd9d53fa56b3a68e6c9f6c9d71f1bd",
+      "sha256": "26a728c97758529374c202a7461d419cb2a8466a2decab6b3dc1623198661679",
       "executable": false
     },
     "src/mallet/jobs/runner.ts": {
@@ -5372,7 +5372,7 @@
       "executable": false
     },
     "tests/jobs-browser.mjs": {
-      "sha256": "5535079167e331b30ef2f15fe204c2a2bcc90b1efb94b32e6d656012666abcbb",
+      "sha256": "b684a79c88c1850b79eeb961539ebf06fdf9d6a6ed54922aa0195c27c7c96431",
       "executable": false
     },
     "tests/mallet.test.mjs": {
@@ -5676,7 +5676,7 @@
       "executable": false
     },
     "tests/support/jobs-journey.mjs": {
-      "sha256": "68c8ea02ff592830ed340c591965f5045adc24ecb31d304d6c88e584c9714fa3",
+      "sha256": "f33a495a1fb85edc6de0814098037b29e27194276e4db0559f32892192216fcf",
       "executable": false
     },
     "tests/support/link-protection-journey.mjs": {
