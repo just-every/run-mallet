@@ -4752,7 +4752,7 @@
       "executable": false
     },
     "tests/bookings-browser.mjs": {
-      "sha256": "189515ad74a0dff4191b2d6f990b7c5e3be0a9af141695485d98f9aa9e1f7a19",
+      "sha256": "4da059aaea8d10f43d28583773e553f73f4b776e47a37fe735f4fe1207c5f150",
       "executable": false
     },
     "tests/browser-journey.mjs": {
@@ -4896,7 +4896,7 @@
       "executable": false
     },
     "tests/mallet.test.mjs": {
-      "sha256": "8c2cc43806fd417ccc9f4c97f68e763bdc0bdd7ee9a7d5b65fa42a589e34e33f",
+      "sha256": "fb1d3db4cfb936447a101a6d958406e6689fc92ca00f81b800fd3d2bf130e708",
       "executable": false
     },
     "tests/media-browser.mjs": {
@@ -5076,7 +5076,7 @@
       "executable": false
     },
     "tests/support/booking-journey.mjs": {
-      "sha256": "d3f3e7d2b9b00b0cddedfb62c8bcb459c22ed7240d1edde98eef3357125b1349",
+      "sha256": "e35e4e8fe7bbb67b1717f5d9dcec9b5e0c1bd24a889dda9a78fc3d9899643f32",
       "executable": false
     },
     "tests/support/calendar-journey.mjs": {
