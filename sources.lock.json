@@ -572,7 +572,7 @@
       "executable": false
     },
     "ACCEPTANCE.md": {
-      "sha256": "923bf63a7c8456dd6963d5416f92f8a1a998d36168f48b480cdb9106050f44cd",
+      "sha256": "0609fccda2aec8b94c2b66a20ca29c75dfc91559b39bb4aa214ec9c9c28cf92f",
       "executable": false
     },
     "AGENTS.md": {
@@ -588,7 +588,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "c69dab5057e7dd10f8271b89e2fdef749050a58e10f8878d48844f736c06b9c9",
+      "sha256": "7cb91b4d9ebc08472a490f1a22f9928b97866b5e4edfe61a6cdea914b9463af2",
       "executable": false
     },
     "deploy-demo.json": {
@@ -4920,7 +4920,7 @@
       "executable": false
     },
     "tests/pricing-browser.mjs": {
-      "sha256": "e482b7d444e94962f698ead9491af8d0556caa63dfb83049c15b4bf761192f79",
+      "sha256": "9bda2d149abb284f5f5b35258d659a23984e714db943aec3cc496f5089fd53f9",
       "executable": false
     },
     "tests/profitability-browser.mjs": {

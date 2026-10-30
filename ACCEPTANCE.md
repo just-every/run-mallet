@@ -407,8 +407,8 @@ Core · target · **partial** · Rules D-1, D-2, D-3
 **Acceptance.**
 1. Create an oil-service package and cost matrix, add it from a finding, override one price as a manager, then change the matrix; the old estimate remains reproducible.
 
-**Evidence.** `src/mallet/pricing.ts`; `src/mallet/inspections.ts`; `src/mallet/ui/pricing.ts`; `tests/mallet.test.mjs`; `tests/support/pricing-journey.mjs`; `tests/pricing-browser.mjs`
-**Gap.** Not asserted in the old cited evidence: Package originates from an inspection finding. Asserted: Cost matrix prices the package; Override reason and actor are retained; Matrix edits preserve the full old estimate.
+**Evidence.** `src/mallet/pricing.ts`; `src/mallet/inspections.ts`; `src/mallet/ui/pricing.ts`; `tests/mallet.test.mjs`; `tests/support/pricing-journey.mjs`; `tests/pricing-browser.mjs`; `src/mallet/ui/estimates.ts`; `tests/support/pricing-journey.mjs` pricingJourney now asserts exact finding origin, cost calculation, reasoned override, immutable revisions and fresh-owner recovery; `tests/pricing-browser.mjs` pricingBrowser asserts native package preparation and rendered origin readback at 1440 and 390
+**Gap.** Not asserted in the old cited evidence: Package originates from an inspection finding. Asserted: Cost matrix prices the package; Override reason and actor are retained; Matrix edits preserve the full old estimate. The replay adds explicit finding-origin assertions and rendered readback, including fresh-owner recovery; main's current partial judgment is retained pending review of the new evidence.
 
 #### EST-003 — Customer approval and decline by link
 
