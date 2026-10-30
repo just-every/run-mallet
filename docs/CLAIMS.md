@@ -46,7 +46,7 @@ A claim is done when every clause behind it is done, missing when every one is m
 | 38 | "clocked in 7:28 am · 6.1 hrs sold today" | `TIME-001` partial | partial |
 | 39 | Quality check: road test, pedal, lug torque, signed | `QUALITY-001` partial | partial |
 | 40 | "Dana gets a ready text with her balance and pays from her phone" (Apple Pay) | `PAY-003` missing; `MSG-001` missing | missing |
-| 41 | Invoice 10418 from labor and parts, sales tax 7.5% | `INVOICE-001` partial; `TAX-001` partial | partial |
+| 41 | Invoice 10418 from labor and parts, sales tax 7.5% | `INVOICE-001` done; `TAX-001` partial | partial |
 | 42 | "QuickBooks has it a minute later" | `BOOKS-001` missing | missing |
 | 43 | Collected 4:30 pm, miles out, keys returned | `RETURN-001` partial; `VEH-002` done | partial |
 | 44 | Reminder on Priya's phone: "Timing belt due at 105,000 mi", $780.00, Book | `AUTO-004` partial; `ADV-005` partial; `MSG-001` missing; `BOOK-001` partial | partial |
