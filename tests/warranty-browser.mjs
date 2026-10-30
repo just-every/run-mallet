@@ -5,7 +5,7 @@ import {randomBytes} from 'node:crypto'
 import {publicDoor} from './support/portable-repair.mjs'
 import {chromium} from '@playwright/test'
 import {installation} from './harness.mjs'
-import {warrantyOriginal,noChargeWork} from './support/warranty-journey.mjs'
+import {warrantyOriginal,noChargeWork,readNoChargeLabor,assertInternalLaborCost} from './support/warranty-journey.mjs'
 export async function warrantyBrowser(){
  const h=await installation({entry:'tests/dev-worker.ts',network:true,assets:true,bindings:{AUTH_LOCAL:'true',RER_DEV_KEY:randomBytes(32).toString('base64url')}});let browser
  try{
@@ -32,8 +32,30 @@ export async function warrantyBrowser(){
   await fill(form('warranty.open'),{failure:'Same squeal; failed pad bonding',mileage:65000,stockUseId:use.id},'Open rework repair')
   assert.ok((await p.locator('main').innerText()).includes('Within saved time and mileage bounds'));await shot('warranty-02-linked-rework')
   await fill(form('warranty.decide'),{outcome:'covered',responsibility:'supplier',reason:'Supplier-marked pad failed within saved terms; shop approves no-charge work'},'Record coverage decision')
-  let w=(await h.state()).records.warranty[0];const job=await noChargeWork(h,w);await p.reload();const workOptions=await form('warranty.cost').locator('[name="actualId"]').innerText();assert.ok(workOptions.includes('Covered replacement pads'));assert.ok(workOptions.includes('Covered replacement labor'))
+  let w=(await h.state()).records.warranty[0];const job=await noChargeWork(publicDoor(h.origin,h.owner),w),noCharge=await readNoChargeLabor(publicDoor(h.origin,h.owner),w)
+  const readRework=async()=>{
+   await p.goto(h.origin+'/app/jobs/'+w.jobId);await p.reload()
+   for(const width of [1440,390]){
+    await p.setViewportSize({width,height:1000})
+    const estimate=p.locator('section.card').filter({has:p.getByRole('heading',{name:'Estimate & customer authorization',exact:true})})
+    const laborLine=estimate.locator('tr').filter({hasText:'Covered replacement labor'})
+    assert.equal((await laborLine.locator('[data-label="Quantity"]').innerText()).trim(),'1')
+    assert.equal((await laborLine.locator('[data-label="Unit (before tax)"]').innerText()).trim(),'$0.00')
+    assert.ok((await laborLine.locator('[data-label="Customer choice"]').innerText()).includes('Authorized'))
+    const actual=p.locator('section.card').filter({has:p.getByRole('heading',{name:'Parts & labor',exact:true})}).locator('li').filter({hasText:'Covered replacement labor'})
+    assert.match(await actual.locator('.row-meta').innerText(),/^1 · .+ · revision 1$/)
+    assert.deepEqual(await readNoChargeLabor(publicDoor(h.origin,h.owner),w),noCharge)
+   }
+   await shot('warranty-06-authorized-zero-price-labor')
+  }
+  await readRework();await p.goto(h.origin+'/app/jobs/'+f.job.id+'/warranty');await p.reload();const workOptions=await form('warranty.cost').locator('[name="actualId"]').innerText();assert.ok(workOptions.includes('Covered replacement pads'));assert.ok(workOptions.includes('Covered replacement labor'))
+  const beforeCosts=(await h.state()).records
   for(const [i,a]of job.actuals.entries())await fill(form('warranty.cost'),{actualId:a.id,amountUsd:i?20:15,evidence:i?'Actual replacement labor cost':'Replacement pad cost'},'Record rework cost')
+  const afterCosts=(await h.state()).records;assertInternalLaborCost(afterCosts.warranty.find(c=>c.id===w.id),noCharge.labor)
+  for(const kind of ['job','estimate','invoice','payment','export'])assert.deepEqual(afterCosts[kind],beforeCosts[kind],'Native internal cost leaves customer charges unchanged: '+kind)
+  await p.reload()
+  for(const width of [1440,390]){await p.setViewportSize({width,height:1000});assert.ok((await p.locator('main').innerText()).includes('labor · $20.00 · Actual replacement labor cost'))}
+  await shot('warranty-07-separate-internal-labor-cost')
   w=(await h.state()).records.warranty[0];const {patternFixture}=await import('./support/warranty-pattern-journey.mjs');const patterns=await patternFixture(publicDoor(h.origin,h.owner),f,w);await p.reload();await p.setViewportSize({width:1440,height:1000})
   await p.getByText('Quality pattern review · Likely repeat-failure cluster',{exact:true}).click()
   assert.ok((await p.locator('main').innerText()).includes('Pad thickness 3.2 mm'))

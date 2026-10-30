@@ -5416,7 +5416,7 @@
       "executable": false
     },
     "tests/support/warranty-journey.mjs": {
-      "sha256": "44c4e4d7d93f12eaaa1939c441b965ac19504ce3b1930b8e7d3aafa7f9a929e8",
+      "sha256": "8181a0e8ed48005a96fa7771ba49e6ba09acadf1af01df5f779ae0262e7b09ef",
       "executable": false
     },
     "tests/support/warranty-pattern-journey.mjs": {
@@ -5440,7 +5440,7 @@
       "executable": false
     },
     "tests/warranty-browser.mjs": {
-      "sha256": "476e2bff68790aa123ef0fad26b130b3fc0303ba744902da92e14c66ca888200",
+      "sha256": "3f4c10d672fc7e69254ff51b10d49054b1b08862b555a392cb1c9dfaeb4baea6",
       "executable": false
     },
     "tests/worker.ts": {
