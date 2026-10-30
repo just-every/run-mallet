@@ -5,6 +5,7 @@ import {join} from 'node:path'
 import {chromium} from '@playwright/test'
 import {publicDoor} from './support/portable-repair.mjs'
 import {installation} from './harness.mjs'
+import {assertInventoryReconciliation} from './support/inventory-journey.mjs'
 import {totpCode} from './support/second-factor.mjs'
 export async function inventoryBrowser(){
  const h=await installation({entry:'tests/dev-worker.ts',network:true,assets:true,bindings:{AUTH_LOCAL:'true',RER_DEV_KEY:randomBytes(32).toString('base64url')}});let browser
@@ -18,12 +19,33 @@ export async function inventoryBrowser(){
   await fill('stock.item',{sku:'synthetic-mallet-1',barcode:'synthetic-mallet-2',name:'Brake pads',unit:'each'},'Register part')
   await fill('stock.bin',{code:'Shelf A',barcode:'synthetic-mallet-3'},'Register bin')
   const scans={itemBarcode:'synthetic-mallet-2',binBarcode:'synthetic-mallet-3'}
-  await fill('stock.receive',{...scans,expectedQuantity:10,quantity:9,reference:'synthetic-mallet-4',reason:'One unit missing'},'Receive stock')
+  const receive={...scans,expectedQuantity:10,quantity:9,reference:'synthetic-mallet-4',reason:'One unit missing'},stateBefore=await h.state(),{id,name,role}=stateBefore.actor,actor={id,name,role}
+  const item=stateBefore.records.stockItem.find(i=>i.sku==='synthetic-mallet-1'),bin=stateBefore.records.stockBin.find(b=>b.barcode==='synthetic-mallet-3')
+  assert.equal(item.barcode,scans.itemBarcode);assert.equal(item.name,'Brake pads');assert.equal(bin.code,'Shelf A')
+  await fill('stock.receive',receive,'Receive stock')
+  let report=await h.api('/api/mallet/inventory')
+  const expected={item,bin,receiptId:report.receipts[0]?.id,receiver:actor,receiptNote:receive.reason}
+  assert.equal(expected.receiptId,(await h.state()).records.stockReceipt[0].id)
+  assertInventoryReconciliation(report,expected)
+  await fill('stock.receive',receive,'Receive stock')
+  assert.match(await p.locator('main').innerText(),/This receiving reference is already retained/);await p.goto(h.origin+'/app/inventory')
+  assert.deepEqual(await h.api('/api/mallet/inventory'),report,'Duplicate native shipment preserves receiving, variance and ledger reports')
   assert.ok((await p.locator('main').innerText()).includes('Labeled 10 · Received 9 · Shortage 1'));await shot('02-shipment-shortage-and-ledger')
   await p.getByRole('link',{name:'Start a blind or cycle count'}).click();assert.ok(!(await p.locator('main').innerText()).includes('On hand 9'));await shot('03-blind-count')
   await fill('stock.count',{...scans,quantity:8,reason:'Physical count confirmed shortage'},'Submit count')
   assert.ok((await p.locator('main').innerText()).includes('On hand 9'));await shot('04-variance-awaiting-approval')
+  const pending=await h.api('/api/mallet/inventory'),countId=pending.counts[0].id
+  assert.equal(pending.counts[0].approval,null);assert.deepEqual(pending.movements,report.movements,'Submitting a native count proposes no movement')
+  const approvedAfter=Date.now()
   await fill('stock.approveCount',{reason:'Recount confirmed one missing'},'Approve variance')
+  report=await h.api('/api/mallet/inventory')
+  assertInventoryReconciliation(report,{...expected,countId,counter:actor,countNote:'Physical count confirmed shortage',approver:actor,approvalReason:'Recount confirmed one missing'})
+  assert.ok(Date.parse(report.counts[0].approval.at)>=approvedAfter&&Date.parse(report.counts[0].approval.at)<=Date.now())
+  await h.command('stock.approveCount',{countId,version:report.counts[0].version,reason:'Cannot apply twice'},{status:409})
+  assert.deepEqual(await h.api('/api/mallet/inventory'),report,'Duplicate native approval preserves receiving, variance and ledger reports')
+  await p.reload()
+  const reconciliation=await p.locator('main').innerText()
+  for(const evidence of ['Brake pads · Shelf A','Labeled 10 · Received 9 · Shortage 1','blind count 8 · Expected 9 · Variance -1','Physical count confirmed shortage','Adjustment approved · Recount confirmed one missing','Brake pads · Shelf A · 9 · One unit missing','Brake pads · Shelf A · -1 · Recount confirmed one missing',actor.name])assert.ok(reconciliation.includes(evidence),'Rendered reconciliation retains '+evidence)
   assert.ok((await p.locator('main').innerText()).includes('On hand 8'));assert.ok((await p.locator('main').innerText()).includes('Adjustment approved'));await shot('05-reconciled-stock-and-variance')
   // Exercise the new public command doors, then inspect their actual native balances at both widths.
   const {stockConsumptionJourney}=await import('./support/stock-consumption-journey.mjs');await stockConsumptionJourney(h)

@@ -306,8 +306,8 @@ test('SUBLET-001 / OPS-001: approved outsourced scope, delayed custody, supplier
 
 test('SUBLET-001: outside handoff, delay, added-scope decision, supplier bill, receipt, quality and margin through native forms at 1440/390',async()=>{const {subletBrowser}=await import('./sublet-browser.mjs');await subletBrowser()})
 
-test('PART-002 / OPS-001: barcode receiving, separate balances, blind and cycle variances, approval fences, reports and fresh recovery',async()=>{const {inventoryJourney}=await import('./support/inventory-journey.mjs');await run(inventoryJourney)})
-test('PART-002: scan shipment and bins, approve shortage and reconcile through native forms at 1440/390',async()=>{const {inventoryBrowser}=await import('./inventory-browser.mjs');await inventoryBrowser()})
+test('PART-002 / OPS-001: exact receipt and variance movements, duplicate preservation, separate balances, approval fences and fresh recovery',async()=>{const {inventoryJourney}=await import('./support/inventory-journey.mjs');await run(inventoryJourney)})
+test('PART-002: exact receipt and count reconciliation with duplicate refusals through native forms at 1440 and 390',async()=>{const {inventoryBrowser}=await import('./inventory-browser.mjs');await inventoryBrowser()})
 
 test('BUY-001 / OPS-001: approved spend, partial receipt, repair allocation, backorder, bill exceptions, closure and fresh recovery',async()=>{const {purchasingJourney}=await import('./support/purchasing-journey.mjs');await run(purchasingJourney)})
 test('BUY-001: two-line spend approval, partial receiving, backorder and changed bill exception through native forms at 1440/390',async()=>{const {purchasingBrowser}=await import('./purchasing-browser.mjs');await purchasingBrowser()})

@@ -4884,7 +4884,7 @@
       "executable": false
     },
     "tests/inventory-browser.mjs": {
-      "sha256": "5f69319f5fc67e13b29b33ce1158f272e4fab8c12d35f56fef01194beaee28da",
+      "sha256": "001aa253c3cf26e1d65a96c0c6d85f2b570c476098bfa940b03ab370d0b53481",
       "executable": false
     },
     "tests/invoice-documents-browser.mjs": {
@@ -4896,7 +4896,7 @@
       "executable": false
     },
     "tests/mallet.test.mjs": {
-      "sha256": "8c2cc43806fd417ccc9f4c97f68e763bdc0bdd7ee9a7d5b65fa42a589e34e33f",
+      "sha256": "0550861a9207e83107df22f490eb704953fc2333bc538f6f6bc1a29be96b691b",
       "executable": false
     },
     "tests/media-browser.mjs": {
@@ -5188,7 +5188,7 @@
       "executable": false
     },
     "tests/support/inventory-journey.mjs": {
-      "sha256": "518fc2e96c4bad42044513281e8dc1b3e43858ca2ecb3fded0c740e40084f3f5",
+      "sha256": "09440433fe01c40514157b6415a6536a42c0560f2debb60b3ff8d53d2221948e",
       "executable": false
     },
     "tests/support/invoice-documents-journey.mjs": {
