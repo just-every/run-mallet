@@ -5,7 +5,7 @@ import {chromium} from '@playwright/test'
 import {mkdir,readFile} from 'node:fs/promises'
 import {join} from 'node:path'
 
-export async function browserJourney(openUrl,{directory='.cache/browser',fixtures='tests/fixtures/repairshopr',fresh=false,paywall,cookie,estimateOnly=false}={}) {
+export async function browserJourney(openUrl,{directory='.cache/browser',fixtures='tests/fixtures/repairshopr',fresh=false,paywall,cookie,repairOnly=false}={}) {
  await mkdir(directory,{recursive:true})
  const browser=await chromium.launch({headless:true,...(process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH?{executablePath:process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH}:{}),args:['--disable-gpu','--use-mock-keychain','--password-store=basic',...(process.platform==='linux'?['--no-sandbox']:[])]})
  let stage='open app'
@@ -81,12 +81,25 @@ export async function browserJourney(openUrl,{directory='.cache/browser',fixture
   assert.match(await estimatePanel.innerText(),/signed/)
   assert.match(await estimatePanel.innerText(),/Customer signed line 1 only on paper estimate NS-104. Labor deferred/)
   await shot('08-partial-authorisation',estimatePanel)
-  if(estimateOnly)return {estimate:decided,actor:owner}
 
   await page.getByLabel('Work note').fill('Pads supplied over the counter. Labor not authorized.')
-  await click('Record parts or labor');await shot('09-work-recorded')
+  await click('Record parts or labor');await page.reload()
+  const worked=(await (await page.request.get(origin+'/api/mallet/state')).json()).records.job.find(j=>j.id===repair.id)
+  assert.equal(worked.actuals.length,1)
+  const actual=worked.actuals[0]
+  assert.deepEqual(actual,{id:actual.id,lineId:shared.revisions[0].lines[0].id,estimateId:shared.id,revision:1,kind:'part',quantityMilli:1000,quantity:1,note:'Pads supplied over the counter. Labor not authorized.',by:owner,at:actual.at})
+  const workPanel=page.locator('section.card').filter({has:page.getByRole('heading',{name:'Parts & labor',exact:true})})
+  assert.match(await workPanel.innerText(),/Shimano B05S brake pads/)
+  assert.ok((await workPanel.innerText()).includes('1 · '+owner.name+' · revision 1'))
+  await shot('09-work-recorded',workPanel)
   const qualityDoor=publicDoor(origin,(await page.context().cookies(origin)).map(c=>c.name+'='+c.value).join('; ')),qualityJob=(await qualityDoor.state()).records.job.find(j=>jobUrl.endsWith('/'+j.id));await qualityReady(qualityDoor,qualityJob);await page.reload();
-  await click('Complete repair');await shot('10-completed')
+  await click('Complete repair');await page.reload()
+  const completed=(await (await page.request.get(origin+'/api/mallet/state')).json()).records.job.find(j=>j.id===repair.id)
+  assert.equal(completed.status,'completed');assert.deepEqual(completed.actuals,[actual])
+  assert.deepEqual(completed.completedBy,owner)
+  assert.ok((await workPanel.innerText()).includes('1 · '+owner.name+' · revision 1'))
+  await shot('10-completed',workPanel)
+  if(repairOnly)return {estimate:decided,job:completed,actor:owner}
   await click('Prepare invoice');await shot('11-invoice-draft')
   await click('Approve invoice');await shot('12-invoice-approved')
   await click('Export invoice once');await shot('13-invoice-exported')
@@ -138,7 +151,7 @@ export async function estimateDecisionBrowser(){
  const h=await installation({entry:'tests/dev-worker.ts',network:true,assets:true,bindings:{AUTH_LOCAL:'true',RER_DEV_KEY:randomBytes(32).toString('base64url')}})
  try{
   await h.stepUp()
-  await browserJourney(h.origin+'/app',{cookie:h.owner,estimateOnly:true,directory:process.env.MALLET_SCREENSHOTS??'.cache/estimate-browser'})
+  await browserJourney(h.origin+'/app',{cookie:h.owner,repairOnly:true,directory:process.env.MALLET_SCREENSHOTS??'.cache/estimate-browser'})
  }finally{await h.close()}
 }
 if(process.argv[1]===import.meta.filename) {
