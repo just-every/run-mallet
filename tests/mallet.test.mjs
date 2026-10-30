@@ -1,3 +1,4 @@
+import {preparationKeyBrowser} from './browser-journey.mjs'
 import {blockerJourney} from './support/blocker-journey.mjs'
 import {blockerBrowser} from './blocker-browser.mjs'
 import {enterpriseBrowser} from './enterprise-browser.mjs'
@@ -89,30 +90,120 @@ test('exact revision, partial authorisation and quantity ceilings protect custom
  assert.equal(q.authorisation.totals.totalCents,5500)
 }))
 
-test('agent prepares, person approves, immutable actual-work invoice exports once',()=>run(async h=>{
- const {job}=await booking(h),key=await h.command('agent.create',{label:'Workshop assistant'}),agent={as:'',headers:{authorization:`Bearer ${key.token}`}}
- let q=await estimate(h,job,agent)
- await h.command('estimate.approve',{estimateId:q.id,version:q.version,revision:1},{...agent,status:403})
- q=await authorise(h,q,[q.revisions[0].lines[0].id])
- let j=(await h.state()).records.job[0]
- j=await h.command('work.record',{jobId:j.id,version:j.version,lineId:q.revisions[0].lines[0].id,quantity:2})
- await qualityReady(h,j)
- j=await h.command('job.complete',{jobId:j.id,version:j.version})
- let invoice=await h.command('invoice.prepare',{jobId:j.id,version:j.version},agent)
- assert.equal(invoice.totals.totalCents,5500);assert.equal(invoice.lines.length,1)
- await h.command('invoice.export',{invoiceId:invoice.id,version:invoice.version},{status:409})
- invoice=await h.command('invoice.approve',{invoiceId:invoice.id,version:invoice.version,revision:1})
- const a=await h.command('invoice.export',{invoiceId:invoice.id,version:invoice.version}),b=await h.command('invoice.export',{invoiceId:invoice.id,version:invoice.version})
- assert.deepEqual(a,b);assert.equal((await h.state()).records.export.length,1)
- const response=await h.request(`/api/mallet/exports/${a.id}`);assert.equal(response.status,200);assert.match(await response.text(),/55.00/)
- assert.equal((await h.state()).records.approval.length,2)
- await h.command('agent.revoke',{id:key.id})
- await h.state({...agent,status:401})
-}))
+test('agent prepares, person approves, immutable actual-work invoice exports once',async()=>{
+ let entered,release
+ const waiting=new Promise(resolve=>{entered=resolve}),resumed=new Promise(resolve=>{release=resolve})
+ let outboundCalls=0
+ await run(async h=>{
+  const {job}=await booking(h),unused=await h.command('asset.create',{...assetInput('synthetic-mallet-unused'),customerEmail:''})
+  const key=await h.command('agent.create',{label:'synthetic-mallet-901'}),agent={as:'',headers:{authorization:`Bearer ${key.token}`}}
+  assert.equal(typeof key.token,'string','Owner issuance returns a private preparation credential')
+  assert.equal(key.token.length,43,'Issued credential is usable by the native bearer door')
+  assert.equal(key.expiresAt,Date.parse('2026-11-29T12:00:00Z'),'Issued key has its full bounded lifetime')
+  const preparer={id:key.id,name:'synthetic-mallet-901',role:'agent'},owner=(await h.state()).actor
+  await h.command('tax.configure',{ratePercent:10,partsTaxable:true,laborTaxable:true})
+  const first=[{id:'synthetic-mallet-902',kind:'part',description:'Brake pads',quantity:2,unitCents:2500},{id:'synthetic-mallet-903',kind:'labor',description:'Replace and tune',quantity:1.5,unitCents:12000}]
+  const revised=[{id:'synthetic-mallet-904',kind:'part',description:'Reviewed brake pads',quantity:2.5,unitCents:2000},{id:'synthetic-mallet-905',kind:'labor',description:'Reviewed adjustment',quantity:0.75,unitCents:10000}]
+  const inspectRevision=(revision,n,expected,subtotal,salesTax,total)=>{
+   assert.equal(revision.n,n);assert.deepEqual(revision.preparedBy,preparer)
+   assert.equal(revision.preparedAt,'2026-10-30T12:00:00.000Z')
+   assert.deepEqual(revision.lines.map(({id,kind,description,quantity,unitCents})=>({id,kind,description,quantity,unitCents})),expected)
+   assert.deepEqual(revision.totals,{currency:'USD',subtotalCents:subtotal,salesTaxCents:salesTax,totalCents:total})
+  }
+  let q=await h.command('estimate.prepare',{jobId:job.id,version:job.version,lines:first,notes:'synthetic-mallet-906'},agent)
+  inspectRevision(q.revisions[0],1,[{id:'synthetic-mallet-902',kind:'part',description:'Brake pads',quantity:2,unitCents:2500},{id:'synthetic-mallet-903',kind:'labor',description:'Replace and tune',quantity:1.5,unitCents:12000}],23000,2300,25300)
+  assert.equal(q.jobId,job.id);assert.equal(q.revisions[0].notes,'synthetic-mallet-906');assert.equal(q.revisions[0].approval,null)
+  const firstSnapshot=structuredClone(q.revisions[0])
+  q=await h.command('estimate.revise',{estimateId:q.id,version:q.version,revision:1,lines:revised,notes:'synthetic-mallet-907'},agent)
+  q=(await h.state()).records.estimate.find(row=>row.id===q.id)
+  assert.equal(q.revisions.length,2);assert.deepEqual(q.revisions[0],firstSnapshot)
+  inspectRevision(q.revisions[1],2,[{id:'synthetic-mallet-904',kind:'part',description:'Reviewed brake pads',quantity:2.5,unitCents:2000},{id:'synthetic-mallet-905',kind:'labor',description:'Reviewed adjustment',quantity:0.75,unitCents:10000}],12500,1250,13750);assert.equal(q.revisions[1].notes,'synthetic-mallet-907')
+  const refuse=async(command,input,status=403,options=agent)=>{
+   const before=(await h.state()).records,mailCount=h.messages.length,external=outboundCalls
+   const response=await h.command(command,input,{...options,status})
+   assert.match(response.error,/FORBIDDEN|manager_required|owner_required|invalid_agent_key|CONCURRENT_CHANGE/,'The authority boundary refuses '+command)
+   assert.deepEqual((await h.state()).records,before,command+' refusal preserves every business record, version and successful event')
+   assert.equal(h.messages.length,mailCount,command+' refusal hands no message to the mail edge')
+   assert.equal(outboundCalls,external,command+' refusal makes no external handoff')
+  }
+  await refuse('estimate.approve',{estimateId:q.id,version:q.version,revision:2})
+  q=await h.command('estimate.approve',{estimateId:q.id,version:q.version,revision:2})
+  const approved=(await h.state()).records.approval.find(row=>row.subjectId===q.id)
+  assert.deepEqual(approved.preparedBy,preparer);assert.deepEqual(approved.approvedBy,{id:owner.id,name:owner.name,role:'owner'})
+  assert.equal(approved.revision,2);assert.equal(approved.subjectVersion,q.version);assert.equal(approved.decision,'approved')
+  assert.equal(approved.at,'2026-10-30T12:00:00.000Z');assert.deepEqual(q.revisions[1].approval.by,approved.approvedBy)
+  await refuse('estimate.markSent',{estimateId:q.id,version:q.version,revision:2,method:'printed',note:'synthetic-mallet-908'})
+  q=await h.command('estimate.markSent',{estimateId:q.id,version:q.version,revision:2,method:'printed',note:'synthetic-mallet-908'})
+  const decision={estimateId:q.id,version:q.version,revision:2,lineIds:['synthetic-mallet-904'],customerName:'Cedar Bikes',method:'signed',evidence:'synthetic-mallet-909'}
+  await refuse('estimate.authorise',decision)
+  q=await h.command('estimate.authorise',decision)
+  const retained=(await h.state()).records.estimate.find(row=>row.id===q.id)
+  assert.deepEqual(retained.authorisation,{revision:2,lineIds:['synthetic-mallet-904'],customerName:'Cedar Bikes',method:'signed',evidence:'synthetic-mallet-909',recordedBy:approved.approvedBy,at:'2026-10-30T12:00:00.000Z',totals:{currency:'USD',subtotalCents:5000,salesTaxCents:500,totalCents:5500}})
+  assert.deepEqual(retained.revisions[1].approval,q.revisions[1].approval)
+  let j=(await h.state()).records.job.find(row=>row.id===job.id)
+  j=await h.command('work.record',{jobId:j.id,version:j.version,lineId:'synthetic-mallet-904',quantity:2.5})
+  await qualityReady(h,j)
+  j=await h.command('job.complete',{jobId:j.id,version:j.version})
+  let invoice=await h.command('invoice.prepare',{jobId:j.id,version:j.version},agent)
+  assert.equal(invoice.totals.totalCents,5500);assert.equal(invoice.lines.length,1)
+  assert.deepEqual(invoice.preparedBy,preparer);assert.equal(invoice.preparedAt,'2026-10-30T12:00:00.000Z');assert.equal(invoice.estimateRevision,2)
+  await h.command('invoice.export',{invoiceId:invoice.id,version:invoice.version},{status:409})
+  invoice=await h.command('invoice.approve',{invoiceId:invoice.id,version:invoice.version,revision:1})
+  await refuse('invoice.export',{invoiceId:invoice.id,version:invoice.version})
+  await refuse('asset.erase',{assetId:unused.id,confirm:'ERASE'})
+  await refuse('agent.create',{label:'synthetic-mallet-910'})
+  await refuse('agent.revoke',{id:key.id})
+  const a=await h.command('invoice.export',{invoiceId:invoice.id,version:invoice.version}),b=await h.command('invoice.export',{invoiceId:invoice.id,version:invoice.version})
+  assert.deepEqual(a,b);assert.equal((await h.state()).records.export.length,1)
+  const response=await h.request(`/api/mallet/exports/${a.id}`);assert.equal(response.status,200);assert.match(await response.text(),/55.00/)
+  assert.equal((await h.state()).records.approval.length,2)
+  const other=await booking(h,{asset:unused,bayId:'synthetic-mallet-911',startAt:'2026-12-01T12:00:00Z',endAt:'2026-12-01T13:00:00Z'})
+  let draft=await h.command('estimate.prepare',{jobId:other.job.id,version:other.job.version,lines:first},agent)
+  const pendingInput={estimateId:draft.id,version:draft.version,revision:1,lines:revised}
+  const pending=h.request('/api/mallet/commands',{method:'POST',body:{command:'estimate.revise',input:pendingInput},...agent,headers:{...agent.headers,'x-synthetic-mallet-pause-write':'yes'}})
+  try{
+   await Promise.race([waiting,new Promise((_,reject)=>{const timer=setTimeout(()=>reject(Error('Preparation did not reach the transaction barrier')),10000);timer.unref()})])
+   await h.command('agent.revoke',{id:key.id})
+   const before=(await h.state()).records,mailCount=h.messages.length
+   release()
+   const refused=await pending;assert.equal(refused.status,409);assert.equal((await refused.json()).error,'CONCURRENT_CHANGE')
+   assert.deepEqual((await h.state()).records,before,'An authenticated in-flight write cannot commit after owner revocation')
+   assert.equal(h.messages.length,mailCount)
+  }finally{release();await pending}
+  await refuse('estimate.revise',pendingInput,401)
+  await h.state({...agent,status:401})
+  // An expiry boundary fixture changes only the clock's deadline; outcomes still
+  // run through the real bearer route with independently valid inputs.
+  const expiring=await h.command('agent.create',{label:'synthetic-mallet-912'}),expired={as:'',headers:{authorization:'Bearer '+expiring.token}},db=await h.mf.getD1Database('DB'),now=Date.parse('2026-10-30T12:00:00Z')
+  await db.prepare('UPDATE mallet_agent_keys SET expires_at=? WHERE id=?').bind(now+1,expiring.id).run()
+  const live=await h.command('estimate.revise',pendingInput,expired);assert.equal(live.revisions.length,2)
+  await db.prepare('UPDATE mallet_agent_keys SET expires_at=? WHERE id=?').bind(now,expiring.id).run()
+  await refuse('estimate.revise',{...pendingInput,version:live.version,revision:2},401,expired)
+  await h.state({...expired,status:401})
+  const recoveryKey=await h.command('agent.create',{label:'synthetic-mallet-913'}),recoveryAgent={as:'',headers:{authorization:'Bearer '+recoveryKey.token}}
+  await h.state(recoveryAgent)
+  const original=(await h.state()).records,backup=await archive(h)
+  assert.ok(!backup[0].tables.some(table=>table.name==='mallet_agent_keys'),'An archive excludes preparation credentials')
+  const fresh=await installation({clock:'2026-10-30T12:00:00Z'})
+  try{
+   await restore(fresh,backup)
+   assert.deepEqual((await fresh.state()).records,original,'Exact revisions, attribution and person decisions recover under a fresh owner')
+   await fresh.command('estimate.revise',{...pendingInput,version:live.version,revision:2},{...recoveryAgent,status:401})
+   assert.deepEqual((await fresh.state()).records,original,'Recovery cannot make the source preparation credential runnable')
+  }finally{await fresh.close()}
+  assert.equal(outboundCalls,1,'Only the synthetic database scheduling signal reached the controlled edge')
+ },{entry:'tests/support/preparation-worker.ts',clock:'2026-10-30T12:00:00Z',outboundService:async request=>{outboundCalls++;assert.equal(new URL(request.url).pathname,'/preparation-write');entered();await resumed;return new Response('continue')}})
+ await preparationKeyBrowser()
+})
 
 test('dispatch proposal is inert until a person approves current free resources',()=>run(async h=>{
  const {job}=await booking(h),key=await h.command('agent.create',{label:'Dispatcher'}),agent={as:'',headers:{authorization:`Bearer ${key.token}`}}
  const p=await h.command('dispatch.prepare',{jobId:job.id,version:job.version,bayId:'Bay 2',technicianId:'Jordan',startAt:'2026-10-20T09:00:00+10:00',endAt:'2026-10-20T10:00:00+10:00',reason:'Move to the diagnostic bay'},agent)
+ const saved=(await h.state()).records.proposal.find(row=>row.id===p.id)
+ assert.equal(saved.jobId,job.id);assert.equal(saved.jobVersion,job.version);assert.equal(saved.status,'pending')
+ assert.deepEqual(saved.preparedBy,{id:key.id,name:'Dispatcher',role:'agent'})
+ assert.ok(Number.isFinite(Date.parse(saved.preparedAt)))
+ assert.deepEqual(saved.plan,{bayId:'Bay 2',technicianId:'Jordan',startAt:'2026-10-19T23:00:00.000Z',endAt:'2026-10-20T00:00:00.000Z'})
  assert.equal((await h.state()).records.job[0].bayId,'Bay 1')
  await h.command('dispatch.approve',{proposalId:p.id,version:p.version},{...agent,status:403})
  await h.command('dispatch.approve',{proposalId:p.id,version:p.version})
