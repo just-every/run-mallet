@@ -22,6 +22,12 @@ export async function creditInvoice(h,account,suffix='1'){
 }
 export const creditInput=(invoice,payment,reference,line=invoice.lines[0],quantity=1)=>({invoiceId:invoice.id,version:invoice.version,paymentId:payment?.id,destination:payment?'original-tender':'account-credit',reference,reason:'Customer returned the accessory',consentEvidence:'Customer requested original tender or retained credit as reviewed',lines:[{lineId:line.id,sourceEstimateId:line.sourceEstimateId,sourceRevision:line.sourceRevision,quantity}]})
 export async function issueCredit(h,input){const review=await h.command('credit.preview',input);return h.command('credit.issue',{...input,review,confirm:'issue-credit'})}
+export const cashRefundPrivateText={reason:'synthetic-mallet-301 private return narrative',consentEvidence:'synthetic-mallet-302 private payer instruction',paymentEvidence:'synthetic-mallet-303 private cash custody',outcomeEvidence:'synthetic-mallet-304 private refund observation'}
+export async function refundReadSnapshot(h){
+ const records=(await h.state()).records,exports=[]
+ for(const saved of records.export??[]){const response=await h.request('/api/mallet/exports/'+saved.id);assert.equal(response.status,200);exports.push({id:saved.id,bytes:await response.text()})}
+ return {records,exports}
+}
 export async function refundsJourney(){
  const h=await installation()
  try{
@@ -35,9 +41,12 @@ export async function refundsJourney(){
   assert.deepEqual(invoice.totals,{currency:'USD',subtotalCents:503,salesTaxCents:38,totalCents:541})
   const inputNoPayment=creditInput(invoice,null,'synthetic-mallet-101')
   await h.command('credit.preview',inputNoPayment,{status:409})
-  const payment=await h.command('payment.record',{invoiceId:invoice.id,version:invoice.version,amountCents:541,method:'cash',reference:'synthetic-mallet-102',evidence:'Cash received; owner declaration'})
+  const payment=await h.command('payment.record',{invoiceId:invoice.id,version:invoice.version,amountCents:541,method:'cash',reference:'synthetic-mallet-102',evidence:cashRefundPrivateText.paymentEvidence})
+  const otherCash=await creditInvoice(h,outsider.account,'4'),otherPayment=await h.command('payment.record',{invoiceId:otherCash.invoice.id,version:otherCash.invoice.version,amountCents:541,method:'cash',reference:'synthetic-mallet-305',evidence:'synthetic-mallet-306 other payer cash custody'})
+  const otherNote=await issueCredit(h,{...creditInput(otherCash.invoice,otherPayment,'synthetic-mallet-307',otherCash.invoice.lines[1]),reason:'synthetic-mallet-308 other payer return narrative',consentEvidence:'synthetic-mallet-309 other payer instruction'})
+  assert.equal(otherNote.totals.totalCents,215)
   await h.command('tax.configure',{ratePercent:20,partsTaxable:true,laborTaxable:true})
-  const input=creditInput(invoice,payment,'synthetic-mallet-103'),admin=await h.person('refund-admin@example.test','admin'),member=await h.person('refund-member@example.test'),agent=await h.command('agent.create',{label:'No refund authority'}),bearer={as:'',headers:{authorization:'Bearer '+agent.token}}
+  const input={...creditInput(invoice,payment,'synthetic-mallet-103'),reason:cashRefundPrivateText.reason,consentEvidence:cashRefundPrivateText.consentEvidence},admin=await h.person(['refund-admin','example.test'].join('@'),'admin'),member=await h.person(['refund-member','example.test'].join('@')),agent=await h.command('agent.create',{label:'No refund authority'}),bearer={as:'',headers:{authorization:'Bearer '+agent.token}}
   const before=(await h.state()).records
   for(const command of ['credit.preview','credit.issue','credit.apply','credit.exchange','refund.record','refund.redirect','refund.submit','refund.reconcile'])for(const options of [{as:'',status:401},{as:admin.cookie,status:403},{as:member.cookie,status:403},{...bearer,status:403},{headers:{origin:'https://elsewhere.test'},status:403}])await h.command(command,input,options)
   for(const command of ['refund.claim','refund.outcome'])await h.command(command,input,{status:404})
@@ -56,10 +65,50 @@ export async function refundsJourney(){
   assert.deepEqual(await h.command('credit.issue',{...input,review,confirm:'issue-credit'}),note,'Exact issue replay returns the same immutable note')
   await h.command('credit.issue',{...input,reason:'Changed instructions',review,confirm:'issue-credit'},{status:409})
   const state=await h.state();let refund=state.records.refund.find(r=>r.creditNoteId===note.id)
-  for(const [n,status]of ['failed','disputed','refunded'].entries()){
-   const outcome={refundId:refund.id,version:refund.version,status,reference:'synthetic-mallet-'+(104+n),evidence:'Owner observed original cash refund '+status,confirm:'record-refund'}
-   refund=await h.command('refund.record',outcome);assert.equal(refund.status,status);assert.deepEqual(await h.command('refund.record',outcome),refund)
+  const payerLogin=await portalSignIn(h,contact.email,account.name)
+  const privateTexts=[...Object.values(cashRefundPrivateText),'synthetic-mallet-306 other payer cash custody','synthetic-mallet-308 other payer return narrative','synthetic-mallet-309 other payer instruction']
+  const checkCashPayers=async(status,refundedCents,paidCents)=>{
+   const beforeRead=await refundReadSnapshot(h)
+   for(const text of [cashRefundPrivateText.reason,cashRefundPrivateText.consentEvidence,cashRefundPrivateText.paymentEvidence,...(status==='unsubmitted'?[]:[cashRefundPrivateText.outcomeEvidence+' '+status])])assert.ok(JSON.stringify(beforeRead.records).includes(text),'Private evidence is populated before asserting its absence from payer reads')
+   const view=await h.api('/api/mallet/portal/billing',undefined,{as:payerLogin.cookie}),bill=view.invoices.find(i=>i.id===invoice.id)
+   assert.equal(view.account.id,account.id)
+   assert.deepEqual(bill.refunds,[{amountCents:109,method:'cash',status}])
+   assert.equal(bill.refundedCents,refundedCents);assert.equal(bill.paidCents,paidCents);assert.equal(bill.creditedCents,109);assert.equal(bill.outstandingCents,0)
+   assert.ok(!view.invoices.some(i=>[other.invoice.id,otherCash.invoice.id].includes(i.id)))
+   const otherView=await h.api('/api/mallet/portal/billing',undefined,{as:otherLogin.cookie})
+   assert.equal(otherView.account.id,outsider.account.id)
+   assert.deepEqual(otherView.invoices.find(i=>i.id===otherCash.invoice.id).refunds,[{amountCents:215,method:'cash',status:'unsubmitted'}])
+   assert.ok(!otherView.invoices.some(i=>[invoice.id,replacement.invoice.id].includes(i.id)))
+   for(const [responseView,hidden]of [[view,[otherCash.invoice.id,otherCash.invoice.number,otherNote.id,otherNote.number]],[otherView,[invoice.id,invoice.number,note.id,note.number]]]){
+    const json=JSON.stringify(responseView)
+    for(const text of [...privateTexts,...hidden])assert.ok(!json.includes(text),'Payer response excludes private narrative and other-account records: '+text)
+   }
+   assert.deepEqual(await refundReadSnapshot(h),beforeRead,'Payer reads preserve all business records and exact saved export bytes')
+   console.log('PROBE PAY-008 cash '+status+': portal billing -> cash refund 109 cents, refunded '+refundedCents+' cents; private narratives and other account excluded; records and exports unchanged')
   }
+  await checkCashPayers('unsubmitted',0,541)
+  for(const [n,status]of ['failed','disputed','refunded'].entries()){
+   const outcome={refundId:refund.id,version:refund.version,status,reference:'synthetic-mallet-'+(104+n),evidence:cashRefundPrivateText.outcomeEvidence+' '+status,confirm:'record-refund'}
+   refund=await h.command('refund.record',outcome);assert.equal(refund.status,status);assert.deepEqual(await h.command('refund.record',outcome),refund)
+   await checkCashPayers(status,status==='refunded'?109:0,status==='refunded'?432:541)
+  }
+  const nextPayer=await h.command('contact.save',{name:'Replacement refund payer',email:['synthetic-mallet-310','example.test'].join('@'),phone:'',communication:'none',notes:''})
+  const currentAccount=(await h.state()).records.customerAccount.find(a=>a.id===account.id)
+  const changed=await h.command('customer.save',{...currentAccount,customerId:account.id,version:currentAccount.version,contactIds:[...currentAccount.contactIds,nextPayer.id],payerId:nextPayer.id,billingContactId:nextPayer.id})
+  const beforeRefusal=await refundReadSnapshot(h)
+  for(const path of ['/api/mallet/portal/billing','/portal/billing']){
+   const response=await h.request(path,{as:payerLogin.cookie});assert.equal(response.status,403)
+   const body=await response.text();for(const text of [...privateTexts,invoice.id,invoice.number,note.id,note.number])assert.ok(!body.includes(text),'Former payer refusal discloses no financial records')
+   assert.deepEqual(await refundReadSnapshot(h),beforeRefusal,'Former payer refusal preserves records and exports immediately')
+  }
+  const nextLogin=await portalSignIn(h,nextPayer.email,account.name),currentView=await h.api('/api/mallet/portal/billing',undefined,{as:nextLogin.cookie})
+  assert.deepEqual(currentView.invoices.find(i=>i.id===invoice.id).refunds,[{amountCents:109,method:'cash',status:'refunded'}])
+  assert.deepEqual(await refundReadSnapshot(h),beforeRefusal,'New current payer can read without financial effects')
+  await h.command('customer.save',{...changed,customerId:account.id,version:changed.version,payerId:contact.id,billingContactId:contact.id})
+  const beforeReplay=await refundReadSnapshot(h)
+  await h.api('/api/mallet/portal/billing',undefined,{as:payerLogin.cookie,status:403})
+  assert.deepEqual(await refundReadSnapshot(h),beforeReplay,'Returning the payer role never revives an old session or changes finances')
+  console.log('PROBE PAY-008 payer change: native customer.save -> former payer refused immediately on billing API and page, fresh current payer served; no financial effects')
   await h.command('refund.record',{refundId:refund.id,version:refund.version,status:'refunded',reference:'synthetic-mallet-107',evidence:'Pay again',confirm:'record-refund'},{status:409})
   const credit=await issueCredit(h,creditInput(invoice,null,'synthetic-mallet-108',invoice.lines[0],2))
   assert.equal(credit.totals.totalCents,217);assert.equal(credit.totals.salesTaxCents,15,'Cumulative tax reversal keeps the split exact')
