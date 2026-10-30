@@ -2672,7 +2672,7 @@
       "executable": false
     },
     "src/mallet/ui/estimates.ts": {
-      "sha256": "91a82382881cb5411b39424b5896cbadb0ed99016f3abca97842b1ce78e2373a",
+      "sha256": "1347c78646df5a78953b650b1c0369ab53b6d5b92e1a231a72d3b7d31a3098b6",
       "executable": false
     },
     "src/mallet/ui/flow.ts": {
@@ -4920,7 +4920,7 @@
       "executable": false
     },
     "tests/pricing-browser.mjs": {
-      "sha256": "31f0133534b70aa87cfae58e4f6499a3e3dae6e4d929b9354badf2ecade534bc",
+      "sha256": "e482b7d444e94962f698ead9491af8d0556caa63dfb83049c15b4bf761192f79",
       "executable": false
     },
     "tests/profitability-browser.mjs": {
@@ -5228,7 +5228,7 @@
       "executable": false
     },
     "tests/support/pricing-journey.mjs": {
-      "sha256": "c75086025ce6c409a770582ab035ad39180fd960c3b92a558154b01e63718662",
+      "sha256": "07782dff48c56d3f2375cd6ec488718abe2fc9df92a01c306654ec59b94321b9",
       "executable": false
     },
     "tests/support/profitability-journey.mjs": {
