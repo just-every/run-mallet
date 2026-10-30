@@ -104,6 +104,8 @@ export async function chaseJourney(){
   assert.match(uncertainTask.detail,/uncertain/)
   assert.equal((await chaseOf(uncertain.id)).stopReason,'delivery-failed')
   const snapshot=records=>Object.fromEntries(['chaseTask','approvalChase','approvalLink','estimate','job'].map(kind=>[kind,records[kind]]))
+  await h.restart()
+  assert.deepEqual(snapshot(await st()),snapshot(uncertainRecords),'Restart retains the original delivery, task and repair before scheduler replay')
   await h.cron(at(uncertain.createdAt,2));await h.cron(at(uncertain.createdAt,5))
   assert.equal(calls,beforeInterrupted+1,'Scheduler replay cannot retry the interrupted handoff')
   assert.deepEqual((await st()).chaseTask.filter(t=>t.linkId===uncertain.id),[uncertainTask],'Scheduler replay retains exactly the original uncertain task')
@@ -127,6 +129,17 @@ export async function chaseJourney(){
   assert.equal(calls,beforeInterrupted+1,'Resolution grants no additional handoff')
   // OPS-001: policy, chases, tasks and opt-outs restore exactly; reminder tokens do not.
   const state=await st(),backup=await archive(h),target=await installation()
-  try{await restore(target,backup);const restored=(await target.state()).records;for(const kind of ['chasePolicy','approvalChase','chaseTask','chaseOptOut'])assert.deepEqual(restored[kind],state[kind],'EST-006 / EST-007 restores '+kind);assert.equal((await target.request(replacementPath,{as:''})).status,404)}finally{await target.close()}
+  try{
+   const freshOwner=(await target.state()).actor
+   assert.notEqual(freshOwner.id,(await h.state()).actor.id)
+   await restore(target,backup);const restored=(await target.state()).records
+   for(const kind of ['chasePolicy','approvalChase','chaseTask','chaseOptOut'])assert.deepEqual(restored[kind],state[kind],'EST-006 / EST-007 restores '+kind)
+   assert.equal((await target.request(replacementPath,{as:''})).status,404)
+   assert.equal((await target.request(new URL(uncertain.url).pathname,{as:''})).status,404,'Recovery restores no approval-link authority for an uncertain send')
+   await target.cron(at(uncertain.createdAt,5,45))
+   assert.deepEqual((await target.state()).records.chaseTask,restored.chaseTask,'Recovered resolution history cannot create a fresh task')
+   assert.equal(target.messages.length,0,'Recovery cannot reissue the interrupted email')
+   assert.equal((await target.state()).actor.id,freshOwner.id)
+  }finally{await target.close()}
  }finally{await h.close()}
 }

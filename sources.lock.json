@@ -5088,7 +5088,7 @@
       "executable": false
     },
     "tests/support/chase-journey.mjs": {
-      "sha256": "abb359b219ea28828532bba8f4fa1f7f291e494f192212557324b2a25d5f061f",
+      "sha256": "d28e687df5fba94f44d312b1e5da01a6d9ca1b6b62a52ce6f55f5284009f57e8",
       "executable": false
     },
     "tests/support/check-in-journey.mjs": {
