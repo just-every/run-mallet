@@ -67,18 +67,19 @@ test('DVI-002 and OPS-001: private original and shared custody, interrupted uplo
  await h.api(path+'/uploads/'+upload.id,undefined,{as:other.cookie,status:401})
  // Read the raw refusal, including range requests, so a denial status cannot
  // conceal an original or a fragment of its bytes in the response body.
- for(const [label,as,status] of [['signed out','',401],['unassigned',unassigned.cookie,404],['reassigned',tech.cookie,404],['revoked',other.cookie,401]]){
+ const refuseOriginal=async(client,label,as,status,headers={})=>{
   for(const range of [null,'bytes=0-63','bytes=65530-65550','bytes=-32']){
-   const response=await h.request(upload.contentUrl,{as,headers:range?{Range:range}:{}}),bytes=Buffer.from(await response.arrayBuffer())
+   const response=await client.request(upload.contentUrl,{as,headers:{...headers,...(range?{Range:range}:{})}}),bytes=Buffer.from(await response.arrayBuffer())
    const context=label+' '+(range??'full original')
    assert.equal(response.status,status,context);assert.match(response.headers.get('content-type'),/^application\/json\b/,context)
    assert.equal(response.headers.get('content-range'),null,context)
    assert.equal(bytes.includes(photo),false,context+' discloses no original')
    for(let offset=0;offset+16<=bytes.length;offset++)assert.equal(photo.includes(bytes.subarray(offset,offset+16)),false,context+' discloses no source fragment')
-   const refusal=JSON.parse(bytes.toString('utf8'));assert.equal(refusal.error,status===401?'sign_in_required':'NOT_FOUND',context)
+   const refusal=JSON.parse(bytes.toString('utf8'));assert.equal(refusal.error,status===401?'sign_in_required':status===403?'FORBIDDEN':'NOT_FOUND',context)
    assert.equal(refusal.details??null,null,context)
   }
  }
+ for(const [label,as,status] of [['signed out','',401],['unassigned',unassigned.cookie,404],['reassigned',tech.cookie,404],['revoked',other.cookie,401]])await refuseOriginal(h,label,as,status)
  const retained=await h.request(upload.contentUrl);assert.equal(retained.status,200);assert.equal(hash(Buffer.from(await retained.arrayBuffer())),originalInput.sha256)
  await h.api(upload.contentUrl,undefined,{as:tech.cookie,status:404})
  await h.api(upload.contentUrl,undefined,{method:'DELETE',status:405})
@@ -95,6 +96,7 @@ test('DVI-002 and OPS-001: private original and shared custody, interrupted uplo
  await h.api(path+'/findings?jobId='+job.id,undefined,{as:'',headers:{authorization:'Bearer '+key.token},status:403})
  await h.api(upload.contentUrl,undefined,{as:'',status:401})
  await h.api(upload.contentUrl,undefined,{as:'',headers:{authorization:'Bearer '+key.token},status:403})
+ await refuseOriginal(h,'agent without media authority','',403,{authorization:'Bearer '+key.token})
  // The same native archive door carries finding metadata and every exact byte.
  const backup=await archive(h),fresh=await installation({bindings:{OWNER_EMAIL:'media-recovery@example.test'}})
  try{
@@ -103,6 +105,7 @@ test('DVI-002 and OPS-001: private original and shared custody, interrupted uplo
   assert.deepEqual((await fresh.api(path+'/findings?jobId='+job.id)).findings,findings)
   for(const m of [upload,shared]){const response=await fresh.request(m.contentUrl);assert.equal(response.status,200);assert.equal(hash(Buffer.from(await response.arrayBuffer())),m.sha256)}
   await fresh.api(upload.contentUrl,undefined,{as:h.owner,status:401})
+  await refuseOriginal(fresh,'source installation owner after restore',h.owner,401)
  }finally{await fresh.close()}
 }))
 
