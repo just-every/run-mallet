@@ -8,12 +8,12 @@ The primary journey: check in the customer and asset, diagnose and inspect, pric
 
 | Tier | Done | Partial | Missing | Total |
 | --- | ---: | ---: | ---: | ---: |
-| Core | 22 | 76 | 54 | 152 |
+| Core | 23 | 75 | 54 | 152 |
 | Agent surface | 0 | 0 | 5 | 5 |
 | Later | 0 | 0 | 0 | 0 |
-| Full target | 22 | 76 | 59 | 157 |
+| Full target | 23 | 75 | 59 | 157 |
 
-Judged from the code and tests at commit `0c4b8e0be86462c713e63dc7875074220be9e636` (28 October 2026). Field proof register: 12 rows; 0 passed, 0 failed, 12 not run.
+Judged from the code and tests at commit `0ca42cbe35bd00371fa3d6d8b22f3b09a701475f` (30 October 2026). Field proof register: 12 rows; 0 passed, 0 failed, 12 not run.
 
 ## Core
 
@@ -584,15 +584,15 @@ Core · target · **partial** · From FLOW-004 · Cites BASE-MAIL-001 · Rules D
 
 #### WARRANTY-001 — Warranty and comeback work
 
-Core · target · **partial** · Rules D-1, D-2, D-3
+Core · target · **done** · Cites BASE-ROLE-001, BASE-AUDIT-001, BASE-DATA-001, BASE-BACKUP-001 · Rules D-1, D-2, D-3
 
 **Requirement.** Link a comeback to original invoice, VIN/serial, installed part/lot, failure, mileage and warranty terms; distinguish shop, supplier and OEM responsibility, approve coverage, track claim/rework costs and retain the original paid repair. Owner/admin save versioned shop-declared terms with inclusive UTC time bounds and an absolute reading limit in the declared unit (no conversion). A comeback snapshots the original approved invoice, staff-recorded paid tender evidence, terms, asset identifier and installed lot/serial provenance; later edits never reprice that repair. Coverage and shop/supplier/OEM responsibility require an explicit immutable human decision, and covered rework uses its own customer-authorized zero-price actuals. Cost entries bind those actuals once. Supplier/OEM claims are approved records only, with separately evidenced submitted/accepted/rejected/credited histories; no outbound claim or accounting posting is inferred. BUY-006, BOOKS-003 and OEM-001/002 retain connected remittance, posting and authorized provider submissions.
 
 **Acceptance.**
 1. Return with the same symptom within coverage, open a linked rework RO, approve no-charge labor and a supplier claim, then compare comeback cost and preserved original invoice.
 
-**Evidence.** `tests/mallet.test.mjs`; `tests/warranty-browser.mjs`
-**Gap.** Not asserted in the old cited evidence: No-charge labor has exact zero-price actuals. Asserted: Coverage result appears for the linked comeback; Prepared supplier claim cites both repair cases; Net comeback cost is read back; Original invoice stays exact.
+**Evidence.** `tests/mallet.test.mjs` — WARRANTY-001 / OPS-001: paid original, linked lot and no-charge comeback, coverage decision, supplier claim and preserved invoice recovery; `tests/warranty-browser.mjs` — warrantyBrowser, registered as WARRANTY-001: original invoice, linked rework, no-charge costs and supplier claim at 1440/390. Both journeys read the exact approved, customer-authorized zero-price labor actual and its separately bound internal cost; the API journey recovers those exact records and the paid original invoice and export under fresh authority.
+**Gap.** None.
 
 #### RETURN-001 — Paid and documented handover
 
