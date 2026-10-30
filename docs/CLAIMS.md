@@ -9,7 +9,7 @@ A claim is done when every clause behind it is done, missing when every one is m
 | 1 | "Mallet checks cars in by VIN" | `INTAKE-003` done; `VEH-001` missing | partial |
 | 2 | "texts photo inspections for line-by-line approval" | `DVI-002` partial; `DVI-003` partial; `MSG-001` missing; `EST-003` done; `ESTIMATE-001` partial | partial |
 | 3 | "orders parts" | `BUY-002` done | done |
-| 4 | "runs the technician board" | `FLOW-001` partial | partial |
+| 4 | "runs the technician board" | `FLOW-001` done | done |
 | 5 | "takes payment" | `PAY-003` missing | missing |
 | 6 | "brings customers back" | `AUTO-003` missing; `AUTO-004` partial; `ADV-005` partial | partial |
 | 7 | "100% free, open source" | `OPEN-001` done | done |
@@ -18,7 +18,7 @@ A claim is done when every clause behind it is done, missing when every one is m
 | 10 | Inspection · 2 red, 3 yellow · texted to Dana Brooks | `DVI-001` done; `DVI-003` partial; `MSG-001` missing | partial |
 | 11 | Front brakes approved · cabin filter declined → due at 67,000 mi | `ESTIMATE-001` partial; `EST-005` done | partial |
 | 12 | Pads backordered at Worldpac → PartsTech +$8.40 · Dana re-approved 10:05 | `ADV-004` missing; `BUY-003` missing; `BUY-005` missing; `ESTIMATE-001` partial | partial |
-| 13 | Bay 3 · Luis Romero · 2.4 hrs sold · promise 5:00 pm · ready 4:10 | `WORKSHOP-001` partial; `FLOW-001` partial; `FLOW-002` done | partial |
+| 13 | Bay 3 · Luis Romero · 2.4 hrs sold · promise 5:00 pm · ready 4:10 | `WORKSHOP-001` partial; `FLOW-001` done; `FLOW-002` done | partial |
 | 14 | Paid by text · $531.70 incl. 7.5% tax | `PAY-003` missing; `TAX-001` partial | partial |
 | 15 | Six-stop day timeline with "Promise 5:00 pm · kept" | `WORKSHOP-001` partial; `FLOW-002` done | partial |
 | 16 | "Dana checks in from her phone at the drop box" | `INTAKE-003` done | done |
@@ -39,7 +39,7 @@ A claim is done when every clause behind it is done, missing when every one is m
 | 31 | "Dana re-approves by text" | `EST-003` done; `MSG-001` missing; `ESTIMATE-001` partial | partial |
 | 32 | Worldpac backorder, Morse Rd supplier via PartsTech, order approved, pads scanned to RO 4127 | `BUY-002` done; `BUY-003` missing; `BUY-005` missing; `PART-006` done | partial |
 | 33 | "Customer promise changed: no" | `FLOW-002` done | done |
-| 34 | "Every car’s stage, promise and clock, live" | `FLOW-001` partial; `FLOW-002` done; `TIME-001` partial | partial |
+| 34 | "Every car’s stage, promise and clock, live" | `FLOW-001` done; `FLOW-002` done; `TIME-001` partial | partial |
 | 35 | "Technicians start and stop jobs from the bay" | `WORK-001` partial; `TIME-001` partial | partial |
 | 36 | Waiting parts: promise moved, customer told | `PART-006` done; `FLOW-002` done | done |
 | 37 | Agent "Next blocker" | `ADV-003` partial | partial |
@@ -66,4 +66,4 @@ A claim is done when every clause behind it is done, missing when every one is m
 | 58 | "100% free and open source. MIT licensed." | `OPEN-001` done | done |
 | 59 | "Free, open source shop management" | `OPEN-001` done | done |
 
-Claims: 59; 11 done, 36 partial, 12 missing.
+Claims: 59; 12 done, 35 partial, 12 missing.

@@ -8,12 +8,12 @@ The primary journey: check in the customer and asset, diagnose and inspect, pric
 
 | Tier | Done | Partial | Missing | Total |
 | --- | ---: | ---: | ---: | ---: |
-| Core | 22 | 76 | 54 | 152 |
+| Core | 23 | 75 | 54 | 152 |
 | Agent surface | 0 | 0 | 5 | 5 |
 | Later | 0 | 0 | 0 | 0 |
-| Full target | 22 | 76 | 59 | 157 |
+| Full target | 23 | 75 | 59 | 157 |
 
-Judged from the code and tests at commit `0c4b8e0be86462c713e63dc7875074220be9e636` (28 October 2026). Field proof register: 12 rows; 0 passed, 0 failed, 12 not run.
+Judged from the code and tests at commit `0c4b8e0be86462c713e63dc7875074220be9e636` (28 October 2026). FLOW-001 is rechecked on candidate ref `cloud/sx-mallet-c-f37` (30 October 2026); its immutable SHA and exact proof runs are recorded in Verify and the guarded landing receipt. Other clause judgments are retained. Field proof register: 12 rows; 0 passed, 0 failed, 12 not run.
 
 ## Core
 
@@ -511,15 +511,15 @@ Core · target · **partial** · From EST-006 · Cites BASE-MAIL-001, BASE-AGENT
 
 #### FLOW-001 — Live repair and technician boards
 
-Core · target · **partial** · Cites BASE-ROLE-001, BASE-MAIL-001 · Rules D-1, D-2, D-3
+Core · target · **done** · Cites BASE-ROLE-001, BASE-MAIL-001 · Rules D-1, D-2, D-3
 
 **Requirement.** Show intake, diagnosis, approval, parts, work, quality, ready, collected and closed stages with assignment, customer, due date, priority and blockers; filter and search, enforce allowed transitions and retain canceled/lost work. Stages derive from each repair’s own records in this precedence: closed (canceled, lost, or collected with the invoice exported), collected, ready (completed after QUALITY-001 clearance), quality (recorded work with the assigned technician’s current sign-off or a post-work check result), approval (any estimate or supplement undecided, or every one declined), parts (customer-authorized with a staff-reported required part not physically received), work (customer-authorized), diagnosis (a DIAG-001 diagnosis or DVI inspection exists), then intake; a card moves only when its gated command succeeds, so work needs customer authorization and ready needs quality clearance. Due is the current customer pickup promise, else the booked end; overdue means now is at or after the promise. Owner/admin set normal, high or urgent priority with a reason and kept history; cancel or mark lost an open repair with no recorded work and no running timer (reason, stage and actor kept, bay and technician freed, shown under Closed); and record collection only on a completed repair whose invoice a person approved: staff type the collector’s name, and the immutable record keeps the recorder, time and invoice number and status, historically labelled “Collection recorded by staff. Mallet did not record or verify payment, keys or the collector’s identity.” New collection uses RETURN-001’s documented-handover gate, exact evidence and staff-check label; old observations are not retroactively certified. Filters cover one technician (lead or helper), stage, priority, customer-promise status and search over customer, email, vehicle, plate/VIN, title and invoice number; technicians see only repairs they are on; the board re-reads current records on every load and every 60 seconds.
 
 **Acceptance.**
 1. Move several realistic ROs through the board, filter one technician and overdue customer promise, and try to skip authorization/quality gates.
 
-**Evidence.** `src/mallet/flow.ts`; `src/mallet/ui/board.ts`; `src/mallet/ui/flow.ts`; `tests/support/flow-journey.mjs`; `tests/flow-browser.mjs`
-**Gap.** Not asserted in the old cited evidence: Quality refusal leaves completion unchanged. Asserted: Repair crosses its recorded stages; Technician filter returns its exact repair; Overdue promise filter returns its exact repair; Authorization gate preserves the prior stage.
+**Evidence.** `tests/mallet.test.mjs` — “FLOW-001 / REPORT-004 / REPORT-006: nine-stage board, measured delays, promises, gated moves, technician, overdue, priority and search filters, canceled and lost retention, recorded collection and recovery” runs flowJourney (`tests/support/flow-journey.mjs`) through public commands, state and board reads: realistic repairs cross their recorded stages; technician, overdue promise, priority and search filters select the exact repairs; refused authorization retains Approval; refused quality clearance preserves the exact repair status, version, completion fields, actual work, completion events and stage history, with the card still in Work; independent technician and reviewer clearance permits one attributable completion and Ready; collection, cancellation, loss and fresh-owner recovery retain history. “FLOW-001: native board filters, priority, cancel and recorded collection at 1440/390” runs flowBrowser (`tests/flow-browser.mjs`): the native completion form refuses absent quality clearance, public state stays exact and the rendered card remains in Work; independent clearance then permits native completion and Ready. The board, refusal, retained repair, filters, priority, collection and closed screens are captured at both release widths.
+**Gap.** None.
 
 #### FLOW-002 — Promise times and capacity
 
