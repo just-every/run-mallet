@@ -572,7 +572,7 @@
       "executable": false
     },
     "ACCEPTANCE.md": {
-      "sha256": "9baeac4cc7f9201bc32f6cd6d61869ee7124f48360dc4b6571c166c0fedd41c4",
+      "sha256": "37011667616d5aea34a6a736f712c57aed0d50c5994b4ea82ac6e1a489e57de5",
       "executable": false
     },
     "agent-surface.json": {
@@ -592,7 +592,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "f9a2c703b9ff3cc0fdc0b37abca1f981cefe1c3c63d17470167dea470e200615",
+      "sha256": "5bfc0e73176e7b11bc58f2ce413d5bb22a4da4b1fc15a64ecad03054323062f1",
       "executable": false
     },
     "deploy-demo.json": {
@@ -5356,7 +5356,7 @@
       "executable": false
     },
     "tests/intake-browser.mjs": {
-      "sha256": "d1835c2758f5dc1d53eeca11b7ac2dd0317f457e1fccaa31f0dbcf1d1c99266a",
+      "sha256": "79df6e72023bd5b574d5c8fa82f163234e46fc13b5ebbabe1ab263803709c6bc",
       "executable": false
     },
     "tests/intake-forms-browser.mjs": {
@@ -5384,7 +5384,7 @@
       "executable": false
     },
     "tests/media.test.mjs": {
-      "sha256": "bd1dd68b7b726bf5d7058a0f89e4d406e2906d29ab937a9f8836a94b6f3957f5",
+      "sha256": "309e6516c39012998b1f0b63192f68e0453ba9e9626b8315bcc0e6e747d3d18c",
       "executable": false
     },
     "tests/open-source-journey.mjs": {
