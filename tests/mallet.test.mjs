@@ -135,6 +135,7 @@ test('exact revision, partial authorisation and quantity ceilings protect custom
   assert.equal(q.revisions[1].notes,'Revised exact scope')
   const refuse=async(command,input,error)=>{const before=await read();assert.equal((await h.command(command,input,{status:409})).error,error);assert.deepEqual(await read(),before,command+' refusal preserves estimate, authorization, approvals, actuals and successful history')}
   await refuse('estimate.approve',{estimateId:q.id,version:q.version,revision:1},'REVISION')
+  await refuse('estimate.markSent',{estimateId:q.id,version:q.version,revision:2,method:'printed',note:'Attempt before the person decision'},'NOT_APPROVED')
   q=await h.command('estimate.approve',{estimateId:q.id,version:q.version,revision:2})
   assert.deepEqual(q.revisions[1].approval.by,owner)
   const approvals=(await read()).approvals

@@ -8,12 +8,12 @@ The primary journey: check in the customer and asset, diagnose and inspect, pric
 
 | Tier | Done | Partial | Missing | Total |
 | --- | ---: | ---: | ---: | ---: |
-| Core | 22 | 76 | 54 | 152 |
+| Core | 24 | 74 | 54 | 152 |
 | Agent surface | 0 | 0 | 5 | 5 |
 | Later | 0 | 0 | 0 | 0 |
-| Full target | 22 | 76 | 59 | 157 |
+| Full target | 24 | 74 | 59 | 157 |
 
-Judged from the code and tests at commit `0c4b8e0be86462c713e63dc7875074220be9e636` (28 October 2026). Field proof register: 12 rows; 0 passed, 0 failed, 12 not run.
+Judged from the code and tests at commit `1af117eb5175a32adf1b2830570f31b2285768bb` (30 October 2026). Field proof register: 12 rows; 0 passed, 0 failed, 12 not run.
 
 ## Core
 
@@ -45,27 +45,27 @@ Core · published · **partial** · Rules D-1, D-2, D-3
 
 #### ESTIMATE-001 — Exact decision
 
-Core · published · **partial** · Rules D-1, D-2, D-3
+Core · published · **done** · Rules D-1, D-2, D-3
 
 **Requirement.** Estimates retain revisions, prices and preparer identity. A person approves the exact current revision before a recorded manual handoff. Staff capture customer identity, selected lines, method and evidence against it; manual sharing is labeled separately from delivered messaging. Accepted scope is immutable; EST-004 adds separately authorized supplements to that repair.
 
 **Acceptance.**
 1. Prepare and revise through the API, refuse stale approval, record a printed handoff and partial customer authorization, then refuse unapproved quantities and changes to accepted lines.
 
-**Evidence.** `src/mallet/estimates.ts`; `tests/mallet.test.mjs`; `tests/browser-journey.mjs`
-**Gap.** Not asserted in the old cited evidence: Prepared and revised exact API content; Stale approval refusal outcome; Printed handoff is read back; Accepted lines cannot be changed; Unapproved line refusal; Excess quantity refusal. Asserted: Partial authorization retains exact total.
+**Evidence.** `tests/mallet.test.mjs` — "exact revision, partial authorisation and quantity ceilings protect customer consent": native API preparation and revision retain exact prices and preparers; stale approval and unapproved handoff leave history unchanged; printed handoff and partial authorization reload exactly; accepted-line changes, unapproved work and excess quantities are refused without changes. The same test invokes `tests/browser-journey.mjs` — estimateDecisionBrowser for persisted and rendered manual handoff, selected lines and decision evidence, with screens at 1440 and 390 in push Verify.
+**Gap.** None.
 
 #### WORK-001 — Authorized actuals
 
-Core · published · **partial** · Cites BASE-ROLE-001 · Rules D-1, D-2, D-3
+Core · published · **done** · Cites BASE-ROLE-001 · Rules D-1, D-2, D-3
 
 **Requirement.** Parts and labor actuals use only lines and quantities within the person-approved, customer-authorized revision. A member records work only on assigned jobs; completion requires recorded work. Additional scope never inherits consent from a previous decision.
 
 **Acceptance.**
 1. As an assigned member record an authorized line; refuse another job, an unapproved line and excess quantity, then complete and inspect actor and revision evidence.
 
-**Evidence.** `src/mallet/workshop.ts`; `src/mallet/model.ts`; `tests/mallet.test.mjs`
-**Gap.** Not asserted in the old cited evidence: Assigned member actual is read back; Another-job refusal has unchanged actuals; Unapproved-line refusal has unchanged actuals; Excess-quantity refusal has unchanged actuals; Completed job retains actual actor; Completed job retains exact source revision. The native journeys exercise the workflow, but their title, performed step or uncited helper is not a point-level assertion here.
+**Evidence.** `tests/mallet.test.mjs` — "native sign-in, CSRF, member isolation and immediate session revocation": assigned-member actuals retain actor, estimate, approved revision, line and quantity; another repair, unapproved line, excess cumulative quantity and revoked access are refused with unchanged repairs and successful work history; independent quality clearance permits completion retaining exact actuals. "exact revision, partial authorisation and quantity ceilings protect customer consent" invokes `tests/browser-journey.mjs` — estimateDecisionBrowser for persisted and rendered actuals and completion at 1440 and 390 in push Verify.
+**Gap.** None.
 
 #### INVOICE-001 — One saved export
 
