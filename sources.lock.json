@@ -4932,7 +4932,7 @@
       "executable": false
     },
     "tests/purchasing-browser.mjs": {
-      "sha256": "6d18a5f87ac74c60d815e1ffc4ed487047e59a41f88ebc21d4fa526692c41e6a",
+      "sha256": "c4d9da66e8ab0bb7e44f283c7384c29b48b810373705c01d7fd8fd27def1ae81",
       "executable": false
     },
     "tests/quality-browser.mjs": {
@@ -5248,7 +5248,7 @@
       "executable": false
     },
     "tests/support/purchasing-journey.mjs": {
-      "sha256": "f62f757630dcbc6bac83f8efb2bb01794b641d594beb41bd3359a2f120bec090",
+      "sha256": "aaed464180709d381baabe43d2c9c005334c73f527dc0a3840e529420cf4d07f",
       "executable": false
     },
     "tests/support/quality-journey.mjs": {
