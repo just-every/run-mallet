@@ -39,11 +39,11 @@ A claim is done when every clause behind it is done, missing when every one is m
 | 31 | "Dana re-approves by text" | `EST-003` done; `MSG-001` missing; `ESTIMATE-001` partial | partial |
 | 32 | Worldpac backorder, Morse Rd supplier via PartsTech, order approved, pads scanned to RO 4127 | `BUY-002` done; `BUY-003` missing; `BUY-005` missing; `PART-006` done | partial |
 | 33 | "Customer promise changed: no" | `FLOW-002` done | done |
-| 34 | "Every car’s stage, promise and clock, live" | `FLOW-001` partial; `FLOW-002` done; `TIME-001` partial | partial |
-| 35 | "Technicians start and stop jobs from the bay" | `WORK-001` partial; `TIME-001` partial | partial |
+| 34 | "Every car’s stage, promise and clock, live" | `FLOW-001` partial; `FLOW-002` done; `TIME-001` done | partial |
+| 35 | "Technicians start and stop jobs from the bay" | `WORK-001` partial; `TIME-001` done | partial |
 | 36 | Waiting parts: promise moved, customer told | `PART-006` done; `FLOW-002` done | done |
 | 37 | Agent "Next blocker" | `ADV-003` partial | partial |
-| 38 | "clocked in 7:28 am · 6.1 hrs sold today" | `TIME-001` partial | partial |
+| 38 | "clocked in 7:28 am · 6.1 hrs sold today" | `TIME-001` done | done |
 | 39 | Quality check: road test, pedal, lug torque, signed | `QUALITY-001` partial | partial |
 | 40 | "Dana gets a ready text with her balance and pays from her phone" (Apple Pay) | `PAY-003` missing; `MSG-001` missing | missing |
 | 41 | Invoice 10418 from labor and parts, sales tax 7.5% | `INVOICE-001` partial; `TAX-001` partial | partial |
@@ -66,4 +66,4 @@ A claim is done when every clause behind it is done, missing when every one is m
 | 58 | "100% free and open source. MIT licensed." | `OPEN-001` done | done |
 | 59 | "Free, open source shop management" | `OPEN-001` done | done |
 
-Claims: 59; 11 done, 36 partial, 12 missing.
+Claims: 59; 12 done, 35 partial, 12 missing.

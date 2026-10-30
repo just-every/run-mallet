@@ -8,12 +8,12 @@ The primary journey: check in the customer and asset, diagnose and inspect, pric
 
 | Tier | Done | Partial | Missing | Total |
 | --- | ---: | ---: | ---: | ---: |
-| Core | 22 | 76 | 54 | 152 |
+| Core | 23 | 75 | 54 | 152 |
 | Agent surface | 0 | 0 | 5 | 5 |
 | Later | 0 | 0 | 0 | 0 |
-| Full target | 22 | 76 | 59 | 157 |
+| Full target | 23 | 75 | 59 | 157 |
 
-Judged from the code and tests at commit `0c4b8e0be86462c713e63dc7875074220be9e636` (28 October 2026). Field proof register: 12 rows; 0 passed, 0 failed, 12 not run.
+Judged from the code and tests at commit `c08a8b78c3dff325375f1590a0ff142b057649c3` (30 October 2026). TIME-001 proof is refreshed in this candidate; its full commit and Verify receipt accompany the landing request. Field proof register: 12 rows; 0 passed, 0 failed, 12 not run.
 
 ## Core
 
@@ -547,15 +547,15 @@ Core · target · **done** · Cites BASE-ROLE-001, BASE-MAIL-001 · Rules D-1, D
 
 #### TIME-001 — Employee clock and job timers
 
-Core · target · **partial** · Cites BASE-ROLE-001, BASE-AGENT-005, BASE-AGENT-006, BASE-AGENT-007 · Rules D-1, D-2, D-3
+Core · target · **done** · Cites BASE-ROLE-001, BASE-AGENT-005, BASE-AGENT-006, BASE-AGENT-007 · Rules D-1, D-2, D-3
 
 **Requirement.** Technicians clock in/out, break and start/pause/resume job labor from their assigned board; distinguish attendance, actual time, sold hours and nonbillable work, require reasons for corrections and handle concurrent timers by shop policy. Native staff clock only their own attendance and one job timer at a time; starting/resuming needs the current job assignment and an open attendance interval outside a break. Pause before starting a break or clocking out; end a break before clocking out. After reassignment, a technician can stop their already-running own timer, granting no new work authority. Billable, nonbillable and rework intervals remain separate from authorized sold labor hours and invoiced actual quantities; timers never create work authority or billing entries. Server UTC instants persist across requests; elapsed seconds retain milliseconds, attendance less breaks gives net attendance, and job seconds sum separately. Board clocks show elapsed timer time rounded to the nearest minute, with minute carry. Today’s sold hours use the UTC date of the recorded customer decision. Staff propose corrections only to their own stopped intervals with exact prior version, timezone-bearing start/end and a reason; owner/admin approve the exact immutable proposal and an owner can decide when the manager role has no assigned person. Approval rechecks versions, non-overlap and attendance bounds; all original intervals, proposals and deciding actors remain. Staff see only their own time, owner/admin read shop time, agent reads are sensitive and follow the sponsor’s scope and the company’s policy. OPS-001 archives retain exact histories under fresh native authority; historical identity never becomes self-service authority.
 
 **Acceptance.**
 1. Clock in, run two jobs with a break, correct a missed stop with manager approval and compare attendance, actual and sold hours; a member cannot alter a colleague’s time.
 
-**Evidence.** `src/mallet/time.ts`; `src/mallet/ui/time.ts`; `src/mallet/http.ts`; `tests/mallet.test.mjs`; `tests/support/time-journey.mjs`; `tests/time-browser.mjs`
-**Gap.** Not asserted in the old cited evidence: A member’s attempt leaves a colleague’s original time unchanged. Asserted: Attendance is computed from clock events; Breaks remain separate; Actual nonbillable and rework time remains separate; Sold hours are independently displayed; Approved correction retains original intervals; Correction retains manager and reason.
+**Evidence.** `tests/support/time-journey.mjs` timeJourney (registered in `tests/mallet.test.mjs` as "TIME-001: two assigned job timers, breaks, approved corrections, isolation and recovery"): attendance, separate breaks and job categories, authorized sold hours, immutable owner-approved correction history and immediate unchanged colleague entry and correction readback; `tests/time-browser.mjs` timeBrowser ("TIME-001: native clocks, reasoned correction decisions and actual board time at 1440/390"): native clock forms, exact self-proposal and owner decision, elapsed board time and retained history at both widths.
+**Gap.** None.
 
 #### FLOW-004 — Technician crews and subtasks
 

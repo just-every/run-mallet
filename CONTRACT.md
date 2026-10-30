@@ -1876,13 +1876,13 @@ Provider sandboxes, official-schema fakes, run-auth and seeded capacity runs rem
 
 ## Status
 
-Judged from the code and tests at commit `0c4b8e0be86462c713e63dc7875074220be9e636` (28 October 2026).
+Judged from the code and tests at commit `c08a8b78c3dff325375f1590a0ff142b057649c3` (30 October 2026). TIME-001 proof is refreshed in this candidate; its full commit and Verify receipt accompany the landing request.
 
 | Clauses | Done | Partial | Missing | Total |
 | --- | ---: | ---: | ---: | ---: |
 | Published | 1 | 8 | 0 | 9 |
-| Target and push further | 21 | 68 | 59 | 148 |
-| All | 22 | 76 | 59 | 157 |
+| Target and push further | 22 | 67 | 59 | 148 |
+| All | 23 | 75 | 59 | 157 |
 
 | Clause | Title | Kind | Status | Evidence | Gap |
 | --- | --- | --- | --- | --- | --- |
@@ -1928,7 +1928,7 @@ Judged from the code and tests at commit `0c4b8e0be86462c713e63dc7875074220be9e6
 | `FLOW-001` | Live repair and technician boards | target | partial | `src/mallet/flow.ts`; `src/mallet/ui/board.ts`; `src/mallet/ui/flow.ts`; `tests/support/flow-journey.mjs`; `tests/flow-browser.mjs` | Not asserted in the old cited evidence: Quality refusal leaves completion unchanged. Asserted: Repair crosses its recorded stages; Technician filter returns its exact repair; Overdue promise filter returns its exact repair; Authorization gate preserves the prior stage. |
 | `FLOW-002` | Promise times and capacity | target | done | `src/mallet/promises.ts`; `src/mallet/promise-zone.ts`; `src/mallet/promise-door.ts`; `src/mallet/ui/promises.ts`; `src/mallet/http.ts`; `tests/support/promise-journey.mjs`; `tests/promise-browser.mjs` |  |
 | `FLOW-003` | Rules-based routing and escalation | target | done | `src/mallet/routing.ts`; `src/mallet/routing-door.ts`; `docs/routing.md`; `tests/mallet.test.mjs`; `tests/support/routing-journey.mjs` |  |
-| `TIME-001` | Employee clock and job timers | target | partial | `src/mallet/time.ts`; `src/mallet/ui/time.ts`; `src/mallet/http.ts`; `tests/mallet.test.mjs`; `tests/support/time-journey.mjs`; `tests/time-browser.mjs` | Not asserted in the old cited evidence: A member’s attempt leaves a colleague’s original time unchanged. Asserted: Attendance is computed from clock events; Breaks remain separate; Actual nonbillable and rework time remains separate; Sold hours are independently displayed; Approved correction retains original intervals; Correction retains manager and reason. |
+| `TIME-001` | Employee clock and job timers | target | done | `tests/support/time-journey.mjs` timeJourney (registered in `tests/mallet.test.mjs` as "TIME-001: two assigned job timers, breaks, approved corrections, isolation and recovery"): attendance, separate breaks and job categories, authorized sold hours, immutable owner-approved correction history and immediate unchanged colleague entry and correction readback; `tests/time-browser.mjs` timeBrowser ("TIME-001: native clocks, reasoned correction decisions and actual board time at 1440/390"): native clock forms, exact self-proposal and owner decision, elapsed board time and retained history at both widths. | |
 | `FLOW-004` | Technician crews and subtasks | target | done | `src/mallet/collaboration.ts`; `src/mallet/ui/collaboration.ts`; `src/mallet/http.ts`; `src/mallet/media/storage.ts`; `tests/support/collaboration-journey.mjs`; `tests/collaboration-browser.mjs` |  |
 | `FLOW-005` | Acknowledged technician handoff | target | partial | `src/mallet/collaboration.ts`; `src/mallet/ui/collaboration.ts`; `src/mallet/http.ts`; `src/mallet/media/storage.ts`; `tests/support/collaboration-journey.mjs`; `tests/collaboration-browser.mjs` | Not asserted in the old cited evidence: Exact elapsed per-person time in receipt; Decline retains reason. Asserted: Proposal leaves the prior lead unchanged; Recipient acceptance changes the lead; Receipt retains exact from actor; Receipt retains exact to actor; Receipt retains work-state note; Receipt has both technicians’ time identities; Open subtasks are retained; Decline keeps the prior assignment. |
 | `WARRANTY-001` | Warranty and comeback work | target | partial | `tests/mallet.test.mjs`; `tests/warranty-browser.mjs` | Not asserted in the old cited evidence: No-charge labor has exact zero-price actuals. Asserted: Coverage result appears for the linked comeback; Prepared supplier claim cites both repair cases; Net comeback cost is read back; Original invoice stays exact. |
