@@ -40,7 +40,7 @@ Core · published · **done** · Rules D-1, D-2, D-3
 **Acceptance.**
 1. Register an asset through the counter form, book repeat visits and try overlapping bay and technician bookings through the command API; inspect the conflict and complete service history.
 
-**Evidence.** `tests/mallet.test.mjs` — booking rejects bay and technician collisions and keeps every asset visit; `tests/browser-journey.mjs` — workshopBrowser, registered as WORKSHOP-001: counter registration and exact repeat-visit history at 1440 and 390 in `tests/mallet.test.mjs`
+**Evidence.** `tests/mallet.test.mjs` — booking rejects bay and technician collisions and keeps every asset visit; `tests/browser-journey.mjs` — workshopBrowser, registered as WORKSHOP-001 and INVOICE-001: native registration, repeat visits and exact saved invoice at 1440 and 390 in `tests/mallet.test.mjs`
 **Gap.** None.
 
 #### ESTIMATE-001 — Exact decision
