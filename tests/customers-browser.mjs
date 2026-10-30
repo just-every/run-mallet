@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import {mkdir} from 'node:fs/promises'
 import {join} from 'node:path'
-import {creditAccountFixture,creditInvoice,creditInput,issueCredit,cashRefundPrivateText,refundReadSnapshot} from './support/refunds-journey.mjs'
+import {creditAccountFixture,creditInvoice,creditInput,issueCredit,cashRefundPrivateText,refundReadSnapshot,secondCashRefund} from './support/refunds-journey.mjs'
 import {portalMail,portalSignIn} from './support/portal-journey.mjs'
 import {qualityReady} from './support/quality-ready.mjs'
 import {chromium} from '@playwright/test'
@@ -86,6 +86,7 @@ export async function refundsBrowser(){
   const otherPayment=await h.command('payment.record',{invoiceId:other.invoice.id,version:other.invoice.version,amountCents:541,method:'cash',reference:'synthetic-mallet-311',evidence:'synthetic-mallet-312 private other account cash'})
   const otherCredit=await issueCredit(h,{...creditInput(other.invoice,otherPayment,'synthetic-mallet-313',other.invoice.lines[1]),reason:'synthetic-mallet-314 private other account return',consentEvidence:'synthetic-mallet-315 private other account instruction'})
   const otherLogin=await portalSignIn(h,outsider.contact.email,outsider.account.name)
+  const second=await secondCashRefund(h,account)
   browser=await chromium.launch({headless:true,...(process.env.MALLET_CHROMIUM?{executablePath:process.env.MALLET_CHROMIUM}:{}),args:['--no-sandbox','--use-mock-keychain','--password-store=basic']})
   const context=await browser.newContext({ignoreHTTPSErrors:true,viewport:{width:1440,height:1000}}),p=await context.newPage(),errors=[];p.on('pageerror',e=>errors.push(e.message))
   const directory=process.env.MALLET_CUSTOMERS_PROOF_DIR??'.cache/customers-browser';await mkdir(directory,{recursive:true})
@@ -97,19 +98,24 @@ export async function refundsBrowser(){
   const privateTexts=[...Object.values(cashRefundPrivateText),'synthetic-mallet-312 private other account cash','synthetic-mallet-314 private other account return','synthetic-mallet-315 private other account instruction']
   const checkCashStatement=async(status,refundedCents,paidCents,name)=>{
    const beforeRead=await refundReadSnapshot(h)
-   for(const text of [cashRefundPrivateText.reason,cashRefundPrivateText.consentEvidence,cashRefundPrivateText.paymentEvidence,...(status==='unsubmitted'?[]:[cashRefundPrivateText.outcomeEvidence+' '+status])])assert.ok(JSON.stringify(beforeRead.records).includes(text),'Private evidence is populated before payer read')
+   for(const text of [cashRefundPrivateText.reason,cashRefundPrivateText.consentEvidence,cashRefundPrivateText.paymentEvidence,cashRefundPrivateText.secondReason,cashRefundPrivateText.secondConsent,cashRefundPrivateText.secondEvidence,...(status==='unsubmitted'?[]:[cashRefundPrivateText.outcomeEvidence+' '+status])])assert.ok(JSON.stringify(beforeRead.records).includes(text),'Private evidence is populated before payer read')
    await p.reload()
    const response=await p.request.get(h.origin+'/api/mallet/portal/billing');assert.equal(response.status(),200)
    const view=await response.json(),bill=view.invoices.find(i=>i.id===invoice.id),text=await p.locator('main').innerText()
    assert.equal(view.account.id,account.id);assert.deepEqual(bill.refunds,[{amountCents:109,method:'cash',status}])
    assert.equal(bill.refundedCents,refundedCents);assert.equal(bill.paidCents,paidCents);assert.equal(bill.creditedCents,109);assert.equal(bill.outstandingCents,0)
+   const secondBill=view.invoices.find(i=>i.id===second.invoice.id)
+   assert.deepEqual(secondBill.refunds,[{amountCents:215,method:'cash',status:'refunded'}])
+   assert.equal(secondBill.creditedCents,215);assert.equal(secondBill.refundedCents,215);assert.equal(secondBill.paidCents,326);assert.equal(secondBill.outstandingCents,0)
+   const secondText=await p.getByRole('heading',{name:second.invoice.number,exact:true}).locator('..').innerText()
+   assert.ok(secondText.includes(second.note.number));assert.ok(secondText.includes('Refund $2.15 · cash · refunded · Owner recorded; not verified by Mallet'));assert.ok(secondText.includes('Refunded $2.15'))
    const invoiceText=await p.getByRole('heading',{name:invoice.number,exact:true}).locator('..').innerText()
    assert.ok(text.includes(invoice.number));assert.ok(invoiceText.includes(credit.number));assert.ok(invoiceText.includes('Refund $1.09 · cash · '+status+' · Owner recorded; not verified by Mallet'));assert.ok(invoiceText.includes('Refunded $'+(refundedCents===109?'1.09':'0.00')))
    for(const body of [JSON.stringify(view),text])for(const secret of [...privateTexts,other.invoice.id,other.invoice.number,otherCredit.id,otherCredit.number])assert.ok(!body.includes(secret),'Payer billing excludes private and other-account evidence: '+secret)
    assert.deepEqual(await refundReadSnapshot(h),beforeRead,'Current payer browser and API reads immediately preserve records and saved exports')
    const otherView=await h.api('/api/mallet/portal/billing',undefined,{as:otherLogin.cookie})
    assert.equal(otherView.account.id,outsider.account.id);assert.deepEqual(otherView.invoices.find(i=>i.id===other.invoice.id).refunds,[{amountCents:215,method:'cash',status:'unsubmitted'}])
-   for(const secret of [...privateTexts,invoice.id,invoice.number,credit.id,credit.number])assert.ok(!JSON.stringify(otherView).includes(secret))
+   for(const secret of [...privateTexts,invoice.id,invoice.number,credit.id,credit.number,second.invoice.id,second.invoice.number,second.note.id,second.note.number])assert.ok(!JSON.stringify(otherView).includes(secret))
    await shot(name)
    assert.deepEqual(await refundReadSnapshot(h),beforeRead,'Rendered statements and API reads change no business record or saved export bytes')
   }
@@ -122,11 +128,11 @@ export async function refundsBrowser(){
   const changed=await h.command('customer.save',{...currentAccount,customerId:account.id,version:currentAccount.version,contactIds:[...currentAccount.contactIds,nextPayer.id],payerId:nextPayer.id,billingContactId:nextPayer.id})
   const beforeRefusal=await refundReadSnapshot(h)
   const denied=await p.request.get(h.origin+'/api/mallet/portal/billing');assert.equal(denied.status(),403)
-  for(const secret of [...privateTexts,invoice.id,invoice.number,credit.id,credit.number])assert.ok(!(await denied.text()).includes(secret))
+  for(const secret of [...privateTexts,invoice.id,invoice.number,credit.id,credit.number,second.invoice.id,second.invoice.number,second.note.id,second.note.number])assert.ok(!(await denied.text()).includes(secret))
   assert.deepEqual(await refundReadSnapshot(h),beforeRefusal,'Former payer API refusal has no financial effect')
   const deniedPage=await p.reload();assert.equal(deniedPage.status(),403)
   const deniedText=await p.locator('main').innerText();assert.ok(deniedText.includes('Billing unavailable'))
-  for(const secret of [...privateTexts,invoice.number,credit.number,other.invoice.number,otherCredit.number])assert.ok(!deniedText.includes(secret))
+  for(const secret of [...privateTexts,invoice.number,credit.number,second.invoice.number,second.note.number,other.invoice.number,otherCredit.number])assert.ok(!deniedText.includes(secret))
   await shot('13a-former-refund-payer-denied')
   assert.deepEqual(await refundReadSnapshot(h),beforeRefusal,'Former payer page refusal has no financial effect')
   const usePayer=async(email)=>{const login=await portalSignIn(h,email,account.name);await context.clearCookies();await context.addCookies(login.cookie.split('; ').map(pair=>({name:pair.slice(0,pair.indexOf('=')),value:pair.slice(pair.indexOf('=')+1),url:h.origin})));await p.goto(h.origin+'/portal/billing')}
