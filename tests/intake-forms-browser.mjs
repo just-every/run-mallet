@@ -10,13 +10,35 @@ export async function intakeFormsBrowser(){
  try{
   const setup=await fetch(h.origin+'/setup',{method:'POST',redirect:'manual',headers:{Origin:h.origin,Cookie:h.owner,'Content-Type':'application/x-www-form-urlencoded'},body:'confirm=yes&ratePercent=0&partsTaxable=yes'});assert.equal(setup.status,303)
   const asset=await h.command('asset.create',{customerName:'Dana Brooks',customerEmail:'dana@example.test',label:'2019 Honda CR-V',identifier:'synthetic-mallet-101'}),{job}=await booking(h,{asset})
-  browser=await chromium.launch({headless:true,args:['--use-mock-keychain','--password-store=basic']});const owner=await browser.newContext(),customer=await browser.newContext({viewport:{width:390,height:1000}});await owner.addCookies(h.owner.split('; ').map(pair=>({name:pair.slice(0,pair.indexOf('=')),value:pair.slice(pair.indexOf('=')+1),url:h.origin})));const p=await owner.newPage(),c=await customer.newPage(),errors=[];for(const page of [p,c])page.on('pageerror',e=>errors.push(e.message));const dir=process.env.MALLET_C19_PROOF_DIR??'.cache/intake-forms-browser';await mkdir(dir,{recursive:true})
+  browser=await chromium.launch({headless:true,...(process.env.MALLET_CHROMIUM?{executablePath:process.env.MALLET_CHROMIUM}:{}),args:['--no-sandbox','--use-mock-keychain','--password-store=basic']});const owner=await browser.newContext({viewport:{width:1440,height:1000}}),customer=await browser.newContext({viewport:{width:390,height:1000}});await owner.addCookies(h.owner.split('; ').map(pair=>({name:pair.slice(0,pair.indexOf('=')),value:pair.slice(pair.indexOf('=')+1),url:h.origin})));const p=await owner.newPage(),c=await customer.newPage(),errors=[];for(const page of [p,c])page.on('pageerror',e=>errors.push(e.message));const dir=process.env.MALLET_C19_PROOF_DIR??'.cache/intake-forms-browser';await mkdir(dir,{recursive:true})
   const shot=async(page,name)=>{for(const width of [1440,390]){await page.setViewportSize({width,height:1000});assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),name+' fits '+width);await page.screenshot({path:join(dir,name+'-'+width+'.png'),fullPage:true})}}
   const form=(page,command)=>page.locator(`form:has(input[name="command"][value="${command}"])`),fill=async(target,fields,button)=>{for(const [name,value]of Object.entries(fields)){const el=target.locator(`[name="${name}"]`);if(await el.evaluate(e=>e.tagName)==='SELECT')await el.selectOption(String(value));else await el.fill(String(value))}await target.getByRole('button',{name:button,exact:true}).click();await p.waitForLoadState('domcontentloaded')}
   await p.goto(h.origin+'/app/jobs/'+job.id+'/intake');await p.getByRole('link',{name:'Configure vehicle/device templates'}).click()
-  for(const [kind,name]of [['vehicle','Vehicle intake'],['device','Device intake']])await fill(form(p,'intakeForm.publish').first(),{kind,name,fieldLines:'concern | '+(kind==='vehicle'?'When does the noise happen?':'Does the device power on?')+' | required\nnotes | Other details | optional',feeUsd:75,storageTerms:'Storage $10/day after three days.',teardownTerms:'Diagnosis only; teardown needs separate permission.',...Object.fromEntries(acknowledgmentTerms.map(a=>['acknowledgment:'+a.key,a.text]))},'Publish template')
+  const templates=[
+   {name:'Vehicle intake',kind:'vehicle',fields:[{key:'concern',label:'When does the noise happen?',required:true},{key:'notes',label:'Other details',required:false}],diagnosticFeeCents:7500,storageTerms:'Storage $10/day after three days.',teardownTerms:'Diagnosis only; teardown needs separate permission.',acknowledgments:acknowledgmentTerms},
+   {name:'Device intake',kind:'device',fields:[{key:'power',label:'Does the device power on?',required:true},{key:'accessories',label:'Device accessories',required:false}],diagnosticFeeCents:12550,storageTerms:'Device storage $5/day after seven days.',teardownTerms:'Device diagnosis only; opening the case needs separate permission.',acknowledgments:[acknowledgmentTerms[1]]}
+  ],published=[]
+  const fieldLines=fields=>fields.map(f=>`${f.key} | ${f.label} | ${f.required?'required':'optional'}`).join('\n')
+  for(const expected of templates){
+   await fill(form(p,'intakeForm.publish').first(),{kind:expected.kind,name:expected.name,fieldLines:fieldLines(expected.fields),feeUsd:expected.diagnosticFeeCents/100,storageTerms:expected.storageTerms,teardownTerms:expected.teardownTerms,...Object.fromEntries(expected.acknowledgments.map(a=>['acknowledgment:'+a.key,a.text]))},'Publish template')
+   const matches=(await h.state()).records.intakeTemplate.filter(t=>t.revisions.at(-1).name===expected.name);assert.equal(matches.length,1)
+   assert.ok(matches[0].id);published.push({id:matches[0].id,expected})
+  }
+  assert.equal(new Set(published.map(t=>t.id)).size,2)
+  await p.reload();await p.setViewportSize({width:1440,height:1000})
+  const savedTemplates=(await h.state()).records.intakeTemplate;assert.equal(savedTemplates.length,2)
+  for(const {id,expected}of published){
+   const saved=savedTemplates.find(t=>t.id===id);assert.ok(saved,expected.name+' retains its published identity');assert.equal(saved.version,1);assert.equal(saved.revisions.length,1)
+   const {by,at,...revision}=saved.revisions[0];assert.deepEqual(revision,{n:1,...expected})
+   const editor=form(p,'intakeForm.publish').filter({has:p.locator(`input[name="templateId"][value="${id}"]`)}),card=p.locator('section.card').filter({has:editor});assert.equal(await card.count(),1)
+   assert.equal(await card.getByRole('heading',{name:expected.name,exact:true}).isVisible(),true)
+   assert.equal(await card.getByText(`${expected.kind} · revision 1 · diagnostic fee $${(expected.diagnosticFeeCents/100).toFixed(2)}`,{exact:true}).isVisible(),true)
+   for(const text of ['Storage: '+expected.storageTerms,'Teardown: '+expected.teardownTerms])assert.equal(await card.getByText(text,{exact:true}).isVisible(),true)
+   await card.locator('summary').click()
+   for(const [name,value]of Object.entries({version:1,name:expected.name,kind:expected.kind,fieldLines:fieldLines(expected.fields),feeUsd:expected.diagnosticFeeCents/100,storageTerms:expected.storageTerms,teardownTerms:expected.teardownTerms,...Object.fromEntries(acknowledgmentTerms.map(a=>['acknowledgment:'+a.key,expected.acknowledgments.find(item=>item.key===a.key)?.text??'']))}))assert.equal(await editor.locator(`[name="${name}"]`).inputValue(),String(value),expected.name+' saved '+name)
+  }
   assert.ok((await p.locator('main').innerText()).includes('Device intake'));await shot(p,'forms-01-two-published-templates')
-  const t=(await h.state()).records.intakeTemplate.find(t=>t.revisions[0].kind==='vehicle')
+  const t=savedTemplates.find(t=>t.id===published[0].id)
   await p.goto(h.origin+'/app/jobs/'+job.id+'/intake');await shot(p,'forms-01b-review-copy-email');await fill(form(p,'intakeForm.create'),{templateSource:JSON.stringify({id:t.id,version:t.version})},'Create customer intake link')
   const link=await p.getByRole('link',{name:'Open customer intake form',exact:true}).getAttribute('href')
   // Never retain a screenshot of the one-time credential page or the browser address bar.
