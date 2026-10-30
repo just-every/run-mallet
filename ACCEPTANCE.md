@@ -1812,8 +1812,8 @@ Core · target · **partial** · From OPS-002 · Cites BASE-ROLE-001, BASE-DATA-
 2. Archives preserve outcomes but cannot grant destination provider/customer-link authority.
 3. Recover an uncertain outbound effect explicitly; a restored or retried record alone grants no new sending authority.
 
-**Evidence.** `tests/mallet.test.mjs`; `tests/support/capacity-import-journey.mjs`; `tests/support/search-journey.mjs`; `tests/search-browser.mjs`; `tests/support/repair-read-journey.mjs`; `tests/support/jobs-journey.mjs`; `tests/support/provider-jobs-journey.mjs`; `tests/jobs-browser.mjs`; `tests/support/board-live-journey.mjs`; `docs/background-jobs.md`; `docs/performance.md`; `scripts/capacity/README.md`
-**Gap.** Small reminder and provider-read jobs prove restart and explicit recovery. Complete queued-authority lifecycle and every failed/uncertain resolution branch remain open for point-level completion proof.
+**Evidence.** `tests/mallet.test.mjs`; `tests/support/capacity-import-journey.mjs`; `tests/support/search-journey.mjs`; `tests/search-browser.mjs`; `tests/support/repair-read-journey.mjs`; `tests/support/jobs-journey.mjs` — jobsJourney and reminderConcurrency; `tests/support/provider-jobs-journey.mjs`; `tests/jobs-browser.mjs`; `tests/support/board-live-journey.mjs`; `docs/background-jobs.md`; `docs/performance.md`; `scripts/capacity/README.md`
+**Gap.** Small reminder and provider-read jobs prove restart and explicit recovery. Five distinct authorized estimate-reminder events prove the installation-wide four-job bound under overlapping deployed scheduler calls, with the fifth pending during four outstanding controlled mail responses, one handoff per event and exact retained source identities and durable outcomes; `tests/jobs-browser.mjs` reads back backlog and outcomes at 1440 and 390. One-minute lease-expiry qualification remains unproved. Complete queued-authority lifecycle and every failed/uncertain resolution branch remain open for point-level completion proof.
 
 ### Open source and installation
 
