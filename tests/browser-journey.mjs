@@ -70,7 +70,7 @@ async function savedInvoiceReadback(page,jobUrl,directory) {
  }
  const after=await state();assert.deepEqual(after.records.invoice,before.records.invoice);assert.deepEqual(after.records.export,before.records.export);assert.deepEqual(after.records.approval,before.records.approval);assert.equal(after.records.export.filter(e=>e.invoiceId===invoice.id).length,1)
  await page.reload()
- const panel=page.locator('section.card').filter({has:page.getByRole('heading',{name:'Invoice',exact:true})})
+ const panel=page.locator('section.card').filter({has:page.getByRole('heading',{name:'Handover invoice',exact:true})})
  assert.ok((await panel.innerText()).includes('Shimano B05S brake pads'));assert.ok((await panel.innerText()).includes('$35.75'));assert.ok((await panel.innerText()).includes('Approved by '+actor.name))
 }
 
@@ -120,7 +120,7 @@ export async function workshopBrowser() {
   await page.goto(h.origin+'/setup');await page.getByLabel('Sales tax rate (%)').fill('10');await page.getByLabel('Labor is taxable').check();await page.getByRole('checkbox',{name:'I confirm this owner account is ready to use.'}).check();await click('Finish setup')
   const {assetUrl,technicianId}=await counterRegistration(page,click);await shot('01-registered-asset')
   const first=await counterVisit(page,click,{title:'Brake pads and safety inspection',bayId:'Bay 2',technicianId,startAt:'2026-10-19T09:00:00-04:00',endAt:'2026-10-19T11:00:00-04:00'})
-  await counterInvoice(page,click,async name=>{if(name==='13-invoice-exported')await shot('03-saved-invoice')},page.url(),h,directory)
+  await counterInvoice(page,click,async name=>{if(name==='13-invoice-exported')await shot('03-saved-invoice')},page.url(),{...h,person:publicDoor(h.origin,h.owner).person},directory)
   await page.goto(assetUrl)
   const second=await counterVisit(page,click,{title:'Follow-up wheel alignment',bayId:'Bay 3',technicianId,startAt:'2026-11-02T09:00:00-05:00',endAt:'2026-11-02T10:00:00-05:00'})
   await counterHistory(page,assetUrl,[first,second],directory);await shot('02-repeat-visit-history')
