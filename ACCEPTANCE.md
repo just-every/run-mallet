@@ -8,12 +8,12 @@ The primary journey: check in the customer and asset, diagnose and inspect, pric
 
 | Tier | Done | Partial | Missing | Total |
 | --- | ---: | ---: | ---: | ---: |
-| Core | 22 | 76 | 54 | 152 |
+| Core | 23 | 75 | 54 | 152 |
 | Agent surface | 0 | 0 | 5 | 5 |
 | Later | 0 | 0 | 0 | 0 |
-| Full target | 22 | 76 | 59 | 157 |
+| Full target | 23 | 75 | 59 | 157 |
 
-Judged from the code and tests at commit `0c4b8e0be86462c713e63dc7875074220be9e636` (28 October 2026). Field proof register: 12 rows; 0 passed, 0 failed, 12 not run.
+Judged from the code and tests at commit `5c777f2cf7fb560abf8027e474be599eb79a8952` (30 October 2026). PART-004 recovery assertions are further strengthened and rerun on the exact publication candidate; its full SHA and verification receipts accompany the handoff. Other clause judgments are retained. Field proof register: 12 rows; 0 passed, 0 failed, 12 not run.
 
 ## Core
 
@@ -744,15 +744,15 @@ Core · target · **missing** · Cites BASE-MAIL-001 · Rules D-1, D-2, D-3 · R
 
 #### PART-004 — Core deposits and returns
 
-Core · target · **partial** · Rules D-1, D-2, D-3
+Core · target · **done** · Rules D-1, D-2, D-3
 
 **Requirement.** Separate core charge from sale price/tax under configured rules; track customer/supplier core due dates, deposits, returned condition, shipment and supplier credit, and alert before a core credit expires. Owner/admin track a core against a separately customer-authorized one-unit fee on an approved original invoice and its installed lot. The existing configured fee tax is frozen separately from sale price. UTC customer/supplier deadlines and a configured advance window create visible due/expiry alerts. Physical return condition and external shipment evidence are immutable. Supplier credit documents reconcile independently from customer liability, with adjusted/partial credit exposure retained. Only the owner, with fresh confirmation and customer original-tender instruction, issues the existing credit note for the original core fee and its original tax; a refund outcome is separately evidenced, never inferred. Original invoices are unchanged. BOOKS-003 inherits connected vendor-credit posting.
 
 **Acceptance.**
 1. Sell a core-bearing alternator, collect deposit, send the old core and reconcile an adjusted supplier credit; the core exposure and invoice correction tie out.
 
-**Evidence.** `tests/mallet.test.mjs`; `tests/support/cores-journey.mjs`; `tests/cores-browser.mjs`
-**Gap.** Not asserted in the old cited evidence: Physical core shipment evidence is read back. Asserted: Core deposit has exact subtotal; Core deposit has exact tax; Core deposit is recorded; Adjusted supplier credit is exact; Customer correction reverses exact invoice tax; Original invoice remains unchanged.
+**Evidence.** `tests/mallet.test.mjs` — “PART-004 / OPS-001: separate taxed core deposit, tender, due alerts, returned condition, shipment, adjusted supplier credit and immutable invoice correction” runs coresJourney in `tests/support/cores-journey.mjs`: exact separate deposit and tax, recorded tender, deadlines and expiry alert, returned condition, independent public shipment and invoice and installed-lot readback, refused overwrite with unchanged records, adjusted supplier credit, owner-confirmed original-tax correction and refund, revoked-staff refusal and exact fresh-owner recovery. “PART-004: core deposit, expiry alert, shipment and adjusted credit correction at 1440/390” runs coresBrowser in `tests/cores-browser.mjs`: native forms, reloaded carrier, tracking, evidence, recorder, timestamp and source references, refused second shipment, unchanged original invoice and recovered history at both release widths. Shipment facts are staff-recorded custody, without independent carrier verification; connected posting, remittance, delegation, location qualification and retention policy remain with their owning clauses.
+**Gap.** None.
 
 #### PART-005 — Supplier RMAs and defective parts
 

@@ -1876,13 +1876,13 @@ Provider sandboxes, official-schema fakes, run-auth and seeded capacity runs rem
 
 ## Status
 
-Judged from the code and tests at commit `0c4b8e0be86462c713e63dc7875074220be9e636` (28 October 2026).
+Judged from the code and tests at commit `5c777f2cf7fb560abf8027e474be599eb79a8952` (30 October 2026). PART-004 recovery assertions are further strengthened and rerun on the exact publication candidate; its full SHA and verification receipts accompany the handoff. Other clause judgments are retained.
 
 | Clauses | Done | Partial | Missing | Total |
 | --- | ---: | ---: | ---: | ---: |
 | Published | 1 | 8 | 0 | 9 |
-| Target and push further | 21 | 68 | 59 | 148 |
-| All | 22 | 76 | 59 | 157 |
+| Target and push further | 22 | 67 | 59 | 148 |
+| All | 23 | 75 | 59 | 157 |
 
 | Clause | Title | Kind | Status | Evidence | Gap |
 | --- | --- | --- | --- | --- | --- |
@@ -1944,7 +1944,7 @@ Judged from the code and tests at commit `0c4b8e0be86462c713e63dc7875074220be9e6
 | `BUY-003` | PartsTech catalog and orders | target | missing |  | No PartsTech adapter, credential onboarding or supplier-event mapping. |
 | `BUY-004` | Nexpart catalog and orders | target | missing |  | No Nexpart connection or distributor onboarding. |
 | `BUY-005` | Worldpac sourcing and orders | target | missing |  | No Worldpac or speedDIAL integration; supplier approval/access work remains required. |
-| `PART-004` | Core deposits and returns | target | partial | `tests/mallet.test.mjs`; `tests/support/cores-journey.mjs`; `tests/cores-browser.mjs` | Not asserted in the old cited evidence: Physical core shipment evidence is read back. Asserted: Core deposit has exact subtotal; Core deposit has exact tax; Core deposit is recorded; Adjusted supplier credit is exact; Customer correction reverses exact invoice tax; Original invoice remains unchanged. |
+| `PART-004` | Core deposits and returns | target | done | `tests/mallet.test.mjs` — “PART-004 / OPS-001: separate taxed core deposit, tender, due alerts, returned condition, shipment, adjusted supplier credit and immutable invoice correction” runs coresJourney in `tests/support/cores-journey.mjs`: exact separate deposit and tax, recorded tender, deadlines and expiry alert, returned condition, independent public shipment and invoice and installed-lot readback, refused overwrite with unchanged records, adjusted supplier credit, owner-confirmed original-tax correction and refund, revoked-staff refusal and exact fresh-owner recovery. “PART-004: core deposit, expiry alert, shipment and adjusted credit correction at 1440/390” runs coresBrowser in `tests/cores-browser.mjs`: native forms, reloaded carrier, tracking, evidence, recorder, timestamp and source references, refused second shipment, unchanged original invoice and recovered history at both release widths. Shipment facts are staff-recorded custody, without independent carrier verification; connected posting, remittance, delegation, location qualification and retention policy remain with their owning clauses. |  |
 | `PART-005` | Supplier RMAs and defective parts | target | partial | `tests/mallet.test.mjs`; `tests/support/supplier-returns-journey.mjs`; `tests/supplier-returns-browser.mjs` | Not asserted in the old cited evidence: RMA authorization and shipment evidence are read back. Asserted: Removed installed part retains repair and original use; Removed stock enters quarantine; Partial credit is exact; Remaining supplier credit exposure is exact; Net warranty cost is exact; Stock remains separately traceable. |
 | `PART-006` | ETA and special-order follow-through | target | done | `src/mallet/special-parts.ts`; `src/mallet/ui/special-parts.ts`; `src/mallet/promises.ts`; `src/mallet/workshop.ts`; `tests/support/special-part-journey.mjs`; `tests/special-part-browser.mjs` |  |
 | `PART-007` | Low-stock replenishment | target | partial | `tests/mallet.test.mjs`; `tests/support/replenishment-journey.mjs`; `tests/replenishment-browser.mjs` | Not asserted in the old cited evidence: Actual supplier order is placed exactly once. Asserted: Outstanding PO is subtracted from the demand; Repeated preparation keeps the same draft; Draft has exact unmet quantity; Approval retains exact cart. |

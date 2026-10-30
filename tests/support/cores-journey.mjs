@@ -66,6 +66,15 @@ export async function coresJourney(h){
  await h.api('/api/mallet/cores',undefined,{as:admin.cookie,status:401})
  assert.deepEqual((await h.state()).records,beforeRevocation,'Revoked staff cannot change or read retained shipment custody')
  await readCoreShipment(h,expectedShipment)
- const final=(await h.state()).records,fresh=await installation({bindings:{OWNER_EMAIL:'core-recovery@example.test'}})
- try{await restore(fresh,await archive(h));assert.deepEqual((await fresh.state()).records,final);assert.deepEqual((await fresh.api('/api/mallet/cores'))[0],report);await readCoreShipment(fresh,expectedShipment);await fresh.command('stock.coreShip',{...replacement,version:final.stockCore[0].version},{status:409});assert.deepEqual((await fresh.state()).records,final,'Recovery cannot reopen shipment custody');assert.equal((await fresh.command('stock.coreCorrect',refs())).id,note.id)}finally{await fresh.close()}
+ const final=(await h.state()).records,fresh=await installation({clock:coreClock,bindings:{OWNER_EMAIL:'recovered-'+(await h.api('/auth/session')).operator.email}})
+ try{
+  await restore(fresh,await archive(h))
+  assert.notEqual((await fresh.state()).actor.id,actor.id,'Retained shipment attribution is independent of the destination owner')
+  await fresh.api('/api/mallet/cores',undefined,{as:admin.cookie,status:401})
+  assert.deepEqual((await fresh.state()).records,final);assert.deepEqual((await fresh.api('/api/mallet/cores'))[0],report)
+  await readCoreShipment(fresh,expectedShipment)
+  await fresh.command('stock.coreShip',{...replacement,version:final.stockCore[0].version},{status:409})
+  assert.deepEqual((await fresh.state()).records,final,'Recovery cannot reopen shipment custody')
+  assert.equal((await fresh.command('stock.coreCorrect',refs())).id,note.id)
+ }finally{await fresh.close()}
 }

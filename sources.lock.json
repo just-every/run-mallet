@@ -572,7 +572,7 @@
       "executable": false
     },
     "ACCEPTANCE.md": {
-      "sha256": "7bf626a950743d21e5665c8e4f192b3b2df35295000c75f968eeffa83cd6a3d5",
+      "sha256": "e31363576fef23b1eff2e4c882b109df5a08cc6519faeb2e59e6c10dd5a16682",
       "executable": false
     },
     "AGENTS.md": {
@@ -588,7 +588,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "818f321a463a442569efac0369820e361e5d404301418b07ac6ec2c168b8a314",
+      "sha256": "88ed434b4f61ef0b3d043777fd525444ebc83fe91e2b7fa26a5b90b7bdc81f28",
       "executable": false
     },
     "deploy-demo.json": {
@@ -5104,7 +5104,7 @@
       "executable": false
     },
     "tests/support/cores-journey.mjs": {
-      "sha256": "e3e4b7c1d8004c65490fb09b4d52fae61869848eb24363f35d2458f90007c1da",
+      "sha256": "46d211d399923c80aa44b51bdf9b704074e8b9e46b50fd819134cdda85198819",
       "executable": false
     },
     "tests/support/coverage-follow-up-journey.mjs": {
