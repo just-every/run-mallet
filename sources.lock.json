@@ -572,7 +572,7 @@
       "executable": false
     },
     "ACCEPTANCE.md": {
-      "sha256": "923bf63a7c8456dd6963d5416f92f8a1a998d36168f48b480cdb9106050f44cd",
+      "sha256": "aa412f7469ae918cc8c7932286536006e2421692f034c199ef3299e53cea0ce0",
       "executable": false
     },
     "AGENTS.md": {
@@ -588,7 +588,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "c69dab5057e7dd10f8271b89e2fdef749050a58e10f8878d48844f736c06b9c9",
+      "sha256": "50d55044a4deae6ad79098bb4467b6c79cd149192de966ea7ba290d25c7fae91",
       "executable": false
     },
     "deploy-demo.json": {
@@ -4736,7 +4736,7 @@
       "executable": false
     },
     "tests/approval-browser.mjs": {
-      "sha256": "8d9cea032f94ca9af3051825037bceff1c483a07cc424bc4d288ccb8d70c37eb",
+      "sha256": "d2157ea022206f10c7958a0f5addc8bd0ca31f38d8beaac0a1b08f3befdcd52a",
       "executable": false
     },
     "tests/asset-browser.mjs": {
@@ -4896,7 +4896,7 @@
       "executable": false
     },
     "tests/mallet.test.mjs": {
-      "sha256": "8c2cc43806fd417ccc9f4c97f68e763bdc0bdd7ee9a7d5b65fa42a589e34e33f",
+      "sha256": "516a2268a6a6adfb8809a11966a5be25a3f1560a9c101d613c1b492777565ae5",
       "executable": false
     },
     "tests/media-browser.mjs": {
@@ -5088,7 +5088,7 @@
       "executable": false
     },
     "tests/support/chase-journey.mjs": {
-      "sha256": "f478b0e9d0a8ab08b0a2f60f623426195567f5796882d8e515ecdd30aa84d9ab",
+      "sha256": "d28e687df5fba94f44d312b1e5da01a6d9ca1b6b62a52ce6f55f5284009f57e8",
       "executable": false
     },
     "tests/support/check-in-journey.mjs": {
