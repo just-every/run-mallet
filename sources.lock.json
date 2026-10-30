@@ -2672,7 +2672,7 @@
       "executable": false
     },
     "src/mallet/ui/estimates.ts": {
-      "sha256": "91a82382881cb5411b39424b5896cbadb0ed99016f3abca97842b1ce78e2373a",
+      "sha256": "939793758fe367e79c64b4bf34e99c534039febde241684457901ecd533ebe40",
       "executable": false
     },
     "src/mallet/ui/flow.ts": {
@@ -4756,7 +4756,7 @@
       "executable": false
     },
     "tests/browser-journey.mjs": {
-      "sha256": "22d8029358a919d0cc5a8777b2c851652959138a5820428597b3f126b23af7ce",
+      "sha256": "8ccdfa5364a1657f1024544a2c0b33f7976b32396f42b98de3ffb2d6b9785502",
       "executable": false
     },
     "tests/calendar-browser.mjs": {
@@ -4896,7 +4896,7 @@
       "executable": false
     },
     "tests/mallet.test.mjs": {
-      "sha256": "8c2cc43806fd417ccc9f4c97f68e763bdc0bdd7ee9a7d5b65fa42a589e34e33f",
+      "sha256": "4887a215eaee93f597833b54ab1f3c41bac4eb9c11ef643b7ce637df4ce84f8a",
       "executable": false
     },
     "tests/media-browser.mjs": {

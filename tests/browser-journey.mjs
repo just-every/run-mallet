@@ -5,12 +5,14 @@ import {chromium} from '@playwright/test'
 import {mkdir,readFile} from 'node:fs/promises'
 import {join} from 'node:path'
 
-export async function browserJourney(openUrl,{directory='.cache/browser',fixtures='tests/fixtures/repairshopr',fresh=false,paywall}={}) {
+export async function browserJourney(openUrl,{directory='.cache/browser',fixtures='tests/fixtures/repairshopr',fresh=false,paywall,cookie,estimateOnly=false}={}) {
  await mkdir(directory,{recursive:true})
- const browser=await chromium.launch({headless:true,args:['--disable-gpu','--use-mock-keychain','--password-store=basic']})
+ const browser=await chromium.launch({headless:true,...(process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH?{executablePath:process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH}:{}),args:['--disable-gpu','--use-mock-keychain','--password-store=basic',...(process.platform==='linux'?['--no-sandbox']:[])]})
  let stage='open app'
  try {
-  const page=await browser.newPage({viewport:{width:1440,height:1000},timezoneId:'America/New_York'})
+  const context=await browser.newContext({viewport:{width:1440,height:1000},timezoneId:'America/New_York'})
+  if(cookie)await context.addCookies(cookie.split('; ').map(pair=>({name:pair.slice(0,pair.indexOf('=')),value:pair.slice(pair.indexOf('=')+1),url:new URL(openUrl).origin})))
+  const page=await context.newPage()
   await page.goto(openUrl)
   await page.waitForURL(url=>['/setup','/app'].includes(url.pathname))
   if(fresh){assert.equal(new URL(page.url()).pathname,'/setup','OPEN-001: published install starts at first-run setup');for(const width of [1440,390]){await page.setViewportSize({width,height:1000});await page.screenshot({path:join(directory,`00-setup-${width}.png`),fullPage:true})}}
@@ -18,21 +20,22 @@ export async function browserJourney(openUrl,{directory='.cache/browser',fixture
   await page.waitForURL('**/app')
   const origin=new URL(page.url()).origin
   if(fresh){const state=await (await page.request.get(origin+'/api/mallet/state')).json();for(const [kind,records] of Object.entries(state.records))if(kind!=='taxSettings')assert.equal(records.length,0,`OPEN-001: installed shop starts empty (${kind})`);assert.equal(state.actor.role,'owner','OPEN-001: local buyer owns the installation')}
-  const shot=async name=>{
+  const shot=async(name,target)=>{
    stage=name
    if(paywall)assert.doesNotMatch(await page.locator('body').innerText(),paywall,'OPEN-001: no Mallet commercial gate on '+name)
    for(const width of [1440,390]) {
     await page.setViewportSize({width,height:1000})
     assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth),'Page fits its viewport')
-    await page.screenshot({path:join(directory,`${name}-${width}.png`),fullPage:true,...(name==='21-key-created'?{mask:[page.locator('pre')]}:{})})
+    await (target??page).screenshot({path:join(directory,`${name}-${width}.png`),...(target?{}:{fullPage:true}),...(name==='21-key-created'?{mask:[page.locator('pre')]}:{})})
    }
+   await page.setViewportSize({width:1440,height:1000})
   }
   const click=async name=>{await page.getByRole('button',{name,exact:true}).click();await page.waitForLoadState('domcontentloaded')}
   await shot('01-board')
   await page.getByRole('link',{name:'New repair order'}).first().click();await page.waitForURL(url=>url.pathname==='/app/customers')
   await page.getByLabel('Customer name',{exact:true}).fill('Northside Cycles')
   await page.getByLabel('Customer email').fill('service@northside.example')
-  await page.getByLabel('Vehicle').fill('2019 Trek FX 3')
+  await page.getByLabel('Vehicle',{exact:true}).fill('2019 Trek FX 3')
   await page.getByLabel('Plate or VIN').fill('TREK-FX3-2019')
   await click('Add vehicle');const assetUrl=page.url();await shot('02-asset')
   await page.getByLabel('Repair request').fill('Brake pads and safety inspection')
@@ -53,10 +56,33 @@ export async function browserJourney(openUrl,{directory='.cache/browser',fixture
   const print=await page.getByRole('link',{name:'Open printable estimate'}).getAttribute('href')
   await page.goto(origin+print);await shot('06-print-estimate');await page.goto(jobUrl)
   await page.getByLabel('Handoff note').fill('Printed estimate handed to customer at counter')
-  await click('Record estimate shared');await shot('07-estimate-shared')
+  await click('Record estimate shared');await page.reload()
+  const estimateState=await (await page.request.get(origin+'/api/mallet/state')).json(),owner=estimateState.actor,repair=estimateState.records.job.find(j=>jobUrl.endsWith('/'+j.id)),shared=estimateState.records.estimate.find(q=>q.id===repair.estimateId)
+  assert.equal(shared.sent.length,1)
+  assert.deepEqual(shared.sent[0],{revision:1,method:'printed',note:'Printed estimate handed to customer at counter',recordedBy:owner,at:shared.sent[0].at,deliveryConfirmed:false})
+  assert.ok(Number.isFinite(Date.parse(shared.sent[0].at)))
+  const estimatePanel=page.locator('section.card').filter({has:page.getByRole('heading',{name:'Estimate & customer authorization',exact:true})})
+  assert.match(await estimatePanel.innerText(),/Revision 1 · printed/)
+  assert.ok((await estimatePanel.innerText()).includes(owner.name))
+  assert.match(await estimatePanel.innerText(),/Printed estimate handed to customer at counter/)
+  assert.match(await estimatePanel.innerText(),/Manual handoff only; delivery is not confirmed/)
+  await shot('07-estimate-shared',estimatePanel)
   await page.locator('input[name="lineIds"]').first().check()
   await page.getByLabel('Authorization evidence / reference').fill('Customer signed line 1 only on paper estimate NS-104. Labor deferred.')
-  await click('Record customer authorization');await shot('08-partial-authorisation')
+  await page.locator('select[name=method]').selectOption('signed')
+  await click('Record customer authorization');await page.reload()
+  const decided=(await (await page.request.get(origin+'/api/mallet/state')).json()).records.estimate.find(q=>q.id===shared.id)
+  assert.deepEqual(decided.sent,shared.sent,'Customer decision preserves the recorded manual handoff')
+  assert.deepEqual(decided.authorisation,{revision:1,lineIds:[shared.revisions[0].lines[0].id],customerName:'Northside Cycles',method:'signed',evidence:'Customer signed line 1 only on paper estimate NS-104. Labor deferred.',recordedBy:owner,at:decided.authorisation.at,totals:{currency:'USD',subtotalCents:3250,salesTaxCents:325,totalCents:3575}})
+  const part=estimatePanel.getByRole('row').filter({hasText:'Shimano B05S brake pads'}),labor=estimatePanel.getByRole('row').filter({hasText:'Replace pads, adjust brakes and safety inspection'})
+  assert.match(await part.innerText(),/Authorized/);assert.match(await labor.innerText(),/Declined/)
+  assert.match(await estimatePanel.innerText(),/Authorized total: \$35\.75/)
+  assert.match(await estimatePanel.innerText(),/Customer decision: Northside Cycles/)
+  assert.match(await estimatePanel.innerText(),/signed/)
+  assert.match(await estimatePanel.innerText(),/Customer signed line 1 only on paper estimate NS-104. Labor deferred/)
+  await shot('08-partial-authorisation',estimatePanel)
+  if(estimateOnly)return {estimate:decided,actor:owner}
+
   await page.getByLabel('Work note').fill('Pads supplied over the counter. Labor not authorized.')
   await click('Record parts or labor');await shot('09-work-recorded')
   const qualityDoor=publicDoor(origin,(await page.context().cookies(origin)).map(c=>c.name+'='+c.value).join('; ')),qualityJob=(await qualityDoor.state()).records.job.find(j=>jobUrl.endsWith('/'+j.id));await qualityReady(qualityDoor,qualityJob);await page.reload();
@@ -95,7 +121,7 @@ export async function browserJourney(openUrl,{directory='.cache/browser',fixture
   await page.goto(origin+'/app/data');await click('Revoke key');await shot('21-key-revoked')
   await page.goto(origin+'/app/customers')
   await page.getByLabel('Customer name',{exact:true}).fill('Unused intake')
-  await page.getByLabel('Vehicle').fill('Unbooked inspection request')
+  await page.getByLabel('Vehicle',{exact:true}).fill('Unbooked inspection request')
   await page.getByLabel('Plate or VIN').fill('UNUSED-INTAKE')
   await click('Add vehicle');await shot('22-unused-asset')
   await page.getByLabel('Type ERASE to confirm').fill('ERASE');await click('Erase unused vehicle')
@@ -105,6 +131,15 @@ export async function browserJourney(openUrl,{directory='.cache/browser',fixture
   console.log('Browser repair, partial authorization, invoice, history, import/undo, backup, key revocation and erasure journey passed at 1440 and 390.')
   return credentials
  }catch(error){throw new Error(`Browser journey failed at ${stage}: ${String(error.message).replace(/https?:\/\/\S+/g,'[private URL]').slice(0,1200)}`)}finally{await browser.close()}
+}
+// The same native estimate flow runs in push Verify, without the unrelated clone proof.
+export async function estimateDecisionBrowser(){
+ const {installation}=await import('./harness.mjs'),{randomBytes}=await import('node:crypto')
+ const h=await installation({entry:'tests/dev-worker.ts',network:true,assets:true,bindings:{AUTH_LOCAL:'true',RER_DEV_KEY:randomBytes(32).toString('base64url')}})
+ try{
+  await h.stepUp()
+  await browserJourney(h.origin+'/app',{cookie:h.owner,estimateOnly:true,directory:process.env.MALLET_SCREENSHOTS??'.cache/estimate-browser'})
+ }finally{await h.close()}
 }
 if(process.argv[1]===import.meta.filename) {
  const open=await readFile('.rer/local/open-url','utf8')

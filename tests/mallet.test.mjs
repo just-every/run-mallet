@@ -76,18 +76,66 @@ test('booking rejects bay and technician collisions and keeps every asset visit'
  assert.equal((await current()).visits.length,2)
 }))
 
-test('exact revision, partial authorisation and quantity ceilings protect customer consent',()=>run(async h=>{
- const {job}=await booking(h);let q=await estimate(h,job)
- await h.command('estimate.approve',{estimateId:q.id,version:q.version,revision:2},{status:409})
- q=await authorise(h,q,[q.revisions[0].lines[0].id])
- await h.command('estimate.revise',{estimateId:q.id,version:q.version,revision:1,lines:q.revisions[0].lines},{status:409})
- let j=(await h.state()).records.job[0]
- await h.command('work.record',{jobId:j.id,version:j.version,lineId:q.revisions[0].lines[1].id,quantity:1},{status:409})
- await h.command('work.record',{jobId:j.id,version:j.version,lineId:q.revisions[0].lines[0].id,quantity:3},{status:409})
- j=await h.command('work.record',{jobId:j.id,version:j.version,lineId:q.revisions[0].lines[0].id,quantity:2})
- await h.command('job.complete',{jobId:j.id,version:j.version-1},{status:409})
- assert.equal(q.authorisation.totals.totalCents,5500)
-}))
+test('exact revision, partial authorisation and quantity ceilings protect customer consent',async()=>{
+ await run(async h=>{
+  const {job}=await booking(h),owner=(await h.state()).actor
+  await h.command('tax.configure',{ratePercent:10,partsTaxable:true,laborTaxable:true})
+  const key=await h.command('agent.create',{label:'Synthetic estimate preparer'}),agent={as:'',headers:{authorization:'Bearer '+key.token}}
+  const content=r=>r.lines.map(({id,kind,description,quantity,quantityMilli,unitCents,subtotalCents,salesTaxCents,totalCents})=>({id,kind,description,quantity,quantityMilli,unitCents,subtotalCents,salesTaxCents,totalCents}))
+  let q=await h.command('estimate.prepare',{jobId:job.id,version:job.version,notes:'First quoted scope',lines:[
+   {id:'synthetic-mallet-541',kind:'part',description:'Initial pads',quantity:1.25,unitCents:3200},
+   {id:'synthetic-mallet-542',kind:'labor',description:'Initial adjustment',quantity:.75,unitCents:11000}
+  ]},agent)
+  const first=q.revisions[0]
+  assert.equal(first.n,1)
+  assert.deepEqual(content(first),[
+   {id:'synthetic-mallet-541',kind:'part',description:'Initial pads',quantity:1.25,quantityMilli:1250,unitCents:3200,subtotalCents:4000,salesTaxCents:400,totalCents:4400},
+   {id:'synthetic-mallet-542',kind:'labor',description:'Initial adjustment',quantity:.75,quantityMilli:750,unitCents:11000,subtotalCents:8250,salesTaxCents:825,totalCents:9075}
+  ])
+  assert.deepEqual(first.totals,{currency:'USD',subtotalCents:12250,salesTaxCents:1225,totalCents:13475})
+  assert.equal(first.notes,'First quoted scope')
+  assert.deepEqual(first.preparedBy,{id:key.id,name:'Synthetic estimate preparer',role:'agent'})
+  q=await h.command('estimate.revise',{estimateId:q.id,version:q.version,revision:1,notes:'Revised exact scope',lines:[
+   {id:'synthetic-mallet-543',kind:'part',description:'Brake pads',quantity:2,unitCents:2500},
+   {id:'synthetic-mallet-544',kind:'labor',description:'Replace and tune',quantity:1.5,unitCents:12000}
+  ]})
+  const read=async()=>{const s=await h.state();return {estimate:s.records.estimate.find(e=>e.id===q.id),approvals:(s.records.approval??[]).filter(a=>a.subjectId===q.id),job:s.records.job.find(j=>j.id===job.id),events:(s.records.event??[]).filter(e=>e.jobId===job.id)}}
+  q=(await read()).estimate
+  assert.deepEqual(q.revisions.map(r=>r.n),[1,2])
+  assert.deepEqual(q.revisions[0],first,'Revision retains the original preparation and identity')
+  assert.deepEqual(content(q.revisions[1]),[
+   {id:'synthetic-mallet-543',kind:'part',description:'Brake pads',quantity:2,quantityMilli:2000,unitCents:2500,subtotalCents:5000,salesTaxCents:500,totalCents:5500},
+   {id:'synthetic-mallet-544',kind:'labor',description:'Replace and tune',quantity:1.5,quantityMilli:1500,unitCents:12000,subtotalCents:18000,salesTaxCents:1800,totalCents:19800}
+  ])
+  assert.deepEqual(q.revisions[1].totals,{currency:'USD',subtotalCents:23000,salesTaxCents:2300,totalCents:25300})
+  assert.deepEqual(q.revisions[1].preparedBy,owner)
+  assert.equal(q.revisions[1].notes,'Revised exact scope')
+  const refuse=async(command,input,error)=>{const before=await read();assert.equal((await h.command(command,input,{status:409})).error,error);assert.deepEqual(await read(),before,command+' refusal preserves estimate, authorization, approvals, actuals and successful history')}
+  await refuse('estimate.approve',{estimateId:q.id,version:q.version,revision:1},'REVISION')
+  q=await h.command('estimate.approve',{estimateId:q.id,version:q.version,revision:2})
+  assert.deepEqual(q.revisions[1].approval.by,owner)
+  const approvals=(await read()).approvals
+  assert.equal(approvals.length,1);assert.equal(approvals[0].revision,2);assert.deepEqual(approvals[0].approvedBy,owner)
+  q=await h.command('estimate.markSent',{estimateId:q.id,version:q.version,revision:2,method:'printed',note:'Printed revision two handed over at counter synthetic-mallet-54'})
+  q=(await read()).estimate
+  assert.equal(q.sent.length,1)
+  assert.deepEqual(q.sent[0],{revision:2,method:'printed',note:'Printed revision two handed over at counter synthetic-mallet-54',recordedBy:owner,at:q.sent[0].at,deliveryConfirmed:false})
+  assert.ok(Number.isFinite(Date.parse(q.sent[0].at)))
+  q=await h.command('estimate.authorise',{estimateId:q.id,version:q.version,revision:2,lineIds:['synthetic-mallet-543'],customerName:'Cedar Bikes',method:'signed',evidence:'Signed paper estimate in workshop custody, reference CB-20'})
+  q=(await read()).estimate
+  assert.deepEqual(q.authorisation,{revision:2,lineIds:['synthetic-mallet-543'],customerName:'Cedar Bikes',method:'signed',evidence:'Signed paper estimate in workshop custody, reference CB-20',recordedBy:owner,at:q.authorisation.at,totals:{currency:'USD',subtotalCents:5000,salesTaxCents:500,totalCents:5500}})
+  await refuse('estimate.revise',{estimateId:q.id,version:q.version,revision:2,lines:[{id:'synthetic-mallet-543',kind:'part',description:'Changed accepted pads',quantity:3,unitCents:1}]},'ESTIMATE_FROZEN')
+  let j=(await read()).job
+  await refuse('work.record',{jobId:j.id,version:j.version,lineId:'synthetic-mallet-544',quantity:1},'NOT_AUTHORISED')
+  await refuse('work.record',{jobId:j.id,version:j.version,lineId:'synthetic-mallet-543',quantity:3},'QUANTITY_EXCEEDED')
+  j=await h.command('work.record',{jobId:j.id,version:j.version,lineId:'synthetic-mallet-543',quantity:2})
+  assert.equal(j.actuals.length,1);assert.equal(j.actuals[0].quantityMilli,2000);assert.equal(j.actuals[0].revision,2)
+  await h.command('job.complete',{jobId:j.id,version:j.version-1},{status:409})
+  assert.equal(q.authorisation.totals.totalCents,5500)
+  await h.command('agent.revoke',{id:key.id})
+ })
+ const {estimateDecisionBrowser}=await import('./browser-journey.mjs');await estimateDecisionBrowser()
+})
 
 test('agent prepares, person approves, immutable actual-work invoice exports once',()=>run(async h=>{
  const {job}=await booking(h),key=await h.command('agent.create',{label:'Workshop assistant'}),agent={as:'',headers:{authorization:`Bearer ${key.token}`}}
