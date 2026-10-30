@@ -588,7 +588,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "882c8ccf553d819b025bdc6c7e7e120678410d5afc567303a4a6fb360b6ddd4c",
+      "sha256": "8939a17095b0565f68b25932f3494716c1578446eed0064c39e50845cc227e45",
       "executable": false
     },
     "deploy-demo.json": {
@@ -4860,7 +4860,7 @@
       "executable": false
     },
     "tests/harness.mjs": {
-      "sha256": "81d1b4abe938d88e4f9486ebf85f16e63f1fb1cfd5880c267c8bb0a6cd0b67ea",
+      "sha256": "8f8d39dbe3ae772731e2acf206cfa5b908c46d10d1f507bb46597f69e8d0c612",
       "executable": false
     },
     "tests/inspection-browser.mjs": {
@@ -5244,7 +5244,7 @@
       "executable": false
     },
     "tests/support/provider-jobs-journey.mjs": {
-      "sha256": "419cf7ba25075c9a144f602cd7c7eeb828559ee57e2efc4b021e9ff8d689d65c",
+      "sha256": "5269df1a5fd5920e67fcef5a6f3546baffef26cfef4e997d1a280d964df01410",
       "executable": false
     },
     "tests/support/purchasing-journey.mjs": {
