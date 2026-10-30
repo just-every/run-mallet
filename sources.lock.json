@@ -588,7 +588,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "5574a0edbf4a6b2bcffdd61674785b90bdfe466a6a9bb60ae34585d96ec208fd",
+      "sha256": "98fc55acba16e97dbdde915bdb25699a5c5246805d557834f06ad16045a1c8c9",
       "executable": false
     },
     "deploy-demo.json": {
@@ -4752,7 +4752,7 @@
       "executable": false
     },
     "tests/bookings-browser.mjs": {
-      "sha256": "8a67dffc7fbee10ff51d52894571335d2afd787191374b5b401fb553b829c080",
+      "sha256": "dfd5ac573c58dc7ee28118dfce19b4cdcbf985430daa6743098ffb268e3240f2",
       "executable": false
     },
     "tests/browser-journey.mjs": {

@@ -35,8 +35,14 @@ export async function bookingsBrowser(){
    await page.setViewportSize({width,height:1000});await page.goto(embedOrigin)
    const embedded=page.frameLocator('iframe[title="Shop booking"]');await embedded.getByRole('heading',{name:'Choose a service'}).waitFor()
    // Select a different published service first so a default selection cannot pass.
-   await embedded.getByRole('combobox',{name:/Service/}).selectOption({label:decoy.name});await embedded.getByRole('button',{name:'Show available times'}).click();await embedded.getByRole('heading',{name:decoy.name,exact:true}).waitFor()
-   await embedded.getByRole('combobox',{name:/Service/}).selectOption({label:service.name});await embedded.getByRole('button',{name:'Show available times'}).click();await embedded.getByRole('heading',{name:service.name,exact:true}).waitFor()
+   const frame=page.frames().find(frame=>frame.parentFrame()===page.mainFrame())
+   const selectService=async selected=>{
+    await embedded.getByRole('combobox',{name:/Service/}).selectOption({label:selected.name})
+    // The heading may already exist before submission; wait for the iframe's new document.
+    await Promise.all([frame.waitForURL(url=>url.searchParams.get('serviceId')===selected.id,{waitUntil:'domcontentloaded'}),embedded.getByRole('button',{name:'Show available times'}).click()])
+    await embedded.getByRole('heading',{name:selected.name,exact:true}).waitFor()
+   }
+   await selectService(decoy);await selectService(service)
    assert.equal(await embedded.getByRole('combobox',{name:/Service/}).inputValue(),service.id,'The embedded form retains the selected service at '+width)
    const form=embedded.locator('form:has(input[value="hold"])');assert.equal(await form.count(),1,'Only the final published bay slot is available')
    assert.equal(await form.locator('[name="serviceId"]').inputValue(),service.id)
