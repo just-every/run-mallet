@@ -4932,7 +4932,7 @@
       "executable": false
     },
     "tests/purchasing-browser.mjs": {
-      "sha256": "c4d9da66e8ab0bb7e44f283c7384c29b48b810373705c01d7fd8fd27def1ae81",
+      "sha256": "7bdc233b8bd6220cdac9dcdad3cd4517aa1364f3e741b9f5885c9a491151f0a7",
       "executable": false
     },
     "tests/quality-browser.mjs": {
