@@ -5340,7 +5340,7 @@
       "executable": false
     },
     "tests/harness.mjs": {
-      "sha256": "81d1b4abe938d88e4f9486ebf85f16e63f1fb1cfd5880c267c8bb0a6cd0b67ea",
+      "sha256": "4e73ed576e5d11143a601f542fb47dc3ea7c8df572e917ff7032d614e1276080",
       "executable": false
     },
     "tests/inspection-browser.mjs": {
@@ -5352,7 +5352,7 @@
       "executable": false
     },
     "tests/inspection-report-browser.mjs": {
-      "sha256": "655b4b4d8561c8bd6de38a4288186691c28729853b6de476f9bf3a6e27f99f05",
+      "sha256": "15180f435c6a803d51c7cb8ac3d6426281241171b4885980f37fd4457571ec62",
       "executable": false
     },
     "tests/intake-browser.mjs": {
@@ -5656,7 +5656,7 @@
       "executable": false
     },
     "tests/support/inspection-report-journey.mjs": {
-      "sha256": "4b53b1624e0a3ff1aefd61eaa9d3d95deafde83241889e73f1d3822453f6ee0a",
+      "sha256": "1274dacace65be140e377b462b1ddc2e787cbd05098bccdddaf7d8a8cd8f1a6e",
       "executable": false
     },
     "tests/support/intake-forms-journey.mjs": {
