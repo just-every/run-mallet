@@ -8,12 +8,12 @@ The primary journey: check in the customer and asset, diagnose and inspect, pric
 
 | Tier | Done | Partial | Missing | Total |
 | --- | ---: | ---: | ---: | ---: |
-| Core | 22 | 76 | 54 | 152 |
+| Core | 23 | 75 | 54 | 152 |
 | Agent surface | 0 | 0 | 5 | 5 |
 | Later | 0 | 0 | 0 | 0 |
-| Full target | 22 | 76 | 59 | 157 |
+| Full target | 23 | 75 | 59 | 157 |
 
-Judged from the code and tests at commit `0c4b8e0be86462c713e63dc7875074220be9e636` (28 October 2026). Field proof register: 12 rows; 0 passed, 0 failed, 12 not run.
+Judged from the code and tests at commit `71f7211c447a7556a9206719df675714370e71e4` (30 October 2026). Field proof register: 12 rows; 0 passed, 0 failed, 12 not run.
 
 ## Core
 
@@ -188,15 +188,15 @@ Core · target · **missing** · Cites BASE-AUDIT-001 · Rules D-1, D-2, D-3 · 
 
 #### INTAKE-001 — Condition media and custody
 
-Core · target · **partial** · From INTAKE-001 · Cites BASE-INPUT-003 · Rules D-1, D-2, D-3
+Core · target · **done** · From INTAKE-001 · Cites BASE-INPUT-003 · Rules D-1, D-2, D-3
 
 **Requirement.** Attach timestamped before/after photos and video, damage marks, accessories, keys, valuables, security-lock handling and custody receipts to the asset and visit; private secrets are restricted and removed after their purpose ends. Owner/admin record immutable before/after condition with same-visit completed media, damage locations, keys/accessories/valuables and a typed acknowledgment of the exact checklist; identity is not verified. A comparison retains every original item, returned quantities, discrepancies and explicit electronic-signing/receipt consent with paper-copy instructions; it records no payment or release. Temporary unlock custody is governed by INTAKE-004. Technical formats and custody parameters are in [contract mechanisms](docs/contract-mechanisms.md#intake-004).
 
 **Acceptance.**
 1. Check in a vehicle with body damage and spare key and a device with charger, capture signed custody receipt and photos, then compare the actual handover against the same checklist.
 
-**Evidence.** `tests/media.test.mjs`; `tests/intake-browser.mjs`
-**Gap.** Not asserted in the old cited evidence: Vehicle damage condition is read back; Signed custody receipt fields are read back. Asserted: Vehicle key checklist is visible; Device charger checklist is visible; Photos remain attached; Actual returned checklist is compared. Additional signed-checklist and condition assertions live in uncited tests/support/intake-journey.mjs.
+**Evidence.** `tests/media.test.mjs` — INTAKE-001: vehicle and device signed custody and actual checklist comparison at 1440 and 390 (`tests/intake-browser.mjs`, intakeBrowser); INTAKE-001, INTAKE-004 and OPS-001: signed condition and custody, exact checklist comparison, private temporary secrets and fresh-owner recovery (`tests/support/intake-journey.mjs`, intakeJourney)
+**Gap.** None.
 
 #### INTAKE-004 — Temporary unlock custody
 
