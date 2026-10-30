@@ -49,6 +49,18 @@ export async function returnBrowser(){
     await p.reload();assert.ok((await p.locator('main').innerText()).includes(authorization.evidence));await shot('return-11-cash-delegate-authority')
    }
    await p.goto(h.origin+'/app/jobs/'+manual.job.id+'/return');await fill(form('payment.record'),{method,reference:'synthetic-mallet-'+(113+n),evidence:'Counter staff recorded '+method+' tender for the exact revision'},'Record tender evidence');assert.ok(p.url().endsWith('/return'));await shot('return-09-'+method+'-tender')
+   if(method==='cash'){
+    const revokedId=savedDelegate.id,revoke=form('return.revokeDelegate').filter({has:p.locator('input[name="delegateId"][value="'+revokedId+'"]')})
+    await fill(revoke,{reason:'Customer withdrew cash pickup authority before collection'},'Revoke delegate authority')
+    const revoked=(await h.state()).records
+    assert.equal(await form('flow.collect').locator('select[name="delegateId"] option[value="'+revokedId+'"]').count(),0,'The native handover cannot select withdrawn cash pickup authority')
+    assert.equal((await h.command('flow.collect',{...pickup,overrideId:''},{status:409})).error,'DELEGATE_STATE')
+    assert.deepEqual((await h.state()).records,revoked,'A direct cash collection cannot bypass native delegate revocation')
+    delegateBefore=new Date().toISOString()
+    await fill(form('return.delegate'),{customerName:authorization.customerName,delegateName:authorization.delegateName,consent:true,evidence:authorization.evidence},'Record delegate authority');delegateAfter=new Date().toISOString()
+    savedDelegate=(await h.state()).records.returnDelegate.find(d=>d.jobId===manual.job.id&&d.id!==revokedId&&!d.revoked&&d.evidence===authorization.evidence)
+    assertDelegateEvidence(savedDelegate,authorization,recorder,delegateBefore,delegateAfter);pickup.delegateId=savedDelegate.id
+   }
    const handoverBefore=new Date().toISOString()
    await fill(form('flow.collect'),{collectorName:pickup.collectorName,delegateId:pickup.delegateId,comparisonId:pickup.comparisonId,readingId:pickup.readingId,identityEvidence:pickup.identityEvidence,warrantyAdvice:pickup.warrantyAdvice},'Record documented handover');const handoverAfter=new Date().toISOString(),copy=await p.locator('main').innerText();assert.ok(copy.includes('Tender recorded by staff; Mallet did not verify funds'));assert.equal(copy.includes('not cleared'),method==='check');await shot('return-10-'+method+'-handover')
    if(method==='cash'){

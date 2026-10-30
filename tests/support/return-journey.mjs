@@ -120,7 +120,21 @@ export async function returnJourney(){
    const allocation={jobId:manual.job.id,invoiceId:manual.invoice.id,version:manual.invoice.version,invoiceRevision:manual.invoice.revision,method,amountCents:manual.invoice.totals.totalCents,reference:'synthetic-mallet-'+(106+n),evidence:'Staff counted '+method+' tender for this exact invoice'}
    await h.command('payment.record',{...allocation,invoiceRevision:manual.invoice.revision+1},{as:advisor.cookie,status:409})
    const payment=await h.command('payment.record',allocation,{as:advisor.cookie});assert.equal(payment.invoiceRevision,manual.invoice.revision);assert.equal(payment.verified,false)
-   if(method==='cash')await refuseChangedReturnRevision(h,manual.invoice,pickup)
+   if(method==='cash'){
+    const beforeIdentity=(await h.state()).records
+    const missingIdentity=await h.command('flow.collect',{...pickup,identityEvidence:''},{as:advisor.cookie,status:400})
+    assert.equal(missingIdentity.error,'INPUT')
+    assert.deepEqual((await h.state()).records,beforeIdentity,'Recorded cash cannot bypass the staff identity evidence requirement')
+    await h.command('return.revokeDelegate',{jobId:manual.job.id,version:pickup.version,delegateId:savedDelegate.id,delegateVersion:savedDelegate.version,reason:'Customer withdrew cash pickup authority before collection'},{as:advisor.cookie})
+    const revoked=(await h.state()).records
+    assert.equal((await h.command('flow.collect',pickup,{as:advisor.cookie,status:409})).error,'DELEGATE_STATE')
+    assert.deepEqual((await h.state()).records,revoked,'Recorded cash cannot revive withdrawn delegate authority or create a receipt')
+    delegateBefore=new Date().toISOString()
+    const reauthorized=await h.command('return.delegate',authorization,{as:advisor.cookie});delegateAfter=new Date().toISOString();pickup.delegateId=reauthorized.id
+    savedDelegate=(await h.state()).records.returnDelegate.find(d=>d.id===reauthorized.id)
+    assertDelegateEvidence(savedDelegate,authorization,recorder,delegateBefore,delegateAfter)
+    await refuseChangedReturnRevision(h,manual.invoice,pickup)
+   }
    // Export changes record version, not price revision; that cannot invalidate exact-revision tender.
    await h.command('invoice.export',{invoiceId:manual.invoice.id,version:manual.invoice.version});pickup.version=(await h.state()).records.job.find(j=>j.id===manual.job.id).version
    const beforeCalls=edge.calls.length,handoverBefore=new Date().toISOString();edge.setFailure(true);const collected=await h.command('flow.collect',pickup,{as:advisor.cookie});const handoverAfter=new Date().toISOString();edge.setFailure(false);assert.equal(edge.calls.length,beforeCalls,'Full manual tender needs no processor observation')
