@@ -1881,8 +1881,8 @@ Judged from the code and tests at commit `39e7b596fc2a2a9cd592c139276f47f1611565
 | Clauses | Done | Partial | Missing | Total |
 | --- | ---: | ---: | ---: | ---: |
 | Published | 1 | 8 | 0 | 9 |
-| Target and push further | 22 | 67 | 59 | 148 |
-| All | 23 | 75 | 59 | 157 |
+| Target and push further | 23 | 66 | 59 | 148 |
+| All | 24 | 74 | 59 | 157 |
 
 | Clause | Title | Kind | Status | Evidence | Gap |
 | --- | --- | --- | --- | --- | --- |
@@ -1899,7 +1899,7 @@ Judged from the code and tests at commit `39e7b596fc2a2a9cd592c139276f47f1611565
 | `VEH-001` | Vehicle identity and VIN decode | target | missing |  | No structured vehicle fields, camera VIN/plate scan or decode provider connection. |
 | `VEH-002` | Mileage and service intervals | target | done | `src/mallet/mileage.ts`; `src/mallet/ui/mileage.ts`; `tests/mallet.test.mjs` |  |
 | `VEH-003` | CARFAX service history exchange | target | missing |  | No CARFAX history or service reporting integration; account/program approval is required engineering work. |
-| `INTAKE-001` | Condition media and custody | target | partial | `tests/media.test.mjs`; `tests/intake-browser.mjs` | Not asserted in the old cited evidence: Vehicle damage condition is read back; Signed custody receipt fields are read back. Asserted: Vehicle key checklist is visible; Device charger checklist is visible; Photos remain attached; Actual returned checklist is compared. Additional signed-checklist and condition assertions live in uncited tests/support/intake-journey.mjs. |
+| `INTAKE-001` | Condition media and custody | target | done | `tests/media.test.mjs` — INTAKE-001: vehicle and device signed custody and actual checklist comparison at 1440 and 390 (`tests/intake-browser.mjs`, intakeBrowser); INTAKE-001, INTAKE-004 and OPS-001: signed condition and custody, exact checklist comparison, private temporary secrets and fresh-owner recovery (`tests/support/intake-journey.mjs`, intakeJourney) | |
 | `INTAKE-004` | Temporary unlock custody | target | partial | `tests/media.test.mjs`; `tests/intake-browser.mjs` | Not asserted in the old cited evidence: No material is copied to public state; No material is copied to audit; No material is copied to archives; Purpose end destroys readability; Lifetime expiry destroys readability; Older database cannot recover the secret; Destination authority is fresh. Asserted: Consented material is readable only through the authorized vault; Customer erasure removes reveal; Non-secret custody history restores exactly. Additional vault, state/audit/archive absence and recovery assertions live in uncited tests/support/intake-journey.mjs. |
 | `INTAKE-002` | Custom forms and signed shop terms | target | partial | `tests/media.test.mjs`; `tests/intake-forms-browser.mjs` | Not asserted in the old cited evidence: Two published templates are both read back. Asserted: Original terms survive template change; Staff retrieve the original signed version; Required phone fields retain saved answers; Exact readable copy is downloadable. Additional vehicle/device-template and delivered-copy assertions live in uncited tests/support/intake-forms-journey.mjs. |
 | `INTAKE-003` | Counter and after-hours check-in | target | done | `tests/media.test.mjs`; `tests/support/check-in-journey.mjs`; `tests/check-in-browser.mjs` |  |
