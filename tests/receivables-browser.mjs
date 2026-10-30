@@ -6,7 +6,7 @@ import {join} from 'node:path'
 import {chromium} from '@playwright/test'
 import {installation,archive,restore} from './harness.mjs'
 import {publicDoor} from './support/portable-repair.mjs'
-import {receivablesFixture,balanceFailureFixture,balanceRecoveryMail} from './support/receivables-journey.mjs'
+import {receivablesFixture,balanceFailureFixture,balanceRecoveryMail,assertPartialStatement,assertPartialReminder,assertReminderFinancialRecords,savedReceivablesExports,assertReceivablesExports} from './support/receivables-journey.mjs'
 import {shopSetup} from './support/diagnosis-journey.mjs'
 export async function receivablesBrowser(){
  const h=await installation({entry:'tests/dev-worker.ts',network:true,assets:true,bindings:{AUTH_LOCAL:'true',RER_DEV_KEY:randomBytes(32).toString('base64url')}});let browser
@@ -134,9 +134,87 @@ export async function receivablesBrowser(){
     await shot('13-recovered-custody-sources',width)
    }
   }finally{await fresh.close()}
+  await partialBalanceBrowser(browser,directory)
   await balanceRecoveryBrowser(browser,directory)
   assert.deepEqual(errors,[])
  }finally{await browser?.close();await h.close()}
+}
+
+async function partialBalanceBrowser(browser,directory){
+ const h=await installation({network:true,secureNetwork:true,assets:true}),context=await browser.newContext({ignoreHTTPSErrors:true}),p=await context.newPage()
+ const errors=[];p.on('pageerror',error=>errors.push(error.message))
+ const cookies=source=>context.addCookies(source.owner.split('; ').map(pair=>({name:pair.slice(0,pair.indexOf('=')),value:pair.slice(pair.indexOf('=')+1),url:source.origin})))
+ const form=(command,id)=>p.locator((id?'#ar-'+id+' ':'')+'form:has(input[name="command"][value="'+command+'"])')
+ const submit=async(command,id,fields,checks=[])=>{
+  const f=form(command,id)
+  for(const [name,value]of Object.entries(fields))await f.locator('[name="'+name+'"]').fill(String(value))
+  for(const name of checks)await f.locator('[name="'+name+'"]').check()
+  const pending=p.waitForResponse(r=>new URL(r.url()).pathname==='/app/actions'&&r.request().method()==='POST')
+  await f.getByRole('button').click();assert.equal((await pending).status(),303);await p.waitForLoadState('domcontentloaded')
+ }
+ const shot=async(name,width)=>{
+  assert.ok(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'Partial balance fits '+width)
+  assert.equal(await p.locator('button,a').evaluateAll(nodes=>nodes.filter(n=>n.querySelector('svg,img')&&!n.textContent.trim()&&!n.getAttribute('data-tooltip')).length),0)
+  await p.screenshot({path:join(directory,name+'-'+width+'.png'),fullPage:true})
+ }
+ try{
+  const {account,manager,i1,i2}=await receivablesFixture(h),path='/api/mallet/receivables?'+new URLSearchParams({accountId:account.id,asOf:'2099-01-02'}),ledger='/app/receivables?'+new URLSearchParams({accountId:account.id,asOf:'2099-01-02'})
+  await h.stepUp();await cookies(h);await p.setViewportSize({width:1440,height:1000});await p.goto(h.origin+ledger)
+  await submit('ar.terms',null,{days:30,limitUsd:220,evidence:'Fleet separately agreed to reviewed net terms'},['consent'])
+  const terms=(await h.state()).records.arTerms.at(-1)
+  for(const [index,invoice]of [i1,i2].entries())await submit('ar.invoice',invoice.id,{po:'synthetic-mallet-partial-po-'+index,evidence:'Current fleet manager approved these exact invoice terms'})
+  const assignment=(await h.state()).records.arInvoice.find(r=>r.invoiceId===i1.id)
+  const check=await h.command('deposit.record',{accountId:account.id,amountCents:5000,method:'check',reference:'synthetic-mallet-partial-browser-check',evidence:'Fleet instructed a partial check allocation; funds are not verified'})
+  await h.command('deposit.allocate',{depositId:check.id,invoiceId:i1.id,version:i1.version,amountCents:5000,reference:'synthetic-mallet-partial-browser-allocation',evidence:'Fleet instructed USD 50 against the first invoice',confirm:'allocate-deposit'})
+  await p.goto(h.origin+ledger);await submit('ar.dispute',i2.id,{evidence:'Fleet disputes the second invoice pending work review'})
+  const savedExports=await savedReceivablesExports(h,[i1,i2]),statement=await h.api(path)
+  assertPartialStatement(statement,i1,i2)
+  await p.goto(h.origin+ledger)
+  const input={invoiceId:i1.id,version:i1.version,outstandingCents:6000,to:manager.email,reference:await form('ar.remind',i1.id).locator('[name="reference"]').inputValue(),confirm:'send-balance-reminder',consent:true,consentEvidence:'Billing contact separately requested this one USD 60 partial-balance email',evidence:'Current owner reviewed the exact partial balance and current billing recipient'}
+  const before=await h.state(),mail=h.messages.length
+  await h.command('ar.remind',{...input,outstandingCents:11000},{status:409})
+  assert.deepEqual(await h.state(),before);assert.equal(h.messages.length,mail,'The stale full amount never reaches mail')
+  for(const width of [1440,390]){
+   await p.setViewportSize({width,height:1000});await p.goto(h.origin+ledger)
+   assert.match(await p.getByRole('heading',{name:'Current account statement',exact:true}).locator('..').innerText(),/Outstanding \$170\.00 USD/)
+   assert.match(await p.locator('#ar-'+i1.id).innerText(),/outstanding \$60\.00/);assert.match(await p.locator('#ar-'+i2.id).innerText(),/outstanding \$110\.00/)
+   assert.equal(await form('ar.remind',i1.id).locator('[name="outstandingCents"]').inputValue(),'6000')
+   assert.match(await p.locator('#ar-'+i2.id).innerText(),/Dispute open/);assert.match(await p.locator('#ar-'+i2.id).innerText(),/Chasing paused/)
+   assert.equal(await form('ar.remind',i2.id).count(),0,'The disputed invoice offers no reminder action')
+   await shot('17-exact-partial-statement',width)
+  }
+  await p.setViewportSize({width:1440,height:1000})
+  input.reference=await form('ar.remind',i1.id).locator('[name="reference"]').inputValue()
+  await submit('ar.remind',i1.id,{consentEvidence:input.consentEvidence,evidence:input.evidence},['consent'])
+  const after=await h.state(),retained=after.records.arReminder.find(r=>r.reference===input.reference),contact=before.records.contact.find(c=>c.id===manager.id)
+  assert.equal(after.records.arReminder.length,1);assertPartialReminder(retained,{invoice:i1,assignment,terms,contact,actor:before.actor,input})
+  assert.equal(retained.status,'accepted');assert.equal(h.messages.length,mail+1);assert.equal(h.messages.at(-1).text,retained.content);assert.deepEqual(h.messages.at(-1).to,[manager.email])
+  assertReminderFinancialRecords(before.records,after.records,retained);assert.deepEqual(await h.api(path),statement);await assertReceivablesExports(h,savedExports)
+  await h.command('ar.remind',input,{status:409});await h.restart();await h.command('ar.remind',input,{status:409})
+  assert.deepEqual(await h.state(),after);assert.equal(h.messages.length,mail+1,'A retained manual reminder is never handed off again')
+  for(const width of [1440,390]){
+   await p.setViewportSize({width,height:1000});await p.goto(h.origin+ledger)
+   const row=p.locator('#ar-'+i1.id)
+   assert.match(await row.innerText(),/Balance reminder .*Handed to the mail provider.*\$60\.00/)
+   assert.match(await row.innerText(),/Delivery is not verified; no automatic retry/);assert.equal(await form('ar.remind',i2.id).count(),0)
+   await shot('18-retained-partial-reminder',width)
+  }
+  const fresh=await installation({network:true,secureNetwork:true,assets:true})
+  try{
+   await restore(fresh,await archive(h));await shopSetup(fresh);assert.deepEqual((await fresh.state()).records.arReminder,after.records.arReminder);assert.deepEqual(await fresh.api(path),statement)
+   await fresh.command('ar.remind',{...input,reference:'synthetic-mallet-partial-browser-recovered'},{status:409})
+   await assertReceivablesExports(fresh,savedExports);await fresh.restart();assert.equal(fresh.messages.length,0)
+   await cookies(fresh)
+   for(const width of [1440,390]){
+    await p.setViewportSize({width,height:1000});await p.goto(fresh.origin+ledger)
+    assert.match(await p.locator('#ar-'+i1.id).innerText(),/Balance reminder .*Handed to the mail provider.*\$60\.00/)
+    assert.match(await p.locator('#ar-'+i2.id).innerText(),/Dispute open/);assert.equal(await form('ar.remind',i2.id).count(),0)
+    await shot('19-recovered-partial-reminder',width)
+   }
+   assert.deepEqual((await fresh.state()).records.arReminder,after.records.arReminder);assert.equal(fresh.messages.length,0,'History readback restores no sending authority')
+  }finally{await fresh.close()}
+  assert.deepEqual(errors,[])
+ }finally{await context.close();await h.close()}
 }
 
 async function balanceRecoveryBrowser(browser,directory){
