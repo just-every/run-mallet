@@ -64,7 +64,7 @@ export async function installation({entry='tests/worker.ts',bindings={},outbound
    return {cookie,id:session.operator.id,session}
   }
   // The Worker's cron door at a chosen scheduled time (EST-006 reminders).
-  const cron=async at=>{const result=await (await mf.getWorker()).scheduled({scheduledTime:new Date(at),cron:'*/15 * * * *'});assert.equal(result.outcome,'ok')}
+  const cron=async at=>{const result=await (await mf.getWorker()).scheduled({scheduledTime:new Date(at),cron:'*/15 * * * *'});assert.equal(result.outcome,'ok',logs.filter(line=>/error|exception|conflict/i.test(line)).join('\n'))}
   return {get mf(){return mf},origin,owner,messages,logs,request,api,command,state,person,cron,stepUp,signInAs,async restart(){await mf.dispose();mf=new Miniflare(options());await mf.ready},async configure(values){Object.assign(bindings,values);await mf.setOptions(options());await mf.ready},async close(){await mf.dispose();await rm(directory,{recursive:true,force:true})}}
  }catch(error){await mf.dispose();await rm(directory,{recursive:true,force:true});throw error}
 }
