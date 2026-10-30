@@ -572,7 +572,7 @@
       "executable": false
     },
     "ACCEPTANCE.md": {
-      "sha256": "d695273d7107573ec2057fe3c8efd0753bc9185f2f651a3eb7307acc14150283",
+      "sha256": "9baeac4cc7f9201bc32f6cd6d61869ee7124f48360dc4b6571c166c0fedd41c4",
       "executable": false
     },
     "agent-surface.json": {
@@ -580,7 +580,7 @@
       "executable": false
     },
     "AGENTS.md": {
-      "sha256": "045dcd682dc720e8dcc37b346d8fa552dd5c5674ae59b3e13f587cbd7e083b48",
+      "sha256": "5e36d6e54deb6e5b34516f0782b42e0347d35c4a642c583a322359b79c0b7832",
       "executable": false
     },
     "base-copies.json": {
@@ -592,7 +592,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "ea72e761de4ec96edfec8dbc0893bbe2dc4caa43d58f509de94c2f2843500e75",
+      "sha256": "f9a2c703b9ff3cc0fdc0b37abca1f981cefe1c3c63d17470167dea470e200615",
       "executable": false
     },
     "deploy-demo.json": {
@@ -628,7 +628,7 @@
       "executable": false
     },
     "docs/CLAIMS.md": {
-      "sha256": "a18a7b2a2dd52e63ee9ba14ea89060b4d1d0a84f52b573b3c0025d90b16b1a46",
+      "sha256": "9a421f24e72baf389c31f270dd993c0bafd6485989401119a8ec83bd12dadaa9",
       "executable": false
     },
     "docs/complete-a-repair.md": {
@@ -5384,7 +5384,7 @@
       "executable": false
     },
     "tests/media.test.mjs": {
-      "sha256": "14e2c60e8d6e89fbf5dc4e24490112c864dde92166e4c40eb6d4c36b38b75391",
+      "sha256": "bd1dd68b7b726bf5d7058a0f89e4d406e2906d29ab937a9f8836a94b6f3957f5",
       "executable": false
     },
     "tests/open-source-journey.mjs": {

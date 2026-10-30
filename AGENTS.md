@@ -2,11 +2,11 @@
 
 ## Contract-derived documents
 
-Lander-Regenerate: node scripts/contract-docs.mjs write
+Lander-Regenerate: `node src/base/contract-docs.mjs write`
 
-Lander-Regenerate-Check: node scripts/contract-docs.mjs check
+Lander-Regenerate-Check: `node src/base/contract-docs.mjs check`
 
-The generator derives all clause indexes from the current contract.
+The command regenerates contract-derived documents without clause arguments.
 CONTRACT.md remains the source; generated documents do not change acceptance points.
 
 ## Launch for review
