@@ -70,6 +70,9 @@ test('native sign-in, CSRF, member isolation and immediate session revocation',(
  assert.equal((await h.state({as:other.cookie})).records.job.length,1)
  assert.equal((await h.state({as:other.cookie})).records.job[0].id,second.id)
  assert.equal((await h.state({as:other.cookie})).records.job.filter(j=>j.id===job.id).length,0)
+ before=await workSnapshot()
+ assert.equal((await h.command('job.complete',{jobId:job.id,version:current.version},{status:409})).error,'NO_WORK')
+ assert.deepEqual(await workSnapshot(),before,'A repair without actual work cannot complete or gain successful work events')
  await h.command('work.record',{jobId:job.id,version:current.version,lineId:line.id,quantity:1},{as:tech.cookie})
  current=await currentJob(job.id,{as:tech.cookie})
  const expectedActor={id:tech.id,name:'alex',role:'member'}

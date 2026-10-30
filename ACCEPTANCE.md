@@ -8,12 +8,12 @@ The primary journey: check in the customer and asset, diagnose and inspect, pric
 
 | Tier | Done | Partial | Missing | Total |
 | --- | ---: | ---: | ---: | ---: |
-| Core | 22 | 76 | 54 | 152 |
+| Core | 23 | 75 | 54 | 152 |
 | Agent surface | 0 | 0 | 5 | 5 |
 | Later | 0 | 0 | 0 | 0 |
-| Full target | 22 | 76 | 59 | 157 |
+| Full target | 23 | 75 | 59 | 157 |
 
-Judged from the code and tests at commit `0c4b8e0be86462c713e63dc7875074220be9e636` (28 October 2026). Field proof register: 12 rows; 0 passed, 0 failed, 12 not run.
+Judged from the code and tests at commit `bc221074fbd18e9112710da13d09b708bc3ce630` (30 October 2026). WORK-001 proof updated; other clause judgments retained. Field proof register: 12 rows; 0 passed, 0 failed, 12 not run.
 
 ## Core
 
@@ -57,15 +57,15 @@ Core · published · **partial** · Rules D-1, D-2, D-3
 
 #### WORK-001 — Authorized actuals
 
-Core · published · **partial** · Cites BASE-ROLE-001 · Rules D-1, D-2, D-3
+Core · published · **done** · Cites BASE-ROLE-001 · Rules D-1, D-2, D-3
 
 **Requirement.** Parts and labor actuals use only lines and quantities within the person-approved, customer-authorized revision. A member records work only on assigned jobs; completion requires recorded work. Additional scope never inherits consent from a previous decision.
 
 **Acceptance.**
 1. As an assigned member record an authorized line; refuse another job, an unapproved line and excess quantity, then complete and inspect actor and revision evidence.
 
-**Evidence.** `src/mallet/workshop.ts`; `src/mallet/model.ts`; `tests/mallet.test.mjs`
-**Gap.** Not asserted in the old cited evidence: Assigned member actual is read back; Another-job refusal has unchanged actuals; Unapproved-line refusal has unchanged actuals; Excess-quantity refusal has unchanged actuals; Completed job retains actual actor; Completed job retains exact source revision. The native journeys exercise the workflow, but their title, performed step or uncited helper is not a point-level assertion here.
+**Evidence.** `tests/mallet.test.mjs` — "native sign-in, CSRF, member isolation and immediate session revocation" records and reloads assigned-member actuals against approved and customer-authorized revision 2, refuses another repair, unapproved lines and excess quantity with both repairs, versions and successful work events unchanged, and reloads completed work after independent quality review with its original actor and source intact; "exact revision, partial authorisation and quantity ceilings protect customer consent" independently preserves actuals and events after denied quantities. "WORK-001: native authorized actuals retain actor and source after completion at 1440 and 390" invokes `tests/browser-journey.mjs` — browserJourney, reloading persisted and rendered quantity, actor and exact source before and after completion through native forms in push Verify. `tests/support/supplement-journey.mjs` — supplementJourney, the existing EST-004 incremental-decision journey, covers parts and labor with separate incremental customer decisions.
+**Gap.** None.
 
 #### INVOICE-001 — One saved export
 
