@@ -6,6 +6,48 @@ import {booking,authorise,archive,restore,installation} from '../harness.mjs'
 import {shopSetup} from './diagnosis-journey.mjs'
 import {qualityReady} from './quality-ready.mjs'
 export const balancePermissionFields=(reference=randomUUID())=>({consentPurpose:'balance-reminder',consentWordingVersion:'balance-permission-v1',consentedAt:'2026-10-01T12:00:00Z',captureChannel:'telephone',consentReference:reference})
+export function assertPartialStatement(report,i1,i2){
+ assert.equal(report.outstandingCents,17000,'The statement retains both current invoice balances')
+ assert.equal(report.invoices.find(i=>i.invoiceId===i1.id).balance.outstandingCents,6000)
+ assert.equal(report.invoices.find(i=>i.invoiceId===i2.id).balance.outstandingCents,11000)
+ assert.deepEqual(report.invoices.filter(i=>i.chaseEligible).map(i=>i.invoiceId),[i1.id],'Only the partial, undisputed invoice can be chased')
+ assert.equal(report.invoices.find(i=>i.invoiceId===i2.id).dispute.status,'open')
+}
+export function assertPartialReminder(reminder,{invoice,assignment,terms,contact,actor,input}){
+ assert.equal(reminder.invoiceId,invoice.id);assert.equal(reminder.invoiceRevision,invoice.revision);assert.equal(reminder.jobId,invoice.jobId)
+ assert.equal(reminder.accountId,assignment.accountId);assert.equal(reminder.assignmentId,assignment.id);assert.equal(reminder.termsId,terms.id)
+ assert.equal(reminder.contactId,contact.id);assert.equal(reminder.contactVersion,contact.version);assert.equal(reminder.to,contact.email)
+ assert.equal(reminder.outstandingCents,6000);assert.equal(reminder.dueOn,assignment.dueOn)
+ assert.equal(reminder.reference,input.reference);assert.equal(reminder.consentEvidence,input.consentEvidence);assert.equal(reminder.evidence,input.evidence)
+ assert.deepEqual(reminder.by,actor);assert.ok(Number.isFinite(Date.parse(reminder.at)));assert.ok(Number.isFinite(Date.parse(reminder.outcomeAt)))
+ assert.ok(reminder.content.includes('invoice '+invoice.number+': USD 60.00.'));assert.ok(reminder.content.includes('Balance due '+assignment.dueOn+'.'))
+ assert.doesNotMatch(reminder.content,/USD 110\.00|overdue/i)
+ assert.ok(reminder.content.includes('Recorded tender is not independent bank verification.'))
+}
+export function assertReminderFinancialRecords(before,after,reminder){
+ const financial=records=>Object.fromEntries(Object.entries(records).filter(([kind])=>!['arReminder','audit','event'].includes(kind)))
+ assert.deepEqual(financial(after),financial(before),'Sending a reminder changes no financial or approval record')
+ for(const kind of ['audit','event']){
+  for(const original of before[kind])assert.deepEqual(after[kind].find(r=>r.id===original.id),original,'Earlier '+kind+' history remains exact')
+  const appended=after[kind].filter(r=>!before[kind].some(b=>b.id===r.id))
+  assert.deepEqual(appended.map(r=>r.kind??r.action).sort(),['ar.reminderClaim','ar.reminderOutcome'])
+  if(kind==='event')assert.ok(appended.every(r=>r.subjectId===reminder.id))
+ }
+}
+export async function savedReceivablesExports(h,invoices){
+ const saved=[]
+ for(const invoice of invoices){
+  Object.assign(invoice,(await h.state()).records.invoice.find(i=>i.id===invoice.id))
+  const exported=await h.command('invoice.export',{invoiceId:invoice.id,version:invoice.version})
+  const response=await h.request('/api/mallet/exports/'+exported.id);assert.equal(response.status,200)
+  const csv=await response.text();assert.equal(csv,exported.csv);saved.push({id:exported.id,csv})
+  Object.assign(invoice,(await h.state()).records.invoice.find(i=>i.id===invoice.id))
+ }
+ return saved
+}
+export async function assertReceivablesExports(h,saved){
+ for(const {id,csv}of saved){const response=await h.request('/api/mallet/exports/'+id);assert.equal(response.status,200);assert.equal(await response.text(),csv,'Reminder operations preserve the exact saved invoice export')}
+}
 export async function receivablesFixture(h){
  await shopSetup(h);await h.command('tax.configure',{ratePercent:10,partsTaxable:true,laborTaxable:true})
  const driver=await h.command('contact.save',{name:'Van driver',email:'driver@example.test',phone:'',communication:'none'}),manager=await h.command('contact.save',{name:'Fleet manager',email:'manager@example.test',phone:'',communication:'email'})
@@ -129,7 +171,7 @@ export async function receivablesJourney(h){
  await h.stepUp()
  await h.command('ar.terms',{...termsInput,active:false})
  await h.command('flow.collect',releaseInput,{status:409})
- await h.command('ar.terms',termsInput)
+ const reopenedTerms=await h.command('ar.terms',termsInput)
  const beforeRelease=await archive(h),destination=await installation()
  try{await restore(destination,beforeRelease);const denied=await destination.command('flow.collect',releaseInput,{status:409});assert.equal(denied.error,'AR_RELEASE','Archived commercial approvals do not grant destination release authority')}finally{await destination.close()}
  const collected=await h.command('flow.collect',releaseInput),receipt=(await h.state()).records.handover.find(r=>r.id===collected.collection.handoverId)
@@ -163,6 +205,46 @@ export async function receivablesJourney(h){
  await h.command('ar.dispute',{invoiceId:i2.id,version:i2.version,status:'open',evidence:'Fleet disputes second invoice pending work review'})
  await h.command('ar.remind',{...reminderInput,invoiceId:i2.id,version:i2.version,reference:'synthetic-mallet-disputed'},{status:409})
  report=await statement(aged);assert.equal(report.outstandingCents,17000);assert.equal(report.ageing['31–60'],17000);assert.deepEqual(report.invoices.filter(i=>i.chaseEligible).map(i=>i.invoiceId),[i1.id]);assert.equal(report.invoices.find(i=>i.invoiceId===i1.id).balance.outstandingCents,6000)
+ assertPartialStatement(report,i1,i2)
+ const savedExports=await savedReceivablesExports(h,[i1,i2]);reminderInput.version=i1.version;report=await statement(aged);assertPartialStatement(report,i1,i2)
+ const partialInput={...reminderInput,outstandingCents:6000,reference:'synthetic-mallet-partial-manual',consentEvidence:'Billing contact separately requested this one USD 60 partial-balance email',evidence:'Current owner reviewed the exact partial balance and current billing recipient'}
+ const partialState=await h.state(),partialMail=h.messages.length
+ await h.command('ar.remind',{...partialInput,outstandingCents:11000},{status:409})
+ assert.deepEqual(await h.state(),partialState,'The stale full balance creates no reminder or financial mutation');assert.equal(h.messages.length,partialMail)
+ await h.command('ar.remind',{...partialInput,invoiceId:i2.id,version:i2.version,outstandingCents:11000,reference:'synthetic-mallet-disputed-current-balance'},{status:409})
+ assert.deepEqual(await h.state(),partialState,'A current disputed balance creates no reminder or financial mutation');assert.equal(h.messages.length,partialMail)
+ await (await h.mf.getD1Database('DB')).prepare('UPDATE mallet_session_proofs SET step_up_until=0').run()
+ await h.command('ar.remind',partialInput,{status:403})
+ assert.deepEqual(await h.state(),partialState,'Current owner identity alone cannot replace fresh confirmation');assert.equal(h.messages.length,partialMail)
+ await h.stepUp()
+ for(const [change,status]of [[{consent:false},409],[{consentEvidence:''},400]]){
+  await h.command('ar.remind',{...partialInput,...change},{status})
+  assert.deepEqual(await h.state(),partialState,'Account terms consent cannot substitute for exact per-send permission');assert.equal(h.messages.length,partialMail)
+ }
+ await assertReceivablesExports(h,savedExports)
+ const partialReminder=await h.command('ar.remind',partialInput),partialAfter=await h.state()
+ assert.equal(partialAfter.records.arReminder.length,partialState.records.arReminder.length+1)
+ const retained=partialAfter.records.arReminder.find(r=>r.id===partialReminder.id),contact=partialState.records.contact.find(c=>c.id===manager.id)
+ assertPartialReminder(retained,{invoice:i1,assignment:a1,terms:reopenedTerms,contact,actor:partialState.actor,input:partialInput})
+ assert.deepEqual(retained,partialReminder);assert.equal(retained.status,'accepted');assert.equal(retained.provider,'resend');assert.ok(retained.providerMessageId)
+ assert.equal(h.messages.length,partialMail+1,'Exactly one manual partial-balance email reaches the controlled mail edge')
+ const handed=h.messages.at(-1);assert.deepEqual(handed.to,[manager.email]);assert.equal(handed.text,retained.content);assert.equal(handed.subject,'Balance reminder: '+a1.dueOn)
+ const partialPage=await (await h.request('/app/receivables?accountId='+account.id)).text()
+ assert.match(partialPage,/Handed to the mail provider/);assert.match(partialPage,/Delivery is not verified; no automatic retry/)
+ assertReminderFinancialRecords(partialState.records,partialAfter.records,retained)
+ assert.deepEqual(await statement(aged),report);await assertReceivablesExports(h,savedExports)
+ await h.command('ar.remind',partialInput,{status:409});assert.deepEqual(await h.state(),partialAfter);assert.equal(h.messages.length,partialMail+1)
+ await h.restart();await h.command('ar.remind',partialInput,{status:409})
+ assert.deepEqual(await h.state(),partialAfter);assert.equal(h.messages.length,partialMail+1,'Replay after restart never hands off another partial reminder')
+ const partialRecovery=await installation()
+ try{
+  await restore(partialRecovery,await archive(h));assert.deepEqual((await partialRecovery.state()).records,partialAfter.records)
+  assert.deepEqual(await partialRecovery.api('/api/mallet/receivables?'+new URLSearchParams({accountId:account.id,asOf:aged})),report)
+  await partialRecovery.stepUp();const recoveredBefore=await partialRecovery.state()
+  await partialRecovery.command('ar.remind',{...partialInput,reference:'synthetic-mallet-recovered-partial'},{status:409})
+  assert.deepEqual(await partialRecovery.state(),recoveredBefore);await assertReceivablesExports(partialRecovery,savedExports)
+  await partialRecovery.restart();assert.equal(partialRecovery.messages.length,0,'Recovered history grants no destination sending authority')
+ }finally{await partialRecovery.close()}
  const partialDay=new Date(Date.now()+3*86400000).toISOString().slice(0,10),partialAt=time=>partialDay+'T'+time+':00Z'
  const partialFields={...balancePermissionFields(),kind:'balance',subjectId:i1.id,version:i1.version,to:manager.email,outstandingCents:6000,consent:true,consentEvidence:'Billing contact requested one exact partial balance email',instructions:'Approved balance',timeZone:'UTC',allowedStart:9,allowedEnd:18,dueAt:partialAt('15:00'),expiresAt:partialAt('18:00')}
  const partial=await h.command('outreach.schedule',partialFields),partialBefore=h.messages.length
@@ -183,7 +265,7 @@ export async function receivablesJourney(h){
  for(const outsider of [{as:admin.cookie},{as:member.cookie},agent]){const s=await h.state(outsider);for(const kind of ['arTerms','arInvoice','arDispute','arPromise','arReminder'])assert.equal(s.records[kind],undefined);assert.ok(!JSON.stringify(s).includes(termsInput.evidence))}
  await h.command('payment.record',{invoiceId:i1.id,version:i1.version,method:'cash',amountCents:6000,reference:'synthetic-mallet-ar-paid',evidence:'Owner observed the remaining cash payment'})
  await h.command('ar.remind',{...reminderInput,outstandingCents:0,reference:'synthetic-mallet-paid'},{status:409})
- assert.equal(h.messages.filter(m=>m.subject.startsWith('Balance reminder:')).length,1,'Disputed, promised and paid balances send nothing')
+ assert.equal(h.messages.filter(m=>m.subject.startsWith('Balance reminder:')).length,2,'Only the earlier full-balance and exact partial-balance manual requests send; disputed, promised and paid balances send nothing')
  const settled=(await statement(aged)).invoices.find(i=>i.invoiceId===i1.id);assert.equal(settled.balance.outstandingCents,0);assert.equal(settled.chaseEligible,false,'Paid balance never remains eligible for chasing')
  const recoveredTerms=await h.command('ar.terms',{...termsInput,limitCents:50000})
  const backup=await archive(h),fresh=await installation()

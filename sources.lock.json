@@ -5420,7 +5420,7 @@
       "executable": false
     },
     "tests/receivables-browser.mjs": {
-      "sha256": "498a11be3a68a551a5ffc4f3e5d7f756cc098e0efbdaa37a9b830162d484f036",
+      "sha256": "7798a63dfd390ffd2bc44824414efe482cad67fcad21035215a89131948ff255",
       "executable": false
     },
     "tests/replenishment-browser.mjs": {
@@ -5748,7 +5748,7 @@
       "executable": false
     },
     "tests/support/receivables-journey.mjs": {
-      "sha256": "4fcbbf94aa6962387f54447757d67ece191990a7c3355367d724e673700ef1c6",
+      "sha256": "850df7cbd7a4fa97907eac4515adac575c4770adede04a0432193a86ab253d59",
       "executable": false
     },
     "tests/support/refunds-journey.mjs": {
