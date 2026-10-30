@@ -93,7 +93,7 @@ export const tax: Handler = (c, command, p) => {
     const rule=find(c.s,'taxFeeRule',p.feeRuleId);expectVersion(rule,p.feeVersion)
     if(rule.mode==='fixed'&&rule.fixedCents>rule.capCents)fail('TAX_FEE_CAP','The fixed fee exceeds its saved cap; save a valid rule before applying it.')
     if(priced.length>=100)fail('INPUT','The supplies fee would exceed 100 estimate lines.',null,400)
-    const {baseCents,amountCents}=suppliesCalculation(rule,priced),settings=configuredTax(c.s,job.asset.assetType)
+    const {baseCents,amountCents}=suppliesCalculation(rule,priced),settings=job.locationSnapshot?.tax??configuredTax(c.s,job.asset.assetType)
     fee={ruleId:rule.id,category:rule.category??'supplies',mode:rule.mode??'percentage',fixedCents:rule.fixedCents??0,name:rule.name,basis:rule.basis,baseCents,rateBps:rule.rateBps,capCents:rule.capCents,amountCents,legalBasis:rule.legalBasis}
     const line={id:crypto.randomUUID(),kind:'fee',description:rule.name,quantity:1,quantityMilli:1000,unitCents:amountCents,taxable:rule.taxable,taxRatePercent:settings.ratePercent,taxRateMillionths:settings.rateMillionths,pierItemId:null,suppliesFee:fee}
     priced.push({...line,...price(line)})

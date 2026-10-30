@@ -340,6 +340,12 @@
       "name": "core-0122_mallet_business_people.sql",
       "sha256": "51aa39622d866b987d71b6e37c9a8300e7f24c54a55611edaab669ed051b01cd",
       "sql": "ALTER TABLE bs_settings ADD COLUMN owner_id TEXT CHECK(owner_id IS NULL OR owner_id <> '');\nALTER TABLE bs_team ADD COLUMN business_id TEXT CHECK(business_id IS NULL OR business_id <> '');\nALTER TABLE bs_team ADD COLUMN business_role TEXT CHECK(business_role IS NULL OR business_role IN('admin','member'));\nCREATE UNIQUE INDEX bs_team_business_id ON bs_team(business_id) WHERE business_id IS NOT NULL;\n"
+    },
+    {
+      "binding": "DB",
+      "name": "core-0123_mallet_locations.sql",
+      "sha256": "0c0f26a1ef6d75fdf77dfd21c872b3499270febfe8f38c1fe4142a446d120156",
+      "sql": "-- Keep delegation installation-local while allowing one explicit location.\nCREATE TABLE mallet_location_staff_grants (\n operator_id TEXT PRIMARY KEY, operator_version INTEGER NOT NULL, revision INTEGER NOT NULL,\n role TEXT NOT NULL CHECK(role IN ('advisor','manager','purchaser','cashier','accountant')),\n location TEXT NOT NULL CHECK(length(trim(location))>0), discount_bps INTEGER NOT NULL CHECK(discount_bps BETWEEN 0 AND 10000),\n spend_cents INTEGER NOT NULL CHECK(spend_cents>=0), refund_cents INTEGER NOT NULL CHECK(refund_cents>=0),\n cost_right INTEGER NOT NULL CHECK(cost_right IN (0,1)), granted_by TEXT NOT NULL, owner_version INTEGER NOT NULL,\n revoked_at INTEGER\n);\nINSERT INTO mallet_location_staff_grants SELECT * FROM mallet_staff_grants;\n-- A source rollback must not revive an obsolete standing grant.\nDELETE FROM mallet_staff_grants;\n"
     }
   ],
   "compatibilityDate": "2026-09-08",
