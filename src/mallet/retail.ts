@@ -16,7 +16,7 @@ export const retail:Handler=(c,command,p)=>{
  if(c.actor.role!=='owner')fail('FORBIDDEN','Only the current owner records counter cash sales and returns.',null,403)
  const reference=text(p.reference,'unique counter reference'),quantity=integer(p.quantity,'whole accessory quantity',1,1000)
  const kind=command==='retail.sell'?'retailSale':'retailReturn'
- const request=command==='retail.sell'?{itemBarcode:text(p.itemBarcode,'accessory barcode',100),binBarcode:text(p.binBarcode,'bin barcode',100),lotId:text(p.lotId,'lot',200,true),quantity,unitCents:integer(p.unitCents,'unit price in USD cents',0,100_000_000),cashCents:integer(p.cashCents,'cash received in USD cents',0,1_000_000_000)}:
+ const request=command==='retail.sell'?{itemBarcode:text(p.itemBarcode,'accessory barcode',100).toLowerCase(),binBarcode:text(p.binBarcode,'bin barcode',100).toLowerCase(),lotId:text(p.lotId,'lot',200,true),quantity,unitCents:integer(p.unitCents,'unit price in USD cents',0,100_000_000),cashCents:integer(p.cashCents,'cash received in USD cents',0,1_000_000_000)}:
   {saleId:text(p.saleId,'sale receipt'),quantity,reason:text(p.reason,'inspection and cash return evidence',2000),confirm:text(p.confirm,'physical return confirmation')}
  const prior=rows(c.s,kind).find(r=>r.reference===reference)
  if(prior){if(JSON.stringify(prior.request)===JSON.stringify(request))return prior;fail('DUPLICATE','This counter reference already records different facts.')}
@@ -31,7 +31,7 @@ export const retail:Handler=(c,command,p)=>{
   const amounts=price({quantityMilli,unitCents,taxable:settings.partsTaxable,taxRateMillionths:settings.rateMillionths})
   const cashCents=integer(p.cashCents,'cash received in USD cents',amounts.totalCents,1_000_000_000)
   const id=crypto.randomUUID(),movement=moveStock(c,item.id,bin.id,-quantityMilli,{kind:'retailSale',id,lotId:lot?.id??null},'Counter sale '+reference)
-  const sale=put(c.s,'retailSale',{reference,request,itemId:item.id,binId:bin.id,lotId:lot?.id??null,description:item.name,sku:item.sku,itemBarcode:item.barcode,binBarcode:bin.barcode,quantity,quantityMilli,unitCents,taxable:settings.partsTaxable,taxRateMillionths:settings.rateMillionths,...amounts,currency:'USD',cashCents,changeCents:cashCents-amounts.totalCents,movementId:movement.id,by:who(c),at:c.now})
+  const sale=put(c.s,'retailSale',{reference,request,itemId:item.id,binId:bin.id,lotId:lot?.id??null,description:item.name,sku:item.sku,itemBarcode:item.barcode.toLowerCase(),binBarcode:bin.barcode.toLowerCase(),quantity,quantityMilli,unitCents,taxable:settings.partsTaxable,taxRateMillionths:settings.rateMillionths,...amounts,currency:'USD',cashCents,changeCents:cashCents-amounts.totalCents,movementId:movement.id,by:who(c),at:c.now})
   // Reserve the source identity before persistence; receipts never change later.
   sale.id=id
   event(c,command,null,id,{reference,movementId:movement.id,totalCents:sale.totalCents});return sale

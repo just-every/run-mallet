@@ -16,8 +16,8 @@ export async function retailBrowser(){
   const shot=async name=>{for(const width of [1440,390]){await p.setViewportSize({width,height:1000});await p.screenshot({path:directory+'/'+name+'-'+width+'.png',fullPage:true})}await p.setViewportSize({width:1440,height:1000})}
   const form=c=>p.locator(`form:has(input[name="command"][value="${c}"])`)
   await p.goto(h.origin+'/app/retail');assert.equal(await p.getByRole('heading',{name:'Retail counter',exact:true}).count(),1)
-  await form('retail.sell').getByLabel('Accessory barcode',{exact:true}).fill(f.item.barcode)
-  await form('retail.sell').getByLabel('Bin barcode',{exact:true}).fill(f.bin.barcode)
+  await form('retail.sell').getByLabel('Accessory barcode',{exact:true}).fill(f.item.barcode.toUpperCase())
+  await form('retail.sell').getByLabel('Bin barcode',{exact:true}).fill(f.bin.barcode.toLowerCase())
   await form('retail.sell').getByLabel('Quantity',{exact:true}).fill('3')
   await form('retail.sell').getByLabel('Unit price (USD)',{exact:true}).fill('0.99')
   await form('retail.sell').getByLabel('Cash received (USD)',{exact:true}).fill('5.00')
