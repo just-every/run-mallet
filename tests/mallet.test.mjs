@@ -326,9 +326,9 @@ test('WARRANTY-001 / OPS-001: paid original, linked lot and no-charge comeback, 
 
 test('WARRANTY-001: original invoice, linked rework, no-charge costs and supplier claim at 1440/390',async()=>{const {warrantyBrowser}=await import('./warranty-browser.mjs');await warrantyBrowser()})
 
-test('RETURN-001 / PAY-004 / OPS-001: quality and unpaid gates, fresh processor split receipts, authorized delegate, keys, mileage, receipt and recovery',async()=>{const {returnJourney}=await import('./support/return-journey.mjs');await returnJourney()})
+test('RETURN-001 / PAY-004 / OPS-001: quality and unpaid gates, processor receipts, exact cash delegate and identity evidence, immutable receipt and recovery',async()=>{const {returnJourney}=await import('./support/return-journey.mjs');await returnJourney()})
 
-test('RETURN-001: unpaid refusal, processor confirmation, delegate handover and owner-exception receipt at 1440/390',async()=>{const {returnBrowser}=await import('./return-browser.mjs');await returnBrowser()})
+test('RETURN-001: unpaid refusal, processor confirmation, exact cash delegate receipt, recovery and owner exception at 1440/390',async()=>{const {returnBrowser}=await import('./return-browser.mjs');await returnBrowser()})
 
 test('PORTAL-001: known and unknown requests answer before mail; address and client limits disclose nothing',async()=>{const {portalRequestJourney}=await import('./support/portal-journey.mjs');await portalRequestJourney()})
 
