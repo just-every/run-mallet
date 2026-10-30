@@ -5388,7 +5388,7 @@
       "executable": false
     },
     "tests/support/supplier-returns-journey.mjs": {
-      "sha256": "1034975bba9783d15e772fb9e44a8df17bd92645603a57ad9509f7524a00da05",
+      "sha256": "2d6c7ac3aa80ad716ca00eb1867203f4a3e8f1c2325102135f93d414061b5de3",
       "executable": false
     },
     "tests/support/tax-custody-journey.mjs": {
