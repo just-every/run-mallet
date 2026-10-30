@@ -1876,13 +1876,13 @@ Provider sandboxes, official-schema fakes, run-auth and seeded capacity runs rem
 
 ## Status
 
-Judged from the code and tests at commit `0c4b8e0be86462c713e63dc7875074220be9e636` (28 October 2026).
+Judged from the code and tests at commit `6e779b63f71a2b48ce3e74608a1e4acc61be9d9c` (30 October 2026).
 
 | Clauses | Done | Partial | Missing | Total |
 | --- | ---: | ---: | ---: | ---: |
 | Published | 1 | 8 | 0 | 9 |
-| Target and push further | 21 | 68 | 59 | 148 |
-| All | 22 | 76 | 59 | 157 |
+| Target and push further | 22 | 67 | 59 | 148 |
+| All | 23 | 75 | 59 | 157 |
 
 | Clause | Title | Kind | Status | Evidence | Gap |
 | --- | --- | --- | --- | --- | --- |
@@ -1945,7 +1945,7 @@ Judged from the code and tests at commit `0c4b8e0be86462c713e63dc7875074220be9e6
 | `BUY-004` | Nexpart catalog and orders | target | missing |  | No Nexpart connection or distributor onboarding. |
 | `BUY-005` | Worldpac sourcing and orders | target | missing |  | No Worldpac or speedDIAL integration; supplier approval/access work remains required. |
 | `PART-004` | Core deposits and returns | target | partial | `tests/mallet.test.mjs`; `tests/support/cores-journey.mjs`; `tests/cores-browser.mjs` | Not asserted in the old cited evidence: Physical core shipment evidence is read back. Asserted: Core deposit has exact subtotal; Core deposit has exact tax; Core deposit is recorded; Adjusted supplier credit is exact; Customer correction reverses exact invoice tax; Original invoice remains unchanged. |
-| `PART-005` | Supplier RMAs and defective parts | target | partial | `tests/mallet.test.mjs`; `tests/support/supplier-returns-journey.mjs`; `tests/supplier-returns-browser.mjs` | Not asserted in the old cited evidence: RMA authorization and shipment evidence are read back. Asserted: Removed installed part retains repair and original use; Removed stock enters quarantine; Partial credit is exact; Remaining supplier credit exposure is exact; Net warranty cost is exact; Stock remains separately traceable. |
+| `PART-005` | Supplier RMAs and defective parts | target | done | `tests/mallet.test.mjs` — "PART-005 / OPS-001: installed and unused supplier returns, PO provenance, quarantine, authorization, shipment, partial credit and warranty costs survive recovery" (`tests/support/supplier-returns-journey.mjs`, rmaJourney) proves exact original PO, goods receipt, lot, installed use, repair and warranty linkage; unavailable quarantine; independently reloaded RMA number, label, authorization evidence, whole shipment quantity, carrier, tracking, evidence, distinct recorders and pinned timestamps; unchanged custody, stock, invoice and event history after refused replacement, duplicate shipment and revoked access; exact partial credit, remaining exposure and net warranty cost; explicit unused and faulty dispositions; and exact fresh-owner recovery without source authority. "PART-005: remove failed part, authorize RMA, ship and reconcile partial credit at 1440/390" (`tests/supplier-returns-browser.mjs`, rmaBrowser) proves native forms followed by independent state and report reloads, rendered original links and saved authorization and shipment evidence, recorder and time, unchanged refused writes, exact recovered custody and both release-width screens. Supplier and carrier facts remain staff-recorded evidence, with no inferred supplier action, customer charge or connected posting. | |
 | `PART-006` | ETA and special-order follow-through | target | done | `src/mallet/special-parts.ts`; `src/mallet/ui/special-parts.ts`; `src/mallet/promises.ts`; `src/mallet/workshop.ts`; `tests/support/special-part-journey.mjs`; `tests/special-part-browser.mjs` |  |
 | `PART-007` | Low-stock replenishment | target | partial | `tests/mallet.test.mjs`; `tests/support/replenishment-journey.mjs`; `tests/replenishment-browser.mjs` | Not asserted in the old cited evidence: Actual supplier order is placed exactly once. Asserted: Outstanding PO is subtracted from the demand; Repeated preparation keeps the same draft; Draft has exact unmet quantity; Approval retains exact cart. |
 | `PART-008` | Inter-store transfers | target | done | `tests/mallet.test.mjs`; `tests/support/transfers-journey.mjs`; `tests/transfers-browser.mjs` |  |

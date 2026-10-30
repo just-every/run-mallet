@@ -8,12 +8,12 @@ The primary journey: check in the customer and asset, diagnose and inspect, pric
 
 | Tier | Done | Partial | Missing | Total |
 | --- | ---: | ---: | ---: | ---: |
-| Core | 22 | 76 | 54 | 152 |
+| Core | 23 | 75 | 54 | 152 |
 | Agent surface | 0 | 0 | 5 | 5 |
 | Later | 0 | 0 | 0 | 0 |
-| Full target | 22 | 76 | 59 | 157 |
+| Full target | 23 | 75 | 59 | 157 |
 
-Judged from the code and tests at commit `0c4b8e0be86462c713e63dc7875074220be9e636` (28 October 2026). Field proof register: 12 rows; 0 passed, 0 failed, 12 not run.
+Judged from the code and tests at commit `6e779b63f71a2b48ce3e74608a1e4acc61be9d9c` (30 October 2026). Field proof register: 12 rows; 0 passed, 0 failed, 12 not run.
 
 ## Core
 
@@ -756,15 +756,15 @@ Core · target · **partial** · Rules D-1, D-2, D-3
 
 #### PART-005 — Supplier RMAs and defective parts
 
-Core · target · **partial** · Rules D-1, D-2, D-3
+Core · target · **done** · Rules D-1, D-2, D-3
 
 **Requirement.** Create linked supplier returns for faulty, unused and warranty parts with reason, serial/lot, original PO/RO, authorization, label, shipment and expected credit; quarantine defective stock until disposition. Owner/admin identify a lot against its original approved PO goods receipt without receiving it again; part, bin, supplier, quantity and unit cost must match. Faulty, unused and warranty returns retain original PO, installed-use/RO and approved warranty references. Physical unused stock is removed from saleable on-hand into separate quarantine; a removed installed part enters only quarantine, never on-hand again. Supplier RMA number/label and shipment require recorded external evidence. Disposition is explicit and reasoned; a failed installed part cannot be restocked. Append-only supplier credit documents retain partial-credit exposure and the linked rework cost less these credits. No supplier action, customer charge or accounting posting is inferred. BOOKS-003 and BUY-006 inherit posting/remittance.
 
 **Acceptance.**
 1. Remove a failed installed part, quarantine it, obtain an RMA and reconcile partial credit; repair warranty cost and stock both remain traceable.
 
-**Evidence.** `tests/mallet.test.mjs`; `tests/support/supplier-returns-journey.mjs`; `tests/supplier-returns-browser.mjs`
-**Gap.** Not asserted in the old cited evidence: RMA authorization and shipment evidence are read back. Asserted: Removed installed part retains repair and original use; Removed stock enters quarantine; Partial credit is exact; Remaining supplier credit exposure is exact; Net warranty cost is exact; Stock remains separately traceable.
+**Evidence.** `tests/mallet.test.mjs` — "PART-005 / OPS-001: installed and unused supplier returns, PO provenance, quarantine, authorization, shipment, partial credit and warranty costs survive recovery" (`tests/support/supplier-returns-journey.mjs`, rmaJourney) proves exact original PO, goods receipt, lot, installed use, repair and warranty linkage; unavailable quarantine; independently reloaded RMA number, label, authorization evidence, whole shipment quantity, carrier, tracking, evidence, distinct recorders and pinned timestamps; unchanged custody, stock, invoice and event history after refused replacement, duplicate shipment and revoked access; exact partial credit, remaining exposure and net warranty cost; explicit unused and faulty dispositions; and exact fresh-owner recovery without source authority. "PART-005: remove failed part, authorize RMA, ship and reconcile partial credit at 1440/390" (`tests/supplier-returns-browser.mjs`, rmaBrowser) proves native forms followed by independent state and report reloads, rendered original links and saved authorization and shipment evidence, recorder and time, unchanged refused writes, exact recovered custody and both release-width screens. Supplier and carrier facts remain staff-recorded evidence, with no inferred supplier action, customer charge or connected posting.
+**Gap.** None.
 
 #### PART-006 — ETA and special-order follow-through
 
