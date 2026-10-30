@@ -675,6 +675,7 @@ async function workshopResponse(request:Request,original:Bindings,execution:Pick
    return page('Sublet work needs review',`<section class="card"><p>${e(error.message)}</p><p><a href="/app/jobs/${encodeURIComponent(jobId)}#sublets">Return to this repair’s sublet work</a></p></section>`,actor,status,{section:'jobs'})
   }
   const details=error instanceof MalletError&&error.details?`<pre>${e(JSON.stringify(error.details,null,2))}</pre>`:''
+  if(String(submitted?.command).startsWith('retail.'))return page('Could not complete that action',`<section class="card"><p>${e(known?errorMessage(code,error.message):'The action could not be completed. Check what you entered and try again.')}</p><a href="/app/retail">Back to the retail counter</a></section>`,actor,status,{section:'inventory'})
   return page('Could not complete that action',refused(known?errorMessage(code,error.message):'The action could not be completed. Check what you entered and try again.',details,path.startsWith('/app/move-in')),actor,status,{section:path.startsWith('/app/move-in')?'move-in':path==='/app/data'?'data':path==='/app/tax'?'tax':path.startsWith('/app/actions')?'board':null})
  }
 }
