@@ -75,6 +75,7 @@ export async function refundsJourney(){
    assert.deepEqual(bill.refunds,[{amountCents:109,method:'cash',status}])
    assert.equal(bill.refundedCents,refundedCents);assert.equal(bill.paidCents,paidCents);assert.equal(bill.creditedCents,109);assert.equal(bill.outstandingCents,0)
    assert.ok(!view.invoices.some(i=>[other.invoice.id,otherCash.invoice.id].includes(i.id)))
+   assert.deepEqual(await refundReadSnapshot(h),beforeRead,'Current payer billing read immediately preserves records and saved export bytes')
    const otherView=await h.api('/api/mallet/portal/billing',undefined,{as:otherLogin.cookie})
    assert.equal(otherView.account.id,outsider.account.id)
    assert.deepEqual(otherView.invoices.find(i=>i.id===otherCash.invoice.id).refunds,[{amountCents:215,method:'cash',status:'unsubmitted'}])
