@@ -8,12 +8,12 @@ The primary journey: check in the customer and asset, diagnose and inspect, pric
 
 | Tier | Done | Partial | Missing | Total |
 | --- | ---: | ---: | ---: | ---: |
-| Core | 22 | 76 | 54 | 152 |
+| Core | 23 | 75 | 54 | 152 |
 | Agent surface | 0 | 0 | 5 | 5 |
 | Later | 0 | 0 | 0 | 0 |
-| Full target | 22 | 76 | 59 | 157 |
+| Full target | 23 | 75 | 59 | 157 |
 
-Judged from the code and tests at commit `0c4b8e0be86462c713e63dc7875074220be9e636` (28 October 2026). Field proof register: 12 rows; 0 passed, 0 failed, 12 not run.
+Judged from the code and tests at commit `92bb23406f56b8790d8249eec18499a86bcb86a2` (30 October 2026). Field proof register: 12 rows; 0 passed, 0 failed, 12 not run.
 
 ## Core
 
@@ -21,15 +21,15 @@ Judged from the code and tests at commit `0c4b8e0be86462c713e63dc7875074220be9e6
 
 #### HTTP-001 — Private app boundary
 
-Core · published · **partial** · Cites BASE-ACCESS-002, BASE-ACCESS-003, BASE-ROLE-001, BASE-OPS-001, BASE-SECRET-001, BASE-AGENT-005, BASE-AGENT-006, BASE-AGENT-007 · Rules D-1, D-2, D-3
+Core · published · **done** · Cites BASE-ACCESS-002, BASE-ACCESS-003, BASE-ROLE-001, BASE-OPS-001, BASE-SECRET-001, BASE-AGENT-005, BASE-AGENT-006, BASE-AGENT-007 · Rules D-1, D-2, D-3
 
 **Requirement.** The workshop boundary distinguishes health and declared public surfaces from its repair pages, commands and downloads. The workshop boundary refuses unconfigured hosts and cross-origin repair mutations. Unknown paths return real 404s. AGENT-001 describes a preparation-scoped grant.
 
 **Acceptance.**
 1. Request private pages, state, commands and exports signed out, as another role, after revocation and cross-origin; require refusal without writes, then succeed with the authorized session.
 
-**Evidence.** `src/mallet/http.ts`; `src/mallet/auth.ts`; `tests/mallet.test.mjs`
-**Gap.** Not asserted in the old cited evidence: Private page refusal while signed out; Private state refusal while signed out; Private command refusal while signed out; Private export refusal while signed out; Revoked-session refusal; Cross-origin mutation refusal with no write; Authorized private-door success and unchanged refusal state. Asserted: Another role sees no assigned repair.
+**Evidence.** `tests/mallet.test.mjs` — “native sign-in, CSRF, member isolation and immediate session revocation” exercises populated private repair pages, state, commands and saved invoice exports while signed out, unassigned, revoked, cross-origin and on an unconfigured host; checks refusal bodies for private fixture content and exact business-record preservation; and proves authorized technician work plus exact owner page, state, command and saved-export readback. `tests/runtime.mjs` proves emitted Worker health, the public homepage and real unknown-path 404s. `tests/browser-journey.mjs` — browserJourney retains the native repair, saved invoice CSV, key revocation and erasure journey at 1440 and 390.
+**Gap.** None.
 
 #### WORKSHOP-001 — Register and visits
 
