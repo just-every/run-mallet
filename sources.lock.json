@@ -588,7 +588,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "c69dab5057e7dd10f8271b89e2fdef749050a58e10f8878d48844f736c06b9c9",
+      "sha256": "5574a0edbf4a6b2bcffdd61674785b90bdfe466a6a9bb60ae34585d96ec208fd",
       "executable": false
     },
     "deploy-demo.json": {
@@ -4752,7 +4752,7 @@
       "executable": false
     },
     "tests/bookings-browser.mjs": {
-      "sha256": "4da059aaea8d10f43d28583773e553f73f4b776e47a37fe735f4fe1207c5f150",
+      "sha256": "8a67dffc7fbee10ff51d52894571335d2afd787191374b5b401fb553b829c080",
       "executable": false
     },
     "tests/browser-journey.mjs": {
@@ -5076,7 +5076,7 @@
       "executable": false
     },
     "tests/support/booking-journey.mjs": {
-      "sha256": "e35e4e8fe7bbb67b1717f5d9dcec9b5e0c1bd24a889dda9a78fc3d9899643f32",
+      "sha256": "41419f9ae68fda0e9d98378d6cd0830fc8ca3af11b533d9dcf7727d5566603fc",
       "executable": false
     },
     "tests/support/calendar-journey.mjs": {

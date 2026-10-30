@@ -1876,13 +1876,13 @@ Provider sandboxes, official-schema fakes, run-auth and seeded capacity runs rem
 
 ## Status
 
-Judged from the code and tests at commit `39e7b596fc2a2a9cd592c139276f47f1611565d0` (30 October 2026).
+Judged from the code and tests at commit `a9d255b9aaf05df21a605f1d75527d7542a8199f` (30 October 2026).
 
 | Clauses | Done | Partial | Missing | Total |
 | --- | ---: | ---: | ---: | ---: |
 | Published | 1 | 8 | 0 | 9 |
-| Target and push further | 22 | 67 | 59 | 148 |
-| All | 23 | 75 | 59 | 157 |
+| Target and push further | 23 | 66 | 59 | 148 |
+| All | 24 | 74 | 59 | 157 |
 
 | Clause | Title | Kind | Status | Evidence | Gap |
 | --- | --- | --- | --- | --- | --- |
@@ -1903,7 +1903,7 @@ Judged from the code and tests at commit `39e7b596fc2a2a9cd592c139276f47f1611565
 | `INTAKE-004` | Temporary unlock custody | target | partial | `tests/media.test.mjs`; `tests/intake-browser.mjs` | Not asserted in the old cited evidence: No material is copied to public state; No material is copied to audit; No material is copied to archives; Purpose end destroys readability; Lifetime expiry destroys readability; Older database cannot recover the secret; Destination authority is fresh. Asserted: Consented material is readable only through the authorized vault; Customer erasure removes reveal; Non-secret custody history restores exactly. Additional vault, state/audit/archive absence and recovery assertions live in uncited tests/support/intake-journey.mjs. |
 | `INTAKE-002` | Custom forms and signed shop terms | target | partial | `tests/media.test.mjs`; `tests/intake-forms-browser.mjs` | Not asserted in the old cited evidence: Two published templates are both read back. Asserted: Original terms survive template change; Staff retrieve the original signed version; Required phone fields retain saved answers; Exact readable copy is downloadable. Additional vehicle/device-template and delivered-copy assertions live in uncited tests/support/intake-forms-journey.mjs. |
 | `INTAKE-003` | Counter and after-hours check-in | target | done | `tests/media.test.mjs`; `tests/support/check-in-journey.mjs`; `tests/check-in-browser.mjs` |  |
-| `BOOK-001` | Online appointment booking | target | partial | `tests/mallet.test.mjs` | Not asserted in the old cited evidence: Embedded booking form; Phone service selection; Last-bay contention result; Exactly one confirmed appointment is sent; Cancellation frees the claimed capacity. The native journeys exercise the workflow, but their title, performed step or uncited helper is not a point-level assertion here. Additional booking assertions live in uncited tests/support/booking-journey.mjs and tests/bookings-browser.mjs. |
+| `BOOK-001` | Online appointment booking | target | done | `tests/mallet.test.mjs`: "BOOK-001: embedded service selection, final-slot contention and released capacity at 1440 and 390" (`tests/bookings-browser.mjs`, bookingsBrowser); "BOOK-001: final-slot contenders retain one exact confirmation, cancel, reclaim and recover with fresh authority" (`tests/support/booking-journey.mjs`, onlineBookingJourney). The same registered file runs bookingAvailabilityJourney, bookingFailureJourney and bookingAbuseJourney for published capacity, expiry, honest mail outcomes and bounded holds. | |
 | `BOOK-002` | Resource calendars and recurring reservations | target | partial | `tests/mallet.test.mjs`; `tests/support/calendar-journey.mjs`; `tests/support/waitlist-journey.mjs`; `tests/calendar-browser.mjs` | Native resource calendars, qualifications, absences and dated recurring reservations are asserted. Point-level completion proof for every resource, competing-dispatch and recurring-DST outcome remains unestablished. |
 | `BOOK-003` | Cancellation waitlist offers | target | partial | `tests/mallet.test.mjs`; `tests/support/calendar-journey.mjs`; `tests/support/waitlist-journey.mjs`; `tests/calendar-browser.mjs` | Native matching-FIFO offers and explicit staff recovery are asserted. Complete permission, FIFO, expiry and failed/uncertain-handoff outcome proof remains unestablished. |
 | `DIAG-001` | Diagnostic findings and private notes | target | done | `src/mallet/diagnostics.ts`; `src/mallet/diagnosis-links.ts`; `src/mallet/ui/diagnostics.ts`; `migrations/core/0021_customer_links.sql`; `tests/support/diagnosis-journey.mjs`; `tests/diagnosis-browser.mjs` |  |

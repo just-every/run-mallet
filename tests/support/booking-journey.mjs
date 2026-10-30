@@ -37,6 +37,7 @@ export async function onlineBookingJourney(h){
  const results=await Promise.all(contenders.map(fields=>bookingPost(h,'/book',fields)));assert.deepEqual(results.map(r=>r.status).sort(),[303,409])
  const winner=results.findIndex(r=>r.status===303),loser=1-winner,path=results[winner].headers.get('location')
  const heldState=await h.state();let appointment=heldState.records.appointment.find(a=>a.email===contenders[winner].email)
+ assert.equal(heldState.records.appointment.length,4,'Only the prior appointment, two prior holds and the winning hold exist')
  assert.equal(appointment.status,'held');assert.equal(heldState.records.appointment.filter(a=>a.serviceId===service.id&&a.startAt===startAt).length,1)
  assert.equal(heldState.records.appointment.filter(a=>a.email===contenders[loser].email).length,0,'The losing customer has no reservation')
  assert.deepEqual(heldState.records.appointment.find(a=>a.id===unrelated.id),unrelated)

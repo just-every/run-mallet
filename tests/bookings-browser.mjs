@@ -52,6 +52,7 @@ export async function bookingsBrowser(){
   await Promise.all(contenders.map(({form})=>form.getByRole('button',{name:'Hold this time'}).click()))
   const responses=await Promise.all(replies);assert.deepEqual(responses.map(response=>response.status()).sort(),[303,409],'Distinct customers contend through the embedded forms')
   const heldState=await h.state(),held=heldState.records.appointment.filter(a=>a.serviceId===service.id&&a.startAt===new Date(fields.startAt).toISOString());assert.equal(held.length,1)
+  assert.equal(heldState.records.appointment.length,4,'The losing form creates no extra appointment')
   const winner=contenders.find(x=>x.email===held[0].email),loser=contenders.find(x=>x!==winner),w=winner.page
   await w.waitForURL(/\/book\/[A-Za-z0-9_-]{43}$/);await w.waitForLoadState('domcontentloaded');await shot(w,'booking-04-tentative')
   await loser.page.getByRole('alert').waitFor();assert.match(await loser.page.getByRole('alert').innerText(),/no longer available/)
@@ -63,7 +64,7 @@ export async function bookingsBrowser(){
   const refused=await customer.newPage();await refused.goto(h.origin+'/book?serviceId='+service.id);const limited=refused.locator('form:has(input[value="hold"])').first();await limited.getByLabel('Your name').fill(winner.name);await limited.getByLabel('Confirmation email',{exact:true}).fill(winner.email.toUpperCase());await limited.getByRole('checkbox').check();await limited.getByRole('button',{name:'Hold this time'}).click();await refused.getByRole('alert').waitFor();assert.match(await refused.getByRole('alert').innerText(),/email already has a tentative appointment/);await shot(refused,'booking-04b-hold-limit');await refused.close()
   // The real mail adapter is exercised against the harness's controlled network edge.
   const beforeMail=h.messages.filter(m=>m.subject==='Your confirmed appointment').length
-  await w.getByRole('button',{name:'Confirm appointment',exact:true}).click();await w.waitForLoadState('domcontentloaded');await w.reload();await shot(w,'booking-05-confirmed')
+  await w.getByRole('button',{name:'Confirm appointment',exact:true}).click();await w.waitForLoadState('domcontentloaded');assert.equal((await w.goto(w.url())).status(),200);await shot(w,'booking-05-confirmed')
   const confirmedState=await h.state(),confirmed=confirmedState.records.appointment.find(a=>a.id===held[0].id)
   assert.equal(confirmedState.records.appointment.filter(a=>a.serviceId===service.id&&a.status==='confirmed').length,1)
   assert.deepEqual({serviceId:confirmed.serviceId,name:confirmed.name,email:confirmed.email,bayId:confirmed.bayId,technicianId:confirmed.technicianId,startAt:confirmed.startAt,endAt:confirmed.endAt,status:confirmed.status},
@@ -80,7 +81,7 @@ export async function bookingsBrowser(){
   const moved=(await h.state()).records.appointment.find(a=>a.id===confirmed.id);assert.equal(moved.startAt,new Date(Date.parse(fields.startAt)+3600000).toISOString())
   const mailAfterMove=h.messages.filter(m=>m.subject==='Your confirmed appointment');assert.equal(mailAfterMove.length,beforeMail+2,'The requested move gets exactly one updated confirmation')
   assert.deepEqual(mailAfterMove.at(-1).to,[winner.email]);assert.ok(mailAfterMove.at(-1).text.includes(bookingTime(moved.startAt)))
-  await w.getByRole('button',{name:'Cancel appointment',exact:true}).click();await w.waitForLoadState('domcontentloaded');await w.reload();await shot(w,'booking-07-canceled');assert.match(await w.locator('main').innerText(),/canceled/)
+  await w.getByRole('button',{name:'Cancel appointment',exact:true}).click();await w.waitForLoadState('domcontentloaded');assert.equal((await w.goto(w.url())).status(),200);await shot(w,'booking-07-canceled');assert.match(await w.locator('main').innerText(),/canceled/)
   const canceledState=await h.state(),canceled=canceledState.records.appointment.find(a=>a.id===confirmed.id);assert.equal(canceled.status,'canceled');assert.deepEqual(canceledState.records.appointment.find(a=>a.id===unrelated.id),unrelated)
   const newcomer=await rival.newPage();await newcomer.setViewportSize({width:390,height:1000});await newcomer.goto(h.origin+'/book?serviceId='+service.id)
   const reclaimedForm=newcomer.locator('form').filter({has:newcomer.locator('input[name="slotId"][value="'+slotId(service,moved)+'"]')});assert.equal(await reclaimedForm.count(),1,'Cancellation republishes the exact moved capacity')
