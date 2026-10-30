@@ -13,7 +13,7 @@ The primary journey: check in the customer and asset, diagnose and inspect, pric
 | Later | 0 | 0 | 0 | 0 |
 | Full target | 25 | 73 | 59 | 157 |
 
-Judged from the code and tests at commit `39e7b596fc2a2a9cd592c139276f47f1611565d0` (30 October 2026). Field proof register: 12 rows; 0 passed, 0 failed, 12 not run.
+Judged from the code and tests at commit `219381da95928f682370557575ea103f422744e2` (30 October 2026). Field proof register: 12 rows; 0 passed, 0 failed, 12 not run.
 
 ## Core
 

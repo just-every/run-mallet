@@ -118,6 +118,9 @@ test('exact revision, partial authorisation and quantity ceilings protect custom
   assert.deepEqual(first.totals,{currency:'USD',subtotalCents:12250,salesTaxCents:1225,totalCents:13475})
   assert.equal(first.notes,'First quoted scope')
   assert.deepEqual(first.preparedBy,{id:key.id,name:'Synthetic estimate preparer',role:'agent'})
+  const beforeFutureApproval=(await h.state()).records
+  assert.equal((await h.command('estimate.approve',{estimateId:q.id,version:q.version,revision:2},{status:409})).error,'REVISION')
+  assert.deepEqual((await h.state()).records,beforeFutureApproval,'An approval of a nonexistent revision preserves every business record')
   q=await h.command('estimate.revise',{estimateId:q.id,version:q.version,revision:1,notes:'Revised exact scope',lines:[
    {id:'synthetic-mallet-543',kind:'part',description:'Brake pads',quantity:2,unitCents:2500},
    {id:'synthetic-mallet-544',kind:'labor',description:'Replace and tune',quantity:1.5,unitCents:12000}

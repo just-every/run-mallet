@@ -1876,7 +1876,7 @@ Provider sandboxes, official-schema fakes, run-auth and seeded capacity runs rem
 
 ## Status
 
-Judged from the code and tests at commit `39e7b596fc2a2a9cd592c139276f47f1611565d0` (30 October 2026).
+Judged from the code and tests at commit `219381da95928f682370557575ea103f422744e2` (30 October 2026).
 
 | Clauses | Done | Partial | Missing | Total |
 | --- | ---: | ---: | ---: | ---: |
