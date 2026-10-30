@@ -106,6 +106,7 @@ export async function refundsBrowser(){
    const invoiceText=await p.getByRole('heading',{name:invoice.number,exact:true}).locator('..').innerText()
    assert.ok(text.includes(invoice.number));assert.ok(invoiceText.includes(credit.number));assert.ok(invoiceText.includes('Refund $1.09 · cash · '+status+' · Owner recorded; not verified by Mallet'));assert.ok(invoiceText.includes('Refunded $'+(refundedCents===109?'1.09':'0.00')))
    for(const body of [JSON.stringify(view),text])for(const secret of [...privateTexts,other.invoice.id,other.invoice.number,otherCredit.id,otherCredit.number])assert.ok(!body.includes(secret),'Payer billing excludes private and other-account evidence: '+secret)
+   assert.deepEqual(await refundReadSnapshot(h),beforeRead,'Current payer browser and API reads immediately preserve records and saved exports')
    const otherView=await h.api('/api/mallet/portal/billing',undefined,{as:otherLogin.cookie})
    assert.equal(otherView.account.id,outsider.account.id);assert.deepEqual(otherView.invoices.find(i=>i.id===other.invoice.id).refunds,[{amountCents:215,method:'cash',status:'unsubmitted'}])
    for(const secret of [...privateTexts,invoice.id,invoice.number,credit.id,credit.number])assert.ok(!JSON.stringify(otherView).includes(secret))
