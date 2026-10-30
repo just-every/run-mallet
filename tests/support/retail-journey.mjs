@@ -79,6 +79,7 @@ export async function retailJourney(h){
   ['return amount', (kind,r)=>{if(kind!=='retailReturn')return false;r.totalCents++;return true}],
   ['stock quantity', (kind,r)=>{if(kind!=='stockMovement'||r.source.kind!=='retailSale')return false;r.deltaMilli=-1000;return true}],
   ['excess return', (kind,r)=>{if(kind!=='retailReturn')return false;r.quantity=4;r.quantityMilli=4000;return true}],
+  ['retry identity', (kind,r)=>{if(kind!=='retailSale')return false;r.request.quantity=1;return true}],
  ]){
   const invalid=await changedArchive(saved,change),empty=await installation()
   try{const result=await restore(empty,invalid,{status:409});assert.match(result.error,/mallet_graph:/,label);assert.equal((await empty.state()).records.retailSale,undefined,label+' restores no receipt');assert.equal((await empty.state()).records.stockMovement,undefined,label+' restores no stock')}
