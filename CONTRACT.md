@@ -1876,13 +1876,13 @@ Provider sandboxes, official-schema fakes, run-auth and seeded capacity runs rem
 
 ## Status
 
-Judged from the code and tests at commit `0c4b8e0be86462c713e63dc7875074220be9e636` (28 October 2026).
+Judged from the code and tests at commit `b18e7415ba0d32b2e4af16c7d58bf6a2c7d25d1f` (30 October 2026).
 
 | Clauses | Done | Partial | Missing | Total |
 | --- | ---: | ---: | ---: | ---: |
 | Published | 1 | 8 | 0 | 9 |
-| Target and push further | 21 | 68 | 59 | 148 |
-| All | 22 | 76 | 59 | 157 |
+| Target and push further | 22 | 67 | 59 | 148 |
+| All | 23 | 75 | 59 | 157 |
 
 | Clause | Title | Kind | Status | Evidence | Gap |
 | --- | --- | --- | --- | --- | --- |
@@ -1939,7 +1939,7 @@ Judged from the code and tests at commit `0c4b8e0be86462c713e63dc7875074220be9e6
 | `PART-001` | Shop parts catalog and traceability | target | partial | `tests/mallet.test.mjs`; `tests/stock-trace-browser.mjs` | Not asserted in the old cited evidence: Both received lot quantities are independently asserted. Asserted: Installed lot use is read back; Installed use retains exact repair identity; Consumed supplier-lot search shows the repair; Unconsumed supplier-lot search excludes that repair. |
 | `PART-002` | Barcode receiving and stock counts | target | partial | `tests/mallet.test.mjs`; `tests/inventory-browser.mjs` | Not asserted in the old cited evidence: Stock movement ledger reconciles every receipt and variance; Receiving report reconciles to movement totals; Variance report reconciles to movement totals. Asserted: Receipt shortage is exact; Approved variance changes stock to the expected quantity. |
 | `PART-003` | Repair reservations and consumption | target | partial | `tests/mallet.test.mjs`; `tests/support/stock-consumption-journey.mjs`; `tests/inventory-browser.mjs` | Selected Pier movement authority, idempotent retry and source reconciliation remain unbuilt; the existing Pier connection exposes a catalog only. |
-| `BUY-001` | Purchase orders and goods receipts | target | partial | `tests/mallet.test.mjs`; `tests/purchasing-browser.mjs` | Not asserted in the old cited evidence: Two-line exact approved cart is read back; Full received quantity is read back separately. Asserted: Partial received quantity and backorder remain visible; Changed bill has a price exception; Changed bill has a quantity exception. |
+| `BUY-001` | Purchase orders and goods receipts | target | done | `tests/mallet.test.mjs` — "BUY-001 / OPS-001: approved spend, partial receipt, repair allocation, backorder, bill exceptions, closure and fresh recovery" (`tests/support/purchasing-journey.mjs`, purchasingJourney) proves exact saved and approved item identities, ordered thousandths, unit costs, tax, freight and total through public state and the purchasing report, distinct full and partial receipt identities and references, repair allocation, backorders, changed-bill exceptions, safe refusals, closure and exact fresh-owner recovery. "BUY-001: two-line spend approval, partial receiving, backorder and changed bill exception through native forms at 1440/390" (`tests/purchasing-browser.mjs`, purchasingBrowser) proves reloaded native approval, both exact receipt records and rendered quantities, retained exceptions and closure, with both release-width screens. |  |
 | `BUY-002` | Supplier stock and approved ordering | target | done | `tests/mallet.test.mjs`; `tests/support/supplier-orders-journey.mjs`; `tests/supplier-orders-browser.mjs`; `docs/supplier-ordering.md` |  |
 | `BUY-003` | PartsTech catalog and orders | target | missing |  | No PartsTech adapter, credential onboarding or supplier-event mapping. |
 | `BUY-004` | Nexpart catalog and orders | target | missing |  | No Nexpart connection or distributor onboarding. |

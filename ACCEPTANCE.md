@@ -8,12 +8,12 @@ The primary journey: check in the customer and asset, diagnose and inspect, pric
 
 | Tier | Done | Partial | Missing | Total |
 | --- | ---: | ---: | ---: | ---: |
-| Core | 22 | 76 | 54 | 152 |
+| Core | 23 | 75 | 54 | 152 |
 | Agent surface | 0 | 0 | 5 | 5 |
 | Later | 0 | 0 | 0 | 0 |
-| Full target | 22 | 76 | 59 | 157 |
+| Full target | 23 | 75 | 59 | 157 |
 
-Judged from the code and tests at commit `0c4b8e0be86462c713e63dc7875074220be9e636` (28 October 2026). Field proof register: 12 rows; 0 passed, 0 failed, 12 not run.
+Judged from the code and tests at commit `b18e7415ba0d32b2e4af16c7d58bf6a2c7d25d1f` (30 October 2026). Field proof register: 12 rows; 0 passed, 0 failed, 12 not run.
 
 ## Core
 
@@ -684,15 +684,15 @@ Core · target · **partial** · Cites BASE-ROLE-001, BASE-OPS-003, BASE-OPS-004
 
 #### BUY-001 — Purchase orders and goods receipts
 
-Core · target · **partial** · Rules D-1, D-2, D-3
+Core · target · **done** · Rules D-1, D-2, D-3
 
 **Requirement.** Create supplier POs from repair demand or stock needs with approved spend, ship-to, tax/freight and expected date; receive full/partial/backordered quantities against the PO, allocate to waiting ROs and match supplier bill before closure. GOV-001 governs the purchasing roles and limits for preparation and approval of the exact PO spend. Supplier tax and freight are recorded USD cents, each quantity uses integer thousandths of its part unit, and each extended unit cost rounds half-up to cents before summing. Goods receipt requires a matching part barcode, bin and unique receipt reference, adds only physically received quantity and reserves repair-demand receipts to the linked open RO. Outstanding quantity remains a backorder. Owner and admin operators may short-close all outstanding quantities with a required reason, actor and UTC time. The immutable decision retains original approval, ordered and physically received quantities and receipt references; it creates no stock movement and prevents later receipt of the short-closed quantity. Closure then requires a new bill matched to physically received quantities after the short-close, with the original approved unit costs, tax and freight; earlier bill exceptions remain visible. Bills retain sequential immutable versions and supplier invoice numbers; exact approved quantities less explicitly short-closed quantities, unit costs, supplier tax and freight must match cumulative physical receipts before closure. A changed bill remains an exception until a corrected bill matches; earlier exceptions remain visible. These are staff records, not supplier order submission, payment or accounting-posting claims; BUY-002 retains submission/acknowledgment and BOOKS-003 retains posting.
 
 **Acceptance.**
 1. Approve a two-line PO, receive one line and part of another, retain the backorder and match a changed supplier bill as an exception.
 
-**Evidence.** `tests/mallet.test.mjs`; `tests/purchasing-browser.mjs`
-**Gap.** Not asserted in the old cited evidence: Two-line exact approved cart is read back; Full received quantity is read back separately. Asserted: Partial received quantity and backorder remain visible; Changed bill has a price exception; Changed bill has a quantity exception.
+**Evidence.** `tests/mallet.test.mjs` — "BUY-001 / OPS-001: approved spend, partial receipt, repair allocation, backorder, bill exceptions, closure and fresh recovery" (`tests/support/purchasing-journey.mjs`, purchasingJourney) proves exact saved and approved item identities, ordered thousandths, unit costs, tax, freight and total through public state and the purchasing report, distinct full and partial receipt identities and references, repair allocation, backorders, changed-bill exceptions, safe refusals, closure and exact fresh-owner recovery. "BUY-001: two-line spend approval, partial receiving, backorder and changed bill exception through native forms at 1440/390" (`tests/purchasing-browser.mjs`, purchasingBrowser) proves reloaded native approval, both exact receipt records and rendered quantities, retained exceptions and closure, with both release-width screens.
+**Gap.** None.
 
 #### BUY-002 — Supplier stock and approved ordering
 
