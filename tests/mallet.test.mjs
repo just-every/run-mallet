@@ -34,6 +34,8 @@ import {inspectionBrowser} from './inspection-browser.mjs'
 import {supplementJourney} from './support/supplement-journey.mjs'
 import {qualityReady} from './support/quality-ready.mjs'
 import {test} from 'node:test'
+import {retailJourney} from './support/retail-journey.mjs'
+import {retailBrowser} from './retail-browser.mjs'
 import assert from 'node:assert/strict'
 import {portableRepair} from './support/portable-repair.mjs'
 import {connectorJourney} from './support/connector-journey.mjs'
@@ -44,6 +46,8 @@ import {run,installation,assetInput,booking,estimate,authorise,archive,restore,s
 
 test('ADV-003: source-cited blockers require actual evidence, exact consent and physical receipt, preserve handlers and recover privately',()=>run(blockerJourney))
 test('ADV-003: native blocker packet, handlers and proposal review at 1440 and 390',blockerBrowser)
+test('POS-001: cash receipts, exact replay, partial returns, stock custody, authority and fresh-owner recovery',()=>run(retailJourney))
+test('POS-001: native cash checkout and return forms at 1440 and 390',retailBrowser)
 
 test('native sign-in, CSRF, member isolation and immediate session revocation',()=>run(async h=>{
  await h.state({as:'',status:401})
