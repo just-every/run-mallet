@@ -23,7 +23,7 @@ import {diagnosisBrowser} from './diagnosis-browser.mjs'
 import {approvalJourney} from './support/approval-journey.mjs'
 import {approvalBrowser,chaseBrowser} from './approval-browser.mjs'
 import {chaseJourney} from './support/chase-journey.mjs'
-import {collaborationJourney} from './support/collaboration-journey.mjs'
+import {collaborationJourney,collaborationClock} from './support/collaboration-journey.mjs'
 import {collaborationBrowser} from './collaboration-browser.mjs'
 import {flowJourney} from './support/flow-journey.mjs'
 import {flowBrowser} from './flow-browser.mjs'
@@ -396,7 +396,7 @@ test('FLOW-002: delayed required parts, resource/labor plan, advisor promise not
 test('FLOW-002: failed/uncertain provider outcome claims one send and remains visible',promiseMailFailureJourney)
 test('FLOW-002: revised pickup promise and customer notice through native forms at 1440/390',promiseBrowser)
 
-test('FLOW-004 / FLOW-005: helper crew, dependent subtasks, mentioned advisor with media, acknowledged handoff, per-person time and recovery',()=>run(collaborationJourney))
+test('FLOW-004 / FLOW-005: helper crew, dependent subtasks, mentioned advisor with media, acknowledged handoff, per-person time and recovery',()=>run(collaborationJourney,{clock:collaborationClock}))
 test('FLOW-004 / FLOW-005: native helper, dependent subtasks, mention and acknowledged handoff at 1440/390',collaborationBrowser)
 test('FLOW-001 / REPORT-004 / REPORT-006: nine-stage board, measured delays, promises, gated moves, technician, overdue, priority and search filters, canceled and lost retention, recorded collection and recovery',()=>run(flowJourney))
 test('FLOW-001: native board filters, priority, cancel and recorded collection at 1440/390',flowBrowser)
