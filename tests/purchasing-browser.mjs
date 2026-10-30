@@ -4,7 +4,7 @@ import {mkdir} from 'node:fs/promises'
 import {join} from 'node:path'
 import {chromium} from '@playwright/test'
 import {installation} from './harness.mjs'
-import {purchasingFixture} from './support/purchasing-journey.mjs'
+import {purchasingFixture,assertApprovedPurchase,assertPartialPurchase} from './support/purchasing-journey.mjs'
 export async function purchasingBrowser(){
  const h=await installation({entry:'tests/dev-worker.ts',network:true,assets:true,bindings:{AUTH_LOCAL:'true',RER_DEV_KEY:randomBytes(32).toString('base64url')}});let browser
  try{
@@ -17,11 +17,37 @@ export async function purchasingBrowser(){
   await shot('01-purchase-order-form')
   await fill('purchase.create',{reference:f.input.reference,supplier:f.input.supplier,shipTo:f.input.shipTo,expectedAt:f.input.expectedAt,item0:f.item.id,quantity0:2,cost0:25,job0:f.job.id,item1:f.second.id,quantity1:4,cost1:10,taxUsd:7.5,freightUsd:5},'Prepare two-line PO')
   assert.ok((await p.locator('main').innerText()).includes('Prepared total $102.50'));assert.equal(await form('purchase.receive').count(),0);await shot('02-exact-spend-awaiting-approval')
-  await fill('purchase.approve',{reason:'Approve exact two-line PO'},'Approve spend');await shot('03-approved-spend')
+  const prepared=(await h.state()).records.purchaseOrder.find(r=>r.reference===f.input.reference),lineIds=prepared.lines.map(l=>l.id)
+  await fill('purchase.approve',{reason:'Approve exact two-line PO'},'Approve spend')
   let activeReference=f.input.reference
   const section=()=>p.locator('section.card').filter({has:p.getByRole('heading',{name:activeReference,exact:true})}),receive=async(lineId,item,quantity,reference)=>{await section().locator('summary').filter({hasText:/^Receive goods$/}).click();await fill('purchase.receive',{lineId,itemBarcode:item.barcode,binBarcode:f.bin.barcode,quantity,reference},'Receive PO goods')}
-  let po=(await h.state()).records.purchaseOrder[0]
-  await receive(po.lines[0].id,f.item,2,'synthetic-mallet-13');await receive(po.lines[1].id,f.second,1,'synthetic-mallet-14')
+  await p.goto(h.origin+'/app/purchasing')
+  let po=(await h.state()).records.purchaseOrder.find(r=>r.id===prepared.id)
+  assertApprovedPurchase(po,f,lineIds)
+  assertApprovedPurchase((await h.api('/api/mallet/purchasing')).find(r=>r.id===prepared.id),f,lineIds)
+  const renderedLines=section().locator('ul.list > li.plain')
+  assert.equal(await renderedLines.count(),2)
+  assert.equal(await renderedLines.nth(0).locator('strong').innerText(),f.item.name)
+  assert.ok((await renderedLines.nth(0).innerText()).includes('Ordered 2 × $25.00 · Received 0 · Backorder 2'))
+  assert.equal(await renderedLines.nth(1).locator('strong').innerText(),f.second.name)
+  assert.ok((await renderedLines.nth(1).innerText()).includes('Ordered 4 × $10.00 · Received 0 · Backorder 4'))
+  let text=await section().innerText()
+  for(const amount of ['Approved spend $102.50','supplier tax $7.50 and freight $5.00'])assert.ok(text.includes(amount))
+  await shot('03-approved-spend')
+  await receive(po.lines[0].id,f.item,2,'synthetic-mallet-13')
+  const fullReceipt=(await h.state()).records.purchaseReceipt.find(r=>r.reference==='synthetic-mallet-13')
+  await receive(po.lines[1].id,f.second,1,'synthetic-mallet-14')
+  await p.goto(h.origin+'/app/purchasing')
+  const report=(await h.api('/api/mallet/purchasing')).find(r=>r.id===po.id),receivedState=(await h.state()).records.purchaseReceipt
+  assertPartialPurchase(report,f,lineIds)
+  assert.deepEqual(receivedState.find(r=>r.id===fullReceipt.id),report.receipts.find(r=>r.reference==='synthetic-mallet-13'))
+  assert.deepEqual(receivedState.find(r=>r.reference==='synthetic-mallet-14'),report.receipts.find(r=>r.reference==='synthetic-mallet-14'))
+  assert.ok((await renderedLines.nth(0).innerText()).includes('Ordered 2 × $25.00 · Received 2 · Backorder 0'))
+  assert.ok((await renderedLines.nth(1).innerText()).includes('Ordered 4 × $10.00 · Received 1 · Backorder 3'))
+  const renderedReceipts=section().locator('section.card').filter({has:p.getByRole('heading',{name:'Goods receipts',exact:true})}).locator('p')
+  assert.equal(await renderedReceipts.count(),2)
+  assert.ok((await renderedReceipts.nth(0).innerText()).startsWith('synthetic-mallet-13 · '+f.item.name+' · 2 · '))
+  assert.ok((await renderedReceipts.nth(1).innerText()).startsWith('synthetic-mallet-14 · '+f.second.name+' · 1 · '))
   assert.ok((await section().innerText()).includes('Received 1 · Backorder 3'));assert.ok((await section().innerText()).includes('Reserved on receipt'));await shot('04-partial-receipt-and-backorder')
   await section().locator('summary').filter({hasText:/^Record supplier bill$/}).click();await fill('purchase.bill',{invoiceNumber:'synthetic-mallet-15',billQuantity0:2,billCost0:26,billQuantity1:4,billCost1:10,evidence:'Changed supplier invoice'},'Match supplier bill')
   assert.ok((await section().innerText()).includes('billed unit cost differs'));assert.ok((await section().innerText()).includes('quantities differ'));await shot('05-changed-bill-exception')

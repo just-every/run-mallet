@@ -6,6 +6,29 @@ export async function purchasingFixture(h){
  const input={reference:'synthetic-mallet-12',supplier:'Cedar Parts',shipTo:'Receiving bench, 17 Cedar Rd',expectedAt:'2026-10-23T09:00:00-04:00',taxCents:750,freightCents:500,lines:[{itemId:item.id,quantity:2,unitCents:2500,jobId:job.id},{itemId:second.id,quantity:4,unitCents:1000}]}
  return {item,bin,scans,second,job,input}
 }
+export function assertApprovedPurchase(po,{item,second,job},lineIds){
+ const cart=lines=>lines.map(({id,itemId,quantityMilli,unitCents,jobId})=>({id,itemId,quantityMilli,unitCents,jobId}))
+ const expected=[{id:lineIds[0],itemId:item.id,quantityMilli:2000,unitCents:2500,jobId:job.id},{id:lineIds[1],itemId:second.id,quantityMilli:4000,unitCents:1000,jobId:null}]
+ assert.deepEqual(cart(po.lines),expected,'Saved PO retains both independently specified items, quantities and unit costs')
+ assert.deepEqual(cart(po.approval.lines),expected,'Approval binds the exact two-line cart')
+ for(const saved of [po,po.approval]){
+  assert.equal(saved.taxCents,750,'Supplier tax is 750 cents')
+  assert.equal(saved.freightCents,500,'Freight is 500 cents')
+  assert.equal(saved.totalCents,10250,'Approved total is 10250 cents')
+ }
+}
+export function assertPartialPurchase(report,{item,second,bin},lineIds){
+ const full=report.receipts.find(r=>r.reference==='synthetic-mallet-13'),partial=report.receipts.find(r=>r.reference==='synthetic-mallet-14')
+ const receipt=r=>({purchaseId:r.purchaseId,lineId:r.lineId,itemId:r.itemId,binId:r.binId,quantityMilli:r.quantityMilli,reference:r.reference})
+ assert.ok(full,'The first line has its own retained full receipt')
+ assert.ok(partial,'The second line has its own retained partial receipt')
+ assert.notEqual(full.id,partial.id,'Full and partial receipts have distinct identities')
+ assert.equal(report.receipts.length,2)
+ assert.deepEqual(receipt(full),{purchaseId:report.id,lineId:lineIds[0],itemId:item.id,binId:bin.id,quantityMilli:2000,reference:'synthetic-mallet-13'})
+ assert.deepEqual(receipt(partial),{purchaseId:report.id,lineId:lineIds[1],itemId:second.id,binId:bin.id,quantityMilli:1000,reference:'synthetic-mallet-14'})
+ const quantities=report.lines.map(({id,itemId,receivedMilli,backorderMilli})=>({id,itemId,receivedMilli,backorderMilli}))
+ assert.deepEqual(quantities,[{id:lineIds[0],itemId:item.id,receivedMilli:2000,backorderMilli:0},{id:lineIds[1],itemId:second.id,receivedMilli:1000,backorderMilli:3000}])
+}
 export async function purchasingJourney(h){
  const {item,bin,second,job,input}=await purchasingFixture(h),member=await h.person('purchase-tech@example.test'),admin=await h.person('purchase-advisor@example.test','admin'),key=await h.command('agent.create',{label:'Purchasing boundary'}),agent={as:'',headers:{authorization:'Bearer '+key.token}},before=(await h.state()).records
  for(const command of ['purchase.create','purchase.approve','purchase.receive','purchase.bill','purchase.shortClose','purchase.close'])for(const opts of [{as:'',status:401},{as:member.cookie,status:403},{...agent,status:403},{headers:{origin:'https://elsewhere.test'},status:403}])await h.command(command,input,opts)
@@ -19,17 +42,25 @@ export async function purchasingJourney(h){
  await h.command('purchase.approve',{...refs(),version:2,reason:'Stale'},{status:409})
  po=await h.command('purchase.approve',{...refs(),reason:'Approved exact two-line spend'},{as:admin.cookie});assert.deepEqual(po.approval.lines,snapshot.lines);assert.equal(po.approval.totalCents,10250);assert.equal(po.approval.by.id,admin.id)
  const refresh=async()=>{po=(await h.state()).records.purchaseOrder.find(x=>x.id===po.id)}
+ await refresh()
+ const lineIds=snapshot.lines.map(l=>l.id),fixture={item,second,job,bin}
+ assertApprovedPurchase(po,fixture,lineIds)
+ assertApprovedPurchase((await h.api('/api/mallet/purchasing')).find(r=>r.id===po.id),fixture,lineIds)
  await h.command('purchase.receive',receipt(po.lines[0],second,1,'synthetic-mallet-13'),{status:409});await h.command('purchase.receive',receipt(po.lines[0],item,3,'synthetic-mallet-13'),{status:409})
- await h.command('purchase.receive',receipt(po.lines[0],item,2,'synthetic-mallet-13'));await refresh()
- await h.command('purchase.receive',receipt(po.lines[1],second,1,'synthetic-mallet-14'));await refresh()
+ const fullReceipt=await h.command('purchase.receive',receipt(po.lines[0],item,2,'synthetic-mallet-13'));await refresh()
+ const partialReceipt=await h.command('purchase.receive',receipt(po.lines[1],second,1,'synthetic-mallet-14'));await refresh()
  let report=(await h.api('/api/mallet/purchasing'))[0];assert.deepEqual(report.lines.map(l=>[l.receivedMilli,l.backorderMilli]),[[2000,0],[1000,3000]])
+ assertPartialPurchase(report,fixture,lineIds)
+ const receivedState=(await h.state()).records.purchaseReceipt
+ assert.deepEqual(receivedState.find(r=>r.id===fullReceipt.id),report.receipts.find(r=>r.reference==='synthetic-mallet-13'))
+ assert.deepEqual(receivedState.find(r=>r.id===partialReceipt.id),report.receipts.find(r=>r.reference==='synthetic-mallet-14'))
  let stock=await h.api('/api/mallet/inventory');assert.equal(stock.balances.find(b=>b.itemId===item.id).reservedMilli,2000);assert.equal(stock.balances.find(b=>b.itemId===item.id).availableMilli,0);assert.equal(stock.reservations[0].jobId,job.id)
  await h.command('purchase.receive',receipt(po.lines[1],second,1,'synthetic-mallet-14'),{status:409});await h.command('purchase.close',{...refs(),reason:'Cannot discard backorder'},{status:409})
  const billInput=()=>({...refs(),invoiceNumber:'synthetic-mallet-15',lines:po.lines.map(l=>({lineId:l.id,quantity:l.quantityMilli/1000,unitCents:l.unitCents})),taxCents:po.taxCents,freightCents:po.freightCents,evidence:'Full supplier invoice retained at counter'})
  let bill=await h.command('purchase.bill',{...billInput(),lines:billInput().lines.map((l,n)=>({...l,unitCents:l.unitCents+(n===0?100:0)}))});await refresh()
  assert.equal(bill.matched,false);assert.ok(bill.exceptions.some(e=>e.includes('unit cost')));assert.ok(bill.exceptions.some(e=>e.includes('quantities')))
  const retained=(await h.state()).records,backup=await archive(h),fresh=await installation({bindings:{OWNER_EMAIL:'purchase-recovery@example.test'}})
- try{await restore(fresh,backup);assert.deepEqual((await fresh.state()).records,retained);await fresh.command('purchase.close',{...refs(),reason:'Restored backorder still blocks'},{status:409});await fresh.state({as:h.owner,status:401});await fresh.state({...agent,status:401});await fresh.command('purchase.receive',receipt(po.lines[1],second,3,'synthetic-mallet-16'));assert.equal((await fresh.api('/api/mallet/purchasing'))[0].fullyReceived,true)}finally{await fresh.close()}
+ try{await restore(fresh,backup);assert.deepEqual((await fresh.state()).records,retained);const recovered=(await fresh.api('/api/mallet/purchasing')).find(r=>r.id===po.id);assertApprovedPurchase(recovered,fixture,lineIds);assertPartialPurchase(recovered,fixture,lineIds);await fresh.command('purchase.close',{...refs(),reason:'Restored backorder still blocks'},{status:409});await fresh.state({as:h.owner,status:401});await fresh.state({...agent,status:401});await fresh.command('purchase.receive',receipt(po.lines[1],second,3,'synthetic-mallet-16'));assert.equal((await fresh.api('/api/mallet/purchasing'))[0].fullyReceived,true)}finally{await fresh.close()}
  await h.command('purchase.receive',receipt(po.lines[1],second,3,'synthetic-mallet-16'));await refresh()
  await h.command('purchase.close',{...refs(),reason:'Changed cost still blocks'},{status:409})
  const badLines=billInput().lines.map(l=>({...l,lineId:po.lines[0].id}));await h.command('purchase.bill',{...billInput(),lines:badLines},{status:400})
