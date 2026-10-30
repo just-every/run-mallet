@@ -8,12 +8,12 @@ The primary journey: check in the customer and asset, diagnose and inspect, pric
 
 | Tier | Done | Partial | Missing | Total |
 | --- | ---: | ---: | ---: | ---: |
-| Core | 22 | 76 | 54 | 152 |
+| Core | 23 | 75 | 54 | 152 |
 | Agent surface | 0 | 0 | 5 | 5 |
 | Later | 0 | 0 | 0 | 0 |
-| Full target | 22 | 76 | 59 | 157 |
+| Full target | 23 | 75 | 59 | 157 |
 
-Judged from the code and tests at commit `0c4b8e0be86462c713e63dc7875074220be9e636` (28 October 2026). Field proof register: 12 rows; 0 passed, 0 failed, 12 not run.
+Judged from the code and tests at commit `b0ddaeaca5452fcbce6deee58d5f975d4f24438c` (30 October 2026). Field proof register: 12 rows; 0 passed, 0 failed, 12 not run.
 
 ## Core
 
@@ -33,15 +33,15 @@ Core · published · **partial** · Cites BASE-ACCESS-002, BASE-ACCESS-003, BASE
 
 #### WORKSHOP-001 — Register and visits
 
-Core · published · **partial** · Rules D-1, D-2, D-3
+Core · published · **done** · Rules D-1, D-2, D-3
 
 **Requirement.** Customer-linked assets have unique case-insensitive identifiers and retain every native visit. Booking snapshots customer and asset details, normalizes timezone-bearing ISO timestamps to UTC, assigns the operator ID, and refuses overlaps for either the bay or technician.
 
 **Acceptance.**
 1. Register an asset through the counter form, book repeat visits and try overlapping bay and technician bookings through the command API; inspect the conflict and complete service history.
 
-**Evidence.** `src/mallet/workshop.ts`; `tests/mallet.test.mjs`; `tests/browser-journey.mjs`
-**Gap.** Not asserted in the old cited evidence: Counter registration creates the asset; Technician collision outcome is read back; History download names the second visit. Asserted: Repeated visits remain in history; Bay collision is read back.
+**Evidence.** `tests/mallet.test.mjs` — booking rejects bay and technician collisions and keeps every asset visit; `tests/browser-journey.mjs` — workshopBrowser, registered as WORKSHOP-001: counter registration and exact repeat-visit history at 1440 and 390 in `tests/mallet.test.mjs`
+**Gap.** None.
 
 #### ESTIMATE-001 — Exact decision
 

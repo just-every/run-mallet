@@ -1876,18 +1876,18 @@ Provider sandboxes, official-schema fakes, run-auth and seeded capacity runs rem
 
 ## Status
 
-Judged from the code and tests at commit `0c4b8e0be86462c713e63dc7875074220be9e636` (28 October 2026).
+Judged from the code and tests at commit `b0ddaeaca5452fcbce6deee58d5f975d4f24438c` (30 October 2026).
 
 | Clauses | Done | Partial | Missing | Total |
 | --- | ---: | ---: | ---: | ---: |
-| Published | 1 | 8 | 0 | 9 |
+| Published | 2 | 7 | 0 | 9 |
 | Target and push further | 21 | 68 | 59 | 148 |
-| All | 22 | 76 | 59 | 157 |
+| All | 23 | 75 | 59 | 157 |
 
 | Clause | Title | Kind | Status | Evidence | Gap |
 | --- | --- | --- | --- | --- | --- |
 | `HTTP-001` | Private app boundary | published | partial | `src/mallet/http.ts`; `src/mallet/auth.ts`; `tests/mallet.test.mjs` | Not asserted in the old cited evidence: Private page refusal while signed out; Private state refusal while signed out; Private command refusal while signed out; Private export refusal while signed out; Revoked-session refusal; Cross-origin mutation refusal with no write; Authorized private-door success and unchanged refusal state. Asserted: Another role sees no assigned repair. |
-| `WORKSHOP-001` | Register and visits | published | partial | `src/mallet/workshop.ts`; `tests/mallet.test.mjs`; `tests/browser-journey.mjs` | Not asserted in the old cited evidence: Counter registration creates the asset; Technician collision outcome is read back; History download names the second visit. Asserted: Repeated visits remain in history; Bay collision is read back. |
+| `WORKSHOP-001` | Register and visits | published | done | `tests/mallet.test.mjs` — booking rejects bay and technician collisions and keeps every asset visit; `tests/browser-journey.mjs` — workshopBrowser, registered as WORKSHOP-001: counter registration and exact repeat-visit history at 1440 and 390 in `tests/mallet.test.mjs` | |
 | `ESTIMATE-001` | Exact decision | published | partial | `src/mallet/estimates.ts`; `tests/mallet.test.mjs`; `tests/browser-journey.mjs` | Not asserted in the old cited evidence: Prepared and revised exact API content; Stale approval refusal outcome; Printed handoff is read back; Accepted lines cannot be changed; Unapproved line refusal; Excess quantity refusal. Asserted: Partial authorization retains exact total. |
 | `WORK-001` | Authorized actuals | published | partial | `src/mallet/workshop.ts`; `src/mallet/model.ts`; `tests/mallet.test.mjs` | Not asserted in the old cited evidence: Assigned member actual is read back; Another-job refusal has unchanged actuals; Unapproved-line refusal has unchanged actuals; Excess-quantity refusal has unchanged actuals; Completed job retains actual actor; Completed job retains exact source revision. The native journeys exercise the workflow, but their title, performed step or uncited helper is not a point-level assertion here. |
 | `INVOICE-001` | One saved export | published | partial | `src/mallet/invoices.ts`; `tests/mallet.test.mjs`; `tests/browser-journey.mjs` | Not asserted in the old cited evidence: Approval history retains exact deciding actor and revision; Retry using the preceding version returns the same saved export; Actual-work invoice has the expected lines. Asserted: Exact invoice cent total; Repeated export identity is equal; Exactly one saved export; Exact approval history count. |

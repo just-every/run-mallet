@@ -18,13 +18,13 @@ A claim is done when every clause behind it is done, missing when every one is m
 | 10 | Inspection · 2 red, 3 yellow · texted to Dana Brooks | `DVI-001` done; `DVI-003` partial; `MSG-001` missing | partial |
 | 11 | Front brakes approved · cabin filter declined → due at 67,000 mi | `ESTIMATE-001` partial; `EST-005` done | partial |
 | 12 | Pads backordered at Worldpac → PartsTech +$8.40 · Dana re-approved 10:05 | `ADV-004` missing; `BUY-003` missing; `BUY-005` missing; `ESTIMATE-001` partial | partial |
-| 13 | Bay 3 · Luis Romero · 2.4 hrs sold · promise 5:00 pm · ready 4:10 | `WORKSHOP-001` partial; `FLOW-001` partial; `FLOW-002` done | partial |
+| 13 | Bay 3 · Luis Romero · 2.4 hrs sold · promise 5:00 pm · ready 4:10 | `WORKSHOP-001` done; `FLOW-001` partial; `FLOW-002` done | partial |
 | 14 | Paid by text · $531.70 incl. 7.5% tax | `PAY-003` missing; `TAX-001` partial | partial |
-| 15 | Six-stop day timeline with "Promise 5:00 pm · kept" | `WORKSHOP-001` partial; `FLOW-002` done | partial |
+| 15 | Six-stop day timeline with "Promise 5:00 pm · kept" | `WORKSHOP-001` done; `FLOW-002` done | done |
 | 16 | "Dana checks in from her phone at the drop box" | `INTAKE-003` done | done |
 | 17 | "Mallet decodes the VIN" | `VEH-001` missing | missing |
 | 18 | "has the repair order ready when Kayla opens it" | `INTAKE-003` done | done |
-| 19 | RO card: mileage in, last visit, "6 visits · 5 imported from Tekmetric" | `WORKSHOP-001` partial; `VEH-002` done; `MOVE-001` missing | partial |
+| 19 | RO card: mileage in, last visit, "6 visits · 5 imported from Tekmetric" | `WORKSHOP-001` done; `VEH-002` done; `MOVE-001` missing | partial |
 | 20 | "Luis inspects 39 points on a tablet" | `DVI-001` done | done |
 | 21 | "Every red and yellow item carries a measurement and a photo" | `DVI-001` done; `DVI-002` partial | partial |
 | 22 | Inspection texted, "Delivered 9:12 · opened 9:19" | `DVI-003` partial; `MSG-001` missing | partial |
@@ -66,4 +66,4 @@ A claim is done when every clause behind it is done, missing when every one is m
 | 58 | "100% free and open source. MIT licensed." | `OPEN-001` done | done |
 | 59 | "Free, open source shop management" | `OPEN-001` done | done |
 
-Claims: 59; 11 done, 36 partial, 12 missing.
+Claims: 59; 12 done, 35 partial, 12 missing.
