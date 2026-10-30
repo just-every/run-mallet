@@ -11,7 +11,7 @@ import {localHttps} from './support/local-https.mjs'
 const bundles={}
 // entry: the Worker under test; bindings: extra Worker bindings (the demo test sets RER_DEMO).
 export async function installation({entry='tests/worker.ts',bindings={},outboundService,mailService,network=false,assets=false,secureNetwork=false,localhost=false,onScratch,clock}={}) {
- const bundle=bundles[entry+String(clock??'')]??=await workerBundle(entry,clock)
+ let bundle=bundles[entry+String(clock??'')]??=await workerBundle(entry,clock)
  const directory=await mkdtemp(join(tmpdir(),'mallet-api-')),setup=randomBytes(32).toString('hex'),messages=[]
  let origin='https://127.0.0.1'
  // Everything the Worker logs, kept for tests that prove a secret never reaches a log.
@@ -65,7 +65,7 @@ export async function installation({entry='tests/worker.ts',bindings={},outbound
   }
   // The Worker's cron door at a chosen scheduled time (EST-006 reminders).
   const cron=async at=>{const result=await (await mf.getWorker()).scheduled({scheduledTime:new Date(at),cron:'*/15 * * * *'});assert.equal(result.outcome,'ok')}
-  return {get mf(){return mf},origin,owner,messages,logs,request,api,command,state,person,cron,stepUp,signInAs,async restart(){await mf.dispose();mf=new Miniflare(options());await mf.ready},async configure(values){Object.assign(bindings,values);await mf.setOptions(options());await mf.ready},async close(){await mf.dispose();await rm(directory,{recursive:true,force:true})}}
+  return {get mf(){return mf},origin,owner,messages,logs,request,api,command,state,person,cron,stepUp,signInAs,async advanceClock(at){assert.ok(clock&&Number.isFinite(Date.parse(at))&&Date.parse(at)>=Date.parse(clock),'Advance a pinned test clock monotonically');clock=at;bundle=await workerBundle(entry,clock);await mf.setOptions(options());await mf.ready},async restart(){await mf.dispose();mf=new Miniflare(options());await mf.ready},async configure(values){Object.assign(bindings,values);await mf.setOptions(options());await mf.ready},async close(){await mf.dispose();await rm(directory,{recursive:true,force:true})}}
  }catch(error){await mf.dispose();await rm(directory,{recursive:true,force:true});throw error}
 }
 export async function run(fn,options){const h=await installation(options);try{return await fn(h)}finally{await h.close()}}

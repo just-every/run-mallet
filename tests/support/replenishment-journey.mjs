@@ -95,13 +95,16 @@ export async function replenishmentOrderingJourney(){
   // A separately signed-in session has no fresh human confirmation.
   const unproven=await h.signInAs((await h.api('/auth/session')).operator.email)
   await h.command('purchase.submit',submit,{as:unproven,status:403});assert.equal(posts().length,0)
+  await h.advanceClock('2026-10-30T12:06:00Z');const beforeConfirmation=(await h.state()).records
+  const expiredProof=await h.command('purchase.submit',submit,{status:403});assert.equal(expiredProof.error,'step_up_required');assert.equal(posts().length,0);assert.deepEqual((await h.state()).records,beforeConfirmation)
+  await h.stepUp()
   await h.command('purchase.submit',{...submit,confirm:'no'},{status:409});assert.equal(posts().length,0)
   let submission=await h.command('purchase.submit',submit);assert.equal(submission.status,'uncertain');assert.equal(posts().length,1);assert.equal(edge.orders.size,1)
   assert.deepEqual(posts()[0].body,{clientReference:po.id,supplierId:'synthetic-mallet-203',quoteId:'synthetic-mallet-201',currency:'USD',totalCents:8300,shipTo:'Shelf A',lines:[{sku:f.item.sku,grade:'OE-equivalent',unit:'each',quantityMilli:8000,unitCents:1000}]})
   assert.equal(submission.replenishmentSource.purchaseId,po.replenishmentSource.purchaseId);assert.equal(submission.binId,f.bin.id);assert.equal(submission.policyVersion,policy.version)
   await h.restart()
   const responses=await Promise.all([h.request('/api/mallet/commands',{method:'POST',body:{command:'purchase.submit',input:submit}}),h.request('/api/mallet/commands',{method:'POST',body:{command:'purchase.submit',input:submit}})])
-  assert.ok(responses.some(r=>r.status===200));assert.ok(responses.every(r=>[200,409].includes(r.status)));submission=await h.command('purchase.submit',submit);assert.equal(submission.status,'acknowledged');assert.equal(posts().length,1);assert.equal(submission.orderId,'synthetic-mallet-210')
+  assert.equal(posts().length,1,'Concurrent replay must never repeat the supplier POST');assert.ok(responses.some(r=>r.status===200));assert.ok(responses.every(r=>[200,409].includes(r.status)));submission=await h.command('purchase.submit',submit);assert.equal(submission.status,'acknowledged');assert.equal(posts().length,1);assert.equal(submission.orderId,'synthetic-mallet-210')
   const report=await h.api('/api/mallet/replenishment');assert.deepEqual(report.map(r=>[r.onHandMilli,r.reservedMilli,r.availableMilli,r.openOrderMilli,r.demandMilli,r.projectedMilli,r.suggestedMilli]),[[2000,1000,1000,11000,2000,10000,0]])
   assert.deepEqual((await h.command('stock.replenish')).drafts,[])
   const saved=(await h.state()).records,fresh=await installation({...options,clock:'2026-10-30T14:00:00Z'})

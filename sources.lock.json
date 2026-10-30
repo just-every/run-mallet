@@ -5340,7 +5340,7 @@
       "executable": false
     },
     "tests/harness.mjs": {
-      "sha256": "81d1b4abe938d88e4f9486ebf85f16e63f1fb1cfd5880c267c8bb0a6cd0b67ea",
+      "sha256": "851e26f4e3447255be6788ff4cb518dae018ec9b48a427c99076a610e46d1405",
       "executable": false
     },
     "tests/inspection-browser.mjs": {
@@ -5760,7 +5760,7 @@
       "executable": false
     },
     "tests/support/replenishment-journey.mjs": {
-      "sha256": "e051f037981e17a3846b340ec833bf17885221f0d82a7a117d27bb0e43152faf",
+      "sha256": "8b0443a18647d939ec4d2773bfec6245d9bff0657f125c06ba26ed7eac96b6ab",
       "executable": false
     },
     "tests/support/report-csv.mjs": {
