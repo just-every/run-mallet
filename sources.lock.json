@@ -5240,7 +5240,7 @@
       "executable": false
     },
     "tests/calendar-browser.mjs": {
-      "sha256": "3cf34ff7a5e9b202a70ac8ecfb7c31e5419b281c6d6075e918d0244a1896a5bc",
+      "sha256": "a247c9305c291c10a4bf9cd145bd096b5af5d9d9f0893b6fbe347fc38f7bb3a1",
       "executable": false
     },
     "tests/check-in-browser.mjs": {
