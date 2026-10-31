@@ -75,6 +75,16 @@ export async function afterStep(context) {
   assert.deepEqual(await read(`mallet://${family}/${result.id}`), preparationRecord(expected), 'The link reads the exact retained native record and version')
   assert.equal(expected.version, result.version)
   assert.match(JSON.stringify(expected.preparedBy ?? expected.revisions.at(-1).preparedBy), / for /, 'Native readback retains agent attribution')
+  if (step.id === 'invoice') {
+   const approved = await native('/api/mallet/commands', { command: 'invoice.approve', input: { invoiceId: expected.id, version: expected.version, revision: expected.revision } })
+   const exported = await native('/api/mallet/commands', { command: 'invoice.export', input: { invoiceId: approved.id, version: approved.version } })
+   const saved = await native('/api/mallet/state')
+   assert.deepEqual(await read(`mallet://invoices/${expected.id}`), preparationRecord(saved.records.invoice.find(row => row.id === expected.id)), 'The original preparation link reflects the exact retained invoice after a native decision')
+   const graph = await read(`mallet://repairs/${expected.jobId}`)
+   assert.deepEqual(graph.records.export.find(row => row.id === exported.id), preparationRecord(saved.records.export.find(row => row.id === exported.id)), 'Repair resource readback retains the existing native export text and identity')
+   assert.equal(graph.records.export.find(row => row.id === exported.id).csv, exported.csv)
+   console.log(`PROBE BASE-AGENT-003 retained-invoice-export-${phase}: native person approval and export -> original preparation link reads current invoice and exact retained CSV record`)
+  }
  }
  if (step.id === 'dispatch' || step.id === 'read') {
   const id = step.id === 'dispatch' ? result.jobId : context.args.id

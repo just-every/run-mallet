@@ -80,7 +80,9 @@ outside this adopted registry. Native API clients and the separately scoped
 assistant do not acquire company-agent authority through this adoption.
 Customers, inspections, parts, orders and audit resource families, complete
 two-role UI parity, file-byte budget qualification and resource refresh remain
-unproved. No file bytes are served by these preparation templates.
+unproved. Original media bytes are not served. Retained invoice CSV text
+remains preparation data under the existing read authority; this adoption does
+not qualify file-byte budgets.
 Multi-sponsor, timed and queued execution, second-host
 operation and full owner administration remain unproved. The broader ct
 SURFACE-001–005 target and its complete repair-week journey remain open.

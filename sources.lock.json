@@ -612,7 +612,7 @@
       "executable": false
     },
     "docs/agent-door.md": {
-      "sha256": "958f7a1df2fd899d85c2de1a9e1b69d76f8a6e3f6f010f25be929e0e90e849be",
+      "sha256": "1785087003f3c7a0ab03f7889a8ac27772d5ef59642dfd41011d55816a887a58",
       "executable": false
     },
     "docs/background-jobs.md": {
@@ -5216,7 +5216,7 @@
       "executable": false
     },
     "tests/agent-door/resources.mjs": {
-      "sha256": "e8f031fa8aef62bab11dc52bcd101faee6b91c0f7b79c5fdf052699e544bcfaf",
+      "sha256": "27b093eed45f96e97b7cbcaa9760385c3a1264a9113eba12c97bd69e57297e19",
       "executable": false
     },
     "tests/agent-door/reviewer.mjs": {
