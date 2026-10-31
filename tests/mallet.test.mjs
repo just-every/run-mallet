@@ -42,6 +42,7 @@ import {securityBrowser} from './security-browser.mjs'
 import {linkProtectionJourney} from './support/link-protection-journey.mjs'
 import {secondFactorJourney,policyRecoveryJourney,stepUpJourney} from './support/strong-auth-journey.mjs'
 import {run,installation,assetInput,booking,estimate,authorise,archive,restore,snapshots} from './harness.mjs'
+import {csvRecords} from './support/report-csv.mjs'
 
 test('ADV-003: source-cited blockers require actual evidence, exact consent and physical receipt, preserve handlers and recover privately',()=>run(blockerJourney))
 test('ADV-003: native blocker packet, handlers and proposal review at 1440 and 390',blockerBrowser)
@@ -87,18 +88,29 @@ test('booking rejects bay and technician collisions and keeps every asset visit'
  const {asset,job}=await booking(h)
  const current=()=>h.state().then(s=>s.records.asset.find(a=>a.id===asset.id))
  const input={assetId:asset.id,version:(await current()).version,title:'Second visit',bayId:'Bay 1',technicianId:'Jordan',startAt:job.startAt,endAt:job.endAt}
- assert.equal((await h.command('job.book',input,{status:409})).error,'DISPATCH_CONFLICT')
- await h.command('job.book',{...input,bayId:'Bay 2',technicianId:job.technicianId},{status:409})
+ const before=(await h.state()).records
+ const unchanged=async()=>{const after=(await h.state()).records;assert.deepEqual(after.job,before.job,'Refused booking preserves every original job');assert.deepEqual(after.asset,before.asset,'Refused booking preserves exact asset fields, versions and visits')}
+ const expectedConflict=resources=>({jobId:job.id,title:job.title,bayId:job.bayId,technicianId:job.technicianId,startAt:job.startAt,endAt:job.endAt,resources})
+ const bay=await h.command('job.book',input,{status:409});assert.equal(bay.error,'DISPATCH_CONFLICT');assert.deepEqual(bay.details.conflicts,[expectedConflict(['bay'])]);await unchanged()
+ const technician=await h.command('job.book',{...input,bayId:'Bay 2',technicianId:job.technicianId},{status:409})
+ assert.equal(technician.error,'DISPATCH_CONFLICT');assert.deepEqual(technician.details.conflicts,[expectedConflict(['technician'])],'Technician-only collision identifies its original job and resource');await unchanged()
+ assert.equal((await h.command('asset.create',{...assetInput(),identifier:asset.identifier.toLowerCase()},{status:409})).error,'DUPLICATE');await unchanged()
  const post=(path,fields)=>h.mf.dispatchFetch(h.origin+path,{method:'POST',redirect:'manual',headers:{origin:h.origin,host:new URL(h.origin).host,'content-type':'application/x-www-form-urlencoded',cookie:h.owner},body:new URLSearchParams(fields).toString()})
  assert.equal((await post('/setup',{confirm:'yes',ratePercent:'10',partsTaxable:'yes',laborTaxable:'yes'})).status,303)
  const refused=await post('/app/actions',{command:'job.book',...input}),html=await refused.text()
  assert.equal(refused.status,409);assert.ok(html.includes(`/app/jobs/${job.id}`),'links the clashing visit');assert.ok(html.includes('Back to the booking form')&&html.includes('title=Second+visit'));assert.ok(!html.includes('DISPATCH_CONFLICT'))
+ await unchanged()
  assert.match(await (await h.request(`/app/assets/${asset.id}`)).text(),/<select name="technicianId"/)
- await h.command('job.book',{...input,startAt:'2026-10-20T09:00:00+10:00',endAt:'2026-10-20T10:00:00+10:00'})
+ const second=await h.command('job.book',{...input,startAt:'2026-10-20T09:00:00+10:00',endAt:'2026-10-20T10:00:00+10:00'})
  const history=await h.request(`/api/mallet/assets/${asset.id}/history.csv`)
- assert.equal(history.status,200);assert.match(await history.text(),/Second visit|job.book/)
- assert.equal((await current()).visits.length,2)
+ assert.equal(history.status,200)
+ const bookings=csvRecords(await history.text()).filter(row=>row.Event==='job.book')
+ assert.deepEqual(bookings.map(row=>row.Job).sort(),[job.id,second.id].sort(),'Downloaded CSV retains both distinct visit identities')
+ for(const visit of [job,second]){const row=bookings.find(row=>row.Job===visit.id);assert.equal(row.Asset,asset.label);assert.equal(row.Identifier,asset.identifier);assert.equal(JSON.parse(row.Details).technicianId,visit.technicianId)}
+ assert.deepEqual((await current()).visits,[job.id,second.id])
 }))
+
+test('WORKSHOP-001: counter registration and exact repeat-visit history at 1440 and 390',async()=>{const {workshopBrowser}=await import('./browser-journey.mjs');await workshopBrowser()})
 
 test('exact revision, partial authorisation and quantity ceilings protect customer consent',async()=>{
  await run(async h=>{
