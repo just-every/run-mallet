@@ -592,7 +592,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "98e2afda21565f28fa4ee4f310b5497716fdceefd18d749ffad3b4708fdff337",
+      "sha256": "a167024b615b2833ecab95ce8b8f2286f08770883f4436df3b8ec5012fbe1459",
       "executable": false
     },
     "deploy-demo.json": {
@@ -5212,7 +5212,7 @@
       "executable": false
     },
     "tests/agent-door/refused-classification.mjs": {
-      "sha256": "ec8966e8cd6b78124ef7f1a50fe64c245df0fa575613827528d641ad47e89f86",
+      "sha256": "aaef354105a656aac8704b1df2f0cc72f638f49dc1db2842e45774e33eeb8b0c",
       "executable": false
     },
     "tests/agent-door/reviewer.mjs": {
