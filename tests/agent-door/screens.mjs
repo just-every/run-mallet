@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict'
 import { mkdir } from 'node:fs/promises'
+import { userInfo } from 'node:os'
 import { chromium } from '@playwright/test'
 
 /** Render the real production responses with only the disposable native cookies. */
@@ -7,6 +8,7 @@ export async function memberScreens({ c, b, fixture, approval }) {
  const directory = process.env.MALLET_AGENT_SCREENS ?? '.cache/agent-member'
  await mkdir(directory, { recursive: true })
  const browser = await chromium.launch({ headless: true, executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH,
+  env: { ...process.env, HOME: userInfo().homedir },
   args: ['--use-mock-keychain', '--password-store=basic', '--disable-gpu'] })
  try {
   for (const [label, principal, pages] of [

@@ -5232,7 +5232,7 @@
       "executable": false
     },
     "tests/agent-door/screens.mjs": {
-      "sha256": "4a2b874374889a9d4442965d3f4160cd9cfc274fa16a9f9e2b38ba81092865d0",
+      "sha256": "bde189c05ba04b1187defdd854dcc01606a5a8230e184716958169b537663d8b",
       "executable": false
     },
     "tests/approval-browser.mjs": {
