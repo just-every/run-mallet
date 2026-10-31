@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import {run,booking} from '../harness.mjs'
 import {shopSetup} from './diagnosis-journey.mjs'
 import {autonomousPolicy,heldPolicy} from '../../src/modules/agent-door/conformance/crypto.mjs'
+import {totpCode} from './second-factor.mjs'
 
 const error=answer=>answer.result?._meta?.['com.runeditrun/error']
 const content=answer=>answer.result.structuredContent
@@ -14,6 +15,7 @@ const nextDay='2028-11-02T13:00:00Z'
 async function retryConflicts(h,document){
  await shopSetup(h)
  await h.api('/agents/api/policy',{document},{method:'PUT'})
+ const factor=await h.stepUp()
  const key=await h.command('agent.create',{label:'synthetic-mallet-943'})
  const agent={as:'',headers:{authorization:'Bearer '+key.token}}
  let rpcId=0
@@ -128,6 +130,7 @@ async function retryConflicts(h,document){
  // retained outcomes must survive both a Worker restart and more than 24 hours.
  await h.setClock(nextDay)
  owner=await h.signInAs('owner'+String.fromCharCode(64)+'example.test')
+ await h.api('/api/mallet/security/verify/totp',{code:totpCode(factor.secret,Date.parse(nextDay))},{as:owner})
  await h.restart()
  for(const {name,args,original} of retained){
   const before=await records(),replay=await call(name,args)
