@@ -256,11 +256,15 @@ test('INVOICE-001: exact approval history, actual-work rows and saved export ret
  const frozen=(await h.state()).records
  await h.command('invoice.export',{invoiceId:invoice.id,version:invoice.version-2},{status:409})
  await h.command('invoice.export',{invoiceId:invoice.id,version:invoice.version},{...agent,status:403})
+ const deniedDownload=await h.request(`/api/mallet/exports/${a.id}`,agent)
+ assert.equal(deniedDownload.status,403);assert.ok(!(await deniedDownload.text()).includes(a.csv),'Preparation credentials cannot download saved financial bytes')
  assert.deepEqual((await h.state()).records,frozen,'Stale and unauthorized retrieval cannot create exports or decisions')
  await h.command('agent.revoke',{id:key.id})
  const afterRevocation=(await h.state()).records
  await h.state({...agent,status:401})
  await h.command('invoice.export',{invoiceId:invoice.id,version:invoice.version},{...agent,status:401})
+ const revokedDownload=await h.request(`/api/mallet/exports/${a.id}`,agent)
+ assert.equal(revokedDownload.status,401);assert.ok(!(await revokedDownload.text()).includes(a.csv),'Revocation also closes the saved download door')
  assert.deepEqual((await h.state()).records,afterRevocation,'Revoked preparation credentials cannot change saved invoice evidence')
  console.log('PROBE INVOICE-001 approval: public invoice commands -> exact person and revision retained; unsafe decisions refused without writes')
  console.log('PROBE INVOICE-001 actuals: public state and CSV -> two authorized parts at 2500 cents, source revision 2, tax 500 and total 5500; declined labor excluded')
