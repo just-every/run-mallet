@@ -572,7 +572,7 @@
       "executable": false
     },
     "ACCEPTANCE.md": {
-      "sha256": "69ad3a9c2a4a8c5ccf6459b5026875a127c62d596c157246e2624c88b5cbb761",
+      "sha256": "9bb1dbb680833fb0a055077526c836797cd8940a4e0365417bf772453fec9075",
       "executable": false
     },
     "agent-surface.json": {
@@ -592,7 +592,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "79c00119874431424c84141ad09a17df51f8f5c43f5a72c923cc6bff9f0fd9e4",
+      "sha256": "fb4976134d31b60f2a8a63df559d29bcac9df00c5a9c275af98d7a03b56df16f",
       "executable": false
     },
     "deploy-demo.json": {
@@ -2888,7 +2888,7 @@
       "executable": false
     },
     "src/mallet/ui/supplier-returns.ts": {
-      "sha256": "7a7016ab35fa29ecad84945b330a9c376da98607d3c1a2d1599b0b44784a6cd7",
+      "sha256": "e5d10123786972628631551f399dd86d3db29d2b6133cd5620c37bbf3d143920",
       "executable": false
     },
     "src/mallet/ui/tax-custody.ts": {
@@ -5376,7 +5376,7 @@
       "executable": false
     },
     "tests/mallet.test.mjs": {
-      "sha256": "d4eea59fc06b131f4ffefc31e1c1a1385d9cb16bae4d449911c8617dd4b7bef3",
+      "sha256": "01151d7d76f2200c5cd41254f40f183907882a460703de783b83ac5046785c60",
       "executable": false
     },
     "tests/media-browser.mjs": {
@@ -5512,7 +5512,7 @@
       "executable": false
     },
     "tests/supplier-returns-browser.mjs": {
-      "sha256": "f5895e2b76bce1d0be243993da7791ec0e83a2ec126ea0702fcfefde44df9a14",
+      "sha256": "5de17905faa10a97e1c3edd712d28495ec0c1452ffcafa88d0591bb371b8e87f",
       "executable": false
     },
     "tests/support/ach-browser-steps.mjs": {
@@ -5872,7 +5872,7 @@
       "executable": false
     },
     "tests/support/supplier-returns-journey.mjs": {
-      "sha256": "3a573738e04ebe2ac9cedd593d65525dd63e7c6c7c6f29155c20a07833ffcfb8",
+      "sha256": "2d6c7ac3aa80ad716ca00eb1867203f4a3e8f1c2325102135f93d414061b5de3",
       "executable": false
     },
     "tests/support/tax-custody-journey.mjs": {
