@@ -2676,7 +2676,7 @@
       "executable": false
     },
     "src/mallet/ui/cores.ts": {
-      "sha256": "9f5bdb91e13b02058ed6092874f3fbdd55e72e736931a96b69b5a21c6397896b",
+      "sha256": "f7f78244d10cce673e651f1c963aa526f5a2530e1d157ee486bed00501c59c2a",
       "executable": false
     },
     "src/mallet/ui/coverage-follow-up.ts": {
@@ -5256,7 +5256,7 @@
       "executable": false
     },
     "tests/cores-browser.mjs": {
-      "sha256": "8f99b90d3ae59f967e69c940e163f98347e563b2b1aa9a7a420a12ad48c2950c",
+      "sha256": "cbf0e240dfd8b3968f15977d20c14320091f65b056d36adddd4146d152568fad",
       "executable": false
     },
     "tests/coverage-follow-up-browser.mjs": {
@@ -5376,7 +5376,7 @@
       "executable": false
     },
     "tests/mallet.test.mjs": {
-      "sha256": "34b214ecfbffbff4272eb33a668dbdb2d1a7f8c3c58fd6b972f10ae38d7c2a6e",
+      "sha256": "24a818d8f41ce053cb480722c65d8cb44def1297924bff544b8371560ca572b9",
       "executable": false
     },
     "tests/media-browser.mjs": {
@@ -5584,7 +5584,7 @@
       "executable": false
     },
     "tests/support/cores-journey.mjs": {
-      "sha256": "3daa110287dcf51428b26d0497f3b72b0291cbda1cfb8025de184c1190997921",
+      "sha256": "46d211d399923c80aa44b51bdf9b704074e8b9e46b50fd819134cdda85198819",
       "executable": false
     },
     "tests/support/coverage-follow-up-journey.mjs": {
