@@ -64,7 +64,7 @@ Core · published · **partial** · Cites BASE-ROLE-001 · Rules D-1, D-2, D-3
 **Acceptance.**
 1. As an assigned member record an authorized line; refuse another job, an unapproved line and excess quantity, then complete and inspect actor and revision evidence.
 
-**Evidence.** `src/mallet/workshop.ts`; `src/mallet/model.ts`; `tests/mallet.test.mjs`
+**Evidence.** `src/mallet/workshop.ts`; `src/mallet/model.ts`; `tests/mallet.test.mjs`; tests/browser-journey.mjs — estimateDecisionBrowser proves persisted actuals and completion.
 **Gap.** Not asserted in the old cited evidence: Assigned member actual is read back; Another-job refusal has unchanged actuals; Unapproved-line refusal has unchanged actuals; Excess-quantity refusal has unchanged actuals; Completed job retains actual actor; Completed job retains exact source revision. The native journeys exercise the workflow, but their title, performed step or uncited helper is not a point-level assertion here.
 
 #### INVOICE-001 — One saved export
