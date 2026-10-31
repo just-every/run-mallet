@@ -91,10 +91,15 @@ export async function afterStep(context) {
  const after = await json('/api/mallet/state')
  assert.deepEqual(after.records.estimate.find(row => row.id === draft.id), result, 'The separate draft persists the exact requested revision')
  assert.deepEqual(after.records.estimate.find(row => row.id === frozen.id), frozen, 'The success control leaves the customer-authorized estimate unchanged')
+ const afterReviews = (await json('/agents/api/reviews')).reviews
+ const newReviews = afterReviews.filter(row => !beforeReviews.some(prior => prior.id === row.id))
+ assert.equal(newReviews.length, phase === 'held' ? 1 : 0, 'Only a completed standard-review call creates a review')
  if (phase === 'held') {
   const review = success.result._meta['com.runeditrun/review']
   assert.ok(review?.id)
-  assert.ok((await json('/agents/api/reviews')).reviews.some(row => row.id === review.id && row.decision_id === success.decision.id))
+  assert.equal(newReviews[0].id, review.id)
+  assert.equal(newReviews[0].decision_id, success.decision.id)
+  assert.deepEqual(newReviews[0].classes, classes)
  }
  completed.add(phase)
  console.log(`PROBE BASE-AGENT-006 point-6 ${phase}: native customer authorization then two-line mallet.estimates.revise -> estimate_frozen, standard measure 2, policy revision ${revision}, refused audit, no review or native changes; separate draft persisted exact two-line revision totaling 6700 cents.`)
