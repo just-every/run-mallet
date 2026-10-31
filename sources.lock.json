@@ -576,7 +576,7 @@
       "executable": false
     },
     "agent-surface.json": {
-      "sha256": "8e35a4c385ee25f65ce228e8d85377d3bb9c4ebdfe21a36e1df8aefbd1fc4ef2",
+      "sha256": "2e690a59179f50489cfd3c492517d70725499ae413ae9b6b5c65f88cc4b68a99",
       "executable": false
     },
     "AGENTS.md": {
@@ -592,7 +592,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "d2250fb24e95a787a5a73473893937761b6eaf286d1f89a3e3f07a738ee67c3d",
+      "sha256": "171466dabc3401c6a0fdbe56fc54d9d62988bfc2de7b0bba564b984880689f60",
       "executable": false
     },
     "deploy-demo.json": {
@@ -2724,7 +2724,7 @@
       "executable": false
     },
     "src/mallet/ui/estimates.ts": {
-      "sha256": "939793758fe367e79c64b4bf34e99c534039febde241684457901ecd533ebe40",
+      "sha256": "e88b5f86fb9983ec7177a097d8d63c5c6666f76a616607a540fb267c8505a45f",
       "executable": false
     },
     "src/mallet/ui/flow.ts": {
@@ -5376,7 +5376,7 @@
       "executable": false
     },
     "tests/mallet.test.mjs": {
-      "sha256": "578b0ebc663a9da84de986a3ecd66ebe65dd448a9b79a16662dee7532a9969b9",
+      "sha256": "195e1224d04762ac3c6a893ab4dd9b75004ddddf9445b88501340d311436d532",
       "executable": false
     },
     "tests/media-browser.mjs": {
@@ -5928,7 +5928,7 @@
       "executable": false
     },
     "tests/worker.ts": {
-      "sha256": "287be85c45e764a6f3a6068a123002ccaf5554fa4e7d2bd89e939a334ecae8f0",
+      "sha256": "556ed953d6da6f3ec5a41c2b98aa101892c5bea9030639891c2f9d247f11d70a",
       "executable": false
     },
     "tsconfig.json": {

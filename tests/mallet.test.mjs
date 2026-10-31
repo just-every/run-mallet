@@ -1,4 +1,5 @@
 import {preparationKeyBrowser} from './browser-journey.mjs'
+import {agentAttributionBrowser} from './agent-attribution-browser.mjs'
 import {blockerJourney} from './support/blocker-journey.mjs'
 import {blockerBrowser} from './blocker-browser.mjs'
 import {enterpriseBrowser} from './enterprise-browser.mjs'
@@ -43,6 +44,7 @@ import {linkProtectionJourney} from './support/link-protection-journey.mjs'
 import {secondFactorJourney,policyRecoveryJourney,stepUpJourney} from './support/strong-auth-journey.mjs'
 import {run,installation,assetInput,booking,estimate,authorise,archive,restore,snapshots} from './harness.mjs'
 
+test('BASE-AGENT-008: exact agent preparation and distinct native owner approval at 1440',agentAttributionBrowser)
 test('ADV-003: source-cited blockers require actual evidence, exact consent and physical receipt, preserve handlers and recover privately',()=>run(blockerJourney))
 test('ADV-003: native blocker packet, handlers and proposal review at 1440 and 390',blockerBrowser)
 
