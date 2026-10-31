@@ -110,7 +110,7 @@ test('booking rejects bay and technician collisions and keeps every asset visit'
  assert.deepEqual((await current()).visits,[job.id,second.id])
 }))
 
-test('WORKSHOP-001: counter registration and exact repeat-visit history at 1440 and 390',async()=>{const {workshopBrowser}=await import('./browser-journey.mjs');await workshopBrowser()})
+test('WORKSHOP-001 and INVOICE-001: native registration, repeat visits and exact saved invoice at 1440 and 390',async()=>{const {workshopBrowser}=await import('./browser-journey.mjs');await workshopBrowser()})
 
 test('exact revision, partial authorisation and quantity ceilings protect customer consent',async()=>{
  await run(async h=>{
@@ -298,6 +298,44 @@ test('agent prepares, person approves, immutable actual-work invoice exports onc
  },{entry:'tests/support/preparation-worker.ts',clock:'2026-10-30T12:00:00Z',outboundService:async request=>{outboundCalls++;assert.equal(new URL(request.url).pathname,'/preparation-write');entered();await resumed;return new Response('continue')}})
  await preparationKeyBrowser()
 })
+
+test('INVOICE-001: exact actual-work lines, approval and both saved export retrieval versions',()=>run(async h=>{
+ const {job}=await booking(h),key=await h.command('agent.create',{label:'Workshop assistant'}),agent={as:'',headers:{authorization:`Bearer ${key.token}`}}
+ let q=await estimate(h,job,agent)
+ await h.command('estimate.approve',{estimateId:q.id,version:q.version,revision:1},{...agent,status:403})
+ q=await authorise(h,q,[q.revisions[0].lines[0].id])
+ let j=(await h.state()).records.job[0]
+ j=await h.command('work.record',{jobId:j.id,version:j.version,lineId:q.revisions[0].lines[0].id,quantity:2})
+ await qualityReady(h,j)
+ j=await h.command('job.complete',{jobId:j.id,version:j.version})
+ let invoice=await h.command('invoice.prepare',{jobId:j.id,version:j.version},agent)
+ assert.equal(invoice.totals.totalCents,5500);assert.equal(invoice.lines.length,1)
+ const lineId=q.revisions[0].lines[0].id,expectedLine={id:lineId,kind:'part',description:'Brake pads',quantity:2,quantityMilli:2000,unitCents:2500,taxable:true,taxRatePercent:10,taxRateMillionths:100000,subtotalCents:5000,salesTaxCents:500,totalCents:5500,sourceEstimateId:q.id,sourceRevision:1}
+ const lineFields=line=>Object.fromEntries(Object.keys(expectedLine).map(key=>[key,line[key]]))
+ assert.deepEqual(invoice.lines.map(lineFields),[expectedLine],'Invoice freezes only the independently specified authorized actual-work line')
+ assert.deepEqual(invoice.actuals,j.actuals);assert.equal(invoice.actuals[0].lineId,lineId);assert.equal(invoice.actuals[0].estimateId,q.id);assert.equal(invoice.actuals[0].revision,1);assert.equal(invoice.actuals[0].quantityMilli,2000)
+ const beforeRefusal=(await h.state()).records
+ await h.command('invoice.export',{invoiceId:invoice.id,version:invoice.version},{status:409})
+ await h.command('invoice.export',{invoiceId:invoice.id,version:invoice.version},{...agent,status:403})
+ await h.command('invoice.approve',{invoiceId:invoice.id,version:invoice.version,revision:2},{status:409})
+ const refused=(await h.state()).records
+ for(const kind of ['invoice','job','approval','export'])assert.deepEqual(refused[kind]??[],beforeRefusal[kind]??[],'Unsafe invoice action leaves '+kind+' unchanged')
+ invoice=await h.command('invoice.approve',{invoiceId:invoice.id,version:invoice.version,revision:1})
+ const approved=await h.state(),actor={id:approved.actor.id,name:approved.actor.name,role:approved.actor.role},approval=approved.records.approval.find(a=>a.subjectKind==='invoice'&&a.subjectId===invoice.id)
+ assert.deepEqual(invoice.approval.by,actor);assert.equal(invoice.approval.revision,1)
+ assert.deepEqual(approval.approvedBy,actor);assert.equal(approval.revision,1);assert.equal(approval.subjectVersion,invoice.version);assert.deepEqual(approval.preparedBy,invoice.preparedBy);assert.equal(approval.preparedBy.id,key.id)
+ const a=await h.command('invoice.export',{invoiceId:invoice.id,version:invoice.version}),exported=(await h.state()).records,current=exported.invoice.find(i=>i.id===invoice.id)
+ const b=await h.command('invoice.export',{invoiceId:invoice.id,version:current.version-1}),c=await h.command('invoice.export',{invoiceId:invoice.id,version:current.version})
+ assert.deepEqual(a,b);assert.deepEqual(a,c);assert.deepEqual(a.lines.map(lineFields),[expectedLine]);assert.equal(a.invoiceRevision,1)
+ const response=await h.request(`/api/mallet/exports/${a.id}`);assert.equal(response.status,200);const csv=await response.text();assert.match(csv,/55.00/);assert.equal(csv,a.csv)
+ const customer=assetInput()
+ assert.deepEqual(csvRecords(csv),[{InvoiceNumber:invoice.number,CustomerName:customer.customerName,CustomerEmail:customer.customerEmail,Vehicle:customer.label,Identifier:customer.identifier,JobId:job.id,EstimateRevision:'1',Description:'Brake pads',Kind:'part',Quantity:'2',UnitUSD:'25.00',SubtotalUSD:'50.00',SalesTaxUSD:'5.00',TotalUSD:'55.00',Currency:'USD',EstimateId:q.id}])
+ const after=(await h.state()).records
+ assert.equal(after.export.length,1);assert.equal(after.approval.length,2);assert.deepEqual(after.approval,approved.records.approval)
+ for(const kind of ['invoice','job','export'])assert.deepEqual(after[kind],exported[kind],'Both retrieval versions preserve '+kind)
+ await h.command('agent.revoke',{id:key.id})
+ await h.state({...agent,status:401})
+}))
 
 test('dispatch proposal is inert until a person approves current free resources',()=>run(async h=>{
  const {job}=await booking(h),key=await h.command('agent.create',{label:'Dispatcher'}),agent={as:'',headers:{authorization:`Bearer ${key.token}`}}
