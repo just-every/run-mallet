@@ -6,6 +6,72 @@ import assert from 'node:assert/strict'
 import {chromium} from '@playwright/test'
 import {mkdir,readFile} from 'node:fs/promises'
 import {join} from 'node:path'
+import {csvRecords} from './support/report-csv.mjs'
+
+const counterAsset={customerName:'Northside Cycles',customerEmail:['synthetic-mallet-1','example.test'].join('@'),label:'2019 Trek FX 3',identifier:'TREK-FX3-2019'}
+async function counterRegistration(page,click) {
+ await page.getByRole('link',{name:'New repair order'}).first().click();await page.waitForURL(url=>url.pathname==='/app/customers')
+ await page.getByLabel('Customer name',{exact:true}).fill(counterAsset.customerName)
+ await page.getByLabel('Customer email').fill(counterAsset.customerEmail)
+ await page.getByLabel('Vehicle',{exact:true}).fill(counterAsset.label)
+ await page.getByLabel('Plate or VIN').fill(counterAsset.identifier)
+ await click('Add vehicle');await page.reload()
+ const assetUrl=page.url(),assetId=new URL(assetUrl).pathname.split('/').at(-1)
+ const response=await page.request.get(new URL('/api/mallet/state',assetUrl).href);assert.equal(response.status(),200)
+ const state=await response.json(),asset=state.records.asset.find(a=>a.id===assetId)
+ assert.ok(asset,'Counter registration persists the asset reached by the form redirect')
+ assert.deepEqual(Object.fromEntries(Object.keys(counterAsset).map(key=>[key,asset[key]])),counterAsset,'Saved customer, vehicle and identifier match the entered counter fields')
+ assert.equal(asset.assetType,'vehicle');assert.equal(asset.version,1);assert.deepEqual(asset.visits,[])
+ for(const [label,key] of [['Customer name','customerName'],['Customer email','customerEmail'],['Vehicle','label'],['Plate or VIN','identifier']])assert.equal(await page.getByLabel(label,{exact:true}).inputValue(),counterAsset[key],'Reloaded asset editor retains '+label)
+ return {assetUrl,assetId,technicianId:state.actor.id}
+}
+async function counterVisit(page,click,{title,bayId,technicianId,startAt,endAt}) {
+ await page.getByLabel('Repair request').fill(title)
+ await page.getByLabel('Bay',{exact:true}).fill(bayId)
+ await page.locator('select[name=technicianId]').selectOption(technicianId)
+ await page.getByLabel('Start (with timezone)').fill(startAt)
+ await page.getByLabel('End (with timezone)').fill(endAt)
+ await click('Book visit');await page.waitForURL(url=>url.pathname.startsWith('/app/jobs/'))
+ const id=new URL(page.url()).pathname.split('/').at(-1),state=await (await page.request.get(new URL('/api/mallet/state',page.url()).href)).json(),job=state.records.job.find(j=>j.id===id)
+ assert.ok(job,'Counter booking persists its own visit')
+ assert.deepEqual({title:job.title,bayId:job.bayId,technicianId:job.technicianId,startAt:job.startAt,endAt:job.endAt},{title,bayId,technicianId,startAt:new Date(startAt).toISOString(),endAt:new Date(endAt).toISOString()})
+ assert.deepEqual(job.asset,{...counterAsset,assetType:'vehicle',specifications:{}},'Booking freezes the registered customer and vehicle')
+ return job
+}
+async function counterHistory(page,assetUrl,visits,directory) {
+ await page.goto(assetUrl);await page.reload()
+ const state=await (await page.request.get(new URL('/api/mallet/state',assetUrl).href)).json(),assetId=new URL(assetUrl).pathname.split('/').at(-1),asset=state.records.asset.find(a=>a.id===assetId)
+ assert.deepEqual([...asset.visits].sort(),visits.map(j=>j.id).sort(),'Register retains both exact native visit identities')
+ assert.equal(await page.locator('.list li').count(),2)
+ for(const visit of visits)assert.equal(await page.locator(`.list a[href="/app/jobs/${visit.id}"]`).getByText(visit.title,{exact:true}).count(),1,'Rendered history links the exact visit')
+ const [download]=await Promise.all([page.waitForEvent('download'),page.getByRole('link',{name:'Download service history CSV'}).click()])
+ const path=join(directory,'service-history.csv');await download.saveAs(path)
+ const bookings=csvRecords(await readFile(path,'utf8')).filter(row=>row.Event==='job.book')
+ assert.deepEqual(bookings.map(row=>row.Job).sort(),visits.map(j=>j.id).sort(),'Downloaded history contains both exact native bookings')
+ for(const visit of visits){const row=bookings.find(row=>row.Job===visit.id);assert.equal(row.Asset,counterAsset.label);assert.equal(row.Identifier,counterAsset.identifier);assert.equal(JSON.parse(row.Details).technicianId,visit.technicianId)}
+}
+
+export async function workshopBrowser() {
+ const {installation}=await import('./harness.mjs'),{randomBytes}=await import('node:crypto')
+ const h=await installation({entry:'tests/dev-worker.ts',network:true,assets:true,bindings:{AUTH_LOCAL:'true',RER_DEV_KEY:randomBytes(32).toString('base64url')}})
+ const directory=process.env.MALLET_SCREENSHOTS??'.cache/workshop-browser';let browser
+ try {
+  await mkdir(directory,{recursive:true})
+  browser=await chromium.launch({headless:true,...(process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH?{executablePath:process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH}:{}),args:['--no-sandbox','--use-mock-keychain','--password-store=basic']})
+  const context=await browser.newContext({viewport:{width:1440,height:1000},timezoneId:'America/New_York'})
+  await context.addCookies(h.owner.split('; ').map(pair=>({name:pair.slice(0,pair.indexOf('=')),value:pair.slice(pair.indexOf('=')+1),url:h.origin})))
+  const page=await context.newPage(),errors=[];page.on('pageerror',error=>errors.push(error.message))
+  const click=async name=>{await page.getByRole('button',{name,exact:true}).click();await page.waitForLoadState('domcontentloaded')}
+  const shot=async name=>{for(const width of [1440,390]){await page.setViewportSize({width,height:1000});assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'Workshop fits '+width);await page.screenshot({path:join(directory,`${name}-${width}.png`),fullPage:true})}await page.setViewportSize({width:1440,height:1000})}
+  await page.goto(h.origin+'/setup');await page.getByLabel('Sales tax rate (%)').fill('10');await page.getByLabel('Labor is taxable').check();await page.getByRole('checkbox',{name:'I confirm this owner account is ready to use.'}).check();await click('Finish setup')
+  const {assetUrl,technicianId}=await counterRegistration(page,click);await shot('01-registered-asset')
+  const first=await counterVisit(page,click,{title:'Brake pads and safety inspection',bayId:'Bay 2',technicianId,startAt:'2026-10-19T09:00:00-04:00',endAt:'2026-10-19T11:00:00-04:00'})
+  await page.goto(assetUrl)
+  const second=await counterVisit(page,click,{title:'Follow-up wheel alignment',bayId:'Bay 3',technicianId,startAt:'2026-11-02T09:00:00-05:00',endAt:'2026-11-02T10:00:00-05:00'})
+  await counterHistory(page,assetUrl,[first,second],directory);await shot('02-repeat-visit-history')
+  assert.deepEqual(errors,[])
+ }finally{await browser?.close();await h.close()}
+}
 
 export async function browserJourney(openUrl,{directory='.cache/browser',fixtures='tests/fixtures/repairshopr',fresh=false,paywall}={}) {
  await mkdir(directory,{recursive:true})
@@ -31,18 +97,8 @@ export async function browserJourney(openUrl,{directory='.cache/browser',fixture
   }
   const click=async name=>{await page.getByRole('button',{name,exact:true}).click();await page.waitForLoadState('domcontentloaded')}
   await shot('01-board')
-  await page.getByRole('link',{name:'New repair order'}).first().click();await page.waitForURL(url=>url.pathname==='/app/customers')
-  await page.getByLabel('Customer name',{exact:true}).fill('Northside Cycles')
-  await page.getByLabel('Customer email').fill('service@northside.example')
-  await page.getByLabel('Vehicle').fill('2019 Trek FX 3')
-  await page.getByLabel('Plate or VIN').fill('TREK-FX3-2019')
-  await click('Add vehicle');const assetUrl=page.url();await shot('02-asset')
-  await page.getByLabel('Repair request').fill('Brake pads and safety inspection')
-  await page.getByLabel('Bay',{exact:true}).fill('Bay 2')
-  await page.locator('select[name=technicianId]').selectOption({index:0})
-  await page.getByLabel('Start (with timezone)').fill('2026-10-19T09:00:00-04:00')
-  await page.getByLabel('End (with timezone)').fill('2026-10-19T11:00:00-04:00')
-  await click('Book visit');const jobUrl=page.url();await shot('03-booked')
+  const {assetUrl,technicianId}=await counterRegistration(page,click);await shot('02-asset')
+  const firstVisit=await counterVisit(page,click,{title:'Brake pads and safety inspection',bayId:'Bay 2',technicianId,startAt:'2026-10-19T09:00:00-04:00',endAt:'2026-10-19T11:00:00-04:00'}),jobUrl=page.url();await shot('03-booked')
   const estimateForm=page.locator('form').filter({has:page.getByRole('button',{name:'Prepare estimate',exact:true})})
   await estimateForm.getByLabel('Part description').fill('Shimano B05S brake pads')
   await estimateForm.getByLabel('Part unit price (before tax)').fill('32.50')
@@ -70,10 +126,8 @@ export async function browserJourney(openUrl,{directory='.cache/browser',fixture
   await download.saveAs(join(directory,'invoice.csv'))
   assert.match(await readFile(join(directory,'invoice.csv'),'utf8'),/35.75/)
   await page.goto(assetUrl);await shot('14-service-history')
-  await page.getByLabel('Repair request').fill('Follow-up wheel alignment')
-  await page.getByLabel('Start (with timezone)').fill('2026-11-02T09:00:00-05:00')
-  await page.getByLabel('End (with timezone)').fill('2026-11-02T10:00:00-05:00')
-  await click('Book visit');await page.goto(assetUrl);assert.equal(await page.locator('.list li').count(),2);await shot('15-repeat-visit')
+  const secondVisit=await counterVisit(page,click,{title:'Follow-up wheel alignment',bayId:'Bay 1',technicianId,startAt:'2026-11-02T09:00:00-05:00',endAt:'2026-11-02T10:00:00-05:00'})
+  await counterHistory(page,assetUrl,[firstVisit,secondVisit],directory);await shot('15-repeat-visit')
   const state=await (await page.request.get(origin+'/api/mallet/state')).json(),followup=state.records.job.find(j=>j.title==='Follow-up wheel alignment')
   const send=async(command,input,headers={})=>{const response=await page.request.post(origin+'/api/mallet/commands',{headers:{Origin:origin,...headers},data:{command,input}});assert.equal(response.status(),200);return response.json()}
   const preparation=await send('agent.create',{label:'Dispatch assistant'})
