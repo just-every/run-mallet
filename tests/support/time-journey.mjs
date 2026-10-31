@@ -19,7 +19,12 @@ export async function timeJourney(h,{person=h.person}={}){
  const original=(await h.state()).records.timeEntry,clock=original.find(e=>e.id===attendance.id),firstStopped=original.find(e=>e.id===first.id),breakStopped=original.find(e=>e.id===pause.id),end=Date.parse(clock.revisions.at(-1).endAt)
  const stamp=seconds=>new Date(end-seconds*1000).toISOString(),propose=(entry,startAt,endAt,reason,options=as)=>h.command('time.correct',{entryId:entry.id,entryVersion:entry.version,startAt,endAt,reason},options)
  await propose(clock,stamp(28800),stamp(0),'',{...as,status:400})
+ const beforeDenied=(await h.state()).records,targetBeforeDenied=beforeDenied.timeEntry.find(e=>e.id===clock.id)
+ assert.ok(targetBeforeDenied,'The colleague correction targets an existing stopped attendance interval')
  await propose(clock,stamp(28800),stamp(0),'Colleague cannot alter attendance',{...otherAs,status:403})
+ const afterDenied=(await h.state()).records
+ assert.deepEqual(afterDenied.timeEntry.find(e=>e.id===clock.id),targetBeforeDenied,'A denied colleague correction preserves the original entry, version and every revision')
+ assert.deepEqual(afterDenied.timeCorrection,beforeDenied.timeCorrection,'A denied colleague correction creates no proposal and changes no correction records')
  const attendanceCorrection=await propose(clock,stamp(28800),stamp(0),'Missed clock-in at shift start')
  assert.equal((await h.state()).records.timeEntry.find(e=>e.id===clock.id).revisions.length,clock.revisions.length,'TIME-001 proposing does not change time totals')
  await h.command('time.approveCorrection',{correctionId:attendanceCorrection.id,correctionVersion:attendanceCorrection.version},{...as,status:403})
