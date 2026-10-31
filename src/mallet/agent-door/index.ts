@@ -27,7 +27,7 @@ export async function malletAgentDoor(original: Bindings) {
   const name = await settings.resolve('display_name', 'Mallet')
   return createAgentDoor({ seed: 'mallet', name: typeof name === 'string' ? name : 'Mallet', specialist: 'service advisor',
     db: env.DB, origin: env.AUTH_ORIGIN, trust: trust(env), people: nativePeople(env),
-    capabilities: ['tools', 'policy', 'pause', 'audit', 'idempotency'],
+    capabilities: ['tools', 'resources', 'policy', 'pause', 'audit', 'idempotency'],
     tools: nativeTools, resources: repairResources, localCredentials: request => localPreparation(request, env),
     notTools: notTools.map(item => ({ clauses: [...item.clauses], reason: item.reason })),
 

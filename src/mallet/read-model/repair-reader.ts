@@ -29,7 +29,7 @@ export class RepairReader {
  }
  /** Member access is independently checked for every referenced repair. Agents receive only their native preparation surface. */
  private recordScope(){
-  if(this.actor.role==='agent')return {sql:"r.kind IN ('job','asset','estimate','invoice','approval','export','taxSettings','rateProfile')",params:[]}
+  if(this.actor.role==='agent')return {sql:"r.kind IN ('job','asset','estimate','invoice','proposal','approval','export','taxSettings','rateProfile')",params:[]}
   if(this.actor.role!=='member')return {sql:this.actor.role==='owner'?'1=1':"r.kind<>'diagnosticResult'",params:[]}
   return {sql:`r.kind<>'diagnosticResult' AND (r.kind<>'job' OR ${this.crew('r')}) AND (json_extract(r.value,'$.jobId') IS NULL OR EXISTS(SELECT 1 FROM mallet_records j WHERE j.kind='job' AND j.id=json_extract(r.value,'$.jobId') AND ${this.crew()}))`,params:[...this.crewParams,...this.crewParams]}
  }

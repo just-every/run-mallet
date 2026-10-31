@@ -1,3 +1,4 @@
+import {resourceAuthorityJourney} from './agent-door/resource-authority.mjs'
 import {preparationKeyBrowser} from './browser-journey.mjs'
 import {blockerJourney} from './support/blocker-journey.mjs'
 import {blockerBrowser} from './blocker-browser.mjs'
@@ -628,3 +629,5 @@ test('ADV-005: cited declined-work review preserves decisions, refuses stale or 
 test('ADV-005: owner reviews later mileage, replacement inspection and advisory history at 1440 and 390',async()=>{const {declinedReviewBrowser}=await import('./declined-work-review-browser.mjs');await declinedReviewBrowser()})
 test('RETURN-002: reviewed CA and TX storage versions, notice clocks, disposal refusal, payment release and private recovery',()=>run(async h=>{const {storageJourney}=await import('./support/storage-journey.mjs');await storageJourney(h)}))
 test('RETURN-002: native storage rules, notices, legal refusal and released ledger at 1440 and 390',async()=>{const {storageBrowser}=await import('./storage-browser.mjs');await storageBrowser()})
+
+test('agent preparation resources retain exact outcomes and enforce current native authority with attributable browser readback',resourceAuthorityJourney)

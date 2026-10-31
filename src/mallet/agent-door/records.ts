@@ -11,16 +11,19 @@ function reader(person: Person): Actor {
   return { id: person.id, name: person.name, role: person.role === 'member' ? 'member' : 'agent' }
 }
 
+function preparationView(projected: Awaited<ReturnType<typeof load>>) {
+  const allowed = new Set(['asset', 'job', 'estimate', 'invoice', 'proposal', 'approval', 'export', 'taxSettings'])
+  return { ...projected, records: Object.fromEntries(Object.entries(projected.records).filter(([kind]) => allowed.has(kind))) }
+}
+
 export async function readableState(ctx: Pick<ToolContext, 'db' | 'person' | 'agent'>) {
   const authority = await nativeAuthority(ctx)
-  const projected = visible(await load(ctx.db), reader(ctx.person))
-  const allowed = new Set(['asset', 'job', 'estimate', 'invoice', 'proposal', 'approval', 'export', 'taxSettings'])
-  const state = { ...projected, records: Object.fromEntries(Object.entries(projected.records).filter(([kind]) => allowed.has(kind))) }
+  const state = preparationView(visible(await load(ctx.db), reader(ctx.person)))
   if (!await ctx.db.prepare(`SELECT 1 WHERE (${authority.sql})`).bind(...authority.params).first()) throw new ToolRefusal('sponsor_unavailable')
   return state
 }
 
-export async function readRepair(id: string, ctx: ToolContext) {
+export async function readRepair(id: string, ctx: Pick<ToolContext, 'db' | 'person' | 'agent'>) {
   try {
     const authority = await nativeAuthority(ctx)
     return visible(await loadRepairState(ctx.db, reader(ctx.person), authority, id), reader(ctx.person))
@@ -41,8 +44,10 @@ export const repairResources: ResourceDefinition[] = Object.entries(families).ma
     const match = uri.match(new RegExp(`^mallet://${family}/([^/?#]+)$`))
     if (!match) return null
     try {
-      const state = await readableState({ ...ctx, agent: { id: '', name: '' } })
-      const row = state.records[kind]?.find(row => row.id === decodeURIComponent(match[1]))
+      const id = decodeURIComponent(match[1])
+      if (family === 'repairs') return { json: preparationView(await readRepair(id, ctx)), untrusted: true }
+      const state = await readableState(ctx)
+      const row = state.records[kind]?.find(row => row.id === id)
       return row ? { json: row, untrusted: true } : null
     } catch { return null }
   },
