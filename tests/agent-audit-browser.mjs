@@ -75,6 +75,15 @@ export async function agentAuditBrowser() {
    await page.locator('section[aria-labelledby="week-title"]').screenshot({path:join(directory,'weekly-counts-' + width + '.png')})
   }
   assert.deepEqual((await h.state()).records, before, 'Opening audit pages and Agents never alters business records')
+  await h.command('agent.revoke', {id:key.id})
+  const revokedBefore = (await h.state()).records
+  const denied = await tool('mallet.repairs.read', {id:job.id})
+  assert.equal(denied.status, 401, 'A revoked preparation key cannot create another private-data read')
+  assert.equal(denied.result, undefined, 'Revocation exposes no retained private result')
+  const retained = await auditRows(context)
+  assert.deepEqual(retained.rows, rows, 'Revocation preserves every original audit row, name and outcome without adding a successful call')
+  assert.ok(retained.rows.every(row => row.agent.name === key.label), 'Retained audit names keep the original agent identity')
+  assert.deepEqual((await h.state()).records, revokedBefore, 'The revoked read cannot change the business records')
   console.log('PROBE BASE-AGENT-009 point-3-browser: native write, 205 reads, review and blocked refusal; ' + rows.length + ' unique ordered rows; UTC week counts 206 autonomous, 1 review, 1 blocked at 1440 and 390; adjacent weeks excluded; business records unchanged.')
  } finally {
   await browser?.close()

@@ -5204,7 +5204,7 @@
       "executable": false
     },
     "tests/agent-audit-browser.mjs": {
-      "sha256": "9db5e135bc0ec11f5a4154e580a46bfc1595cab0f0d5a7e790b2da33c246d243",
+      "sha256": "56a6eea85911ca6ef324dfd6f4a67dc2c65a57b20db61fccec908d7b3c0d278f",
       "executable": false
     },
     "tests/agent-door/audit-counts.mjs": {
