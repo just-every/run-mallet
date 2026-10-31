@@ -39,6 +39,7 @@
       "browser": true,
       "hosted": false,
       "commands": [
+        "pnpm run build",
         "node --test --test-concurrency=1 --test-name-pattern='1440|390' --test-skip-pattern='^(?:GOV-004|GOV-005|GOV-006|OPS-002)' tests/mallet.test.mjs"
       ]
     },
