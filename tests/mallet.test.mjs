@@ -43,6 +43,9 @@ import {linkProtectionJourney} from './support/link-protection-journey.mjs'
 import {secondFactorJourney,policyRecoveryJourney,stepUpJourney} from './support/strong-auth-journey.mjs'
 import {run,installation,assetInput,booking,estimate,authorise,archive,restore,snapshots} from './harness.mjs'
 import {csvRecords} from './support/report-csv.mjs'
+import {agentTransportJourney} from './support/agent-transport-journey.mjs'
+
+test('BASE-AGENT-001: oversized HTTP preparations preserve populated business records before one bounded draft',()=>run(agentTransportJourney,{entry:'tests/support/agent-transport-worker.ts',network:true,bindings:{AUTH_LOCAL:'true',RER_DEV_KEY:randomBytes(32).toString('base64url')}}))
 
 test('ADV-003: source-cited blockers require actual evidence, exact consent and physical receipt, preserve handlers and recover privately',()=>run(blockerJourney))
 test('ADV-003: native blocker packet, handlers and proposal review at 1440 and 390',blockerBrowser)
