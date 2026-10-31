@@ -592,7 +592,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "79c00119874431424c84141ad09a17df51f8f5c43f5a72c923cc6bff9f0fd9e4",
+      "sha256": "bc9e9112f366f2474f6b989bf45320b3190714c6505b9358adaad425bfdfecae",
       "executable": false
     },
     "deploy-demo.json": {
@@ -5888,7 +5888,7 @@
       "executable": false
     },
     "tests/support/time-journey.mjs": {
-      "sha256": "5ac1ebbd3400937a678ac2326e14f11d85302c56c63bf9945187b45a93337b5b",
+      "sha256": "3a6d9baf4241b306f231b370276e66de5f4c1eebd3b854eeaec72b6b0363e035",
       "executable": false
     },
     "tests/support/transfers-journey.mjs": {
