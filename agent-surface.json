@@ -131,6 +131,7 @@
     "none": true
   },
   "verification": {
+    "journey": "tests/agent-door/refused-classification.mjs",
     "owner": {
       "initializer": "tests/agent-door/owner.mjs"
     },
