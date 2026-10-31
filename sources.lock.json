@@ -1647,6 +1647,10 @@
       "sha256": "180302b71a131f6429f1ae11ddb6b637de9bc03f8295dea522cabb0212d687b4",
       "executable": false
     },
+    "src/mallet/agent-door/audit-export.ts": {
+      "sha256": "b50f260615cb093693f50f7a072a56fb574926d79bd2e82235e486ba86c472f3",
+      "executable": false
+    },
     "src/mallet/agent-door/index.ts": {
       "sha256": "5e3bf6149e8f223c1f93f7953a86bed4088c6675ac9b29c57a6109aecd6a1a7c",
       "executable": false
@@ -5209,6 +5213,10 @@
     },
     "tests/agent-door/audit-counts.mjs": {
       "sha256": "1fd945f27ae9ece952546029dd00a7188511e4a5963e141fc52d31aef75598e0",
+      "executable": false
+    },
+    "tests/agent-door/audit-lifecycle.mjs": {
+      "sha256": "784d4102188c9c857c74ac31099673d971feaaf530e11568e1162fd465e4bb58",
       "executable": false
     },
     "tests/agent-door/fixtures.mjs": {
