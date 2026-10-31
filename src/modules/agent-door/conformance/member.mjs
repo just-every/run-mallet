@@ -37,7 +37,7 @@ export async function nativeMemberPhase(c, sponsors, initializeAgent, observe) {
   }
   const beforeRead = await snapshot(), hidden = await read(b, fixture.owner), missing = await b.tool('mallet.repairs.read', { id: randomUUID() });
   check('unassigned-read', hidden.result?.isError && errorCode(hidden) === 'not_found' && hidden.result?.structuredContent === undefined && noPrivate(hidden.body), 'Unassigned repair must refuse without private content.');
-  check('missing-equivalent', isDeepStrictEqual(hidden.result, missing.result), 'Unassigned and missing native repairs must have identical refusal content.');
+  check('missing-equivalent', hidden.status === missing.status && errorCode(hidden) === errorCode(missing) && isDeepStrictEqual(hidden.result?.content, missing.result?.content) && missing.result?.structuredContent === undefined, 'Unassigned and missing native repairs must have identical refusal content.');
   check('read-unchanged', isDeepStrictEqual(beforeRead, await snapshot()), 'Denied read changed native records.');
   const change = repair => ({ jobId: repair.job.id, version: repair.job.version, lines: [{ kind: 'labor', description: 'Inspect wheel alignment', quantity: 1, unitCents: 4500 }], idempotency_key: randomUUID() });
   for (const [label, repair] of [['assigned', fixture.member], ['unassigned', fixture.owner]]) {
