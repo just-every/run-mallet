@@ -572,7 +572,7 @@
       "executable": false
     },
     "ACCEPTANCE.md": {
-      "sha256": "3c83c4bb5f0aafd939487a97be0c1e1e5c1a7aa6705ce746df537916e26848f7",
+      "sha256": "8c33cdeda9d09ff119ebc35c0ed8979a6cee7592e4ba4745fa67a6fe93fa0b34",
       "executable": false
     },
     "agent-surface.json": {
@@ -592,7 +592,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "404b334a3828d6b6c53ffc3fc6f495d341ba77fcb0133d7c79898b83997eb7f2",
+      "sha256": "98facf381c4e0fa447adc9f2df1e82a7829fe64e3621d4563bc58afda81bfdf9",
       "executable": false
     },
     "deploy-demo.json": {
@@ -5236,7 +5236,7 @@
       "executable": false
     },
     "tests/browser-journey.mjs": {
-      "sha256": "39128c1f03b2c8edde892220d1d2ead3cc743336a1ec739cfa9a726a7a19bd30",
+      "sha256": "0c133723246cae34edf54cbedb615cc73dcf18e83f14ab8f1cb0326f8af01e1f",
       "executable": false
     },
     "tests/calendar-browser.mjs": {
@@ -5376,7 +5376,7 @@
       "executable": false
     },
     "tests/mallet.test.mjs": {
-      "sha256": "6b50ac5bc74a8dedc6ac3443266e83a3ca860ad83307684d6d8c67b9e782e7eb",
+      "sha256": "2d62a113bae8ee6185f09aa3499e01af8ce68c4961cd52fd09c7326c062fa140",
       "executable": false
     },
     "tests/media-browser.mjs": {
@@ -5456,7 +5456,7 @@
       "executable": false
     },
     "tests/sales-tax.test.mjs": {
-      "sha256": "feff588af2a7c2835e6eb1015bc4335f1b64cf39e7286514fa2249943387efdf",
+      "sha256": "5e0180bec4aff9f3d1ec632ce6f9e127ff4f5eabf5fc03597485af1614d3d83b",
       "executable": false
     },
     "tests/search-browser.mjs": {
@@ -5517,6 +5517,14 @@
     },
     "tests/support/ach-browser-steps.mjs": {
       "sha256": "71bc7930ca555673ed84d45afd6d5da62967b6fd6a9b1fd6894180a3e37e6f3a",
+      "executable": false
+    },
+    "tests/support/agent-retry-conflicts-journey.mjs": {
+      "sha256": "d997daf593842512a4ac90e92e8c1d2f0f855558b3fb62bdf9a1bb85873317c5",
+      "executable": false
+    },
+    "tests/support/agent-retry-worker.ts": {
+      "sha256": "a781b8dbe493340eacf1fcd06d7e4dd23bbdd79f3387ab5611dfa66539bed9b5",
       "executable": false
     },
     "tests/support/approval-journey.mjs": {

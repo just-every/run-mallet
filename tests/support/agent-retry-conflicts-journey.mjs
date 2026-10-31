@@ -87,13 +87,12 @@ async function retryConflicts(h,document){
   assert.equal(after.event.filter(row=>row.kind===command&&row.jobId===job.id).length,verb==='prepare'?1:2)
   console.log('PROBE BASE-AGENT-012 '+verb+' ['+disposition+']: /mcp lost response and new RPC id -> exact recorded result, one initial native effect; changed lines -> idempotency_conflict, unchanged records; fresh key and stale expected_revision -> revision_conflict '+current.version+', unchanged records; current revision -> success')
  }
- const beforeRevoke=await records()
  await h.command('agent.revoke',{id:key.id})
+ const beforeRevoke=await records()
  const revoked=await send('mallet.estimates.prepare',{jobId:job.id,version:job.version,lines,expected_revision:job.version,idempotency_key:'synthetic-mallet-946-prepare'})
  assert.equal(revoked.status,401,'Revoked credentials cannot replay retained outcomes')
- const afterRevoke=await records()
- assert.deepEqual(afterRevoke.estimate,beforeRevoke.estimate)
- assert.deepEqual(afterRevoke.job,beforeRevoke.job)
+ assert.equal((await revoked.json()).result,undefined,'Revoked replay discloses no retained native result')
+ assert.deepEqual(await records(),beforeRevoke,'Revoked replay changes no business records')
 }
 
 export async function agentRetryConflictsJourney(){
