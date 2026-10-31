@@ -2087,8 +2087,8 @@ Judged from the code and tests at commit `39e7b596fc2a2a9cd592c139276f47f1611565
 | Clauses | Done | Partial | Missing | Total |
 | --- | ---: | ---: | ---: | ---: |
 | Published | 1 | 8 | 0 | 9 |
-| Target and push further | 22 | 80 | 59 | 161 |
-| All | 23 | 88 | 59 | 170 |
+| Target and push further | 22 | 81 | 58 | 161 |
+| All | 23 | 89 | 58 | 170 |
 
 | Clause | Title | Kind | Status | Evidence | Gap |
 | --- | --- | --- | --- | --- | --- |
@@ -2237,7 +2237,7 @@ Judged from the code and tests at commit `39e7b596fc2a2a9cd592c139276f47f1611565
 | `OPS-003` | Background job authority and recovery | target | partial | `tests/mallet.test.mjs`; `tests/support/capacity-import-journey.mjs`; `tests/support/search-journey.mjs`; `tests/search-browser.mjs`; `tests/support/repair-read-journey.mjs`; `tests/support/jobs-journey.mjs`; `tests/support/provider-jobs-journey.mjs`; `tests/jobs-browser.mjs`; `tests/support/board-live-journey.mjs`; `docs/background-jobs.md`; `docs/performance.md`; `scripts/capacity/README.md` | Small reminder and provider-read jobs prove restart and explicit recovery. Complete queued-authority lifecycle and every failed/uncertain resolution branch remain open for point-level completion proof. |
 | `OPEN-001` | Free and open source under the MIT license, run by one command | target | done | `LICENSE`; `rer-project.json`; `tests/clone-journey.mjs`; `tests/open-source-journey.mjs`; `tests/browser-journey.mjs` |  |
 | `SURFACE-001` | Service-advisor registry | target | missing |  | No remote MCP registry, class classifier and company-policy conformance journey asserts these seed outcomes. |
-| `SURFACE-002` | Repair classes and provider steps | target | missing |  | No remote MCP registry, class classifier and company-policy conformance journey asserts these seed outcomes. |
+| `SURFACE-002` | Repair classes and provider steps | target | partial | `agent-surface.json`; `tests/agent-door/fixtures.mjs`; `tests/agent-door/draft-classification.mjs` — afterStep and draftClassification, invoked by the runtime conformance shard, prove point 1 through the adopted estimate preparation and revision tools under autonomous and held-standard-review policies: two-line draft, three-line revision and price-only revision with exact standard item counts 2, 3 and 3; independent native owner state and repair-read comparisons retain identities, revisions, quantities, prices and attribution without customer authorization, work, financial posting, external sharing or outbound effects. Native draft and review screens are exercised at 1440 and shown at 1440 and 390. | Points 2–8 remain unbuilt or unproved: internal colleague sharing and external sharing with recipients and counterparties; money and binding decisions with exact source facts; outside provider identities and paid resources; person-gated provider steps; continuing-access changes; protective-setting and credential changes. Expanded native authority still awaits ct approval; expanded grants, customer sending and promise-changing authority remain held. AGENT-001 retains its four preparation commands; GOV-001 and SHOP-001 limits, queued-egress fences and existing account and provider prerequisites remain unchanged. |
 | `SURFACE-003` | Irreversible, regulated and live repair facts | target | missing |  | No remote MCP registry, class classifier and company-policy conformance journey asserts these seed outcomes. |
 | `SURFACE-004` | Repair resources and handoffs | target | missing |  | No remote MCP registry, class classifier and company-policy conformance journey asserts these seed outcomes. |
 | `SURFACE-005` | A seeded repair week through MCP | target | missing |  | No remote MCP registry, class classifier and company-policy conformance journey asserts these seed outcomes. |

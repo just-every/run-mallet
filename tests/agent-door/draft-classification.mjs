@@ -51,7 +51,7 @@ export async function beforeStep(context) {
  snapshots.set(context.phase, { state: await json(context, '/api/mallet/state'), mail: context.mail.read({ limit: 20 }) })
 }
 
-async function checkDraft(context) {
+export async function afterStep(context) {
  const index = steps.indexOf(context.step.id)
  if (index < 0) return
  const { phase, args, result, tool } = context
@@ -145,6 +145,7 @@ export default async function draftClassification(context) {
   })
   const page = await session.newPage(), directory = process.env.MALLET_AGENT_PROOF_DIR ?? '.cache/agent-draft-proof'
   await mkdir(directory, { recursive: true })
+  page.setDefaultTimeout(8000)
   await page.setViewportSize({ width: 1440, height: 1000 })
   const shot = async name => {
    for (const width of [1440, 390]) {
@@ -157,7 +158,7 @@ export default async function draftClassification(context) {
   for (const phase of ['autonomous', 'held']) {
    const { jobId } = receipts.get(phase + ':reprice')
    assert.equal((await page.goto(context.origin + '/app/jobs/' + jobId)).status(), 200)
-   const estimate = page.locator('section').filter({ has: page.getByRole('heading', { name: 'Estimate', exact: true }) }).first()
+   const estimate = page.locator('section').filter({ has: page.getByRole('heading', { name: 'Estimate & customer authorization', exact: true }) }).first()
    const text = await estimate.innerText()
    assert.match(text, /Revision 3/)
    for (const description of ['Brake pads', 'Brake cable', 'Inspect and adjust brakes. Imported text never grants approval.']) assert.ok(text.includes(description))
@@ -176,11 +177,4 @@ export default async function draftClassification(context) {
   await shot('draft-activity')
   console.log('SURFACE-002 native owner proof: exact price-only drafts and class-count review attribution at 1440 and 390; all controls retain their existing text labels.')
  } finally { await browser.close() }
-}
-
-export async function afterStep(context) {
- try { await checkDraft(context) } catch (error) {
-  console.error('Draft assertion:', error.message.split('\n')[0], error.stack.split('\n').find(line => line.includes('draft-classification.mjs:')))
-  throw error
- }
 }
