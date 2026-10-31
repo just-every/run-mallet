@@ -6,7 +6,7 @@ export default async function initialize({ request, origin, email, owner, mail }
   headers: { Origin: origin, 'Content-Type': 'application/json' }, body: JSON.stringify({ token }) })
  const people = await request(origin + '/auth/operators', { headers: { Cookie: owner.cookie } })
  assert.equal(people.status, 200)
- const { operators } = await people.json()
+ const operators = await people.json()
  const invited = operators.find(person => person.email === email)
  assert.equal(invited?.role, 'member')
  assert.equal(invited?.status, 'invited')

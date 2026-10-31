@@ -17,7 +17,7 @@ export default async function prepare({ phase, request, origin, cookie }) {
   return { values: {} }
  }
  const label = phase.slice('cross-sponsor:'.length)
- const people = (await json('/auth/operators')).operators
+ const people = await json('/auth/operators')
  const member = people.find(person => person.displayName === label)
  assert.equal(member?.role, 'member')
  assert.equal(member?.status, 'active')
