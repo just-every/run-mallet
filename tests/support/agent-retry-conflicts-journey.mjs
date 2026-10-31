@@ -8,6 +8,8 @@ const content=answer=>answer.result.structuredContent
 const decision=answer=>answer.result._meta['com.runeditrun/decision']
 const lines=[{id:'synthetic-mallet-941',kind:'labor',description:'Inspect native brake adjustment',quantity:1.5,unitCents:3200}]
 const changed=[{id:'synthetic-mallet-942',kind:'labor',description:'Revised native brake adjustment',quantity:2,unitCents:4100}]
+const started='2028-11-01T12:00:00Z'
+const nextDay='2028-11-02T13:00:00Z'
 
 async function retryConflicts(h,document){
  await shopSetup(h)
@@ -17,8 +19,10 @@ async function retryConflicts(h,document){
  let rpcId=0
  const send=(name,args)=>h.request('/mcp',{...agent,method:'POST',headers:{...agent.headers,'MCP-Protocol-Version':'2026-07-28','Mcp-Method':'tools/call','Mcp-Name':name},body:{jsonrpc:'2.0',id:++rpcId,method:'tools/call',params:{name,arguments:args,_meta:{'io.modelcontextprotocol/protocolVersion':'2026-07-28'}}}})
  const call=async(name,args)=>{const response=await send(name,args);assert.equal(response.status,200);return response.json()}
- const records=async()=>(await h.state()).records
- const audit=async()=>(await h.api('/agents/api/audit')).rows
+ let owner=h.owner
+ const records=async()=>(await h.state({as:owner})).records
+ const audit=async()=>(await h.api('/agents/api/audit',undefined,{as:owner})).rows
+ const retained=[]
  const repair=async(suffix,day)=>{
   const asset=await h.command('asset.create',{customerName:'synthetic-mallet-944',customerEmail:'',label:'Native retry bicycle',identifier:'synthetic-mallet-'+suffix})
   return (await booking(h,{asset,bayId:'synthetic-mallet-'+suffix,startAt:day+'T09:00:00Z',endAt:day+'T10:00:00Z'})).job
@@ -46,6 +50,7 @@ async function retryConflicts(h,document){
   assert.equal(original.result.isError,false)
   assert.equal(decision(original).disposition,disposition)
   assert.deepEqual(content(original),saved,'Emitted result matches independently retained native draft')
+  retained.push({name,args,original})
   await response.body.cancel()
 
   const replayBefore=await records(),replay=await call(name,args)
@@ -87,15 +92,69 @@ async function retryConflicts(h,document){
   assert.equal(after.event.filter(row=>row.kind===command&&row.jobId===job.id).length,verb==='prepare'?1:2)
   console.log('PROBE BASE-AGENT-012 '+verb+' ['+disposition+']: /mcp lost response and new RPC id -> exact recorded result, one initial native effect; changed lines -> idempotency_conflict, unchanged records; fresh key and stale expected_revision -> revision_conflict '+current.version+', unchanged records; current revision -> success')
  }
+
+ // Two independently dispatched calls overlap at the public door. An admission
+ // refusal is retried only after both calls settle, using the original key.
+ const concurrentJob=await repair('950','2028-11-12')
+ for(const verb of ['prepare','revise']){
+  const before=await records(),prior=before.estimate?.find(row=>row.jobId===concurrentJob.id)
+  const input=verb==='prepare'?{jobId:concurrentJob.id,version:concurrentJob.version,lines}:{estimateId:prior.id,version:prior.version,revision:1,lines:changed}
+  const name='mallet.estimates.'+verb,args={...input,expected_revision:input.version,idempotency_key:'synthetic-mallet-951-'+verb}
+  const pair=await Promise.all([call(name,args),call(name,args)])
+  assert.notEqual(pair[0].id,pair[1].id)
+  const successful=pair.filter(answer=>!answer.result.isError)
+  assert.ok(successful.length,'An overlapping native preparation commits')
+  for(const answer of pair){
+   if(answer.result.isError)assert.ok(['call_in_progress','decision_busy'].includes(error(answer).code),'Only an explicit in-flight refusal may precede replay')
+   else assert.deepEqual(content(answer),content(successful[0]))
+  }
+  const committed=await records(),saved=committed.estimate.find(row=>row.jobId===concurrentJob.id)
+  assert.equal(committed.estimate.filter(row=>row.jobId===concurrentJob.id).length,1)
+  assert.equal(saved.revisions.length,verb==='prepare'?1:2)
+  assert.deepEqual(saved.revisions.at(-1).lines.map(({id,kind,description,quantity,unitCents})=>({id,kind,description,quantity,unitCents})),verb==='prepare'?lines:changed)
+  assert.equal(committed.event.filter(row=>row.kind==='estimate.'+verb&&row.jobId===concurrentJob.id).length,1)
+  const replay=await call(name,args)
+  assert.equal(replay.result.isError,false)
+  assert.deepEqual(content(replay),content(successful[0]),'Both overlapping clients can retrieve the one committed result')
+  assert.deepEqual(await records(),committed,'Settled replay adds no business effect')
+  const calls=(await audit()).filter(row=>row.idempotency_key===args.idempotency_key)
+  assert.equal(calls.filter(row=>row.outcome==='done').length,1)
+  const first=calls.find(row=>row.outcome==='done')
+  for(const row of calls.filter(row=>row.outcome==='replayed'))assert.equal(row.replay_of,first.id)
+  console.log('PROBE BASE-AGENT-012 concurrent '+verb+' ['+disposition+']: two /mcp requests with one key -> one native effect and equal settled outcomes')
+ }
+
+ // Move the installation clock, then obtain a fresh native owner session. The
+ // retained outcomes must survive both a Worker restart and more than 24 hours.
+ await h.setClock(nextDay)
+ owner=await h.signInAs('owner'+String.fromCharCode(64)+'example.test')
+ await h.restart()
+ for(const {name,args,original} of retained){
+  const before=await records(),replay=await call(name,args)
+  assert.equal(replay.result.isError,false)
+  assert.deepEqual(content(replay),content(original),'The first outcome remains exact after 25 hours, even after later native revisions')
+  assert.deepEqual(replay.result.content,original.result.content)
+  assert.deepEqual(replay.result._meta['com.runeditrun/review'],original.result._meta['com.runeditrun/review'])
+  assert.deepEqual(await records(),before,'A next-day replay creates no draft, revision, event or review')
+  const refused=await call(name,{...args,lines:args.lines===lines?changed:lines})
+  assert.equal(error(refused).code,'idempotency_conflict','The retained digest also survives the replay window')
+  assert.deepEqual(await records(),before)
+  const calls=(await audit()).filter(row=>row.idempotency_key===args.idempotency_key)
+  assert.equal(calls.filter(row=>row.outcome==='done').length,1)
+  const first=calls.find(row=>row.outcome==='done'),latest=calls.findLast(row=>row.outcome==='replayed')
+  assert.equal(Date.parse(latest.at)-Date.parse(first.at),25*3600000,'Audit independently records the elapsed replay window')
+  assert.equal(latest.replay_of,first.id)
+  assert.equal(latest.operation_id,first.operation_id)
+  console.log('PROBE BASE-AGENT-012 24-hour '+name+' ['+disposition+']: /mcp at 25 hours after restart -> exact first outcome, retained conflict, unchanged business records')
+ }
+ await h.command('agent.revoke',{id:key.id},{as:owner})
  const beforeRevoke=await records()
- await h.command('agent.revoke',{id:key.id})
  const revoked=await send('mallet.estimates.prepare',{jobId:job.id,version:job.version,lines,expected_revision:job.version,idempotency_key:'synthetic-mallet-946-prepare'})
  assert.equal(revoked.status,401,'Revoked credentials cannot replay retained outcomes')
- const afterRevoke=await records()
- assert.deepEqual(afterRevoke.estimate,beforeRevoke.estimate)
- assert.deepEqual(afterRevoke.job,beforeRevoke.job)
+ assert.equal((await revoked.json()).result,undefined,'Revoked replay discloses no retained native result')
+ assert.deepEqual(await records(),beforeRevoke,'Revoked replay changes no business records')
 }
 
 export async function agentRetryConflictsJourney(){
- for(const document of [autonomousPolicy(),heldPolicy()])await run(h=>retryConflicts(h,document),{entry:'tests/support/agent-retry-worker.ts'})
+ for(const document of [autonomousPolicy(),heldPolicy()])await run(h=>retryConflicts(h,document),{entry:'tests/support/agent-retry-worker.ts',clock:started})
 }

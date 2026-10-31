@@ -592,7 +592,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "8c0165c57f2c65320ec94a9ab164738c4812d6993ce4aa284ea2d1bf9b2d8345",
+      "sha256": "98facf381c4e0fa447adc9f2df1e82a7829fe64e3621d4563bc58afda81bfdf9",
       "executable": false
     },
     "deploy-demo.json": {
@@ -5520,7 +5520,7 @@
       "executable": false
     },
     "tests/support/agent-retry-conflicts-journey.mjs": {
-      "sha256": "288169839d2b119c13cfc71b7b8b9c9c74d7f2dd11135b046ec705803f6d1519",
+      "sha256": "6b30dc213142ad2d7d04c3145f7e7756c268999fdbd5f72b360c6f6a2deba74f",
       "executable": false
     },
     "tests/support/agent-retry-worker.ts": {
