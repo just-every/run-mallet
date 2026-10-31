@@ -3,12 +3,14 @@ import {join} from 'node:path'
 import axe from 'axe-core'
 import {archive, restore, installation} from '../harness.mjs'
 import {auditRows, expectedCall, assertKnownRows} from './audit-counts.mjs'
+import {auditApprovalOutcomes} from './audit-outcomes.mjs'
 
 const meta = 'com.runeditrun/'
 export function nativeAuditClient(h, key) {
  let id = 0
  return async (name, args, options = {}) => {
-  const response = await h.request('/mcp', {method:'POST',as:'',headers:{Authorization:'Bearer ' + key.token,Accept:'application/json, text/event-stream','MCP-Protocol-Version':'2026-07-28','Mcp-Method':'tools/call','Mcp-Name':name},body:{jsonrpc:'2.0',id:++id,method:'tools/call',params:{name,arguments:args,...options,_meta:{'io.modelcontextprotocol/protocolVersion':'2026-07-28','io.modelcontextprotocol/clientCapabilities':{elicitation:{url:{}}},'io.modelcontextprotocol/clientInfo':{name:'synthetic-mallet-audit',version:'1'}}}}})
+  const {trace, ...params} = options
+  const response = await h.request('/mcp', {method:'POST',as:'',headers:{Authorization:'Bearer ' + key.token,Accept:'application/json, text/event-stream','MCP-Protocol-Version':'2026-07-28','Mcp-Method':'tools/call','Mcp-Name':name},body:{jsonrpc:'2.0',id:++id,method:'tools/call',params:{name,arguments:args,...params,_meta:{'io.modelcontextprotocol/protocolVersion':'2026-07-28','io.modelcontextprotocol/clientCapabilities':{elicitation:{url:{}}},'io.modelcontextprotocol/clientInfo':{name:'synthetic-mallet-audit',version:'1'},...(trace ? {traceparent:trace} : {})}}}})
   const body = await response.json()
   return {status:response.status,result:body.result,decision:body.result?._meta?.[meta + 'decision'],error:body.error}
  }
@@ -198,8 +200,10 @@ export async function auditLifecycle(h, page, directory, now) {
  const replayRow = all.rows.find(row => row.id === replay.decision.id)
  assert.equal(replayRow.outcome,'replayed')
  assert.equal(replayRow.replay_of,pending.decision.id)
+ await auditApprovalOutcomes(h, tool, key, page, directory, now, accessible)
+ const complete = await auditRows(context)
  for (const filters of [{agent:'mallet-key:' + key.id},{class:'standard'},{class:'money'},{agent:'mallet-key:' + key.id,class:'standard'},{agent:'mallet-key:' + other.id,class:'money'}]) {
-  const wanted = all.rows.filter(row => (!filters.agent || row.agent.id === filters.agent) && (!filters.class || row.classes.some(item => item.class === filters.class)))
+  const wanted = complete.rows.filter(row => (!filters.agent || row.agent.id === filters.agent) && (!filters.class || row.classes.some(item => item.class === filters.class)))
   assert.deepEqual((await auditRows(context,filters)).rows,wanted,'Every filtered cursor contains exactly the requested retained identities')
   const response = await h.request('/agents/api/audit/export?' + new URLSearchParams(filters))
   assert.equal(response.status,200,'An authorized audit export reaches its public download door')

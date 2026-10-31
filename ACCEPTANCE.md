@@ -40,7 +40,7 @@ Core · published · **partial** · Rules D-1, D-2, D-3
 **Acceptance.**
 1. Register an asset through the counter form, book repeat visits and try overlapping bay and technician bookings through the command API; inspect the conflict and complete service history.
 
-**Evidence.** `src/mallet/workshop.ts`; `tests/mallet.test.mjs`; `tests/browser-journey.mjs`
+**Evidence.** `tests/mallet.test.mjs` — booking rejects bay and technician collisions and keeps every asset visit; `tests/browser-journey.mjs` — workshopBrowser, registered as WORKSHOP-001 and INVOICE-001: native registration, repeat visits and exact saved invoice at 1440 and 390 in `tests/mallet.test.mjs`
 **Gap.** Not asserted in the old cited evidence: Counter registration creates the asset; Technician collision outcome is read back; History download names the second visit. Asserted: Repeated visits remain in history; Bay collision is read back.
 
 #### ESTIMATE-001 — Exact decision
@@ -76,7 +76,7 @@ Core · published · **partial** · Rules D-1, D-2, D-3
 **Acceptance.**
 1. Complete authorized work, prepare and approve the invoice through the app, export twice with current and preceding versions, and compare saved identity, lines, totals and approval history.
 
-**Evidence.** `src/mallet/invoices.ts`; `tests/mallet.test.mjs`; `tests/browser-journey.mjs`
+**Evidence.** `tests/mallet.test.mjs` — INVOICE-001: exact actual-work lines, approval and both saved export retrieval versions; `tests/browser-journey.mjs` — counterInvoice and savedInvoiceReadback, invoked by workshopBrowser in the WORKSHOP-001 and INVOICE-001 native registration journey in `tests/mallet.test.mjs`
 **Gap.** Not asserted in the old cited evidence: Approval history retains exact deciding actor and revision; Retry using the preceding version returns the same saved export; Actual-work invoice has the expected lines. Asserted: Exact invoice cent total; Repeated export identity is equal; Exactly one saved export; Exact approval history count.
 
 #### AGENT-001 — Scoped preparation keys
@@ -554,8 +554,8 @@ Core · target · **partial** · Cites BASE-ROLE-001, BASE-AGENT-005, BASE-AGENT
 **Acceptance.**
 1. Clock in, run two jobs with a break, correct a missed stop with manager approval and compare attendance, actual and sold hours; a member cannot alter a colleague’s time.
 
-**Evidence.** `src/mallet/time.ts`; `src/mallet/ui/time.ts`; `src/mallet/http.ts`; `tests/mallet.test.mjs`; `tests/support/time-journey.mjs`; `tests/time-browser.mjs`
-**Gap.** Not asserted in the old cited evidence: A member’s attempt leaves a colleague’s original time unchanged. Asserted: Attendance is computed from clock events; Breaks remain separate; Actual nonbillable and rework time remains separate; Sold hours are independently displayed; Approved correction retains original intervals; Correction retains manager and reason.
+**Evidence.** `tests/support/time-journey.mjs` timeJourney (registered in `tests/mallet.test.mjs` as "TIME-001: two assigned job timers, breaks, approved corrections, isolation and recovery"): attendance, separate breaks and job categories, authorized sold hours, immutable owner-approved correction history and immediate unchanged colleague entry and correction readback; `tests/time-browser.mjs` timeBrowser ("TIME-001: native clocks, reasoned correction decisions and actual board time at 1440/390"): native clock forms, exact self-proposal and owner decision, elapsed board time and retained history at both widths.
+**Gap.** Not asserted in the old cited evidence: A member’s attempt leaves a colleague’s original time unchanged. Asserted: Attendance is computed from clock events; Breaks remain separate; Actual nonbillable and rework time remains separate; Sold hours are independently displayed; Approved correction retains original intervals; Correction retains manager and reason. Candidate assertions now read back the unchanged colleague entry and every correction record after refusal, including an existing self-proposal. Main’s partial judgment is retained pending clause review; this replay does not promote acceptance.
 
 #### FLOW-004 — Technician crews and subtasks
 

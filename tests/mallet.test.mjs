@@ -42,6 +42,7 @@ import {securityBrowser} from './security-browser.mjs'
 import {linkProtectionJourney} from './support/link-protection-journey.mjs'
 import {secondFactorJourney,policyRecoveryJourney,stepUpJourney} from './support/strong-auth-journey.mjs'
 import {run,installation,assetInput,booking,estimate,authorise,archive,restore,snapshots} from './harness.mjs'
+import {csvRecords} from './support/report-csv.mjs'
 
 test('ADV-003: source-cited blockers require actual evidence, exact consent and physical receipt, preserve handlers and recover privately',()=>run(blockerJourney))
 test('ADV-003: native blocker packet, handlers and proposal review at 1440 and 390',blockerBrowser)
@@ -83,22 +84,101 @@ test('native sign-in, CSRF, member isolation and immediate session revocation',(
  await h.state({as:tech.cookie,status:401})
 }))
 
+test('HTTP-001: populated private doors refuse unsafe requests without business writes',()=>run(async h=>{
+ await shopSetup(h)
+ const address=name=>name+String.fromCharCode(64)+'example.test'
+ const tech=await h.person(address('synthetic-mallet-531')),other=await h.person(address('synthetic-mallet-532'))
+ const privateAsset={customerName:'synthetic-mallet-531-private-customer',customerEmail:'',label:'synthetic-mallet-531-private-vehicle',identifier:'synthetic-mallet-531-private-identifier'}
+ const asset=await h.command('asset.create',privateAsset)
+ const {job}=await booking(h,{asset,technicianId:tech.id}),q=await authorise(h,await estimate(h,job))
+ const privateContent=[...Object.values(privateAsset).filter(Boolean),job.id,'Brake pads','Replace and tune']
+ // Read the business records immediately around each unsafe public request.
+ // Auth audit and session revocation are separate from workshop business data.
+ const refused=async(path,options,status,error)=>{
+  const before=(await h.state()).records
+  const response=options.unconfiguredHost?await h.mf.dispatchFetch('https://unconfigured.test'+path,{method:options.method??'GET',redirect:'manual',headers:{origin:h.origin,cookie:h.owner,'content-type':'application/json'},...(options.body?{body:JSON.stringify(options.body)}:{})}):await h.request(path,options),body=await response.text()
+  assert.equal(response.status,status,path)
+  for(const value of privateContent)assert.ok(!body.includes(value),`${path} refuses private fixture content`)
+  if(error&&path.startsWith('/api/'))assert.equal(JSON.parse(body).error,error)
+  if(status===303)assert.equal(new URL(response.headers.get('location'),h.origin).pathname,'/signin')
+  assert.deepEqual((await h.state()).records,before,`${path} refusal preserves every business record`)
+ }
+ const mutation={method:'POST',body:{command:'asset.create',input:{customerName:'synthetic-mallet-533-customer',customerEmail:'',label:'synthetic-mallet-533-vehicle',identifier:'synthetic-mallet-533'}}}
+ await refused('/api/mallet/commands',{...mutation,as:tech.cookie},403)
+ await refused('/api/mallet/commands',{...mutation,headers:{origin:'https://elsewhere.test'}},403,'invalid_origin')
+ let current=(await h.state()).records.job[0]
+ await refused('/api/mallet/commands',{as:other.cookie,method:'POST',body:{command:'work.record',input:{jobId:job.id,version:current.version,lineId:q.revisions[0].lines[0].id,quantity:1}}},403)
+ assert.equal((await h.state({as:other.cookie})).records.job.length,0)
+ current=await h.command('work.record',{jobId:job.id,version:current.version,lineId:q.revisions[0].lines[0].id,quantity:1},{as:tech.cookie})
+ const permitted=(await h.state({as:tech.cookie})).records.job.find(j=>j.id===job.id)
+ assert.equal(permitted.actuals.length,1)
+ assert.equal(permitted.actuals[0].quantity,1)
+ assert.equal(permitted.actuals[0].by.id,tech.id)
+ await qualityReady(h,current,{technician:tech})
+ current=await h.command('job.complete',{jobId:job.id,version:current.version})
+ let invoice=await h.command('invoice.prepare',{jobId:job.id,version:current.version})
+ invoice=await h.command('invoice.approve',{invoiceId:invoice.id,version:invoice.version,revision:1})
+ const saved=await h.command('invoice.export',{invoiceId:invoice.id,version:invoice.version})
+ const pagePath='/app/jobs/'+job.id,exportPath='/api/mallet/exports/'+saved.id
+ const doors=[{path:pagePath,status:303},{path:'/api/mallet/state',status:401},{path:'/api/mallet/commands',...mutation,status:401},{path:exportPath,status:401}]
+ for(const {path,status,...options} of doors)await refused(path,{...options,as:''},status,status===401?'sign_in_required':undefined)
+ await refused(pagePath,{as:other.cookie},404)
+ const isolated=await h.request('/api/mallet/state',{as:other.cookie}),isolatedBody=await isolated.text()
+ assert.equal(isolated.status,200)
+ assert.equal(JSON.parse(isolatedBody).records.job.length,0)
+ for(const value of privateContent)assert.ok(!isolatedBody.includes(value),'unassigned state excludes populated private repair')
+ await refused(exportPath,{as:other.cookie},403,'manager_required')
+ // Cross-site reads and mutations are refused even with the live owner cookie.
+ for(const {path,status,...options} of doors)await refused(path,{...options,headers:{origin:'https://elsewhere.test','sec-fetch-site':'cross-site'}},403,'invalid_origin')
+ for(const {path,status,...options} of doors)await refused(path,{...options,unconfiguredHost:true},403,'invalid_host')
+ await h.api('/auth/operator/status',{operatorId:tech.id,status:'inactive'})
+ for(const {path,status,...options} of doors)await refused(path,{...options,as:tech.cookie},status,status===401?'sign_in_required':undefined)
+ // The same populated doors still work for the current authorized owner.
+ const page=await h.request(pagePath),html=await page.text()
+ assert.equal(page.status,200)
+ for(const value of [privateAsset.customerName,privateAsset.label,privateAsset.identifier])assert.ok(html.includes(value),'authorized repair page contains private fixture')
+ const state=await h.state()
+ assert.equal(state.records.job.find(j=>j.id===job.id).asset.identifier,privateAsset.identifier)
+ assert.equal(state.records.export.find(x=>x.id===saved.id).csv,saved.csv)
+ const exported=await h.request(exportPath)
+ assert.equal(exported.status,200)
+ assert.equal(await exported.text(),saved.csv)
+ assert.ok(saved.csv.includes(privateAsset.customerName))
+ const created=await h.api('/api/mallet/commands',mutation.body)
+ const readback=(await h.state()).records.asset.find(a=>a.id===created.id)
+ for(const [key,value] of Object.entries(mutation.body.input))assert.equal(readback[key],value)
+ assert.equal((await h.state()).records.asset.filter(a=>a.identifier===mutation.body.input.identifier).length,1)
+ await refused('/app/synthetic-mallet-unknown',{},404)
+ await refused('/api/mallet/synthetic-mallet-unknown',{},404,'not_found')
+}))
+
 test('booking rejects bay and technician collisions and keeps every asset visit',()=>run(async h=>{
  const {asset,job}=await booking(h)
  const current=()=>h.state().then(s=>s.records.asset.find(a=>a.id===asset.id))
  const input={assetId:asset.id,version:(await current()).version,title:'Second visit',bayId:'Bay 1',technicianId:'Jordan',startAt:job.startAt,endAt:job.endAt}
- assert.equal((await h.command('job.book',input,{status:409})).error,'DISPATCH_CONFLICT')
- await h.command('job.book',{...input,bayId:'Bay 2',technicianId:job.technicianId},{status:409})
+ const before=(await h.state()).records
+ const unchanged=async()=>{const after=(await h.state()).records;assert.deepEqual(after.job,before.job,'Refused booking preserves every original job');assert.deepEqual(after.asset,before.asset,'Refused booking preserves exact asset fields, versions and visits')}
+ const expectedConflict=resources=>({jobId:job.id,title:job.title,bayId:job.bayId,technicianId:job.technicianId,startAt:job.startAt,endAt:job.endAt,resources})
+ const bay=await h.command('job.book',input,{status:409});assert.equal(bay.error,'DISPATCH_CONFLICT');assert.deepEqual(bay.details.conflicts,[expectedConflict(['bay'])]);await unchanged()
+ const technician=await h.command('job.book',{...input,bayId:'Bay 2',technicianId:job.technicianId},{status:409})
+ assert.equal(technician.error,'DISPATCH_CONFLICT');assert.deepEqual(technician.details.conflicts,[expectedConflict(['technician'])],'Technician-only collision identifies its original job and resource');await unchanged()
+ assert.equal((await h.command('asset.create',{...assetInput(),identifier:asset.identifier.toLowerCase()},{status:409})).error,'DUPLICATE');await unchanged()
  const post=(path,fields)=>h.mf.dispatchFetch(h.origin+path,{method:'POST',redirect:'manual',headers:{origin:h.origin,host:new URL(h.origin).host,'content-type':'application/x-www-form-urlencoded',cookie:h.owner},body:new URLSearchParams(fields).toString()})
  assert.equal((await post('/setup',{confirm:'yes',ratePercent:'10',partsTaxable:'yes',laborTaxable:'yes'})).status,303)
  const refused=await post('/app/actions',{command:'job.book',...input}),html=await refused.text()
  assert.equal(refused.status,409);assert.ok(html.includes(`/app/jobs/${job.id}`),'links the clashing visit');assert.ok(html.includes('Back to the booking form')&&html.includes('title=Second+visit'));assert.ok(!html.includes('DISPATCH_CONFLICT'))
+ await unchanged()
  assert.match(await (await h.request(`/app/assets/${asset.id}`)).text(),/<select name="technicianId"/)
- await h.command('job.book',{...input,startAt:'2026-10-20T09:00:00+10:00',endAt:'2026-10-20T10:00:00+10:00'})
+ const second=await h.command('job.book',{...input,startAt:'2026-10-20T09:00:00+10:00',endAt:'2026-10-20T10:00:00+10:00'})
  const history=await h.request(`/api/mallet/assets/${asset.id}/history.csv`)
- assert.equal(history.status,200);assert.match(await history.text(),/Second visit|job.book/)
- assert.equal((await current()).visits.length,2)
+ assert.equal(history.status,200)
+ const bookings=csvRecords(await history.text()).filter(row=>row.Event==='job.book')
+ assert.deepEqual(bookings.map(row=>row.Job).sort(),[job.id,second.id].sort(),'Downloaded CSV retains both distinct visit identities')
+ for(const visit of [job,second]){const row=bookings.find(row=>row.Job===visit.id);assert.equal(row.Asset,asset.label);assert.equal(row.Identifier,asset.identifier);assert.equal(JSON.parse(row.Details).technicianId,visit.technicianId)}
+ assert.deepEqual((await current()).visits,[job.id,second.id])
 }))
+
+test('WORKSHOP-001 and INVOICE-001: native registration, repeat visits and exact saved invoice at 1440 and 390',async()=>{const {workshopBrowser}=await import('./browser-journey.mjs');await workshopBrowser()})
 
 test('exact revision, partial authorisation and quantity ceilings protect customer consent',async()=>{
  await run(async h=>{
@@ -286,6 +366,44 @@ test('agent prepares, person approves, immutable actual-work invoice exports onc
  },{entry:'tests/support/preparation-worker.ts',clock:'2026-10-30T12:00:00Z',outboundService:async request=>{outboundCalls++;assert.equal(new URL(request.url).pathname,'/preparation-write');entered();await resumed;return new Response('continue')}})
  await preparationKeyBrowser()
 })
+
+test('INVOICE-001: exact actual-work lines, approval and both saved export retrieval versions',()=>run(async h=>{
+ const {job}=await booking(h),key=await h.command('agent.create',{label:'Workshop assistant'}),agent={as:'',headers:{authorization:`Bearer ${key.token}`}}
+ let q=await estimate(h,job,agent)
+ await h.command('estimate.approve',{estimateId:q.id,version:q.version,revision:1},{...agent,status:403})
+ q=await authorise(h,q,[q.revisions[0].lines[0].id])
+ let j=(await h.state()).records.job[0]
+ j=await h.command('work.record',{jobId:j.id,version:j.version,lineId:q.revisions[0].lines[0].id,quantity:2})
+ await qualityReady(h,j)
+ j=await h.command('job.complete',{jobId:j.id,version:j.version})
+ let invoice=await h.command('invoice.prepare',{jobId:j.id,version:j.version},agent)
+ assert.equal(invoice.totals.totalCents,5500);assert.equal(invoice.lines.length,1)
+ const lineId=q.revisions[0].lines[0].id,expectedLine={id:lineId,kind:'part',description:'Brake pads',quantity:2,quantityMilli:2000,unitCents:2500,taxable:true,taxRatePercent:10,taxRateMillionths:100000,subtotalCents:5000,salesTaxCents:500,totalCents:5500,sourceEstimateId:q.id,sourceRevision:1}
+ const lineFields=line=>Object.fromEntries(Object.keys(expectedLine).map(key=>[key,line[key]]))
+ assert.deepEqual(invoice.lines.map(lineFields),[expectedLine],'Invoice freezes only the independently specified authorized actual-work line')
+ assert.deepEqual(invoice.actuals,j.actuals);assert.equal(invoice.actuals[0].lineId,lineId);assert.equal(invoice.actuals[0].estimateId,q.id);assert.equal(invoice.actuals[0].revision,1);assert.equal(invoice.actuals[0].quantityMilli,2000)
+ const beforeRefusal=(await h.state()).records
+ await h.command('invoice.export',{invoiceId:invoice.id,version:invoice.version},{status:409})
+ await h.command('invoice.export',{invoiceId:invoice.id,version:invoice.version},{...agent,status:403})
+ await h.command('invoice.approve',{invoiceId:invoice.id,version:invoice.version,revision:2},{status:409})
+ const refused=(await h.state()).records
+ for(const kind of ['invoice','job','approval','export'])assert.deepEqual(refused[kind]??[],beforeRefusal[kind]??[],'Unsafe invoice action leaves '+kind+' unchanged')
+ invoice=await h.command('invoice.approve',{invoiceId:invoice.id,version:invoice.version,revision:1})
+ const approved=await h.state(),actor={id:approved.actor.id,name:approved.actor.name,role:approved.actor.role},approval=approved.records.approval.find(a=>a.subjectKind==='invoice'&&a.subjectId===invoice.id)
+ assert.deepEqual(invoice.approval.by,actor);assert.equal(invoice.approval.revision,1)
+ assert.deepEqual(approval.approvedBy,actor);assert.equal(approval.revision,1);assert.equal(approval.subjectVersion,invoice.version);assert.deepEqual(approval.preparedBy,invoice.preparedBy);assert.equal(approval.preparedBy.id,key.id)
+ const a=await h.command('invoice.export',{invoiceId:invoice.id,version:invoice.version}),exported=(await h.state()).records,current=exported.invoice.find(i=>i.id===invoice.id)
+ const b=await h.command('invoice.export',{invoiceId:invoice.id,version:current.version-1}),c=await h.command('invoice.export',{invoiceId:invoice.id,version:current.version})
+ assert.deepEqual(a,b);assert.deepEqual(a,c);assert.deepEqual(a.lines.map(lineFields),[expectedLine]);assert.equal(a.invoiceRevision,1)
+ const response=await h.request(`/api/mallet/exports/${a.id}`);assert.equal(response.status,200);const csv=await response.text();assert.match(csv,/55.00/);assert.equal(csv,a.csv)
+ const customer=assetInput()
+ assert.deepEqual(csvRecords(csv),[{InvoiceNumber:invoice.number,CustomerName:customer.customerName,CustomerEmail:customer.customerEmail,Vehicle:customer.label,Identifier:customer.identifier,JobId:job.id,EstimateRevision:'1',Description:'Brake pads',Kind:'part',Quantity:'2',UnitUSD:'25.00',SubtotalUSD:'50.00',SalesTaxUSD:'5.00',TotalUSD:'55.00',Currency:'USD',EstimateId:q.id}])
+ const after=(await h.state()).records
+ assert.equal(after.export.length,1);assert.equal(after.approval.length,2);assert.deepEqual(after.approval,approved.records.approval)
+ for(const kind of ['invoice','job','export'])assert.deepEqual(after[kind],exported[kind],'Both retrieval versions preserve '+kind)
+ await h.command('agent.revoke',{id:key.id})
+ await h.state({...agent,status:401})
+}))
 
 test('dispatch proposal is inert until a person approves current free resources',()=>run(async h=>{
  const {job}=await booking(h),key=await h.command('agent.create',{label:'Dispatcher'}),agent={as:'',headers:{authorization:`Bearer ${key.token}`}}
