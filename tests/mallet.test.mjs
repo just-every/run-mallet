@@ -1,3 +1,4 @@
+import {agentRetryConflictsJourney} from './support/agent-retry-conflicts-journey.mjs'
 import {preparationKeyBrowser} from './browser-journey.mjs'
 import {agentAttributionBrowser} from './agent-attribution-browser.mjs'
 import {blockerJourney} from './support/blocker-journey.mjs'
@@ -249,6 +250,8 @@ test('exact revision, partial authorisation and quantity ceilings protect custom
  })
  const {estimateDecisionBrowser}=await import('./browser-journey.mjs');await estimateDecisionBrowser()
 })
+
+test('BASE-AGENT-012: native estimate retries retain one outcome and refuse changed arguments or stale revisions',agentRetryConflictsJourney)
 
 test('agent prepares, person approves, immutable actual-work invoice exports once',async()=>{
  let entered,release
