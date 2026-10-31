@@ -592,7 +592,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "e4df179b611d1e8781561989db19ca5e2cc6564a8f747276380e52f946c1aad7",
+      "sha256": "404b334a3828d6b6c53ffc3fc6f495d341ba77fcb0133d7c79898b83997eb7f2",
       "executable": false
     },
     "deploy-demo.json": {
@@ -5376,7 +5376,7 @@
       "executable": false
     },
     "tests/mallet.test.mjs": {
-      "sha256": "fe1c2f703108da9d543bd180befe64a1de0bd8bfd69fc2700f10aa3b5310c683",
+      "sha256": "6b50ac5bc74a8dedc6ac3443266e83a3ca860ad83307684d6d8c67b9e782e7eb",
       "executable": false
     },
     "tests/media-browser.mjs": {
