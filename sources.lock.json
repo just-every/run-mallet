@@ -576,7 +576,7 @@
       "executable": false
     },
     "agent-surface.json": {
-      "sha256": "8e35a4c385ee25f65ce228e8d85377d3bb9c4ebdfe21a36e1df8aefbd1fc4ef2",
+      "sha256": "03328d85bee83aeb1058ce2a230a1accc14cd78fa182e95c7a82e6f0d6f868b5",
       "executable": false
     },
     "AGENTS.md": {
@@ -5204,11 +5204,15 @@
       "executable": false
     },
     "tests/agent-door/fixtures.mjs": {
-      "sha256": "11a8a925e58bb559cbd5efa5a966ea2081add61b8faee8531342b4d994e63013",
+      "sha256": "2df00e8bc6e18829226d0a87e03577dd9959b28088e6f00536a236ad8cf0c47d",
       "executable": false
     },
     "tests/agent-door/owner.mjs": {
       "sha256": "1fec20fd1a76b3a9a0db6bcfed0de27e164f725eca5c478d0b3cd8b542bb5d80",
+      "executable": false
+    },
+    "tests/agent-door/refused-classification.mjs": {
+      "sha256": "ec8966e8cd6b78124ef7f1a50fe64c245df0fa575613827528d641ad47e89f86",
       "executable": false
     },
     "tests/agent-door/reviewer.mjs": {
