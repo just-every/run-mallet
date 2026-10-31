@@ -26,6 +26,7 @@ export async function auditApprovalOutcomes(h, tool, key, page, directory, now, 
   else assert.equal(answer.decision,null,'Native classification refuses before a policy decision')
   assert.equal(answer.result.isError ?? false,code !== null)
   assert.equal(answer.result._meta[meta + 'error']?.code ?? null,code)
+  if (code) assert.equal(answer.result.structuredContent,undefined,'A refused replay cannot disclose an earlier private result')
   const after = await auditRows(context)
   const added = after.rows.filter(row => row.sequence > (before.rows.at(-1)?.sequence ?? 0))
   assert.equal(added.length,1,'Each native call retains exactly one new audit identity')
@@ -125,6 +126,24 @@ export async function auditApprovalOutcomes(h, tool, key, page, directory, now, 
  await call('mallet.dispatch.prepare',failedArgs,{outcome:'replayed',code:'execution_failed',approval:{id:failed.approvalId,by:[owner.id]},replayOf:failed.row.id})
  assert.deepEqual((await h.state()).records,stoppedBefore,'Removing the fence cannot revive the saved failed approval or retry its effect')
 
+ const freshArgs = proposal('Synthetic freshly approved bench')
+ const fresh = await call('mallet.dispatch.prepare',freshArgs,{outcome:'pending'})
+ assert.deepEqual((await h.state()).records,stoppedBefore,'A fresh capture still requires its own person decision')
+ assert.equal((await decision(fresh.approvalId,'approve')).approval.state,'executed')
+ await executionRow(fresh,null,'done')
+ const freshRecords = (await h.state()).records
+ const created = freshRecords.proposal.filter(row => row.plan.bayId === freshArgs.bayId)
+ assert.equal(created.length,1,'A fresh exact approval creates one native preparation after the owner removed the fence')
+ assert.equal(created[0].jobId,job.id)
+ assert.equal(created[0].preparedBy.id,agentId)
+ assert.equal(freshRecords.proposal.length,stoppedBefore.proposal.length + 1)
+ assert.ok(!freshRecords.proposal.some(row => row.plan.bayId === failedArgs.bayId),'The saved failed capture never creates its proposal')
+ assert.deepEqual(freshRecords.job,stoppedBefore.job,'Preparation grants no booking or completion decision')
+ assert.equal(freshRecords.webhookDelivery?.length ?? 0,0)
+ const repeated = await call('mallet.dispatch.prepare',freshArgs,{outcome:'replayed',approval:{id:fresh.approvalId,by:[owner.id]},replayOf:fresh.row.id})
+ assert.equal(repeated.answer.result.structuredContent.id,created[0].id)
+ assert.deepEqual((await h.state()).records,freshRecords,'The successful capture replays once without retrying the failed capture')
+
  const expiredArgs = proposal('Synthetic expired bench'), expiredBefore = (await h.state()).records
  const expired = await call('mallet.dispatch.prepare',expiredArgs,{outcome:'pending'})
  const saved = await approval(expired.approvalId)
@@ -154,5 +173,5 @@ export async function auditApprovalOutcomes(h, tool, key, page, directory, now, 
   }
  } finally { await h.setClock(now) }
  await policy('autonomous')
- console.log('PROBE BASE-AGENT-009 point-2-outcomes: real invoice preparation under review -> job_state and no business effect or review; exact pending dispatch -> person rejection and inert replay; changed policy -> separately audited execution refused with the real approver; newly enabled webhook -> failed execution and inert replay with zero business changes; exact expiry -> approval_expired, no execution and inert replay; complete local identities, trace, classes, rule, targets and keys retained through every cursor and export.')
+ console.log('PROBE BASE-AGENT-009 point-2-outcomes: real invoice preparation under review -> job_state and no business effect or review; exact pending dispatch -> person rejection and inert replay; changed policy -> separately audited execution refused with the real approver; newly enabled webhook -> failed execution and inert replay with zero business changes; fresh capture and person approval after stopping the webhook -> exactly one attributed proposal, no delivery and inert replay; exact expiry -> approval_expired, no execution and inert replay; complete local identities, trace, classes, rule, targets and keys retained through every cursor and export.')
 }
