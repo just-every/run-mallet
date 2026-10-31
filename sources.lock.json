@@ -576,7 +576,7 @@
       "executable": false
     },
     "agent-surface.json": {
-      "sha256": "8e35a4c385ee25f65ce228e8d85377d3bb9c4ebdfe21a36e1df8aefbd1fc4ef2",
+      "sha256": "65ab4470e4a6413f8d88ecba6a4f3b9e85d2bfdadf19442b6f11363a9cee3fa0",
       "executable": false
     },
     "AGENTS.md": {
@@ -592,7 +592,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "d2250fb24e95a787a5a73473893937761b6eaf286d1f89a3e3f07a738ee67c3d",
+      "sha256": "05a9c676cec56b65083220c652c20e37afe4d1f4560d834aef8e194450522a86",
       "executable": false
     },
     "deploy-demo.json": {
@@ -5203,8 +5203,20 @@
       "sha256": "2e9c1b6a2c2c4d95475e91128d6c017a2fe467e2c499c93ba2df0d951b95c8ce",
       "executable": false
     },
+    "tests/agent-audit-browser.mjs": {
+      "sha256": "9db5e135bc0ec11f5a4154e580a46bfc1595cab0f0d5a7e790b2da33c246d243",
+      "executable": false
+    },
+    "tests/agent-door/audit-counts.mjs": {
+      "sha256": "2c8390b8a7deee7a81e82fb9b89059f253b096bc52e06312da79e223c242a390",
+      "executable": false
+    },
     "tests/agent-door/fixtures.mjs": {
       "sha256": "11a8a925e58bb559cbd5efa5a966ea2081add61b8faee8531342b4d994e63013",
+      "executable": false
+    },
+    "tests/agent-door/journey.mjs": {
+      "sha256": "cde16f47077d0532c9b4b27d1601a8851b3d30a3d03c1afc6fe8934953f62cea",
       "executable": false
     },
     "tests/agent-door/owner.mjs": {
@@ -5213,6 +5225,10 @@
     },
     "tests/agent-door/reviewer.mjs": {
       "sha256": "3cffb2cbb195bad291b1ce75e1a3f22679c826e4c06e620be389072c2ae5029c",
+      "executable": false
+    },
+    "tests/agent-door/worker.ts": {
+      "sha256": "c4e248e979aca294cc0585bb191ef98cc887c517e9c36eadcc0db3de4ab079d0",
       "executable": false
     },
     "tests/approval-browser.mjs": {
@@ -5376,7 +5392,7 @@
       "executable": false
     },
     "tests/mallet.test.mjs": {
-      "sha256": "578b0ebc663a9da84de986a3ecd66ebe65dd448a9b79a16662dee7532a9969b9",
+      "sha256": "211c2512221fe6a707aa7ca2006e9b407a9250a37a23becd116b7bb4770ca86a",
       "executable": false
     },
     "tests/media-browser.mjs": {

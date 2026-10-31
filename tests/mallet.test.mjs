@@ -752,3 +752,5 @@ test('ADV-005: cited declined-work review preserves decisions, refuses stale or 
 test('ADV-005: owner reviews later mileage, replacement inspection and advisory history at 1440 and 390',async()=>{const {declinedReviewBrowser}=await import('./declined-work-review-browser.mjs');await declinedReviewBrowser()})
 test('RETURN-002: reviewed CA and TX storage versions, notice clocks, disposal refusal, payment release and private recovery',()=>run(async h=>{const {storageJourney}=await import('./support/storage-journey.mjs');await storageJourney(h)}))
 test('RETURN-002: native storage rules, notices, legal refusal and released ledger at 1440 and 390',async()=>{const {storageBrowser}=await import('./storage-browser.mjs');await storageBrowser()})
+
+test('BASE-AGENT-009: native weekly audit counts reconcile through every cursor at 1440 and 390',async()=>{const {agentAuditBrowser}=await import('./agent-audit-browser.mjs');await agentAuditBrowser()})
