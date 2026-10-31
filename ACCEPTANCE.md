@@ -102,7 +102,7 @@ Core · published · **partial** · Cites BASE-INPUT-003, BASE-OPS-003, BASE-OPS
 **Acceptance.**
 1. Upload customers and customer-assets API snapshots, preview and apply the fingerprint, replay, resume and undo; inspect originals and journal, and prove an asset used by a new visit survives undo.
 
-**Evidence.** `src/mallet/imports/service.ts`; `src/mallet/imports/snapshots.ts`; `tests/mallet.test.mjs`; supplementary regression evidence in `tests/mallet.test.mjs`: "RepairShopr dry run, reviewed fingerprint, original custody, replay and undo" asserts every bounded continuation, ordered journal positions and fences, retained original bytes, inert completed replay and exact source-linked asset effects; "import undo preserves an asset once it has a native repair visit" compares the complete used asset and native visit across refused undo. These added assertions retain the current main judgment pending review.
+**Evidence.** `src/mallet/imports/service.ts`; `src/mallet/imports/snapshots.ts`; `tests/mallet.test.mjs`; "import undo preserves an asset once it has a native repair visit" compares the complete used asset and native visit across refused undo. These added assertions retain the current main judgment pending review.
 **Gap.** Not asserted in the old cited evidence: An asset with a native visit itself survives undo; Journal retains resumed batches. Asserted: Preview leaves the asset population absent; Exact reviewed import population; Apply replay has one job identity; Journal retains originals; Undo removes untouched assets.
 
 #### DATA-001 — Custody and erasure

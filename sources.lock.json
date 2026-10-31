@@ -572,7 +572,7 @@
       "executable": false
     },
     "ACCEPTANCE.md": {
-      "sha256": "69ad3a9c2a4a8c5ccf6459b5026875a127c62d596c157246e2624c88b5cbb761",
+      "sha256": "7f29877b5605d695e347b8ca6315dcc8c3b45b10a49866f63ec269df61dbbe6c",
       "executable": false
     },
     "agent-surface.json": {
@@ -592,7 +592,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "79c00119874431424c84141ad09a17df51f8f5c43f5a72c923cc6bff9f0fd9e4",
+      "sha256": "10dd0a52b3e4fd1cdda26f90294492d6bb21c8b12f07402299938072b247e486",
       "executable": false
     },
     "deploy-demo.json": {
@@ -5376,7 +5376,7 @@
       "executable": false
     },
     "tests/mallet.test.mjs": {
-      "sha256": "b3ddd3c68562343c40b1bfdc709efc850dab0e4503aad91dd9a3f13aa4dc74d6",
+      "sha256": "34b214ecfbffbff4272eb33a668dbdb2d1a7f8c3c58fd6b972f10ae38d7c2a6e",
       "executable": false
     },
     "tests/media-browser.mjs": {
