@@ -53,7 +53,7 @@ export async function localPreparation(request: Request, env: Bindings) {
     WHERE k.token_hash=? AND k.revoked_at IS NULL AND k.expires_at>(julianday('now')-2440587.5)*86400000
     AND o.status='active' AND o.version=k.creator_version AND o.role IN ('owner','admin')`)
     .bind(await digest(bearer[1])).first<{ id: string; label: string; created_by: string }>()
-  return row ? { sponsor: { id: row.created_by }, agent: { id: `mallet-key:${row.id}`, name: row.label }, scopes: preparationScopes } : null
+  return row ? { sponsor: { id: row.created_by }, agent: { id: `mallet-key:${row.id}`, name: row.label, specialist: 'service advisor' }, clientId: `mallet-key:${row.id}`, scopes: preparationScopes } : null
 }
 
 export async function nativeAuthority(ctx: Pick<ToolContext, 'db' | 'person' | 'agent'>): Promise<Authority> {

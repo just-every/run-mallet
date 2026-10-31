@@ -592,7 +592,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "05a9c676cec56b65083220c652c20e37afe4d1f4560d834aef8e194450522a86",
+      "sha256": "04c9d6bfa38adb4d27003461b7c1f3205998b91b15a028f2652e7cebaecd6a41",
       "executable": false
     },
     "deploy-demo.json": {
@@ -1028,7 +1028,7 @@
       "executable": false
     },
     "package.json": {
-      "sha256": "6156318aaec8a32bce137bae12f447d95e91e8b97c9861c7ff863e796286850f",
+      "sha256": "154a83e200fc1b6b78af4a70ddf423d408ada8412624fd132e03591d3ab491cf",
       "executable": false
     },
     "packaging.json": {
@@ -1036,7 +1036,7 @@
       "executable": false
     },
     "pnpm-lock.yaml": {
-      "sha256": "9420202a13bd5a809c9932383a91d9eedb4d4d2f0844e46533acd3a863c402da",
+      "sha256": "5758b2d22b7d6a2aa6bb218ddbd2400ca8f6beb1f6a2ff517dcf3abe44da594b",
       "executable": false
     },
     "public/app/board-live.js": {
@@ -1656,7 +1656,7 @@
       "executable": false
     },
     "src/mallet/agent-door/people.ts": {
-      "sha256": "b60b1d1fa18295a4d9b9915f2e7c0ecaa907ddde4fd429ee7cd7ff0b32cf25dd",
+      "sha256": "ccab3e8b801919a1cd1ca8963e8528d4169213d57df9a4da9d87c86a23d6d756",
       "executable": false
     },
     "src/mallet/agent-door/records.ts": {
@@ -5204,7 +5204,7 @@
       "executable": false
     },
     "tests/agent-audit-browser.mjs": {
-      "sha256": "56a6eea85911ca6ef324dfd6f4a67dc2c65a57b20db61fccec908d7b3c0d278f",
+      "sha256": "dea22179c11d94a4c2ddaed9a0af60308661c8371f0e695f38b45e3792f2e880",
       "executable": false
     },
     "tests/agent-door/audit-counts.mjs": {

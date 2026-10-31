@@ -20,8 +20,9 @@ export async function agentAuditBrowser() {
    assert.equal(response.status, 200, await response.text())
   }
   let id = 0
+  const trace = '00-' + crypto.randomUUID().replaceAll('-', '') + '-0123456789abcdef-01'
   const tool = async (name, args) => {
-   const response = await h.request('/mcp', {method:'POST', as:'', headers:{Authorization:'Bearer ' + key.token,Accept:'application/json, text/event-stream','MCP-Protocol-Version':'2026-07-28','Mcp-Method':'tools/call','Mcp-Name':name},body:{jsonrpc:'2.0',id:++id,method:'tools/call',params:{name,arguments:args,_meta:{'io.modelcontextprotocol/protocolVersion':'2026-07-28','io.modelcontextprotocol/clientCapabilities':{elicitation:{url:{}}},'io.modelcontextprotocol/clientInfo':{name:'synthetic-mallet-audit',version:'1'}}}}})
+   const response = await h.request('/mcp', {method:'POST', as:'', headers:{Authorization:'Bearer ' + key.token,Accept:'application/json, text/event-stream','MCP-Protocol-Version':'2026-07-28','Mcp-Method':'tools/call','Mcp-Name':name},body:{jsonrpc:'2.0',id:++id,method:'tools/call',params:{name,arguments:args,_meta:{'io.modelcontextprotocol/protocolVersion':'2026-07-28','io.modelcontextprotocol/clientCapabilities':{elicitation:{url:{}}},'io.modelcontextprotocol/clientInfo':{name:'synthetic-mallet-audit',version:'1'},traceparent:trace}}}})
    const body = await response.json()
    return {status:response.status,result:body.result,decision:body.result?._meta?.['com.runeditrun/decision']}
   }
@@ -31,10 +32,14 @@ export async function agentAuditBrowser() {
    expected.push(expectedCall(answer, name, decision, outcome, code))
    return answer.result.structuredContent
   }
+  const unsetBefore = (await h.state()).records
+  await call('mallet.repairs.read', {id:job.id}, 'unset', 'refused', 'policy_unset')
+  assert.deepEqual((await h.state()).records, unsetBefore, 'An unanswered policy records the refusal without reading or changing private business records')
   await policy('autonomous')
   await call('mallet.repairs.list', {}, 'autonomous')
   await h.setClock(now)
-  const draft = await call('mallet.estimates.prepare', {jobId:job.id,version:job.version,lines:[{kind:'labor',description:'Synthetic audit inspection',quantity:1,unitCents:4500}],idempotency_key:crypto.randomUUID()}, 'autonomous')
+  const writeKey = crypto.randomUUID()
+  const draft = await call('mallet.estimates.prepare', {jobId:job.id,version:job.version,lines:[{kind:'labor',description:'Synthetic audit inspection',quantity:1,unitCents:4500}],idempotency_key:writeKey}, 'autonomous')
   assert.equal((await h.state()).records.estimate.find(row => row.id === draft.id).revisions[0].lines[0].unitCents, 4500)
   const before = (await h.state()).records
   for (let index = 0; index < 205; index++) {
@@ -54,6 +59,24 @@ export async function agentAuditBrowser() {
   const {rows, pages} = await auditRows(context)
   assert.ok(rows.length > 200 && pages >= 3)
   assertKnownRows(rows, expected)
+  const write = rows.find(row => row.idempotency_key === writeKey)
+  const owner = (await h.state()).actor
+  assert.deepEqual(write.agent, {id:'mallet-key:' + key.id,name:key.label,specialist:'service advisor'}, 'The native preparation keeps its actual specialist identity')
+  assert.equal(write.client_id, 'mallet-key:' + key.id, 'A local credential identifies its client without inventing a Business grant')
+  assert.deepEqual(write.sponsor, {id:owner.id,name:owner.name})
+  assert.deepEqual(write.resource, {kind:'job',id:job.id})
+  assert.deepEqual(write.classes, [{class:'standard',facts:{measure:1}}])
+  assert.deepEqual(write.rules, [{class:'standard',rule:'native-actions',do:'autonomous'}])
+  assert.equal(write.revision, 1)
+  assert.equal(write.operation_id, write.id)
+  assert.equal(write.at, now)
+  assert.equal(write.door, 'mcp')
+  assert.equal(write.trace, trace)
+  assert.equal(write.consent, null, 'Preparation keys carry no separate Business consent')
+  assert.ok(write.scopes.includes('estimate:prepare'))
+  assert.equal(write.approval, null)
+  assert.equal(write.review, null)
+  assert.equal(write.replay_of, null)
   assert.deepEqual(weeklyCounts(rows, now), {'standard:autonomous':206,'standard:blocked':1,'standard:review':1}, 'The fixture week excludes both adjacent weeks')
   const response = await h.request('/agents')
   assert.equal(response.status, 200)
