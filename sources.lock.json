@@ -592,7 +592,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "04c9d6bfa38adb4d27003461b7c1f3205998b91b15a028f2652e7cebaecd6a41",
+      "sha256": "7ab17d07460de9592ef5d970ba13d8b4d04c83c6082b7fbfb2fae409321264d2",
       "executable": false
     },
     "deploy-demo.json": {
@@ -612,7 +612,7 @@
       "executable": false
     },
     "docs/agent-door.md": {
-      "sha256": "dccd33010c91ef19b57db77c22d4513edae3a22dd8b0027fadb053420f42e7c1",
+      "sha256": "c80ccd1d49896dd9257dd50db6807d0c055bebf62466c0ec15a1c74a8ff202b3",
       "executable": false
     },
     "docs/background-jobs.md": {
@@ -1648,7 +1648,7 @@
       "executable": false
     },
     "src/mallet/agent-door/index.ts": {
-      "sha256": "67b6fff036eda75d7f3cdd9242e037081c582c7eacf32a653cc5668db7a4938c",
+      "sha256": "5e3bf6149e8f223c1f93f7953a86bed4088c6675ac9b29c57a6109aecd6a1a7c",
       "executable": false
     },
     "src/mallet/agent-door/legacy.ts": {
@@ -1656,7 +1656,7 @@
       "executable": false
     },
     "src/mallet/agent-door/people.ts": {
-      "sha256": "ccab3e8b801919a1cd1ca8963e8528d4169213d57df9a4da9d87c86a23d6d756",
+      "sha256": "885d3f76895df9246d3b82f9de7e3004e1449713f71edec4604af1446391b84f",
       "executable": false
     },
     "src/mallet/agent-door/records.ts": {
@@ -1664,7 +1664,7 @@
       "executable": false
     },
     "src/mallet/agent-door/tools.ts": {
-      "sha256": "04970186c33a2c1ca901e168b612b139ec1efcf301ed1fe57c692f353a86cf6e",
+      "sha256": "2ff08629fe50799f9f068e6ebf6267ad41f322bd9b0943454be6a8c4167dae16",
       "executable": false
     },
     "src/mallet/api/clients.ts": {
@@ -2124,7 +2124,7 @@
       "executable": false
     },
     "src/mallet/model.ts": {
-      "sha256": "2074191ef61ed4f9a429cd6b19feaa64d8acff78189c731b223a8b79885aa837",
+      "sha256": "dac857a6551b2719705d57c44303f97f49018758d65beb5ff1a87b88dc7999bb",
       "executable": false
     },
     "src/mallet/money.ts": {
@@ -2356,7 +2356,7 @@
       "executable": false
     },
     "src/mallet/restore/validate-records.mjs": {
-      "sha256": "1b9b5dbdcfd10ee946f3a9df97f1a9e55453e50a56e3a2c58e478194c1c1ddba",
+      "sha256": "10ddd67ada9621e55675f586b5499b3fec8de26e4a752a2af4ed4b4f8f8aad29",
       "executable": false
     },
     "src/mallet/restore/validate-reviews.mjs": {
@@ -2816,7 +2816,7 @@
       "executable": false
     },
     "src/mallet/ui/repair.ts": {
-      "sha256": "7c2b63b142e76c7cf60c5435431f3700d7902d4f72565ae08b8f6bf96a509377",
+      "sha256": "0c103f866424fd7018e4663ad45b7ac474429a3926634994f98ebd7a86d46ec6",
       "executable": false
     },
     "src/mallet/ui/replenishment.ts": {
@@ -2944,7 +2944,7 @@
       "executable": false
     },
     "src/mallet/workshop.ts": {
-      "sha256": "9f45d10d65338170d260f287fcccf8094d14eb971183f7968cb773f411be1e2e",
+      "sha256": "d964b2bfdcef8cf48d65db4069ae0fe8e4be87b05054a3cb56320dc3700cecda",
       "executable": false
     },
     "src/modules/agent-door/admission.ts": {
@@ -2960,11 +2960,11 @@
       "executable": false
     },
     "src/modules/agent-door/approvals.ts": {
-      "sha256": "45757936fac519de054ca754fd45ea3e6def75f18f1e71cb6a651e6451bf767c",
+      "sha256": "8d87530ab9b18dc330820f638a74e9fc698993a0526785ba80d3c7595c1a0382",
       "executable": false
     },
     "src/modules/agent-door/audit.ts": {
-      "sha256": "cb45fb29821cfa9fd544198154dde76efb0d3c2800e264a318282fdb622e7725",
+      "sha256": "23e3ba08add557cac41a474432e16dd236b4d8a48617b4a64024588e8d2e9c8a",
       "executable": false
     },
     "src/modules/agent-door/capabilities.d.mts": {
@@ -3212,7 +3212,7 @@
       "executable": false
     },
     "src/modules/agent-door/reviews.ts": {
-      "sha256": "9884027e619179eba540fc8d9ffce871facc898c77d78479e0e16a9c37922f9b",
+      "sha256": "46e57e800a0f92c74260650b25aee21c3fc00dbf86e26cfff2b5a77e6bfba63f",
       "executable": false
     },
     "src/modules/agent-door/schema/agent-door.sql": {
@@ -5204,11 +5204,11 @@
       "executable": false
     },
     "tests/agent-audit-browser.mjs": {
-      "sha256": "dea22179c11d94a4c2ddaed9a0af60308661c8371f0e695f38b45e3792f2e880",
+      "sha256": "82e3d1399b67133e3af4589121da028a4f57290b23276b5d076d95d574f16e6c",
       "executable": false
     },
     "tests/agent-door/audit-counts.mjs": {
-      "sha256": "2c8390b8a7deee7a81e82fb9b89059f253b096bc52e06312da79e223c242a390",
+      "sha256": "1fd945f27ae9ece952546029dd00a7188511e4a5963e141fc52d31aef75598e0",
       "executable": false
     },
     "tests/agent-door/fixtures.mjs": {

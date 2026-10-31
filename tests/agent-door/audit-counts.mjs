@@ -3,12 +3,13 @@ import assert from 'node:assert/strict'
 const decisionMeta = 'com.runeditrun/decision'
 const errorMeta = 'com.runeditrun/error'
 
-export async function auditRows({request, origin, cookie}) {
+export async function auditRows({request, origin, cookie}, filters = {}) {
  const rows = [], cursors = new Set()
  let after = null, pages = 0
  for (;;) {
   assert.ok(pages++ < 100, 'Audit cursors terminate')
-  const response = await request(origin + '/agents/api/audit' + (after ? '?after=' + encodeURIComponent(after) : ''), {headers:{Cookie:cookie}})
+  const query = new URLSearchParams({...filters, ...(after ? {after} : {})})
+  const response = await request(origin + '/agents/api/audit?' + query, {headers:{Cookie:cookie}})
   assert.equal(response.status, 200, 'Owner can read retained audit pages')
   const page = await response.json()
   assert.equal(page.differs_from_policy, 0, 'Retained decisions reconcile with the policy in force')
@@ -22,7 +23,7 @@ export async function auditRows({request, origin, cookie}) {
    break
   }
   assert.ok(typeof page.cursor === 'string' && !cursors.has(page.cursor), 'Every audit cursor advances')
-  assert.equal(Number(page.cursor), rows.at(-1)?.sequence, 'Unfiltered cursor identifies the last retained row')
+  if (!filters.agent && !filters.class) assert.equal(Number(page.cursor), rows.at(-1)?.sequence, 'Unfiltered cursor identifies the last retained row')
   cursors.add(page.cursor)
   after = page.cursor
  }

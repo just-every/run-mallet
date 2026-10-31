@@ -93,6 +93,17 @@ export const workshop: Handler = (c, command, p) => {
       event(c, command, job.id, row.id, { before: { bayId: job.bayId, technicianId: job.technicianId, startAt: job.startAt, endAt: job.endAt }, after: proposal.plan, reviewedConflicts })
       return row
     }
+    case 'dispatch.withdraw': {
+      const proposal = find(c.s, 'proposal', p.proposalId)
+      expectVersion(proposal, p.version)
+      if (proposal.status !== 'pending') fail('PROPOSAL_STATE', 'Only a pending dispatch proposal can be withdrawn.')
+      const job = find(c.s, 'job', proposal.jobId)
+      expectVersion(job, proposal.jobVersion)
+      const withdrawal = { by: who(c), at: c.now, reason: text(p.reason, 'withdrawal reason', 2000) }
+      const row = bump(c.s, 'proposal', proposal, { status: 'withdrawn', withdrawal })
+      event(c, command, job.id, row.id, withdrawal)
+      return row
+    }
     case 'work.record': {
       const job = openJob(c, p)
       if (c.actor.role === 'member' && !onCrew(job, c.actor.id)) fail('FORBIDDEN', 'Technicians record work only on their assigned jobs.', null, 403)

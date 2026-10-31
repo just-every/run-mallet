@@ -1,4 +1,4 @@
-import { ToolRefusal, type ToolContext, type ToolDefinition, type JsonSchemaObject } from '../../modules/agent-door/index.ts'
+import { ToolRefusal, type ToolContext, type ToolDefinition, type JsonSchemaObject, type UndoContext } from '../../modules/agent-door/index.ts'
 import { execute, load, MalletError } from '../model'
 import { nativeAuthority, preparationActor } from './people.ts'
 import { readRepair, readableState } from './records.ts'
@@ -26,6 +26,13 @@ const definitions = [
     title: 'Prepare an actual-work invoice', clauses: ['AGENT-001', 'INVOICE-001'], schema: object({ jobId: id, version }, ['jobId', 'version']) },
 ]
 
+async function effectAuthority(ctx: ToolContext | UndoContext, command: string) {
+  const native = await nativeAuthority(ctx), family = webhookFamily(command)
+  return family ? { sql: `(${native.sql}) AND NOT EXISTS(SELECT 1 FROM mallet_records r WHERE r.kind='webhookSubscription'
+    AND COALESCE(json_extract(r.value,'$.active'),0) NOT IN (0,'')
+    AND (json_type(r.value,'$.families')<>'array' OR EXISTS(SELECT 1 FROM json_each(r.value,'$.families') WHERE value=?)))`, params: [...native.params, family] } : native
+}
+
 async function target(def: typeof definitions[number], args: Record<string, unknown>, ctx: ToolContext) {
   preparationActor(ctx)
   const state = await load(ctx.db)
@@ -41,6 +48,19 @@ async function target(def: typeof definitions[number], args: Record<string, unkn
 const preparations: ToolDefinition[] = definitions.map(def => ({
   name: def.name, title: def.title, description: `${def.title} through Mallet's native preparation service. A person still decides the resulting draft.`,
   scope: def.scope, readOnly: false, inputSchema: def.schema, outputSchema: output, classes: ['standard'], clauses: def.clauses, untrusted: true,
+  ...(def.command === 'dispatch.prepare' ? {
+    async undo(saved: unknown, ctx: UndoContext) {
+      if (ctx.person.role !== 'owner' && ctx.person.role !== 'admin') throw new ToolRefusal('manager_required')
+      const input = saved as {proposalId: string; version: number; jobId: string}
+      try {
+        await execute(ctx.db, {id:ctx.person.id,name:ctx.person.name,role:ctx.person.role}, 'dispatch.withdraw', {...input,reason:'Person undid the reviewed agent dispatch preparation'}, await effectAuthority(ctx, 'dispatch.withdraw'))
+        ctx.emit('dispatch.withdraw', `mallet://repairs/${input.jobId}`, {proposalId:input.proposalId})
+      } catch (error) {
+        if (error instanceof MalletError) throw new ToolRefusal(error.code.toLowerCase(), error.message)
+        throw error
+      }
+    },
+  } : {}),
   async classify(args, ctx) {
     await target(def, args, ctx)
     // Prices are draft proposals; preparing never moves money or shares a record.
@@ -51,21 +71,20 @@ const preparations: ToolDefinition[] = definitions.map(def => ({
   async summary(args, ctx) {
     const row = await target(def, args, ctx)
     return { target: { id: row.id, name: String(row.title ?? def.title) },
-      items: Array.isArray(args.lines) ? args.lines.map((line: any) => `${line.quantity} × ${line.description}, USD ${line.unitCents} cents per unit`) : [def.title] }
+      items: Array.isArray(args.lines) ? args.lines.map((line: any) => `${line.quantity} × ${line.description}, USD ${line.unitCents} cents per unit`)
+        : def.command === 'dispatch.prepare' ? [`Bay: ${args.bayId}`, `Technician: ${args.technicianId}`, `From: ${args.startAt}`, `Until: ${args.endAt}`, `Reason: ${args.reason}`] : [def.title] }
   },
   async run(args, ctx) {
     await target(def, args, ctx)
-    const actor = preparationActor(ctx), native = await nativeAuthority(ctx), family = webhookFamily(def.command)
+    const actor = preparationActor(ctx)
     // Fence the actual native transaction too: a new subscription between
     // classification and persistence must not turn a draft into queued egress.
-    const authority = family ? { sql: `(${native.sql}) AND NOT EXISTS(SELECT 1 FROM mallet_records r WHERE r.kind='webhookSubscription'
-      AND COALESCE(json_extract(r.value,'$.active'),0) NOT IN (0,'')
-      AND (json_type(r.value,'$.families')<>'array' OR EXISTS(SELECT 1 FROM json_each(r.value,'$.families') WHERE value=?)))`, params: [...native.params, family] } : native
+    const authority = await effectAuthority(ctx, def.command)
     try {
       const result = await execute(ctx.db, actor, def.command, args, authority)
       const uri = `mallet://${def.resource}/${def.command === 'dispatch.prepare' ? result.jobId : result.id}`
       ctx.emit(def.command, uri, { id: result.id, version: result.version })
-      return { result, resources: [{ uri, name: def.title }] }
+      return { result, resources: [{ uri, name: def.title }], ...(def.command === 'dispatch.prepare' ? {undo:{proposalId:result.id,version:result.version,jobId:result.jobId}} : {}) }
     } catch (error) {
       if (error instanceof MalletError) throw new ToolRefusal(error.code.toLowerCase(), error.message)
       throw error

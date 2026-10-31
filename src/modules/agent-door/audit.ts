@@ -33,6 +33,14 @@ export function auditInsert(rt: Runtime, row: AuditRow, evidence?: Evidence, gua
     .bind(row.id, row.at, row.agent.id, JSON.stringify(row.classes.map(item => item.class)), JSON.stringify(row), evidence ? JSON.stringify(evidence) : null, ...(guard ? [guard] : []))
 }
 export async function audit(rt: Runtime, row: AuditRow, evidence?: Evidence) {
+  if (row.review) {
+    const mark = await rt.options.db.prepare('SELECT marked_by FROM agent_door_reviews WHERE id=?').bind(row.review.id).first<{marked_by:string|null}>()
+    if (mark) row.review.by = mark.marked_by
+  }
+  if (row.approval) {
+    const marks = await rt.options.db.prepare('SELECT approvals FROM agent_door_approvals WHERE id=?').bind(row.approval.id).first<{approvals:string}>()
+    if (marks) row.approval.by = [...new Set((JSON.parse(marks.approvals) as Array<{person:string}>).map(mark => mark.person))]
+  }
   await rt.options.db.prepare(`INSERT INTO agent_door_audit(id,at,agent,classes,row,evidence) VALUES(?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET classes=excluded.classes,row=excluded.row,evidence=excluded.evidence`)
     .bind(row.id, row.at, row.agent.id, JSON.stringify(row.classes.map(item => item.class)), JSON.stringify(row), evidence ? JSON.stringify(evidence) : null).run()
 }
@@ -81,9 +89,9 @@ export async function auditPage(rt: Runtime, url: URL) {
     }
     if (row.approval) {
       const item = await rt.options.db.prepare('SELECT approvals FROM agent_door_approvals WHERE id=?').bind(row.approval.id).first<{ approvals: string }>()
-      row.approval.by = item ? [...new Set((JSON.parse(item.approvals) as Array<{ person: string }>).map(item => item.person))] : []
+      row.approval.by = item ? [...new Set((JSON.parse(item.approvals) as Array<{ person: string }>).map(item => item.person))] : row.approval.by
     }
-    if (row.review) row.review.by = (await rt.options.db.prepare('SELECT marked_by FROM agent_door_reviews WHERE id=?').bind(row.review.id).first<{ marked_by: string | null }>())?.marked_by ?? null
+    if (row.review) row.review.by = (await rt.options.db.prepare('SELECT marked_by FROM agent_door_reviews WHERE id=?').bind(row.review.id).first<{ marked_by: string | null }>())?.marked_by ?? row.review.by
     visible.push(row)
   }
   return { rows: visible, cursor: rows.length ? String(rows.at(-1)!.sequence) : url.searchParams.get('after') ?? null, differs_from_policy: differs }

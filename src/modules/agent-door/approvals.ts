@@ -75,6 +75,8 @@ export async function approvalDoor(rt: Runtime, request: Request, person: Person
   const changed = await rt.options.db.prepare('UPDATE agent_door_approvals SET state=?,approvals=?,version=version+1 WHERE id=? AND version=? AND state=?')
     .bind(nextState, JSON.stringify(approvals), id, row.version, 'pending').run()
   if (!changed.meta.changes) return error('approval_conflict', 409)
+  await rt.options.db.prepare("UPDATE agent_door_audit SET row=json_set(row,'$.approval.by',json(?)) WHERE json_extract(row,'$.approval.id')=?")
+    .bind(JSON.stringify([...new Set(approvals.map(mark => mark.person))]), id).run()
   const final = complete ? await executeApproval(rt, id, saved, approvals) : { state: nextState, code: undefined }
   await appendEvents(rt, [{ type: 'approval.decided', uri: `${rt.options.origin}/agents/approvals/${id}`, actor: { kind: 'person', person: { id: person.id, name: person.name } }, data: { decision_id: saved.decision_id, classes: saved.classes, decision: 'approval', state: final.state, ...(final.code ? { code: final.code } : {}) } }])
   const current = (await rt.options.db.prepare('SELECT * FROM agent_door_approvals WHERE id=?').bind(id).first<ApprovalRecord>())!

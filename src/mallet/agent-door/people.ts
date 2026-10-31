@@ -56,13 +56,13 @@ export async function localPreparation(request: Request, env: Bindings) {
   return row ? { sponsor: { id: row.created_by }, agent: { id: `mallet-key:${row.id}`, name: row.label, specialist: 'service advisor' }, clientId: `mallet-key:${row.id}`, scopes: preparationScopes } : null
 }
 
-export async function nativeAuthority(ctx: Pick<ToolContext, 'db' | 'person' | 'agent'>): Promise<Authority> {
+export async function nativeAuthority(ctx: Pick<ToolContext, 'db' | 'person'> & {agent: ToolContext['agent'] | null}): Promise<Authority> {
   const person = await ctx.db.prepare("SELECT id,version,role FROM oa_operators WHERE id=? AND status='active'")
     .bind(ctx.person.id).first<{ id: string; version: number; role: string }>()
   if (!person || person.role !== ctx.person.role) throw new ToolRefusal('sponsor_unavailable')
   const base = { sql: "EXISTS(SELECT 1 FROM oa_operators WHERE id=? AND version=? AND role=? AND status='active') AND NOT EXISTS(SELECT 1 FROM mallet_enterprise_users WHERE id=?) AND NOT EXISTS(SELECT 1 FROM mallet_staff_grants WHERE operator_id=?)",
     params: [person.id, person.version, person.role, person.id, person.id] as unknown[] }
-  if (!ctx.agent.id.startsWith('mallet-key:')) return base
+  if (!ctx.agent?.id.startsWith('mallet-key:')) return base
   return { sql: `(${base.sql}) AND EXISTS(SELECT 1 FROM mallet_agent_keys k JOIN oa_operators o ON o.id=k.created_by
     WHERE k.id=? AND k.created_by=? AND k.revoked_at IS NULL AND k.expires_at>(julianday('now')-2440587.5)*86400000
     AND o.version=k.creator_version AND o.status='active' AND o.role IN ('owner','admin'))`,

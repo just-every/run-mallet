@@ -21,7 +21,12 @@ Draft prices create no payment, published price or commitment. Server-computed
 class facts count proposed lines or the one dispatch/invoice. Mutations retain
 native versions, resolved native targets and server summaries. Caller classes,
 approval claims and imported instructions never grant authority. No provider
-cost, spend authority or unsupported reversal is registered.
+cost or spend authority is registered. A signed-in owner or admin can use the
+review feed to undo a pending dispatch preparation. This withdraws only that
+proposal, retains the original plan and preparer, and records the person and
+reason. It cannot reverse an applied dispatch or stale proposal, alter the
+booking, or create queued webhook activity. Repeating Undo or replaying the
+original preparation cannot restore a withdrawn proposal.
 
 Internal resource visibility adapters cover assets, repairs, jobs, estimates
 and invoices; the public resource capability is undeclared. Preparation reads
@@ -48,6 +53,28 @@ changed arguments conflict, and `expected_revision` can fence a native revision.
 Preparation attribution is `<agent> for <person>`, retaining both identities
 and named policy approvers. Approval of a preparation never asserts customer
 consent, physical work, native estimate approval or settled payment.
+
+## Retained audit and export
+
+Original preparation keys identify their actual credential client and the
+service-advisor specialist in each audit row. The row retains its sponsoring
+person, native target, scopes, policy revision and rules, class facts, decision,
+outcome, trace and idempotency key. A local preparation key is not a Business
+consent grant.
+
+Owners and policy editors read `GET /agents/api/audit`. Optional `agent` and
+`class` parameters filter each page; continue with `after` until the cursor
+stops advancing, including when a filtered page is empty. Download all matching
+rows with `GET /agents/api/audit/export`, using the same filters. The NDJSON
+download includes every audit field in sequence order, ends at the export's
+initial high-water mark, and checks the current native session on each page.
+Members and bearer credentials cannot read these administrative audit doors.
+
+Mark reviewed, Flag and Undo retain the actual signed-in person. Approving a
+pending preparation records that person separately from the agent preparer and
+preserves the historical pending row. Audit attribution survives fresh-owner
+recovery; review handles, executable approvals and credentials do not. Revoking
+an agent keeps its original name, rows and outcomes.
 
 ## Scope and verification
 

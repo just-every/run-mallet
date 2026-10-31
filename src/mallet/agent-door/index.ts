@@ -5,6 +5,7 @@ import { localPreparation, nativePeople } from './people.ts'
 import { nativeTools } from './tools.ts'
 import { repairResources } from './records.ts'
 import { originGuard, HttpError } from '../auth'
+import { exportAgentAudit } from './audit-export.ts'
 
 function trust(env: Bindings): Trust | null {
   const issuer = env.RER_OWNER_CLAIM_ISSUER, installationId = env.RER_OWNER_CLAIM_INSTALLATION_ID
@@ -42,5 +43,7 @@ export async function agentResponse(request: Request, env: Bindings): Promise<Re
     if (error instanceof HttpError) return Response.json({ code: error.code }, { status: error.status, headers: { 'cache-control': 'no-store' } })
     throw error
   }
-  return (await malletAgentDoor(env)).handle(request)
+  const door = await malletAgentDoor(env)
+  if (path === '/agents/api/audit/export') return exportAgentAudit(request, door, runtimeBindings(env).DB)
+  return door.handle(request)
 }

@@ -4,6 +4,7 @@ import {join} from 'node:path'
 import {chromium} from '@playwright/test'
 import {installation, booking} from './harness.mjs'
 import {auditRows, expectedCall, assertKnownRows, weeklyCounts, weekStart, htmlCounts} from './agent-door/audit-counts.mjs'
+import {auditLifecycle} from './agent-door/audit-lifecycle.mjs'
 
 export async function agentAuditBrowser() {
  const previous = '2030-01-06T23:59:59.000Z', now = '2030-01-09T12:00:00.000Z', later = '2030-01-14T00:00:00.000Z'
@@ -107,6 +108,7 @@ export async function agentAuditBrowser() {
   assert.deepEqual(retained.rows, rows, 'Revocation preserves every original audit row, name and outcome without adding a successful call')
   assert.ok(retained.rows.every(row => row.agent.name === key.label), 'Retained audit names keep the original agent identity')
   assert.deepEqual((await h.state()).records, revokedBefore, 'The revoked read cannot change the business records')
+  await auditLifecycle(h, page, directory, now)
   console.log('PROBE BASE-AGENT-009 point-3-browser: native write, 205 reads, review and blocked refusal; ' + rows.length + ' unique ordered rows; UTC week counts 206 autonomous, 1 review, 1 blocked at 1440 and 390; adjacent weeks excluded; business records unchanged.')
  } finally {
   await browser?.close()
