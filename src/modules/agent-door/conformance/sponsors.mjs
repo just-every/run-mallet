@@ -1,3 +1,4 @@
+import { nativeMemberPhase } from './member.mjs';
 import { auditRows } from './audit.mjs';
 import { randomUUID } from 'node:crypto';
 import { isDeepStrictEqual } from 'node:util';
@@ -6,7 +7,8 @@ import { createProtocol, errorCode, APPROVAL } from './protocol.mjs';
 
 /** Additional principals use real native sessions and signed credentials. All
  * record and approval probes cross the same public doors as the main journey. */
-export async function crossSponsorPhase(c, sponsors, initializeAgent) {
+export async function crossSponsorPhase(c, sponsors, initializeAgent, observe) {
+ if (c.surface.verification?.nativeMember) return nativeMemberPhase(c, sponsors, initializeAgent, observe);
  const declaration = c.surface.verification?.crossSponsor;
  if (!declaration || !Array.isArray(declaration.prepare) || !declaration.prepare.length || !declaration.read || !declaration.change) throw new Error('Multiple sponsors require verification.crossSponsor {prepare,read,change} fixtures.');
  for (const person of sponsors.slice(1)) {

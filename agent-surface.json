@@ -143,6 +143,10 @@
         "list",
         "prepare"
       ]
+    },
+    "nativeMember": {
+      "label": "member",
+      "initializer": "tests/agent-door/member.mjs"
     }
   },
   "journey": [
