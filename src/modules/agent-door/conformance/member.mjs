@@ -45,7 +45,9 @@ export async function nativeMemberPhase(c, sponsors, initializeAgent, observe) {
    check(`prepare-refused.${label}`, refused.result?.isError && errorCode(refused) === 'manager_required' && refused.result?.structuredContent === undefined && noPrivate(refused.body), 'An ordinary member cannot prepare an estimate even with its scope.');
    check(`prepare-unchanged.${label}`, isDeepStrictEqual(before, await snapshot()), 'Denied preparation changed native records.');
   }
-  console.log('PROBE BASE-AGENT-004 assignment: member MCP list and read -> exact assigned repair; unassigned read and estimate preparation refused; owner retains both; native records unchanged');
+  console.log('PROBE BASE-AGENT-004 assigned-read: owner job.book assigns two distinct repairs -> member MCP list and read return its exact assignment; owner retains both');
+  console.log('PROBE BASE-AGENT-004 unassigned-read: member MCP read of owner repair -> not_found without private content; native records unchanged');
+  console.log('PROBE BASE-AGENT-004 preparation: member MCP estimate preparation on assigned and unassigned repairs -> manager_required; native records unchanged');
   const held = autonomousPolicy(); held.rules = [{ id: 'all', class: '*', do: 'approval', approver: ['sponsor'], wait: 'PT1H' }];
   await c.adopt(held);
   const beforePending = await snapshot(), pending = await c.tool('mallet.estimates.prepare', change(fixture.owner)), handle = pending.result?._meta?.[APPROVAL];
@@ -72,7 +74,8 @@ export async function nativeMemberPhase(c, sponsors, initializeAgent, observe) {
    check(`attribution.${label}`, row?.outcome === 'done' && row.sponsor?.id === principal.sponsor.id && row.agent?.id === principal.agentId
     && row.consent === principal.consent && row.agent.specialist === c.surface.specialist && row.label === `${row.agent.name} for ${row.sponsor.name}`, 'Exact audit decision must retain distinct native sponsor, agent, specialist and consent attribution.');
   }
-  console.log('PROBE BASE-AGENT-004 approval-and-attribution: member session and bearer -> private approval read and approval refused; exact native sponsor, agent and consent retained');
+  console.log('PROBE BASE-AGENT-004 pending-preparation: member session and bearer read or approve owner pending preparation -> refused; exact pending preparation and native records unchanged');
+  console.log('PROBE BASE-AGENT-004 attribution: owner agent audit readback -> exact distinct native sponsor, agent, specialist and consent identities');
   const token = await accessToken(b), beforeRevocation = await snapshot();
   await c.adopt(autonomousPolicy(), { revoked: { agents: [], consents: [b.consent] } });
   for (const attempt of ['next', 'replay']) {
@@ -86,6 +89,7 @@ export async function nativeMemberPhase(c, sponsors, initializeAgent, observe) {
   const memberSession = await b.personJson('/auth/session');
   check('member-session-retained', memberSession.operator?.id === fixture.memberId && memberSession.operator.role === 'member', 'Consent revocation must not revoke the native person account or session.');
   check('revocation-unchanged', isDeepStrictEqual(beforeRevocation, await snapshot()), 'Consent revocation or refused replay changed native repair records.');
-  console.log('PROBE BASE-AGENT-004 consent: signed policy revokes only member originating consent -> next call and replay 401; owner read 200; native member session and repair records unchanged');
+  console.log('PROBE BASE-AGENT-004 consent-revocation: signed policy revokes only member originating consent -> next member call and replay 401; native repair records unchanged');
+  console.log('PROBE BASE-AGENT-004 owner-retention: first sponsor reads both repairs after member consent revocation -> 200; native member session remains valid');
  }
 }
