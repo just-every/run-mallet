@@ -1768,7 +1768,7 @@
       "executable": false
     },
     "src/mallet/collaboration.ts": {
-      "sha256": "465490d66fa0a6cb4977281fc5951f699e057d6a52475e5565dd09c16e7a673b",
+      "sha256": "d55fa167e298b2be0f62a7f62659ae563c1a6bd2b6a33587f6c3ba57bbaf471b",
       "executable": false
     },
     "src/mallet/connectors/door.ts": {
@@ -5252,7 +5252,7 @@
       "executable": false
     },
     "tests/collaboration-browser.mjs": {
-      "sha256": "c60f3ce9aed9a26ac98b0d9c9d83db9490162485682e889c0d1920ea744563b3",
+      "sha256": "cd01b2cc501b02ab191c92255c27ba4eb34aa2de131eacefe36f2ba825605b26",
       "executable": false
     },
     "tests/cores-browser.mjs": {
@@ -5376,7 +5376,7 @@
       "executable": false
     },
     "tests/mallet.test.mjs": {
-      "sha256": "d4eea59fc06b131f4ffefc31e1c1a1385d9cb16bae4d449911c8617dd4b7bef3",
+      "sha256": "b3ddd3c68562343c40b1bfdc709efc850dab0e4503aad91dd9a3f13aa4dc74d6",
       "executable": false
     },
     "tests/media-browser.mjs": {
@@ -5576,7 +5576,7 @@
       "executable": false
     },
     "tests/support/collaboration-journey.mjs": {
-      "sha256": "3087522fe176b3c731c0dee6399122b5f8be885fd9c5cef09383924c2e10fe01",
+      "sha256": "61908dd326fd839dfc99d0a7809b5b831d5ccee848430b25c804ddaa0ac34426",
       "executable": false
     },
     "tests/support/connector-journey.mjs": {
