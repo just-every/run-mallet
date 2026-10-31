@@ -5220,7 +5220,7 @@
       "executable": false
     },
     "tests/agent-door/prompts.mjs": {
-      "sha256": "e0b7abcde25fd5a35a7addbd3525198d4f956f95e9ba6cd33c86c9757b4f9195",
+      "sha256": "5947a5a0e5806ed03acaa8e90db40a82e0dcb2dc0281bdd89b8ef73bc4c86e2c",
       "executable": false
     },
     "tests/agent-door/reviewer.mjs": {
