@@ -592,7 +592,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "5bfc0e73176e7b11bc58f2ce413d5bb22a4da4b1fc15a64ecad03054323062f1",
+      "sha256": "95eae27452b0c0fc2bd1ef5c61c797a1414d88a2f81aa9b2f0a711abdd463636",
       "executable": false
     },
     "deploy-demo.json": {
@@ -5372,11 +5372,11 @@
       "executable": false
     },
     "tests/jobs-browser.mjs": {
-      "sha256": "85dd6743a9f0920760ab7ea58c35902dcddc98b8f821e710bbfe5e59efea7ac6",
+      "sha256": "2ab681bf8a58ebff4ec6340a1f8dd2915d8dc73ecdab30af0dd5c46c3e3f5c47",
       "executable": false
     },
     "tests/mallet.test.mjs": {
-      "sha256": "ce750e54e44739af5c20b4c2e94ad2279ce682bb6fdf0234de8e855454d838ef",
+      "sha256": "e600ca8d459412fa3e74cbb5793bc4e7c43f1e52797da9d4666c7f9bdbfcf024",
       "executable": false
     },
     "tests/media-browser.mjs": {
@@ -5676,7 +5676,7 @@
       "executable": false
     },
     "tests/support/jobs-journey.mjs": {
-      "sha256": "6d4e82b400431492ca348f357551761a7c382e70eb7c40c03f69d6113964f70d",
+      "sha256": "21a09558e07a07677d10bfff7d433305087e395f0107144cc429f0e8d0bb0c7c",
       "executable": false
     },
     "tests/support/link-protection-journey.mjs": {
