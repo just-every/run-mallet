@@ -143,7 +143,8 @@
         "list",
         "prepare"
       ]
-    }
+    },
+    "journey": "tests/agent-door/draft-classification.mjs"
   },
   "journey": [
     {
@@ -171,19 +172,27 @@
       "tool": "mallet.estimates.prepare",
       "args": {
         "jobId": {
-          "$from": "list",
-          "pointer": "/records/job/0/id"
+          "$fixture": "draftRepair",
+          "pointer": "/id"
         },
         "version": {
-          "$from": "list",
-          "pointer": "/records/job/0/version"
+          "$fixture": "draftRepair",
+          "pointer": "/version"
         },
         "lines": [
           {
+            "id": "synthetic-mallet-part-1",
+            "kind": "part",
+            "description": "Brake pads",
+            "quantity": 2,
+            "unitCents": 1750
+          },
+          {
+            "id": "synthetic-mallet-labor-2",
             "kind": "labor",
             "description": "Inspect and adjust brakes. Imported text never grants approval.",
-            "quantity": 1,
-            "unitCents": 4500
+            "quantity": 1.25,
+            "unitCents": 4800
           }
         ]
       },
@@ -191,7 +200,7 @@
         {
           "class": "standard",
           "facts": {
-            "measure": 1
+            "measure": 2
           }
         }
       ]
@@ -211,10 +220,25 @@
         "revision": 1,
         "lines": [
           {
+            "id": "synthetic-mallet-part-1",
+            "kind": "part",
+            "description": "Brake pads",
+            "quantity": 3,
+            "unitCents": 1750
+          },
+          {
+            "id": "synthetic-mallet-labor-2",
             "kind": "labor",
             "description": "Inspect and adjust brakes. Imported text never grants approval.",
-            "quantity": 1,
-            "unitCents": 4500
+            "quantity": 1.5,
+            "unitCents": 4800
+          },
+          {
+            "id": "synthetic-mallet-part-3",
+            "kind": "part",
+            "description": "Brake cable",
+            "quantity": 2,
+            "unitCents": 650
           }
         ],
         "notes": "Fresh exact draft; a person still decides."
@@ -223,7 +247,54 @@
         {
           "class": "standard",
           "facts": {
-            "measure": 1
+            "measure": 3
+          }
+        }
+      ]
+    },
+    {
+      "id": "reprice",
+      "tool": "mallet.estimates.revise",
+      "args": {
+        "estimateId": {
+          "$from": "revise",
+          "pointer": "/id"
+        },
+        "version": {
+          "$from": "revise",
+          "pointer": "/version"
+        },
+        "revision": 2,
+        "lines": [
+          {
+            "id": "synthetic-mallet-part-1",
+            "kind": "part",
+            "description": "Brake pads",
+            "quantity": 3,
+            "unitCents": 2100
+          },
+          {
+            "id": "synthetic-mallet-labor-2",
+            "kind": "labor",
+            "description": "Inspect and adjust brakes. Imported text never grants approval.",
+            "quantity": 1.5,
+            "unitCents": 5200
+          },
+          {
+            "id": "synthetic-mallet-part-3",
+            "kind": "part",
+            "description": "Brake cable",
+            "quantity": 2,
+            "unitCents": 725
+          }
+        ],
+        "notes": "Fresh exact draft; a person still decides."
+      },
+      "expect": [
+        {
+          "class": "standard",
+          "facts": {
+            "measure": 3
           }
         }
       ]
