@@ -129,7 +129,14 @@ async function retryConflicts(h,document){
  // Move the installation clock, then obtain a fresh native owner session. The
  // retained outcomes must survive both a Worker restart and more than 24 hours.
  await h.setClock(nextDay)
- owner=await h.signInAs('owner'+String.fromCharCode(64)+'example.test')
+ const email='owner'+String.fromCharCode(64)+'example.test',mailStart=h.messages.length
+ await h.api('/auth/magic-link',{email},{as:'',status:202})
+ const message=h.messages.slice(mailStart).findLast(row=>JSON.stringify(row.to).includes(email))
+ assert.ok(message,'A fresh owner sign-in reaches the captured mail edge')
+ const link=new URL(message.text.match(/https?:\/\/[^\s<>]+\/auth\/confirm\?token=[^\s<>]+/)[0])
+ const confirmed=await h.request('/auth/confirm',{method:'POST',as:'',body:{token:link.searchParams.get('token')}})
+ assert.equal(confirmed.status,303)
+ owner=confirmed.headers.getSetCookie().map(value=>value.split(';')[0]).join('; ')
  await h.api('/api/mallet/security/verify/totp',{code:totpCode(factor.secret,Date.parse(nextDay))},{as:owner})
  await h.restart()
  for(const {name,args,original} of retained){
