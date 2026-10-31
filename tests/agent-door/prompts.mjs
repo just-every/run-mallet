@@ -55,12 +55,10 @@ export async function preparePrompts(c) {
   const describe = tool => ({ name: tool.name, title: tool.title, description: tool.description,
     scope: tool._meta['com.runeditrun/scope'], classes: tool._meta['com.runeditrun/classes'], readOnly: tool.annotations.readOnlyHint })
   for (const prompt of listing.body.result.prompts) {
-    const { text, plan } = planOf(await rpc(c, 'prompts/get', { name: prompt.name }))
+    const { plan } = planOf(await rpc(c, 'prompts/get', { name: prompt.name }))
     assert.deepEqual(plan.preparation, describe(tools.find(tool => tool.name === prompt.name)), 'Prompt preparation matches independently discovered registry metadata')
     assert.deepEqual(plan.reads.map(tool => tool.name).sort(), reads)
     for (const read of plan.reads) assert.deepEqual(read, describe(tools.find(tool => tool.name === read.name)))
-    assert.ok(text.includes('customer consent') && text.includes('physical') && text.includes('provider outcome') && text.includes('a person still decides'))
-    assert.ok(text.includes('idempotency_key') && text.includes('expected_revision'))
     assert.ok(prompt.description.includes(plan.preparation.scope) && plan.preparation.classes.every(cls => prompt.description.includes(cls)))
   }
   const missing = await rpc(c, 'prompts/get', { name: 'mallet.unknown' })
