@@ -70,7 +70,10 @@ export async function resourceAuthorityJourney() {
    const ownerGraph = content(await mcp('resources/read', { uri: `mallet://repairs/${job.id}` }), name + ' owner graph')
    const memberGraph = content(await memberMcp('resources/read', { uri: `mallet://repairs/${job.id}` }), name + ' assigned member graph')
    for (const [graph, native] of [[ownerGraph, await h.state()], [memberGraph, await h.state({ as: member.cookie })]]) {
-    for (const [kind, rows] of Object.entries(graph.records)) for (const row of rows) assert.deepEqual(row, preparationRecord(native.records[kind].find(saved => saved.id === row.id)), name + ' permitted records match native state')
+    for (const [kind, rows] of Object.entries(graph.records)) for (const row of rows) {
+     assert.ok(Array.isArray(native.records[kind]), name + ' cannot add records unavailable through native authority')
+     assert.deepEqual(row, preparationRecord(native.records[kind].find(saved => saved.id === row.id)), name + ' permitted records match native state')
+    }
     const serialized = JSON.stringify(graph)
     assert.ok(!serialized.includes(privateNote), 'No private diagnostic note is disclosed')
     assert.ok(!serialized.includes(original.toString('base64')), 'No original media bytes are disclosed')
@@ -110,6 +113,7 @@ export async function resourceAuthorityJourney() {
   const link = proposed.body.result.content.find(item => item.type === 'resource_link')
   assert.ok(link, 'Dispatch emits a repair resource link')
   const graph = content(await mcp('resources/read', { uri: link.uri }), 'Dispatch link')
+  assert.ok(graph.records.proposal?.some(row => row.id === proposal.id), 'Dispatch link contains its retained proposal')
   assert.deepEqual(graph.records.proposal.find(row => row.id === proposal.id), (await h.state()).records.proposal.find(row => row.id === proposal.id))
   assert.equal(graph.records.proposal.find(row => row.id === proposal.id).version, proposal.version)
   assert.equal(graph.records.job.find(row => row.id === job.id).bayId, job.bayId, 'Readback never applies proposed dispatch')
@@ -132,6 +136,18 @@ export async function resourceAuthorityJourney() {
   await browser.close(); browser = undefined
   console.log('PROBE BASE-AGENT-003 attributable-readback: native repair page -> exact prepared estimate and retained proposal, agent for sponsor; browser proof 1440 and 390')
 
+  const erasable = await h.command('asset.create', { customerName: 'synthetic-mallet-erased-customer', customerEmail: '', label: 'synthetic-mallet-erased-asset', identifier: 'synthetic-mallet-erased-asset' })
+  const erasedUri = `mallet://assets/${erasable.id}`
+  assert.equal(content(await mcp('resources/read', { uri: erasedUri }), 'Before erasure').id, erasable.id)
+  await h.command('asset.erase', { assetId: erasable.id, confirm: 'ERASE' })
+  const afterErasure = (await h.state()).records
+  for (let replay = 0; replay < 2; replay++) {
+   const erased = await mcp('resources/read', { uri: erasedUri })
+   assert.equal(erased.body.error.data.code, 'resource_unavailable')
+   assert.equal(erased.body.result, undefined, 'Erased customer records cannot be replayed into resource content')
+  }
+  assert.deepEqual((await h.state()).records, afterErasure, 'Erasure resource replay changes no retained records')
+  console.log('PROBE BASE-AGENT-003 erasure: native asset erasure then repeated MCP reads -> resource unavailable, no content or resurrection')
   const before = (await h.state()).records
   await adopt(autonomousPolicy(), { revoked: { agents: [], consents: [context.consent] } })
   const revoked = await mcp('resources/read', { uri: link.uri })

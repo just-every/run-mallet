@@ -101,7 +101,7 @@ export async function afterStep(context) {
 }
 
 /** Finishes the same runtime journey with refusal and revocation, without content. */
-export default async function resources(context) {
+async function resources(context) {
  const { native, mcp, key } = await reader(context)
  const state = await native('/api/mallet/state'), job = state.records.job[0]
  assert.ok(job, 'Resource refusals use populated native records')
@@ -121,10 +121,17 @@ export default async function resources(context) {
  assert.equal(anonymous.status, 401)
  assert.equal(anonymous.body.result, undefined)
  await native('/api/mallet/commands', { command: 'agent.revoke', input: { id: key.id } })
+ const afterRevocation = await native('/api/mallet/state')
+ for (const [kind, rows] of Object.entries(before.records)) if (kind !== 'audit') assert.deepEqual(afterRevocation.records[kind], rows, 'Explicit key revocation changes no business records')
  const revoked = await mcp('resources/read', { uri: `mallet://repairs/${job.id}` })
  assert.equal(revoked.status, 401)
  assert.equal(revoked.body.result, undefined, 'Revoked native credentials disclose no resource content')
- assert.deepEqual((await native('/api/mallet/state')).records, before.records, 'Refused reads preserve every business record')
+ assert.deepEqual((await native('/api/mallet/state')).records, afterRevocation.records, 'Refused reads preserve every business record')
  console.log('PROBE BASE-AGENT-003 refusals: missing and malformed IDs, anonymous and revoked native key -> no content and unchanged business state')
  readers.delete(context.origin)
+}
+
+export default async function resourceJourney(context) {
+ try { await resources(context) }
+ catch (error) { console.error('Resource refusal journey:', error.message.split('\n', 1)[0]); throw error }
 }

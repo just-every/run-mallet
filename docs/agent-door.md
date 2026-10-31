@@ -18,7 +18,7 @@ Every supported tool has the server-computed class `standard`.
 | `mallet.repairs.read` · `workshop:read` | Indexed native repair graph — AGENT-001, WORKSHOP-001 |
 
 Draft prices create no payment, published price or commitment. Server-computed
-class facts count proposed lines or the one dispatch/invoice. Mutations retain
+class facts count proposed lines or the one dispatch or invoice. Mutations retain
 native versions, resolved native targets and server summaries. Caller classes,
 approval claims and imported instructions never grant authority. No provider
 cost, spend authority or unsupported reversal is registered.

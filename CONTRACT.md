@@ -2072,9 +2072,12 @@ BASE-AGENT-010, BASE-AGENT-011, BASE-AGENT-012 and BASE-AGENT-013.
 Native human decisions, customer consent, physical evidence and provider outcomes
 remain separate from preparation. This adoption does not assert the pending ct
 service-advisor surface or change the native owner-confirmation riders.
-The declared capabilities are tools, policy, pause, audit and idempotency.
-Events, resources, prompts and subscriptions are undeclared families with typed
-refusals; their full clauses remain PARTIAL. Multi-sponsor, mail-provider tools,
+The declared capabilities are tools, resources, policy, pause, audit and idempotency.
+Public resources adopt the existing assets, repairs, jobs, estimates and invoices
+preparation views under unchanged workshop-read authority. Repair links retain
+exact dispatch proposals without applying them. Events, prompts and subscriptions
+remain undeclared families with typed refusals; the full resource clause remains
+PARTIAL. Multi-sponsor, mail-provider tools,
 record refresh, timed lifecycle, dual host and queued lifecycle are not proved.
 Queued agent execution remains unadopted in the seed; Base's authenticated
 continuation hooks do not themselves establish native queue consent binding.
