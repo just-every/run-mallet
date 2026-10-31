@@ -1,3 +1,5 @@
+import {randomBytes} from 'node:crypto'
+import {installation,booking} from './harness.mjs'
 import {qualityReady} from './support/quality-ready.mjs'
 import {publicDoor} from './support/portable-repair.mjs'
 import assert from 'node:assert/strict'
@@ -7,7 +9,7 @@ import {join} from 'node:path'
 
 export async function browserJourney(openUrl,{directory='.cache/browser',fixtures='tests/fixtures/repairshopr',fresh=false,paywall}={}) {
  await mkdir(directory,{recursive:true})
- const browser=await chromium.launch({headless:true,args:['--disable-gpu','--use-mock-keychain','--password-store=basic']})
+ const browser=await chromium.launch({headless:true,executablePath:process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH,args:['--no-sandbox','--disable-gpu','--use-mock-keychain','--password-store=basic']})
  let stage='open app'
  try {
   const page=await browser.newPage({viewport:{width:1440,height:1000},timezoneId:'America/New_York'})
@@ -109,4 +111,92 @@ export async function browserJourney(openUrl,{directory='.cache/browser',fixture
 if(process.argv[1]===import.meta.filename) {
  const open=await readFile('.rer/local/open-url','utf8')
  await browserJourney(open.trim(),{directory:process.env.MALLET_SCREENSHOTS??'.cache/browser'})
+}
+
+// This native key journey is loaded by push Verify alongside the command
+// journey. Credentials stay in memory; screenshots always mask the one-time key.
+export async function preparationKeyBrowser(){
+ const h=await installation({entry:'tests/dev-worker.ts',network:true,assets:true,bindings:{AUTH_LOCAL:'true',RER_DEV_KEY:randomBytes(32).toString('base64url')}})
+ let browser
+ try{
+  // The normal setup form parses URL-encoded input.
+  const setup=await h.mf.dispatchFetch(h.origin+'/setup',{method:'POST',redirect:'manual',headers:{origin:h.origin,host:new URL(h.origin).host,cookie:h.owner,'content-type':'application/x-www-form-urlencoded'},body:new URLSearchParams({confirm:'yes',ratePercent:'10',partsTaxable:'yes',laborTaxable:'yes'}).toString()})
+  assert.equal(setup.status,303)
+  await h.stepUp()
+  const {job}=await booking(h),owner=(await h.state()).actor
+  browser=await chromium.launch({headless:true,executablePath:process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH,args:['--no-sandbox','--use-mock-keychain','--password-store=basic']})
+  const context=await browser.newContext({viewport:{width:1440,height:1000},timezoneId:'UTC'})
+  await context.addCookies(h.owner.split('; ').map(pair=>({name:pair.slice(0,pair.indexOf('=')),value:pair.slice(pair.indexOf('=')+1),url:h.origin})))
+  const page=await context.newPage(),errors=[]
+  page.on('pageerror',error=>errors.push(error.message))
+  const directory=process.env.MALLET_SCREENSHOTS??'.cache/preparation-key-browser'
+  await mkdir(directory,{recursive:true})
+  const shot=async name=>{
+   for(const width of [1440,390]){
+    await page.setViewportSize({width,height:1000})
+    assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'Preparation screen fits '+width)
+    assert.equal(await page.locator('button,a').evaluateAll(nodes=>nodes.filter(n=>n.querySelector('svg,img')&&!n.textContent.trim()&&!n.getAttribute('data-tooltip')).length),0,'Icon controls retain tooltips')
+    await page.screenshot({path:join(directory,`${name}-${width}.png`),fullPage:true,...(name==='key-created'?{mask:[page.locator('pre')]}:{})})
+   }
+   await page.setViewportSize({width:1440,height:1000})
+  }
+  const submit=async name=>{await page.getByRole('button',{name,exact:true}).click();await page.waitForLoadState('domcontentloaded')}
+  await page.goto(h.origin+'/app/data')
+  await page.getByLabel('Agent label').fill('synthetic-mallet-920')
+  const issued=page.waitForResponse(response=>new URL(response.url()).pathname==='/app/actions'&&response.request().method()==='POST')
+  await submit('Create preparation key')
+  assert.equal((await issued).status(),200)
+  assert.equal(await page.getByRole('heading',{name:'Agent key created'}).count(),1)
+  const token=(await page.locator('pre').innerText()).trim()
+  assert.equal(token.length,43,'Native owner form returns the private key once')
+  await shot('key-created')
+  const agent={as:'',headers:{authorization:'Bearer '+token}}
+  const first=[{id:'synthetic-mallet-921',kind:'part',description:'Native preparation pads',quantity:2,unitCents:2500},{id:'synthetic-mallet-922',kind:'labor',description:'Native preparation adjustment',quantity:1.5,unitCents:12000}]
+  const revised=[{id:'synthetic-mallet-923',kind:'part',description:'Native revised pads',quantity:2.5,unitCents:2000},{id:'synthetic-mallet-924',kind:'labor',description:'Native revised adjustment',quantity:0.75,unitCents:10000}]
+  let q=await h.command('estimate.prepare',{jobId:job.id,version:job.version,lines:first},agent)
+  const preparer={id:q.revisions[0].preparedBy.id,name:'synthetic-mallet-920',role:'agent'}
+  assert.deepEqual(q.revisions[0].preparedBy,preparer)
+  const firstSaved=structuredClone(q.revisions[0])
+  q=await h.command('estimate.revise',{estimateId:q.id,version:q.version,revision:1,lines:revised},agent)
+  const view=async(status)=>{
+   const saved=(await h.state()).records.estimate.find(row=>row.id===q.id)
+   assert.equal(saved.status,status);assert.equal(saved.revisions.length,2)
+   const revision=saved.revisions[1]
+   assert.equal(revision.n,2);assert.deepEqual(revision.preparedBy,preparer)
+   assert.deepEqual(saved.revisions[0],firstSaved)
+   assert.deepEqual(revision.lines.map(({id,kind,description,quantity,unitCents})=>({id,kind,description,quantity,unitCents})),[{id:'synthetic-mallet-923',kind:'part',description:'Native revised pads',quantity:2.5,unitCents:2000},{id:'synthetic-mallet-924',kind:'labor',description:'Native revised adjustment',quantity:0.75,unitCents:10000}])
+   assert.equal(revision.totals.totalCents,13750)
+   return saved
+  }
+  await page.goto(h.origin+'/app/jobs/'+job.id);await page.reload()
+  await view('draft')
+  const card=page.locator('section').filter({has:page.getByRole('heading',{name:'Estimate & customer authorization',exact:true})})
+  assert.match(await card.innerText(),/Revision 2/);assert.match(await card.innerText(),/Native revised pads/);assert.match(await card.innerText(),/2.5/);assert.match(await card.innerText(),/0.75/)
+  await shot('revised-draft')
+  await submit('Approve estimate')
+  q=await view('approved');assert.deepEqual(q.revisions[1].approval.by,{id:owner.id,name:owner.name,role:'owner'})
+  await page.getByLabel('Handoff note').fill('synthetic-mallet-925')
+  await submit('Record estimate shared')
+  await page.locator('input[name="lineIds"]').first().check()
+  await page.getByLabel('Authorization evidence / reference').fill('synthetic-mallet-926')
+  await submit('Record customer authorization');await page.reload()
+  q=await view('authorised')
+  assert.equal(q.authorisation.revision,2);assert.deepEqual(q.authorisation.lineIds,['synthetic-mallet-923'])
+  assert.deepEqual(q.authorisation.recordedBy,{id:owner.id,name:owner.name,role:'owner'})
+  assert.equal(q.authorisation.evidence,'synthetic-mallet-926');assert.equal(q.authorisation.customerName,'Cedar Bikes')
+  assert.equal(q.authorisation.totals.totalCents,5500)
+  assert.match(await card.innerText(),/synthetic-mallet-926/);assert.match(await card.innerText(),/Customer decision: Cedar Bikes/)
+  await shot('person-decision')
+  const next=await booking(h,{asset:(await h.state()).records.asset[0],bayId:'synthetic-mallet-927',startAt:'2026-12-03T12:00:00Z',endAt:'2026-12-03T13:00:00Z'})
+  const draft=await h.command('estimate.prepare',{jobId:next.job.id,version:next.job.version,lines:first},agent)
+  await page.goto(h.origin+'/app/data');await submit('Revoke key');await page.reload()
+  assert.match(await page.locator('main').innerText(),/synthetic-mallet-920.*revoked/)
+  await shot('key-revoked')
+  const before=(await h.state()).records,mailCount=h.messages.length
+  const refused=await h.command('estimate.revise',{estimateId:draft.id,version:draft.version,revision:1,lines:revised},{...agent,status:401})
+  assert.equal(refused.error,'invalid_agent_key')
+  assert.deepEqual((await h.state()).records,before,'Native key revocation preserves drafts, versions, decisions and successful events')
+  assert.equal(h.messages.length,mailCount)
+  assert.deepEqual(errors,[])
+ }finally{await browser?.close();await h.close()}
 }
