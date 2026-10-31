@@ -5203,8 +5203,16 @@
       "sha256": "2e9c1b6a2c2c4d95475e91128d6c017a2fe467e2c499c93ba2df0d951b95c8ce",
       "executable": false
     },
+    "tests/agent-attribution-browser.mjs": {
+      "sha256": "630d6628be941c9f91367704e493dde88df0cd7b4655eb2e35c80d6589e6961e",
+      "executable": false
+    },
     "tests/agent-door/fixtures.mjs": {
       "sha256": "11a8a925e58bb559cbd5efa5a966ea2081add61b8faee8531342b4d994e63013",
+      "executable": false
+    },
+    "tests/agent-door/native-attribution.mjs": {
+      "sha256": "7ad8394e969ee98e29358b288467c06a4a939117b71201c9f096b6d7b5bc3a27",
       "executable": false
     },
     "tests/agent-door/owner.mjs": {
