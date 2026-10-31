@@ -28,7 +28,7 @@ export async function nativeMemberPhase(c, sponsors, initializeAgent, observe) {
    && c.sponsor.id === fixture.ownerId && fixture.memberId !== fixture.ownerId && person.sub !== c.person.sub && b.agentId !== c.agentId,
    'Each signed Business subject must resolve to its exact, distinct native person.');
   const own = await read(b, fixture.member), list = await b.tool('mallet.repairs.list', {});
-  check('assigned-read', own.status === 200 && !own.result?.isError && own.result?.structuredContent?.records?.job?.some(job => job.id === fixture.member.job.id && job.title === fixture.member.job.title && job.technicianId === fixture.memberId), 'Member read must return its exact assigned native repair.');
+  check('assigned-read', own.status === 200 && !own.result?.isError && own.result?.structuredContent?.records?.job?.some(job => isDeepStrictEqual(job, fixture.member.job) && job.technicianId === fixture.memberId), 'Member read must return its exact assigned native repair.');
   check('assigned-list', list.result?.structuredContent?.records?.job?.some(job => job.id === fixture.member.job.id)
    && !list.result.structuredContent.records.job.some(job => job.id === fixture.owner.job.id) && noPrivate(list.body), 'Member list must retain its assignment and exclude owner-private records.');
   for (const repair of [fixture.owner, fixture.member]) {
@@ -79,8 +79,11 @@ export async function nativeMemberPhase(c, sponsors, initializeAgent, observe) {
    const refused = await read(b, fixture.member, { token });
    check(`consent-refused.${attempt}`, refused.status === 401 && refused.result === undefined && noPrivate(refused.body), 'Revoking only the member consent must immediately refuse the same credential, including replay.');
   }
-  const ownerStill = await read(c, fixture.owner), memberSession = await b.personJson('/auth/session');
-  check('owner-retained', ownerStill.status === 200 && !ownerStill.result?.isError && ownerStill.result?.structuredContent?.records?.job?.some(job => job.id === fixture.owner.job.id), 'Member consent revocation must preserve the first sponsor permitted access.');
+  for (const [label, repair] of [['own', fixture.owner], ['member', fixture.member]]) {
+   const ownerStill = await read(c, repair);
+   check(`owner-retained.${label}`, ownerStill.status === 200 && !ownerStill.result?.isError && ownerStill.result?.structuredContent?.records?.job?.some(job => job.id === repair.job.id), 'Member consent revocation must preserve the first sponsor permitted access to both repairs.');
+  }
+  const memberSession = await b.personJson('/auth/session');
   check('member-session-retained', memberSession.operator?.id === fixture.memberId && memberSession.operator.role === 'member', 'Consent revocation must not revoke the native person account or session.');
   check('revocation-unchanged', isDeepStrictEqual(beforeRevocation, await snapshot()), 'Consent revocation or refused replay changed native repair records.');
   console.log('PROBE BASE-AGENT-004 consent: signed policy revokes only member originating consent -> next call and replay 401; owner read 200; native member session and repair records unchanged');
