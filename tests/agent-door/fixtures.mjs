@@ -1,7 +1,10 @@
 import assert from 'node:assert/strict'
+import { preparePrompts } from './prompts.mjs'
 
 /** A new native repair keeps replay admission independent of consumed drafts. */
-export default async function prepare({ phase, request, origin, cookie }) {
+export default async function prepare(context) {
+ const { phase, request, origin, cookie } = context
+ try { if (phase === 'autonomous') await preparePrompts(context) } catch (error) { console.error('Prompt preparation assertion:', error.message); throw error }
  if (phase !== 'replay') return { values: {} }
  const json = async (path, body) => {
   const response = await request(origin + path, { method: body === undefined ? 'GET' : 'POST', redirect: 'manual',

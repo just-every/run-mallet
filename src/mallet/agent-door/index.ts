@@ -3,6 +3,8 @@ import { runtimeBindings, type Bindings } from '../../auth.server'
 import { businessSettings } from '../business.ts'
 import { localPreparation, nativePeople } from './people.ts'
 import { nativeTools } from './tools.ts'
+import { preparationPrompts } from './prompts.ts'
+import { agentDocs, agentLimits } from './docs.ts'
 import { repairResources } from './records.ts'
 import { originGuard, HttpError } from '../auth'
 
@@ -25,22 +27,30 @@ export const notTools = [
 export async function malletAgentDoor(original: Bindings) {
   const env = runtimeBindings(original), settings = await businessSettings(env)
   const name = await settings.resolve('display_name', 'Mallet')
-  return createAgentDoor({ seed: 'mallet', name: typeof name === 'string' ? name : 'Mallet', specialist: 'service advisor',
+  const door = createAgentDoor({ seed: 'mallet', name: typeof name === 'string' ? name : 'Mallet', specialist: 'service advisor',
     db: env.DB, origin: env.AUTH_ORIGIN, trust: trust(env), people: nativePeople(env),
-    capabilities: ['tools', 'policy', 'pause', 'audit', 'idempotency'],
-    tools: nativeTools, resources: repairResources, localCredentials: request => localPreparation(request, env),
+    capabilities: ['tools', 'policy', 'pause', 'audit', 'idempotency', 'prompts'],
+    limits: agentLimits, tools: nativeTools, prompts: preparationPrompts, resources: repairResources, localCredentials: request => localPreparation(request, env),
     notTools: notTools.map(item => ({ clauses: [...item.clauses], reason: item.reason })),
 
   })
+  return { ...door, async handle(request: Request) {
+    const response = await door.handle(request)
+    if (!response || new URL(request.url).pathname !== '/mcp' || !['server/discover', 'initialize'].includes(request.headers.get('mcp-method') ?? '')) return response
+    const answer = await response.json() as { result?: { instructions?: string } }
+    if (typeof answer.result?.instructions === 'string') answer.result.instructions += ` Preparation jobs: ${preparationPrompts.map(prompt => prompt.name).join(', ')}. Retrieve a prompt to prepare a draft; a person still decides. Documentation: ${env.AUTH_ORIGIN}/docs/agents.`
+    return Response.json(answer, { status: response.status, headers: response.headers })
+  } }
 }
 
 export async function agentResponse(request: Request, env: Bindings): Promise<Response | null> {
   const path = new URL(request.url).pathname
-  if (!['/mcp', '/api/rer/agent-policy', '/agents', '/.well-known/oauth-protected-resource', '/.well-known/oauth-protected-resource/mcp'].includes(path) && !path.startsWith('/agents/')) return null
+  if (!['/docs/agents', '/mcp', '/api/rer/agent-policy', '/agents', '/.well-known/oauth-protected-resource', '/.well-known/oauth-protected-resource/mcp'].includes(path) && !path.startsWith('/agents/')) return null
   try { originGuard(request, runtimeBindings(env), path === '/mcp' || path === '/api/rer/agent-policy') }
   catch (error) {
     if (error instanceof HttpError) return Response.json({ code: error.code }, { status: error.status, headers: { 'cache-control': 'no-store' } })
     throw error
   }
+  if (path === '/docs/agents') return ['GET', 'HEAD'].includes(request.method) ? agentDocs() : new Response('Method not allowed', { status: 405, headers: { allow: 'GET, HEAD' } })
   return (await malletAgentDoor(env)).handle(request)
 }

@@ -1,7 +1,7 @@
 Mallet's shared agent door is `/mcp`, using MCP 2026-07-28 or 2025-11-25.
 `/agents` shows company policy, Pause, activity, approvals and reviews.
-The declared capabilities are tools, policy, pause, audit and idempotency.
-Events, public resources, prompts and subscriptions are undeclared and return
+The declared capabilities are tools, policy, pause, audit, idempotency and prompts.
+Events, public resources and subscriptions are undeclared and return
 `capability_not_declared`; they are not advertised as supported work.
 Native authority, current sponsor admission, consent and exact repair versions
 apply to every supported call, including retries.
@@ -48,6 +48,39 @@ changed arguments conflict, and `expected_revision` can fence a native revision.
 Preparation attribution is `<agent> for <person>`, retaining both identities
 and named policy approvers. Approval of a preparation never asserts customer
 consent, physical work, native estimate approval or settled payment.
+
+## Service advisor preparation prompts
+
+The public `/docs/agents` page is generated from the adopted runtime registry.
+It lists the same six tools with their descriptions, scopes, computed classes
+and preparation boundaries. It contains no repair or credential data.
+
+MCP prompt listing offers one job per preparation command, named
+`mallet.estimates.prepare`, `mallet.estimates.revise`,
+`mallet.dispatch.prepare` and `mallet.invoices.prepare`.
+Retrieve one by name to receive a preparation plan derived from the actual
+registry, including both permitted read tools and each tool's scope and classes.
+Retrieval takes no business input and executes no action. Caller arguments are
+not inserted into the plan.
+
+Follow the plan by discovering the input schema, reading the current repair,
+and supplying only evidenced inputs with the current revision and an idempotency
+key. Read back the exact persisted draft. Under autonomous policy preparation
+completes; under held standard-review policy it completes with a retained review.
+Neither policy decides the native draft. A separate person must decide dispatch,
+customer consent, sending and any promise change. Physical evidence and provider
+outcomes are never inferred. GOV-001 and SHOP-001 limits and the queued-egress
+fence remain in force.
+
+`tests/agent-door/prompts.mjs` extends the existing runtime conformance journey.
+It retrieves every plan, independently compares its descriptions, scopes and
+classes with the runtime tool catalogue, and checks that successful and refused
+retrieval preserve business records. It follows dispatch preparation under both
+policies, reads back its exact pending plan and native attribution, checks the
+unchanged repair and reads attributable activity and held review through the
+person doors. The emitted documentation and activity pages are shown at 1440
+and 390; browser assertions run at 1440. Revoked preparation credentials cannot
+list or retrieve prompts. These checks run in the existing runtime Verify shard.
 
 ## Scope and verification
 
