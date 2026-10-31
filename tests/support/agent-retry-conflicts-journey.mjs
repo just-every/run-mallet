@@ -79,7 +79,7 @@ async function retryConflicts(h,document){
   const refused=(await audit()).filter(row=>row.idempotency_key===args.idempotency_key||row.idempotency_key===staleArgs.idempotency_key)
   assert.deepEqual(refused.map(row=>[row.outcome,row.code]),[['done',null],['replayed',null],['refused','idempotency_conflict'],['refused','revision_conflict']])
   assert.equal(refused.filter(row=>row.outcome==='done').length,1,'Refusal and replay audits are not additional native preparation effects')
-  const fresh=await call(name,{...staleArgs,expected_revision:current.version})
+  const fresh=await call(name,{...staleArgs,idempotency_key:'synthetic-mallet-949-'+verb,expected_revision:current.version})
   assert.equal(fresh.result.isError,false,'Otherwise identical current inputs succeed with the current expected revision')
   const after=await records(),freshSaved=after.estimate.find(row=>row.id===content(fresh).id)
   assert.deepEqual(freshSaved,content(fresh))
