@@ -572,7 +572,7 @@
       "executable": false
     },
     "ACCEPTANCE.md": {
-      "sha256": "37011667616d5aea34a6a736f712c57aed0d50c5994b4ea82ac6e1a489e57de5",
+      "sha256": "69ad3a9c2a4a8c5ccf6459b5026875a127c62d596c157246e2624c88b5cbb761",
       "executable": false
     },
     "agent-surface.json": {
@@ -592,7 +592,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "5bfc0e73176e7b11bc58f2ce413d5bb22a4da4b1fc15a64ecad03054323062f1",
+      "sha256": "79c00119874431424c84141ad09a17df51f8f5c43f5a72c923cc6bff9f0fd9e4",
       "executable": false
     },
     "deploy-demo.json": {
@@ -5236,7 +5236,7 @@
       "executable": false
     },
     "tests/browser-journey.mjs": {
-      "sha256": "22d8029358a919d0cc5a8777b2c851652959138a5820428597b3f126b23af7ce",
+      "sha256": "e8e212571cebad0189ce58753121402e8a150739d338eb3e1daa163f579a20b1",
       "executable": false
     },
     "tests/calendar-browser.mjs": {
@@ -5376,7 +5376,7 @@
       "executable": false
     },
     "tests/mallet.test.mjs": {
-      "sha256": "ce750e54e44739af5c20b4c2e94ad2279ce682bb6fdf0234de8e855454d838ef",
+      "sha256": "d4eea59fc06b131f4ffefc31e1c1a1385d9cb16bae4d449911c8617dd4b7bef3",
       "executable": false
     },
     "tests/media-browser.mjs": {
@@ -5705,6 +5705,10 @@
     },
     "tests/support/portal-journey.mjs": {
       "sha256": "6b03d08f5f76784d56b605c0232ee59a0e523b8b6d39821734727d83e3045e83",
+      "executable": false
+    },
+    "tests/support/preparation-worker.ts": {
+      "sha256": "73fd97db93a1c05e6b12272edf60450dfcc55b1db0882eb6aca6785fb2862749",
       "executable": false
     },
     "tests/support/pricing-journey.mjs": {

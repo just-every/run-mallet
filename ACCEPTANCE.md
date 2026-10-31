@@ -90,7 +90,7 @@ Core · published · **partial** · Cites BASE-AGENT-004, BASE-AGENT-005, BASE-A
 2. With that preparation grant, attempt approval, sharing, customer authorization, invoice export, erasure and access management; each exceeds its scope.
 3. Record a person’s exact decision, revoke the preparation key, and verify both the old key and a concurrent revoked write are refused.
 
-**Evidence.** `src/mallet/auth.ts`; `src/mallet/model.ts`; `tests/mallet.test.mjs`
+**Evidence.** `src/mallet/auth.ts`; `src/mallet/model.ts`; `tests/mallet.test.mjs`; `tests/browser-journey.mjs` — preparationKeyBrowser, invoked by that push journey, proves native owner issuance, exact revised draft and person decision readback, native revocation and unchanged refused preparation with credential-masked screens at 1440 and 390
 **Gap.** Not asserted in the old cited evidence: Native issuance returns a key (assertion is in uncited tests/browser-journey.mjs); Preparation succeeds with exact draft content; Preparation scope refuses approval; Preparation scope refuses sharing; Preparation scope refuses customer authorization; Preparation scope refuses invoice export; Preparation scope refuses erasure; Preparation scope refuses access management; Person decision is retained with attribution; Revoked key cannot write; Concurrent revoked write changes nothing. The native journeys exercise the workflow, but their title, performed step or uncited helper is not a point-level assertion here.
 
 #### IMPORT-001 — Reviewed register move
