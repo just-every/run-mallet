@@ -5396,7 +5396,7 @@
       "executable": false
     },
     "tests/mallet.test.mjs": {
-      "sha256": "c8aeca6bcc2c0e353445f051bd1bd069497040df220755b49b39657aef3088f2",
+      "sha256": "8c94fd895ef80b5b36217bde258bd396ade82bdf75fc452e2dd8f3cdf8f78646",
       "executable": false
     },
     "tests/media-browser.mjs": {

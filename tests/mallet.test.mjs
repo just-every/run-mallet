@@ -219,7 +219,7 @@ test('dispatch proposal is inert until a person approves current free resources'
  assert.equal(saved.jobId,job.id);assert.equal(saved.jobVersion,job.version);assert.equal(saved.status,'pending')
  assert.deepEqual(saved.preparedBy,{id:key.id,name:'Dispatcher',role:'agent'})
  assert.ok(Number.isFinite(Date.parse(saved.preparedAt)))
- assert.deepEqual(saved.plan,{liftId:'',loanerId:'',requiredSkill:'',bayId:'Bay 2',technicianId:'Jordan',startAt:'2026-10-19T23:00:00.000Z',endAt:'2026-10-20T00:00:00.000Z'})
+ assert.deepEqual(saved.plan,{locationId:'shop',liftId:'',loanerId:'',requiredSkill:'',bayId:'Bay 2',technicianId:'Jordan',startAt:'2026-10-19T23:00:00.000Z',endAt:'2026-10-20T00:00:00.000Z'})
  assert.equal((await h.state()).records.job[0].bayId,'Bay 1')
  await h.command('dispatch.approve',{proposalId:p.id,version:p.version},{...agent,status:403})
  await h.command('dispatch.approve',{proposalId:p.id,version:p.version})
