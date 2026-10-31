@@ -125,6 +125,7 @@
     "none": true
   },
   "verification": {
+    "journey": "tests/agent-door/native-attribution.mjs",
     "owner": {
       "initializer": "tests/agent-door/owner.mjs"
     },
