@@ -63,7 +63,9 @@ sessions, and they are not company policy.
 **Pause agents** on `/agents` is the owner's local switch. Until the owner
 resumes there, every agent call through MCP or the REST preparation URLs is
 refused with `agents_paused`, including the replay of an earlier result, and
-changes nothing. When the installation is paired with Business, Pause all
+changes nothing. The same refusal covers every other bearer credential: scoped
+AI assistant keys and native API clients get 403 `agents_paused`, and their
+writes re-check Pause in the same transaction. When the installation is paired with Business, Pause all
 agents arrives in the signed company policy and holds until a newer signed
 policy resumes; the local switch never lifts it. No agent credential can resume
 either one: the local switch needs the owner's browser session, and a replayed
