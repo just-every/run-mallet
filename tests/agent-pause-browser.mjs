@@ -5,11 +5,12 @@ import {chromium} from '@playwright/test'
 import {agentPauseInstallation,agentPauseFixture,pausedAgentCalls,refusedAgentResume,resumedPreparation} from './support/agent-pause-journey.mjs'
 import {rateOverrun} from './support/agent-capacity.mjs'
 import {businessPairing,businessPause,businessResume,refusedBusinessResume} from './support/agent-business-pause.mjs'
+import {otherAgentCredentials,pausedOtherCredentials,resumedOtherCredentials} from './support/agent-pause-credentials.mjs'
 
 export async function agentPauseBrowser(){
  const h=await agentPauseInstallation();let browser
  try{
-  const f=await agentPauseFixture(h)
+  const f=await agentPauseFixture(h),others=await otherAgentCredentials(f)
   browser=await chromium.launch({headless:true,executablePath:process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH,args:['--no-sandbox','--use-mock-keychain','--password-store=basic']})
   const context=await browser.newContext({viewport:{width:1440,height:1000},timezoneId:'UTC',ignoreHTTPSErrors:true})
   await context.addCookies(h.owner.split('; ').map(pair=>({name:pair.slice(0,pair.indexOf('=')),value:pair.slice(pair.indexOf('=')+1),url:h.origin})))
@@ -53,6 +54,7 @@ export async function agentPauseBrowser(){
   await page.getByRole('button',{name:'Resume agents',exact:true}).waitFor()
   assert.match(await page.locator('[data-agents-state]').innerText(),/Agents are paused/)
   await pausedAgentCalls(f,pausedAt)
+  await pausedOtherCredentials(f,others,pausedAt,'6 other credentials')
   await refusedAgentResume(f)
   await page.reload();assert.match(await page.locator('[data-agents-state]').innerText(),/Agents are paused/)
   await shot('01-paused')
@@ -65,6 +67,7 @@ export async function agentPauseBrowser(){
   assert.match(await page.locator('[data-agents-state]').innerText(),/Agents are on/)
   assert.deepEqual((await h.api('/agents/api/state')).paused,{business:false,local:false})
   const draft=await resumedPreparation(f)
+  await resumedOtherCredentials(f,others)
   await shot('03-resumed')
   await page.goto(h.origin+'/app/jobs/'+f.prepare.id);await page.reload()
   const estimate=page.locator('section').filter({has:page.getByRole('heading',{name:'Estimate & customer authorization',exact:true})})
@@ -81,6 +84,7 @@ export async function agentPauseBrowser(){
   assert.match(await page.locator('[data-agents-state]').innerText(),/Agents are on/)
   const businessPausedAt=await businessPause(f,business)
   await pausedAgentCalls(f,businessPausedAt,'6 Business')
+  await pausedOtherCredentials(f,others,businessPausedAt,'6 Business other credentials')
   await refusedBusinessResume(f,business)
   await page.reload()
   assert.match(await page.locator('[data-agents-state]').innerText(),/Agents are paused/)
@@ -90,6 +94,7 @@ export async function agentPauseBrowser(){
   assert.equal((await h.api('/agents/api/state')).paused.business,true)
   console.log('PROBE BASE-AGENT-011 6 Business owner session: native repair priority form while Business Pause is active -> high priority retained with exact owner and reason; agents remain paused')
   const invoice=await businessResume(f,business)
+  await resumedOtherCredentials(f,others)
   await page.goto(h.origin+'/agents')
   assert.match(await page.locator('[data-agents-state]').innerText(),/Agents are on/)
   assert.doesNotMatch(await page.locator('main').innerText(),/Paused in Business/)

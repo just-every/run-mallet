@@ -1,17 +1,11 @@
-import { createAgentDoor, type Trust } from '../../modules/agent-door/index.ts'
+import { createAgentDoor } from '../../modules/agent-door/index.ts'
 import { runtimeBindings, type Bindings } from '../../auth.server'
+import { trust } from './trust.ts'
 import { businessSettings } from '../business.ts'
 import { localPreparation, nativePeople } from './people.ts'
 import { nativeTools } from './tools.ts'
 import { repairResources } from './records.ts'
 import { originGuard, HttpError } from '../auth'
-
-function trust(env: Bindings): Trust | null {
-  const issuer = env.RER_OWNER_CLAIM_ISSUER, installationId = env.RER_OWNER_CLAIM_INSTALLATION_ID
-  if (![issuer, installationId, env.RER_OWNER_CLAIM_PUBLIC_KEYS].some(Boolean)) return null
-  if (!issuer || !installationId || !env.RER_OWNER_CLAIM_PUBLIC_KEYS) throw new Error('Incomplete agent door trust')
-  return { issuer, installationId, appOrigin: env.AUTH_ORIGIN, publicKeys: JSON.parse(env.RER_OWNER_CLAIM_PUBLIC_KEYS) }
-}
 
 export const notTools = [
   { clauses: ['IMPORT-001'], reason: 'import-door' },

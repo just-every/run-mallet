@@ -45,7 +45,7 @@ import {secondFactorJourney,policyRecoveryJourney,stepUpJourney} from './support
 import {run,installation,assetInput,booking,estimate,authorise,archive,restore,snapshots} from './harness.mjs'
 import {csvRecords} from './support/report-csv.mjs'
 
-test('BASE-AGENT-011: local and Business Pause fence all six tools and legacy routes, rate overrun returns Retry-After, owner work continues and no agent credential resumes at 1440 and 390',agentPauseBrowser)
+test('BASE-AGENT-011: local and Business Pause stop every agent credential, rate overrun returns Retry-After, owner work continues and no agent resumes at 1440 and 390',agentPauseBrowser)
 
 test('ADV-003: source-cited blockers require actual evidence, exact consent and physical receipt, preserve handlers and recover privately',()=>run(blockerJourney))
 test('ADV-003: native blocker packet, handlers and proposal review at 1440 and 390',blockerBrowser)

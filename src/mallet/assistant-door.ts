@@ -5,6 +5,7 @@ import {bookingSlots,bookingSlotId} from './bookings'
 import {find} from './model'
 import {operatorMail} from '../mail.server.mjs'
 import type {Bindings} from '../auth.server'
+import {agentsPaused} from './agent-door/pause.ts'
 export async function scopedAssistantView(env:Bindings,auth:Identity){
  const s=await load(env.DB),g=currentGrant(s,auth.actor.assistantGrantId!,new Date().toISOString())
  if(!await env.DB.prepare(`SELECT 1 WHERE (${auth.authority.sql})`).bind(...auth.authority.params).first())throw new HttpError(401,'invalid_agent_key')
@@ -23,7 +24,7 @@ export async function assistantCommand(env:Bindings,auth:Identity,command:string
   const mail=operatorMail(env);if(!mail)throw new HttpError(409,'mail_unavailable')
   const claim=await execute(env.DB,auth.actor,'assistant.claim',input,auth.authority)
   // A second current-authority read immediately precedes the provider boundary.
-  if(!await env.DB.prepare(`SELECT 1 WHERE (${auth.authority.sql})`).bind(...auth.authority.params).first())throw new HttpError(403,'grant_revoked')
+  if(!await env.DB.prepare(`SELECT 1 WHERE (${auth.authority.sql})`).bind(...auth.authority.params).first())throw new HttpError(403,await agentsPaused(env)?'agents_paused':'grant_revoked')
   let outcome:any
   try{outcome=await mail.send({deliveryId:claim.id,from:String(env.MAIL_FROM??''),to:[claim.to],subject:'Your requested tentative appointment',text:claim.content,html:'',headers:{}})}catch{outcome={status:'uncertain'}}
   return execute(env.DB,auth.actor,'assistant.outcome',{sendId:claim.id,version:claim.version,status:outcome.status==='rejected'?'failed':outcome.status,providerReference:outcome.providerMessageId??null},auth.authority)

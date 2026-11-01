@@ -3,6 +3,7 @@ import { operatorAuth, runtimeBindings, type Bindings } from '../auth.server'
 import {enterpriseAuthority} from './enterprise/session'
 import {staffGrant,staffRoute,staffAuthority,type StaffGrant} from './staff'
 import {blocked,gateState,proofAuthority,type Gate} from './strong-auth/gate'
+import {agentsPaused,pauseFence} from './agent-door/pause.ts'
 export type Actor = { id: string; name: string; role: 'owner'|'admin'|'member'|'agent';staff?:StaffGrant;assistantGrantId?:string;attribution?:{agent:{id:string;name:string};for:{id:string;name:string};label:string};policyApprovers?:{id:string;name:string}[] }
 export type Authority = { sql: string; params: any[] }
 export class HttpError extends Error { constructor(public status: number, public code: string, message = code) { super(message) } }
@@ -12,20 +13,7 @@ export type Identity={actor:Actor;authority:Authority;bearer:boolean;apiClient?:
 // pending: the second-factor door itself, which must work before this session has shown its factor.
 export async function identity(request: Request, original: Bindings, options:{pending?:boolean}={}): Promise<Identity> {
  const env=runtimeBindings(original), bearer=request.headers.get('authorization')
- if(bearer) {
-  if(!/^Bearer [A-Za-z0-9_-]{43}$/.test(bearer)) throw new HttpError(401,'invalid_agent_key')
-  const hash=await digest(bearer.slice(7)), now=Date.now()
-  const sql="EXISTS(SELECT 1 FROM mallet_agent_keys k JOIN oa_operators o ON o.id=k.created_by WHERE k.token_hash=? AND k.revoked_at IS NULL AND k.expires_at>? AND o.status='active' AND o.version=k.creator_version AND o.role IN ('owner','admin'))"
-  const key=await env.DB.prepare(`SELECT k.id,k.label FROM mallet_agent_keys k WHERE k.token_hash=? AND (${sql})`).bind(hash,hash,now).first<{id:string;label:string}>()
-  if(!key) {
-   const client=await clientIdentity(env.DB,hash);if(client)return client
-   const scopedSql="EXISTS(SELECT 1 FROM mallet_assistant_keys k JOIN oa_operators o ON o.id=k.owner_id JOIN mallet_records r ON r.kind='assistantGrant' AND r.id=k.grant_id WHERE k.token_hash=? AND o.status='active' AND o.role='owner' AND o.version=k.owner_version AND json_extract(r.value,'$.revokedAt') IS NULL AND julianday(json_extract(r.value,'$.notBefore'))<=julianday('now') AND julianday(json_extract(r.value,'$.expiresAt'))>julianday('now'))"
-   const scoped=await env.DB.prepare(`SELECT k.grant_id FROM mallet_assistant_keys k WHERE k.token_hash=? AND (${scopedSql})`).bind(hash,hash).first<{grant_id:string}>()
-   if(!scoped)throw new HttpError(401,'invalid_agent_key')
-   return {actor:{id:scoped.grant_id,name:'Scoped AI assistant',role:'agent',assistantGrantId:scoped.grant_id},authority:{sql:scopedSql,params:[hash]},bearer:true}
-  }
-  return {actor:{id:key.id,name:key.label,role:'agent'},authority:{sql,params:[hash,now]},bearer:true}
- }
+ if(bearer) return pausable(env,await bearerIdentity(env,bearer))
  const session=await (await operatorAuth(env)).getSession(request)
  if(!session) throw new HttpError(401,'sign_in_required')
  const {operator:o}=session,gate=await gateState(env,session,o.id)
@@ -33,6 +21,28 @@ export async function identity(request: Request, original: Bindings, options:{pe
  const base:Authority={sql:"EXISTS(SELECT 1 FROM oa_sessions s JOIN oa_operators o ON o.id=s.operator_id WHERE s.id=? AND s.revoked_at IS NULL AND s.expires_at>? AND s.operator_version=o.version AND o.version=? AND o.status='active' AND o.role=?)",params:[session.id,Date.now(),o.version,o.role]}
  const actor:Actor={id:o.id,name:o.displayName,role:o.role,...(o.role==='member'?{staff:await staffGrant(env.DB,o.id)??undefined}:{})};staffRoute(request,actor)
  return {actor,bearer:false,session:{id:session.id,kind:session.kind},gate,authority:await enterpriseAuthority(env,o.id,session.id,staffAuthority(actor,gate.required||gate.enrolled?proofAuthority(base,session.id):base))}
+}
+// Every bearer credential acts as an agent: preparation keys off the agent door, native
+// API clients and scoped AI assistant keys. Pause refuses them all, and the native write
+// re-checks Pause in its own transaction; browser sessions keep working (BASE-AGENT-011).
+async function pausable(env:Bindings,auth:Identity):Promise<Identity>{
+ if(await agentsPaused(env))throw new HttpError(403,'agents_paused','Agents are paused. A person resumes them on the Agents page.')
+ const fence=pauseFence(env)
+ return {...auth,authority:{sql:`(${auth.authority.sql}) AND ${fence.sql}`,params:[...auth.authority.params,...fence.params]}}
+}
+async function bearerIdentity(env:Bindings,bearer:string):Promise<Identity>{
+ if(!/^Bearer [A-Za-z0-9_-]{43}$/.test(bearer)) throw new HttpError(401,'invalid_agent_key')
+ const hash=await digest(bearer.slice(7)), now=Date.now()
+ const sql="EXISTS(SELECT 1 FROM mallet_agent_keys k JOIN oa_operators o ON o.id=k.created_by WHERE k.token_hash=? AND k.revoked_at IS NULL AND k.expires_at>? AND o.status='active' AND o.version=k.creator_version AND o.role IN ('owner','admin'))"
+ const key=await env.DB.prepare(`SELECT k.id,k.label FROM mallet_agent_keys k WHERE k.token_hash=? AND (${sql})`).bind(hash,hash,now).first<{id:string;label:string}>()
+ if(!key) {
+  const client=await clientIdentity(env.DB,hash);if(client)return client
+  const scopedSql="EXISTS(SELECT 1 FROM mallet_assistant_keys k JOIN oa_operators o ON o.id=k.owner_id JOIN mallet_records r ON r.kind='assistantGrant' AND r.id=k.grant_id WHERE k.token_hash=? AND o.status='active' AND o.role='owner' AND o.version=k.owner_version AND json_extract(r.value,'$.revokedAt') IS NULL AND julianday(json_extract(r.value,'$.notBefore'))<=julianday('now') AND julianday(json_extract(r.value,'$.expiresAt'))>julianday('now'))"
+  const scoped=await env.DB.prepare(`SELECT k.grant_id FROM mallet_assistant_keys k WHERE k.token_hash=? AND (${scopedSql})`).bind(hash,hash).first<{grant_id:string}>()
+  if(!scoped)throw new HttpError(401,'invalid_agent_key')
+  return {actor:{id:scoped.grant_id,name:'Scoped AI assistant',role:'agent',assistantGrantId:scoped.grant_id},authority:{sql:scopedSql,params:[hash]},bearer:true}
+ }
+ return {actor:{id:key.id,name:key.label,role:'agent'},authority:{sql,params:[hash,now]},bearer:true}
 }
 export function originGuard(request:Request, env:Bindings, bearer=false) {
  const url=new URL(request.url), origin=runtimeBindings(env).AUTH_ORIGIN
