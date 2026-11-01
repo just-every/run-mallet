@@ -13,9 +13,10 @@ function trust(env: Bindings): Trust | null {
   return { issuer, installationId, appOrigin: env.AUTH_ORIGIN, publicKeys: JSON.parse(env.RER_OWNER_CLAIM_PUBLIC_KEYS) }
 }
 
+// The contract's planned non-tool reasons ("Not tools, and why"); risk is never one.
 export const notTools = [
-  { clauses: ['IMPORT-001'], reason: 'import-door' },
-  { clauses: ['OPS-001', 'OPEN-001'], reason: 'installation' },
+  { clauses: ['IMPORT-001', 'MOVE-001', 'MOVE-002', 'MOVE-003', 'MOVE-004', 'MOVE-005', 'MOVE-006', 'MOVE-007', 'MOVE-008', 'MOVE-009', 'MOVE-010', 'MOVE-011', 'MOVE-012', 'MOVE-013'], reason: 'import-door' },
+  { clauses: ['HTTP-001', 'OPS-001', 'OPS-002', 'OPEN-001'], reason: 'installation' },
   { clauses: ['HARDWARE-001', 'MOBILE-002'], reason: 'device' },
   { clauses: ['DVI-002', 'MOBILE-001'], reason: 'screen' },
   { clauses: ['PIER-001', 'GUIDE-001', 'GUIDE-002', 'GUIDE-003', 'DIAG-003'], reason: 'connector' },

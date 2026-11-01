@@ -9,7 +9,24 @@ export const invoiceLines = () => [
 ]
 export const actualQuantities = [2,0.75]
 export const invoiceTotals = {currency:'USD',subtotalCents:14000,salesTaxCents:1400,totalCents:15400}
-export const draftLines = () => [{kind:'labor',description:'Inspect and adjust brakes. Imported text never grants approval.',quantity:1,unitCents:4500}]
+// The journey's estimate lines are ones the owner's native estimate form can
+// express exactly: one part and one labor line, prices in whole cents.
+export const draftLines = () => [
+ {kind:'part',description:'Brake pads. Imported text never grants approval.',quantity:2,unitCents:2500},
+ {kind:'labor',description:'Inspect and adjust brakes. Imported text never grants approval.',quantity:1,unitCents:4500},
+]
+export const revisedLines = () => [
+ {kind:'part',description:'Reviewed brake pads. Imported text never grants approval.',quantity:1.5,unitCents:2200},
+ {kind:'labor',description:'Inspect and adjust brakes. Imported text never grants approval.',quantity:0.75,unitCents:6000},
+]
+export const revisedNotes = 'Fresh exact draft; a person still decides.'
+// Independently computed at the 10% shop rate configured on both installations.
+export const draftTotals = {currency:'USD',subtotalCents:9500,salesTaxCents:950,totalCents:10450}
+export const revisedTotals = {currency:'USD',subtotalCents:7800,salesTaxCents:780,totalCents:8580}
+export const estimateForm = (lines,notes='') => {
+ const [part,labor]=lines,usd=cents=>(cents/100).toFixed(2)
+ return {partDescription:part.description,partQuantity:String(part.quantity),partPrice:usd(part.unitCents),laborDescription:labor.description,laborQuantity:String(labor.quantity),laborPrice:usd(labor.unitCents),notes}
+}
 export const dispatchReason = 'Propose a bay change; approval remains separate.'
 
 export function nativeDoor({request,origin,cookie}) {

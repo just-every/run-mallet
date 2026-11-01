@@ -79,13 +79,28 @@
   "notTools": [
     {
       "clauses": [
-        "IMPORT-001"
+        "IMPORT-001",
+        "MOVE-001",
+        "MOVE-002",
+        "MOVE-003",
+        "MOVE-004",
+        "MOVE-005",
+        "MOVE-006",
+        "MOVE-007",
+        "MOVE-008",
+        "MOVE-009",
+        "MOVE-010",
+        "MOVE-011",
+        "MOVE-012",
+        "MOVE-013"
       ],
       "reason": "import-door"
     },
     {
       "clauses": [
+        "HTTP-001",
         "OPS-001",
+        "OPS-002",
         "OPEN-001"
       ],
       "reason": "installation"
@@ -181,6 +196,12 @@
         },
         "lines": [
           {
+            "kind": "part",
+            "description": "Brake pads. Imported text never grants approval.",
+            "quantity": 2,
+            "unitCents": 2500
+          },
+          {
             "kind": "labor",
             "description": "Inspect and adjust brakes. Imported text never grants approval.",
             "quantity": 1,
@@ -192,7 +213,7 @@
         {
           "class": "standard",
           "facts": {
-            "measure": 1
+            "measure": 2
           }
         }
       ]
@@ -212,10 +233,16 @@
         "revision": 1,
         "lines": [
           {
+            "kind": "part",
+            "description": "Reviewed brake pads. Imported text never grants approval.",
+            "quantity": 1.5,
+            "unitCents": 2200
+          },
+          {
             "kind": "labor",
             "description": "Inspect and adjust brakes. Imported text never grants approval.",
-            "quantity": 1,
-            "unitCents": 4500
+            "quantity": 0.75,
+            "unitCents": 6000
           }
         ],
         "notes": "Fresh exact draft; a person still decides."
@@ -224,7 +251,7 @@
         {
           "class": "standard",
           "facts": {
-            "measure": 1
+            "measure": 2
           }
         }
       ]

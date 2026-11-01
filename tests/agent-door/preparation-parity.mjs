@@ -1,7 +1,9 @@
 import assert from 'node:assert/strict'
 import {randomBytes} from 'node:crypto'
 import {serveHosted} from '@runeditrun/rer/internal/cli/hosted-output.mjs'
-import {nativeDoor,seedRepair,draftLines,dispatchReason,invoiceLines,invoiceTotals,actualQuantities} from './preparation-fixtures.mjs'
+import {nativeDoor,seedRepair,draftLines,revisedLines,revisedNotes,estimateForm,dispatchReason,invoiceLines,invoiceTotals,actualQuantities} from './preparation-fixtures.mjs'
+import {estimateParity} from './estimate-parity.mjs'
+import {refusalParity} from './refusal-parity.mjs'
 
 const pending=new Map(),proved=new Set()
 let browserProof
@@ -10,6 +12,9 @@ const rows=(state,kind)=>state.records[kind]??[]
 const jobAt=(state,id)=>rows(state,'job').find(row=>row.id===id)
 const fields=(row,keys)=>Object.fromEntries(keys.map(key=>[key,row[key]]))
 const assignmentKeys=['bayId','technicianId','startAt','endAt']
+const compared=['prepare','revise','dispatch','invoice']
+// Each preparation's owner page, form command and the hidden field naming its exact source record.
+const nativeAction={prepare:['estimate.prepare','jobId'],revise:['estimate.revise','estimateId'],dispatch:['dispatch.prepare','jobId'],invoice:['invoice.prepare','jobId']}
 
 // A second emitted production Worker has its own database, native owner,
 // independently confirmed quality reviewer, and synthetic mail boundary.
@@ -44,10 +49,10 @@ export async function nativePeer(){
 
 // Submit the existing person form, including its actual hidden version fence.
 // The browser registration replaces this driver with clicks on the same form.
-async function nativeForm(door,path,command,input){
+async function nativeForm(door,path,command,input,key){
  const response=await door.send(path);assert.equal(response.status,200)
  const html=await response.text(),forms=[...html.matchAll(/<form\b[^>]*>[\s\S]*?<\/form>/g)].map(match=>match[0])
- const form=forms.find(value=>value.includes(`name="command" value="${command}"`)&&value.includes(`name="jobId" value="${input.jobId}"`))
+ const form=forms.find(value=>value.includes(`name="command" value="${command}"`)&&value.includes(`name="${key}" value="${input[key]}"`))
  assert.ok(form,'The native page offers the preparation on this exact repair')
  const hidden=Object.fromEntries([...form.matchAll(/<input type="hidden" name="([^"]+)" value="([^"]*)">/g)].map(match=>[match[1],match[2]]))
  assert.equal(Number(hidden.version),input.version,'Native form retains the exact source repair version')
@@ -57,8 +62,10 @@ async function nativeForm(door,path,command,input){
 
 export async function beforeStep(context){
  const {phase,step,args,outputs}=context
- if(!['autonomous','held'].includes(phase)||!['dispatch','invoice'].includes(step.id))return
- const source=nativeDoor(context),before=await source.state(),job=jobAt(before,args.jobId),asset=rows(before,'asset').find(row=>row.id===job.assetId)
+ if(!['autonomous','held'].includes(phase)||!compared.includes(step.id))return
+ const source=nativeDoor(context),before=await source.state()
+ const sourceEstimate=step.id==='revise'?rows(before,'estimate').find(row=>row.id===args.estimateId):undefined
+ const job=jobAt(before,sourceEstimate?.jobId??args.jobId),asset=rows(before,'asset').find(row=>row.id===job.assetId)
  const index=Number(asset.identifier.replace('AGENT-',''))
  assert.ok(Number.isInteger(index)&&index>=0&&index<=3,'Preparation targets an independently specified repair fixture')
  const peer=await nativePeer()
@@ -68,9 +75,11 @@ export async function beforeStep(context){
   const proposedTechnician=(await source.json('/auth/operators')).find(person=>person.displayName==='Cedar Independent Reviewer')
   const nativeTechnician=(await peer.door.json('/auth/operators')).find(person=>person.displayName==='Cedar Independent Reviewer')
   assert.ok(proposedTechnician&&nativeTechnician,'Each installation has its independently confirmed proposed technician')
+  // The revised estimate starts from the same exact revision one the agent prepared.
+  if(step.id==='revise')fixture.estimate=await peer.door.command('estimate.prepare',{jobId:fixture.job.id,version:fixture.job.version,lines:draftLines()})
   if(step.id==='dispatch'){
    let quote=await peer.door.command('estimate.prepare',{jobId:fixture.job.id,version:fixture.job.version,lines:draftLines()})
-   quote=await peer.door.command('estimate.revise',{estimateId:quote.id,version:quote.version,revision:1,lines:draftLines(),notes:'Fresh exact draft; a person still decides.'})
+   quote=await peer.door.command('estimate.revise',{estimateId:quote.id,version:quote.version,revision:1,lines:revisedLines(),notes:revisedNotes})
    fixture.estimate=quote
    assert.equal(outputs.revise.revisions.at(-1).n,2)
    const bay=await peer.door.command('calendar.resourceSave',{kind:'bay',name:'Diagnostic bench',skills:[],active:true})
@@ -78,10 +87,24 @@ export async function beforeStep(context){
   }
   const nativeBefore=await peer.door.state(),nativeJob=jobAt(nativeBefore,fixture.job.id)
   assert.equal(job.version,nativeJob.version,'Independent repairs have the same source revision')
-  const mapping={asset:[asset.id,fixture.asset.id],job:[job.id,nativeJob.id],technician:[job.technicianId,nativeJob.technicianId],estimate:[job.estimateId,nativeJob.estimateId]}
-  assert.notEqual(...mapping.asset);assert.notEqual(...mapping.job);assert.notEqual(...mapping.technician);assert.notEqual(...mapping.estimate)
+  const mapping={asset:[asset.id,fixture.asset.id],job:[job.id,nativeJob.id],technician:[job.technicianId,nativeJob.technicianId],estimate:[job.estimateId??null,nativeJob.estimateId??null]}
+  assert.notEqual(...mapping.asset);assert.notEqual(...mapping.job);assert.notEqual(...mapping.technician)
+  if(step.id==='prepare')assert.deepEqual(mapping.estimate,[null,null],'Neither repair has an estimate before preparation')
+  else assert.notEqual(...mapping.estimate)
   assert.deepEqual(fields(job,['title','status','bayId','startAt','endAt']),fields(nativeJob,['title','status','bayId','startAt','endAt']),'Equivalent independently seeded repair state')
-  const input={jobId:nativeJob.id,version:nativeJob.version,...(step.id==='dispatch'?{bayId:fixture.proposedBay,technicianId:nativeTechnician.id,startAt:'2028-11-20T13:15:00-05:00',endAt:'2028-11-20T14:45:00-05:00',reason:dispatchReason}:{})}
+  const nativeEstimate=step.id==='revise'?rows(nativeBefore,'estimate').find(row=>row.id===nativeJob.estimateId):undefined
+  let input={jobId:nativeJob.id,version:nativeJob.version,...(step.id==='dispatch'?{bayId:fixture.proposedBay,technicianId:nativeTechnician.id,startAt:'2028-11-20T13:15:00-05:00',endAt:'2028-11-20T14:45:00-05:00',reason:dispatchReason}:{})}
+  if(step.id==='prepare'){
+   assert.deepEqual(args.lines,draftLines(),'The MCP preparation uses the independently specified lines');assert.equal(args.notes,undefined)
+   input={...input,...estimateForm(args.lines)}
+  }
+  if(step.id==='revise'){
+   assert.deepEqual(fields(args,['revision','lines','notes']),{revision:1,lines:revisedLines(),notes:revisedNotes},'The MCP revision uses the independently specified lines')
+   assert.deepEqual(sourceEstimate.revisions.map(revision=>revision.lines.map(({id,...line})=>line)),nativeEstimate.revisions.map(revision=>revision.lines.map(({id,...line})=>line)),'Equivalent exact revision one on both repairs')
+   assert.equal(sourceEstimate.version,nativeEstimate.version)
+   mapping.estimate=[sourceEstimate.id,nativeEstimate.id]
+   input={estimateId:nativeEstimate.id,version:nativeEstimate.version,revision:1,...estimateForm(args.lines,args.notes)}
+  }
   if(step.id==='dispatch'){
    assert.deepEqual(fields(args,['bayId','technicianId','startAt','endAt','reason']),{bayId:'Diagnostic bench',technicianId:proposedTechnician.id,startAt:input.startAt,endAt:input.endAt,reason:dispatchReason})
    mapping.proposedBay=[args.bayId,fixture.proposedBay]
@@ -89,11 +112,11 @@ export async function beforeStep(context){
    assert.notEqual(...mapping.proposedTechnician)
    for(const [requested,current] of [[args,job],[input,nativeJob]])for(const field of assignmentKeys)assert.notEqual(requested[field],current[field],'The proposed '+field+' differs from the actual assignment')
   }
-  const proof={context,source,before,job,peer,fixture,nativeBefore,nativeJob,mapping,input}
+  const proof={context,source,before,job,peer,fixture,nativeBefore,nativeJob,mapping,input,sourceEstimate,nativeEstimate}
   if(browserProof)browser=proof.browser=await browserProof(proof)
-  const path=step.id==='dispatch'?'/app/calendar':'/app/jobs/'+nativeJob.id,command=step.id==='dispatch'?'dispatch.prepare':'invoice.prepare'
-  if(proof.browser)await proof.browser.prepare(path,command,input)
-  else await nativeForm(peer.door,path,command,input)
+  const path=step.id==='dispatch'?'/app/calendar':'/app/jobs/'+nativeJob.id,[command,key]=nativeAction[step.id]
+  if(proof.browser)await proof.browser.prepare(path,command,input,key)
+  else await nativeForm(peer.door,path,command,input,key)
   pending.set(phase+':'+step.id,proof)
  }catch(error){await browser?.close();await peer.close();throw error}
 }
@@ -125,12 +148,27 @@ function assertInvoice(invoice,job,quote){
  assert.deepEqual(invoice.estimateApproval,quote.revisions[1].approval);assert.deepEqual(invoice.customerAuthorisation,quote.authorisation)
 }
 
-export async function afterStep({phase,step,result}){
+export async function afterStep(context){
+ const {phase,step,result}=context
+ if(step.id==='read'&&['autonomous','held'].includes(phase)){
+  const codes=await refusalParity(context,nativeDoor(context),{step:'read'})
+  proved.add(phase+':read');console.log(`PROBE BASE-AGENT-002 ${phase} read refusal: owner repair route and MCP missing repair -> ${codes.join(', ')}`)
+  return
+ }
  const key=phase+':'+step.id,proof=pending.get(key)
  if(!proof)return
  const {source,before,job,peer,nativeBefore,nativeJob,fixture,input,mapping}=proof
  try{
-  const after=await source.state(),nativeAfter=await peer.door.state(),kind=step.id==='dispatch'?'proposal':'invoice',command=step.id==='dispatch'?'dispatch.prepare':'invoice.prepare'
+  const after=await source.state(),nativeAfter=await peer.door.state()
+  if(['prepare','revise'].includes(step.id)){
+   const {actual,native}=estimateParity({step:step.id,result,after,before,nativeAfter,nativeBefore,job,nativeJob,sourceEstimate:proof.sourceEstimate,nativeEstimate:proof.nativeEstimate,assertAttribution})
+   const codes=await refusalParity(context,source,{step:step.id,job,result,estimate:proof.sourceEstimate})
+   if(proof.browser)await proof.browser.readback({actual,native,after,nativeAfter})
+   proved.add(key)
+   console.log(`PROBE BASE-AGENT-002 ${phase} ${step.id}: independent owner form and MCP estimate ${step.id} -> exact lines, totals and revision, one business event, separate attribution, no decision; refusals ${codes.join(', ')} equal the UI codes`)
+   return
+  }
+  const kind=step.id==='dispatch'?'proposal':'invoice',command=step.id==='dispatch'?'dispatch.prepare':'invoice.prepare'
   const actual=rows(after,kind).find(row=>row.id===result.id),native=rows(nativeAfter,kind).find(row=>row.jobId===nativeJob.id)
   assert.ok(actual&&native,'Both public doors persist a prepared record')
   assert.deepEqual(result,actual,'MCP result equals the persisted native record')
@@ -175,19 +213,20 @@ export async function afterStep({phase,step,result}){
     assert.deepEqual((await door.state()).records,state.records,'Unapproved prepared invoices cannot be exported and change nothing')
    }
   }
+  const codes=await refusalParity(context,source,{step:step.id,job,result,dispatch:fields(context.args,assignmentKeys)})
   if(proof.browser)await proof.browser.readback({actual,native,after,nativeAfter})
   proved.add(key)
-  console.log(`PROBE BASE-AGENT-002 ${phase} ${step.id}: independent owner form and MCP preparation -> exact state, source revisions, one business event, separate attribution; no approval or export`)
+  console.log(`PROBE BASE-AGENT-002 ${phase} ${step.id}: independent owner form and MCP preparation -> exact state, source revisions, one business event, separate attribution; no approval or export; refusals ${codes.join(', ')} equal the UI codes`)
  }finally{pending.delete(key);await proof.browser?.close();await peer.close()}
 }
 
 export default async function preparationParity(){
  try{
-  for(const phase of ['autonomous','held'])for(const step of ['dispatch','invoice'])assert.ok(proved.has(phase+':'+step),'Both native preparation comparisons run under '+phase+' policy')
+  for(const phase of ['autonomous','held'])for(const step of [...compared,'read'])assert.ok(proved.has(phase+':'+step),'Every native preparation comparison and refusal check runs under '+phase+' policy')
  }finally{
   proved.clear()
   for(const proof of pending.values()){await proof.browser?.close();await proof.peer.close()}
   pending.clear()
  }
- console.log('BASE-AGENT-002 point 5: independently seeded dispatch and invoice preparations match through production doors under autonomous and standard-review policies.')
+ console.log('BASE-AGENT-002 points 4 and 5: independently seeded estimate, revision, dispatch and invoice preparations match the owner forms, and every refusal returns the UI code, under autonomous and standard-review policies.')
 }

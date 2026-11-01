@@ -14,23 +14,41 @@ const line = { type: 'object', required: ['kind', 'description', 'quantity', 'un
 }, additionalProperties: false }
 const lines = { type: 'array', minItems: 1, maxItems: 100, items: line }
 const object = (properties: JsonSchemaObject['properties'], required: string[] = []): JsonSchemaObject => ({ type: 'object', properties, required, additionalProperties: false })
-const output = { type: 'object', required: ['id', 'version'], properties: { id, version }, additionalProperties: true }
+// Truthful output schemas: each preparation returns the exact persisted native
+// record, and the runtime refuses an effect whose record does not match.
+const open = (properties: JsonSchemaObject['properties'], required: string[]): JsonSchemaObject => ({ type: 'object', properties, required, additionalProperties: true })
+const actor = open({ id, name: { type: 'string', minLength: 1 }, role: { type: 'string', minLength: 1 } }, ['id', 'name', 'role'])
+const cents = { type: 'integer', minimum: 0 }
+const totals = open({ currency: { const: 'USD' }, subtotalCents: cents, salesTaxCents: cents, totalCents: cents }, ['currency', 'subtotalCents', 'salesTaxCents', 'totalCents'])
+const pricedLine = open({ id, kind: { type: 'string', minLength: 1 }, description: { type: 'string' }, quantity: { type: 'number', exclusiveMinimum: 0 }, unitCents: cents }, ['id', 'kind', 'description', 'quantity', 'unitCents'])
+const draft = { type: 'string', const: 'draft' }
+const estimateOutput = open({ id, version, jobId: id, status: draft, authorisation: { type: 'null' },
+  revisions: { type: 'array', minItems: 1, items: open({ n: version, lines: { type: 'array', minItems: 1, items: pricedLine }, totals, preparedBy: actor, approval: { type: 'null' } }, ['n', 'lines', 'totals', 'preparedBy', 'approval']) } },
+  ['id', 'version', 'jobId', 'status', 'revisions', 'authorisation'])
+const proposalOutput = open({ id, version, jobId: id, jobVersion: version, reason: { type: 'string' }, status: { const: 'pending' }, preparedBy: actor,
+  plan: open({ bayId: { type: 'string' }, technicianId: { type: 'string' }, startAt: { type: 'string', format: 'date-time' }, endAt: { type: 'string', format: 'date-time' } }, ['bayId', 'technicianId', 'startAt', 'endAt']) },
+  ['id', 'version', 'jobId', 'jobVersion', 'plan', 'reason', 'status', 'preparedBy'])
+const invoiceOutput = open({ id, version, jobId: id, jobVersion: version, estimateId: id, estimateRevision: version, revision: version, status: draft, approval: { type: 'null' }, exportId: { type: 'null' },
+  lines: { type: 'array', minItems: 1, items: pricedLine }, totals, preparedBy: actor },
+  ['id', 'version', 'jobId', 'jobVersion', 'estimateId', 'estimateRevision', 'revision', 'status', 'approval', 'exportId', 'lines', 'totals', 'preparedBy'])
+const stateOutput = open({ version: { type: 'integer', minimum: 0 }, records: { type: 'object', additionalProperties: { type: 'array', items: { type: 'object' } } } }, ['version', 'records'])
 const definitions = [
   { name: 'mallet.estimates.prepare', command: 'estimate.prepare', scope: 'estimate:prepare', kind: 'job', target: 'jobId', resource: 'estimates',
-    title: 'Prepare an exact estimate', clauses: ['AGENT-001', 'ESTIMATE-001'], schema: object({ jobId: id, version, lines, notes: text, supplement: { type: 'boolean' }, reason: text }, ['jobId', 'version', 'lines']) },
+    title: 'Prepare an exact estimate', clauses: ['AGENT-001', 'ESTIMATE-001'], output: estimateOutput, schema: object({ jobId: id, version, lines, notes: text, supplement: { type: 'boolean' }, reason: text }, ['jobId', 'version', 'lines']) },
   { name: 'mallet.estimates.revise', command: 'estimate.revise', scope: 'estimate:revise', kind: 'estimate', target: 'estimateId', resource: 'estimates',
-    title: 'Revise a draft estimate', clauses: ['AGENT-001', 'ESTIMATE-001'], schema: object({ estimateId: id, version, revision: version, lines, notes: text }, ['estimateId', 'version', 'revision', 'lines']) },
+    title: 'Revise a draft estimate', clauses: ['AGENT-001', 'ESTIMATE-001'], output: estimateOutput, schema: object({ estimateId: id, version, revision: version, lines, notes: text }, ['estimateId', 'version', 'revision', 'lines']) },
   { name: 'mallet.dispatch.prepare', command: 'dispatch.prepare', scope: 'dispatch:prepare', kind: 'job', target: 'jobId', resource: 'repairs',
-    title: 'Propose a dispatch change', clauses: ['AGENT-001', 'WORKSHOP-001'], schema: object({ jobId: id, version, bayId: id, technicianId: id, startAt: id, endAt: id, reason: text }, ['jobId', 'version', 'bayId', 'technicianId', 'startAt', 'endAt', 'reason']) },
+    title: 'Propose a dispatch change', clauses: ['AGENT-001', 'WORKSHOP-001'], output: proposalOutput, schema: object({ jobId: id, version, bayId: id, technicianId: id, startAt: id, endAt: id, reason: text }, ['jobId', 'version', 'bayId', 'technicianId', 'startAt', 'endAt', 'reason']) },
   { name: 'mallet.invoices.prepare', command: 'invoice.prepare', scope: 'invoice:prepare', kind: 'job', target: 'jobId', resource: 'invoices',
-    title: 'Prepare an actual-work invoice', clauses: ['AGENT-001', 'INVOICE-001'], schema: object({ jobId: id, version }, ['jobId', 'version']) },
+    title: 'Prepare an actual-work invoice', clauses: ['AGENT-001', 'INVOICE-001'], output: invoiceOutput, schema: object({ jobId: id, version }, ['jobId', 'version']) },
 ]
 
 async function target(def: typeof definitions[number], args: Record<string, unknown>, ctx: ToolContext) {
   preparationActor(ctx)
   const state = await load(ctx.db)
   const row = state.records[def.kind]?.find(row => row.id === args[def.target])
-  if (!row) throw new ToolRefusal('not_found')
+  // The UI's shared server action refuses a missing record with NOT_FOUND.
+  if (!row) throw new ToolRefusal('NOT_FOUND', `That ${def.kind} does not exist.`)
   const family = webhookFamily(def.command)
   if (family && state.records.webhookSubscription?.some(subscription => subscription.active && subscription.families.includes(family))) {
     throw new ToolRefusal('queued_effect_not_adopted', 'This preparation would queue a native webhook. Queued webhook execution has not been adopted into the shared Mallet agent door.')
@@ -40,7 +58,7 @@ async function target(def: typeof definitions[number], args: Record<string, unkn
 
 const preparations: ToolDefinition[] = definitions.map(def => ({
   name: def.name, title: def.title, description: `${def.title} through Mallet's native preparation service. A person still decides the resulting draft.`,
-  scope: def.scope, readOnly: false, inputSchema: def.schema, outputSchema: output, classes: ['standard'], clauses: def.clauses, untrusted: true,
+  scope: def.scope, readOnly: false, inputSchema: def.schema, outputSchema: def.output, classes: ['standard'], clauses: def.clauses, untrusted: true,
   async classify(args, ctx) {
     await target(def, args, ctx)
     // Prices are draft proposals; preparing never moves money or shares a record.
@@ -67,7 +85,8 @@ const preparations: ToolDefinition[] = definitions.map(def => ({
       ctx.emit(def.command, uri, { id: result.id, version: result.version })
       return { result, resources: [{ uri, name: def.title }] }
     } catch (error) {
-      if (error instanceof MalletError) throw new ToolRefusal(error.code.toLowerCase(), error.message)
+      // A business refusal keeps the exact stable code the UI receives for the same action.
+      if (error instanceof MalletError) throw new ToolRefusal(error.code, error.message)
       throw error
     }
   },
@@ -75,7 +94,7 @@ const preparations: ToolDefinition[] = definitions.map(def => ({
 
 export const nativeTools: ToolDefinition[] = [...preparations, {
   name: 'mallet.repairs.list', title: 'List visible repairs', description: 'Current native preparation records, with the sponsor’s assigned-repair restrictions.',
-  scope: 'workshop:read', readOnly: true, inputSchema: object({ readyFor: { enum: ['estimate', 'invoice'] } }), outputSchema: { type: 'object', required: ['version', 'records'] },
+  scope: 'workshop:read', readOnly: true, inputSchema: object({ readyFor: { enum: ['estimate', 'invoice'] } }), outputSchema: stateOutput,
   classes: ['standard'], clauses: ['AGENT-001', 'WORKSHOP-001'], classify: () => [{ class: 'standard', facts: { measure: 1 } }],
   async run(args, ctx) {
     const state = await readableState(ctx)
@@ -84,7 +103,7 @@ export const nativeTools: ToolDefinition[] = [...preparations, {
   }, untrusted: true,
 }, {
   name: 'mallet.repairs.read', title: 'Read a repair', description: 'Read the indexed, version-fenced native repair graph. Missing and restricted repairs look identical.',
-  scope: 'workshop:read', readOnly: true, inputSchema: object({ id }, ['id']), outputSchema: { type: 'object', required: ['version', 'records'] },
+  scope: 'workshop:read', readOnly: true, inputSchema: object({ id }, ['id']), outputSchema: stateOutput,
   classes: ['standard'], clauses: ['AGENT-001', 'WORKSHOP-001'], classify: () => [{ class: 'standard', facts: { measure: 1 } }],
   async run(args, ctx) { return { result: await readRepair(args.id as string, ctx), resources: [{ uri: `mallet://repairs/${args.id}`, name: 'Repair' }] } }, untrusted: true,
 }]
