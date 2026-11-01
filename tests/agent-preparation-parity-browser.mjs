@@ -56,7 +56,7 @@ export async function preparationParityBrowser(){
      if(step.id==='dispatch'){
       assert.ok(text.includes('Diagnostic bench'));assert.ok(text.includes(row.reason))
       const values=await panel.locator('dd').allTextContents()
-      assert.equal(values[0],'Diagnostic bench');assert.equal(values[1],'Synthetic Base 1')
+      assert.equal(values[0],'Diagnostic bench');assert.equal(values[1],'Cedar Independent Reviewer')
       assert.deepEqual(await panel.locator('time').evaluateAll(nodes=>nodes.map(node=>node.getAttribute('datetime'))),[row.plan.startAt,row.plan.endAt])
       assert.equal(await panel.getByRole('button',{name:'Approve dispatch plan',exact:true}).count(),1,'The dispatch proposal still awaits a person')
      }else{

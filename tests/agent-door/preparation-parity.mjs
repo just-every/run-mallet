@@ -65,6 +65,9 @@ export async function beforeStep(context){
  let browser
  try{
   const fixture=await seedRepair(peer.door,index,peer.reviewer)
+  const proposedTechnician=(await source.json('/auth/operators')).find(person=>person.displayName==='Cedar Independent Reviewer')
+  const nativeTechnician=(await peer.door.json('/auth/operators')).find(person=>person.displayName==='Cedar Independent Reviewer')
+  assert.ok(proposedTechnician&&nativeTechnician,'Each installation has its independently confirmed proposed technician')
   if(step.id==='dispatch'){
    let quote=await peer.door.command('estimate.prepare',{jobId:fixture.job.id,version:fixture.job.version,lines:draftLines()})
    quote=await peer.door.command('estimate.revise',{estimateId:quote.id,version:quote.version,revision:1,lines:draftLines(),notes:'Fresh exact draft; a person still decides.'})
@@ -78,10 +81,13 @@ export async function beforeStep(context){
   const mapping={asset:[asset.id,fixture.asset.id],job:[job.id,nativeJob.id],technician:[job.technicianId,nativeJob.technicianId],estimate:[job.estimateId,nativeJob.estimateId]}
   assert.notEqual(...mapping.asset);assert.notEqual(...mapping.job);assert.notEqual(...mapping.technician);assert.notEqual(...mapping.estimate)
   assert.deepEqual(fields(job,['title','status','bayId','startAt','endAt']),fields(nativeJob,['title','status','bayId','startAt','endAt']),'Equivalent independently seeded repair state')
-  const input={jobId:nativeJob.id,version:nativeJob.version,...(step.id==='dispatch'?{bayId:fixture.proposedBay,technicianId:nativeJob.technicianId,startAt:`2028-11-${10+index}T09:00:00.000Z`,endAt:`2028-11-${10+index}T10:00:00.000Z`,reason:dispatchReason}:{})}
+  const input={jobId:nativeJob.id,version:nativeJob.version,...(step.id==='dispatch'?{bayId:fixture.proposedBay,technicianId:nativeTechnician.id,startAt:'2028-11-20T13:15:00-05:00',endAt:'2028-11-20T14:45:00-05:00',reason:dispatchReason}:{})}
   if(step.id==='dispatch'){
-   assert.deepEqual(fields(args,['bayId','technicianId','startAt','endAt','reason']),{bayId:'Diagnostic bench',technicianId:job.technicianId,startAt:input.startAt,endAt:input.endAt,reason:dispatchReason})
+   assert.deepEqual(fields(args,['bayId','technicianId','startAt','endAt','reason']),{bayId:'Diagnostic bench',technicianId:proposedTechnician.id,startAt:input.startAt,endAt:input.endAt,reason:dispatchReason})
    mapping.proposedBay=[args.bayId,fixture.proposedBay]
+   mapping.proposedTechnician=[proposedTechnician.id,nativeTechnician.id]
+   assert.notEqual(...mapping.proposedTechnician)
+   for(const [requested,current] of [[args,job],[input,nativeJob]])for(const field of assignmentKeys)assert.notEqual(requested[field],current[field],'The proposed '+field+' differs from the actual assignment')
   }
   const proof={context,source,before,job,peer,fixture,nativeBefore,nativeJob,mapping,input}
   if(browserProof)browser=proof.browser=await browserProof(proof)
@@ -142,13 +148,15 @@ export async function afterStep({phase,step,result}){
    assert.equal(rows(state,'export').filter(entry=>entry.invoiceId===row.id).length,0,'Preparation creates no export')
   }
   if(step.id==='dispatch'){
-   const expected={liftId:'',loanerId:'',requiredSkill:'',bayId:'Diagnostic bench',technicianId:job.technicianId,startAt:new Date(input.startAt).toISOString(),endAt:new Date(input.endAt).toISOString()}
+   const expected={liftId:'',loanerId:'',requiredSkill:'',bayId:'Diagnostic bench',technicianId:mapping.proposedTechnician[0],startAt:'2028-11-20T18:15:00.000Z',endAt:'2028-11-20T19:45:00.000Z'}
    assert.deepEqual(actual.plan,expected)
-   assert.deepEqual(native.plan,{...expected,bayId:mapping.proposedBay[1],technicianId:mapping.technician[1]})
+   assert.deepEqual(native.plan,{...expected,bayId:mapping.proposedBay[1],technicianId:mapping.proposedTechnician[1]})
    for(const [row,target,state,prior] of [[actual,job,after,before],[native,nativeJob,nativeAfter,nativeBefore]]){
     assert.equal(row.jobId,target.id);assert.equal(row.jobVersion,target.version);assert.equal(row.reason,dispatchReason);assert.equal(row.status,'pending')
     assert.deepEqual(jobAt(state,target.id),jobAt(prior,target.id),'Dispatch preparation leaves the entire actual repair assignment unchanged')
     assert.deepEqual(fields(jobAt(state,target.id),assignmentKeys),fields(target,assignmentKeys))
+    assert.deepEqual(rows(state,'event').find(event=>event.kind==='dispatch.prepare'&&event.subjectId===row.id).data,{plan:row.plan,conflicts:[]},'The native business event retains the exact proposed move')
+    assert.deepEqual(rows(state,'approval'),rows(prior,'approval'),'A proposed move adds no decision')
    }
   }else{
    const quote=rows(before,'estimate').find(row=>row.id===job.estimateId)
@@ -158,6 +166,8 @@ export async function afterStep({phase,step,result}){
    for(const [state,prior,target,row] of [[after,before,job,actual],[nativeAfter,nativeBefore,nativeJob,native]]){
     assert.deepEqual(jobAt(state,target.id),{...jobAt(prior,target.id),version:target.version+1,invoiceId:row.id},'Invoice preparation changes only the source version and invoice link')
     assert.deepEqual(rows(state,'approval'),rows(prior,'approval'));assert.deepEqual(rows(state,'export'),rows(prior,'export'))
+    assert.deepEqual(rows(state,'estimate'),rows(prior,'estimate'),'Invoice preparation preserves every frozen estimate decision')
+    assert.deepEqual(rows(state,'event').find(event=>event.kind==='invoice.prepare'&&event.subjectId===row.id).data,{revision:1,totals:invoiceTotals,estimateId:row.estimateId,estimateRevision:2},'The native business event cites exact frozen source amounts and revision')
    }
    for(const [door,row,state] of [[source,actual,after],[peer.door,native,nativeAfter]]){
     const refused=await door.send('/api/mallet/commands',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({command:'invoice.export',input:{invoiceId:row.id,version:row.version}})})
