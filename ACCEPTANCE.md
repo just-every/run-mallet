@@ -2074,8 +2074,8 @@ Agent surface · target · **partial**
 6. Activity and exports at 1440 and 390 show `"<agent> for <person>"` for every agent act.
 7. Mail an agent sends to an outside address names `"<agent> for <person>"` as its sender.
 
-**Evidence.** `agent-surface.json`; `tests/agent-door/owner.mjs`; `tests/agent-door/reviewer.mjs`; `tests/agent-door/fixtures.mjs` — SEED_VERIFY_SHARD=runtime npx -y @runeditrun/rer@0.2.91 verify: "Agent door conformance: 587/587 points passed", normal exit 0 (29 October 2026).
-**Gap.** Native preparation retains agent and sponsor attribution. Complete specialist-week, outbound and queued attribution remain unproved; no unsupported Undo is invented.
+**Evidence.** `agent-surface.json`; `tests/agent-door/owner.mjs`; `tests/agent-door/reviewer.mjs`; `tests/agent-door/fixtures.mjs`; `tests/agent-door/native-attribution.mjs` — afterStep compares native estimate preparation, revision and owner approval under autonomous and held standard-review policies; `tests/mallet.test.mjs` — BASE-AGENT-008: exact agent preparation and distinct native owner approval at 1440, using `tests/agent-attribution-browser.mjs`.
+**Gap.** Point 5 is qualified only for adopted estimate preparation and revision with current-owner native exact-revision approval: the saved record and estimate card distinguish the agent for the sponsor from the deciding person. Other point-5 workflows, complete specialist-week attribution, other acceptance outcomes, outbound and queued attribution remain unproved. Expanded native authority awaits ct approval; expanded grants, customer sending and promise-changing authority remain held. AGENT-001, GOV-001 and SHOP-001 limits and existing account, provider, retention and lifecycle holds are unchanged.
 
 #### BASE-AGENT-009 — Every agent action is audited with its class and decision
 
