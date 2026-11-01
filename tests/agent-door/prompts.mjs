@@ -4,6 +4,7 @@ import { mkdir, mkdtemp } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { totpCode } from '../support/second-factor.mjs'
+import preparationParity, { beforeStep as parityBefore, afterStep as parityAfter } from './preparation-parity.mjs'
 
 const installations = new Map()
 const writes = ['mallet.dispatch.prepare', 'mallet.estimates.prepare', 'mallet.estimates.revise', 'mallet.invoices.prepare']
@@ -161,6 +162,7 @@ async function promptScreens(c) {
 const checked = fn => async context => {
   try { await fn(context) } catch (error) { console.error('Prompt journey assertion:', error.message); throw error }
 }
-export const beforeStep = checked(before)
-export const afterStep = checked(after)
-export default checked(promptScreens)
+/** The one declared journey also runs native-form versus MCP preparation parity. */
+export const beforeStep = checked(async c => { await before(c); await parityBefore(c) })
+export const afterStep = checked(async c => { await after(c); await parityAfter(c) })
+export default checked(async c => { await promptScreens(c); await preparationParity(c) })
