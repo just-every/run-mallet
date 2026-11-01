@@ -60,10 +60,19 @@ async function nativeForm(door,path,command,input,key){
  assert.equal(submitted.status,303,'Native preparation form succeeds');await submitted.body?.cancel()
 }
 
+// A person approves the agent's revision one after it is prepared: the native
+// door allows this until the customer authorizes, so the agent's next revision
+// lands beside a historical owner decision on revision one.
+async function approveRevisionOne(source,estimate){
+ const approved=await source.command('estimate.approve',{estimateId:estimate.id,version:estimate.version,revision:1})
+ assert.equal(approved.status,'approved');assert.ok(approved.revisions[0].approval,'The owner decided revision one')
+}
+
 export async function beforeStep(context){
  const {phase,step,args,outputs}=context
  if(!['autonomous','held'].includes(phase)||!compared.includes(step.id))return
- const source=nativeDoor(context),before=await source.state()
+ const source=nativeDoor(context)
+ const before=await source.state()
  const sourceEstimate=step.id==='revise'?rows(before,'estimate').find(row=>row.id===args.estimateId):undefined
  const job=jobAt(before,sourceEstimate?.jobId??args.jobId),asset=rows(before,'asset').find(row=>row.id===job.assetId)
  const index=Number(asset.identifier.replace('AGENT-',''))
@@ -76,7 +85,10 @@ export async function beforeStep(context){
   const nativeTechnician=(await peer.door.json('/auth/operators')).find(person=>person.displayName==='Cedar Independent Reviewer')
   assert.ok(proposedTechnician&&nativeTechnician,'Each installation has its independently confirmed proposed technician')
   // The revised estimate starts from the same exact revision one the agent prepared.
-  if(step.id==='revise')fixture.estimate=await peer.door.command('estimate.prepare',{jobId:fixture.job.id,version:fixture.job.version,lines:draftLines()})
+  if(step.id==='revise'){
+   const drafted=await peer.door.command('estimate.prepare',{jobId:fixture.job.id,version:fixture.job.version,lines:draftLines()})
+   fixture.estimate=await peer.door.command('estimate.approve',{estimateId:drafted.id,version:drafted.version,revision:1})
+  }
   if(step.id==='dispatch'){
    let quote=await peer.door.command('estimate.prepare',{jobId:fixture.job.id,version:fixture.job.version,lines:draftLines()})
    quote=await peer.door.command('estimate.revise',{estimateId:quote.id,version:quote.version,revision:1,lines:revisedLines(),notes:revisedNotes})
@@ -164,6 +176,7 @@ export async function afterStep(context){
    const {actual,native}=estimateParity({step:step.id,result,after,before,nativeAfter,nativeBefore,job,nativeJob,sourceEstimate:proof.sourceEstimate,nativeEstimate:proof.nativeEstimate,assertAttribution})
    const codes=await refusalParity(context,source,{step:step.id,job,result,estimate:proof.sourceEstimate})
    if(proof.browser)await proof.browser.readback({actual,native,after,nativeAfter})
+   if(step.id==='prepare')await approveRevisionOne(source,result)
    proved.add(key)
    console.log(`PROBE BASE-AGENT-002 ${phase} ${step.id}: independent owner form and MCP estimate ${step.id} -> exact lines, totals and revision, one business event, separate attribution, no decision; refusals ${codes.join(', ')} equal the UI codes`)
    return

@@ -219,6 +219,21 @@
       ]
     },
     {
+      "id": "read",
+      "tool": "mallet.repairs.read",
+      "args": {
+        "id": {
+          "$from": "prepare",
+          "pointer": "/jobId"
+        }
+      },
+      "expect": [
+        {
+          "class": "standard"
+        }
+      ]
+    },
+    {
       "id": "revise",
       "tool": "mallet.estimates.revise",
       "args": {
@@ -227,8 +242,8 @@
           "pointer": "/id"
         },
         "version": {
-          "$from": "prepare",
-          "pointer": "/version"
+          "$from": "read",
+          "pointer": "/records/estimate/0/version"
         },
         "revision": 1,
         "lines": [
@@ -253,21 +268,6 @@
           "facts": {
             "measure": 2
           }
-        }
-      ]
-    },
-    {
-      "id": "read",
-      "tool": "mallet.repairs.read",
-      "args": {
-        "id": {
-          "$from": "prepare",
-          "pointer": "/jobId"
-        }
-      },
-      "expect": [
-        {
-          "class": "standard"
         }
       ]
     },

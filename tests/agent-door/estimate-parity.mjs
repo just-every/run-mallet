@@ -37,7 +37,7 @@ function assertEstimate(state,prior,target,row,step,priorEstimate){
  const audits=rows(state,'audit').filter(entry=>entry.action===command&&entry.changes.some(change=>change.kind==='estimate'&&change.id===row.id))
  assert.equal(audits.length,1,'Exactly one matching native audit entry per preparation')
  assert.deepEqual(audits[0].actor,revision.preparedBy)
- assert.equal(rows(state,'approval').filter(approval=>approval.subjectId===row.id).length,0,'Preparation grants no native decision')
+ assert.equal(rows(state,'approval').filter(approval=>approval.subjectId===row.id&&approval.revision===expected.n).length,0,'Preparation grants no native decision on the prepared revision')
  assert.deepEqual(rows(state,'approval'),rows(prior,'approval'),'Preparation adds no decision anywhere')
 }
 

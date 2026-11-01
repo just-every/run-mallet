@@ -22,8 +22,11 @@ const cents = { type: 'integer', minimum: 0 }
 const totals = open({ currency: { const: 'USD' }, subtotalCents: cents, salesTaxCents: cents, totalCents: cents }, ['currency', 'subtotalCents', 'salesTaxCents', 'totalCents'])
 const pricedLine = open({ id, kind: { type: 'string', minLength: 1 }, description: { type: 'string' }, quantity: { type: 'number', exclusiveMinimum: 0 }, unitCents: cents }, ['id', 'kind', 'description', 'quantity', 'unitCents'])
 const draft = { type: 'string', const: 'draft' }
+// An earlier revision may already carry a person's decision (an owner can approve
+// revision one before the agent revises it); the revision just prepared never does.
+const decision = { anyOf: [{ type: 'null' }, open({ by: actor, at: { type: 'string', format: 'date-time' } }, ['by', 'at'])] }
 const estimateOutput = open({ id, version, jobId: id, status: draft, authorisation: { type: 'null' },
-  revisions: { type: 'array', minItems: 1, items: open({ n: version, lines: { type: 'array', minItems: 1, items: pricedLine }, totals, preparedBy: actor, approval: { type: 'null' } }, ['n', 'lines', 'totals', 'preparedBy', 'approval']) } },
+  revisions: { type: 'array', minItems: 1, items: open({ n: version, lines: { type: 'array', minItems: 1, items: pricedLine }, totals, preparedBy: actor, approval: decision }, ['n', 'lines', 'totals', 'preparedBy', 'approval']) } },
   ['id', 'version', 'jobId', 'status', 'revisions', 'authorisation'])
 const proposalOutput = open({ id, version, jobId: id, jobVersion: version, reason: { type: 'string' }, status: { const: 'pending' }, preparedBy: actor,
   plan: open({ bayId: { type: 'string' }, technicianId: { type: 'string' }, startAt: { type: 'string', format: 'date-time' }, endAt: { type: 'string', format: 'date-time' } }, ['bayId', 'technicianId', 'startAt', 'endAt']) },
