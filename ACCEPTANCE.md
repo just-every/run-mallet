@@ -603,7 +603,7 @@ Core · target · **partial** · Cites BASE-ROLE-001, BASE-AGENT-005, BASE-AGENT
 **Acceptance.**
 1. Try collection with a failed test and unpaid invoice, then settle through the processor and hand keys to an authorized delegate; inspect receipt and any override.
 
-**Evidence.** `tests/mallet.test.mjs`; `tests/return-browser.mjs`; `tests/support/return-revision.mjs`
+**Evidence.** `tests/mallet.test.mjs`; `tests/return-browser.mjs`; `tests/support/return-revision.mjs`; `tests/support/return-journey.mjs`; immutable printable receipts and exact fresh-owner recovery without restored credentials are asserted. Unpaid refusal, processor captured funds, returned keys and visible owner-exception evidence remain asserted. GOV-001 complete role, limit and cost coverage, custody and contact delegation, provider communications and reconciliation, destructive rights, SHOP-001 and policy review remain held. Expanded unpaid-release authority, independently verified identity, connected payment and settlement extensions and RETURN-002 actual California and Texas statutory coverage, calendar and conditional procedures and approval of adopted defaults remain outside this evidence.
 **Gap.** Not asserted in the old cited evidence: Failed quality result prevents collection; Actual delegate authorization and identity are read back. Asserted: Unpaid collection is visibly refused; Processor captured funds are read back; Printable receipt retains returned key count; Override reason remains visible in the final handover receipt.
 
 #### RETURN-002 — Storage, abandoned property and repair liens
