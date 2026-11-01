@@ -592,7 +592,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "fde47d07e87a425cbdb7b497f0d7eadd0fadc3f6e249f3ad6b66d0e7aa341e53",
+      "sha256": "b664a1a530eb415bb6cac1de9962be39e6f8a9c0933ff5a7a526aaf0b5729905",
       "executable": false
     },
     "deploy-demo.json": {
@@ -612,7 +612,7 @@
       "executable": false
     },
     "docs/agent-door.md": {
-      "sha256": "dccd33010c91ef19b57db77c22d4513edae3a22dd8b0027fadb053420f42e7c1",
+      "sha256": "345afd0cbc594fd72fc47420f2c2b30c22aad7551f17e409bf1ea690ade0fd0b",
       "executable": false
     },
     "docs/background-jobs.md": {
@@ -1652,7 +1652,7 @@
       "executable": false
     },
     "src/mallet/agent-door/legacy.ts": {
-      "sha256": "dc69cb07313c78d114b94f24bf3ace9640505673f4d1ee60cb3cbb0412f5b8ed",
+      "sha256": "1d4fb0d9ed54733bfaff8eff4504a59536c3f49120158153af08c7bcb1d9961f",
       "executable": false
     },
     "src/mallet/agent-door/people.ts": {
@@ -5216,7 +5216,7 @@
       "executable": false
     },
     "tests/agent-pause-browser.mjs": {
-      "sha256": "aaae03240c9c544066bb87f0016edd74472507f831373d92845a706133f4f462",
+      "sha256": "d9d857d9b9bd812257fa2a70d68db27fb52c43647e4b2d4ca029a4db976739e4",
       "executable": false
     },
     "tests/approval-browser.mjs": {
@@ -5380,7 +5380,7 @@
       "executable": false
     },
     "tests/mallet.test.mjs": {
-      "sha256": "cb1b0936d00dfb18711cc258411d7fafa0af0865dc412dd2dbfad81127dbfd6d",
+      "sha256": "9c5b0e5940f74e606e9a5745a9a918da2605a9bfafa2fca7956258db69869ee2",
       "executable": false
     },
     "tests/media-browser.mjs": {
@@ -5523,8 +5523,16 @@
       "sha256": "71bc7930ca555673ed84d45afd6d5da62967b6fd6a9b1fd6894180a3e37e6f3a",
       "executable": false
     },
+    "tests/support/agent-business-pause.mjs": {
+      "sha256": "31523e0c8f51c36e521015d40f4be12902da32406bb0f7ff96d2dc91ac41a52f",
+      "executable": false
+    },
+    "tests/support/agent-capacity.mjs": {
+      "sha256": "0a88dc6b278a622767e049d87970ba58bc94573299156704ef37b51f693b6125",
+      "executable": false
+    },
     "tests/support/agent-pause-journey.mjs": {
-      "sha256": "199a0402da9d5f759f13b964ddacf880228c02be40ee578c84cd75b1bd0774f9",
+      "sha256": "af641f48271375864cbd67e97ef05cb70dcd959fcc7ca76d083c24d532681afc",
       "executable": false
     },
     "tests/support/approval-journey.mjs": {

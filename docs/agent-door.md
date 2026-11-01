@@ -49,6 +49,33 @@ Preparation attribution is `<agent> for <person>`, retaining both identities
 and named policy approvers. Approval of a preparation never asserts customer
 consent, physical work, native estimate approval or settled payment.
 
+## Capacity, Pause and spend
+
+Each agent may send 600 requests a minute to `/mcp`, and its REST preparation
+and state URLs count toward the same limit. The next request in that minute is
+refused with HTTP 429, error code `rate_limited` and a `Retry-After` header
+giving the seconds until the minute ends; it reaches no policy decision or
+native action. MCP bodies above 1,048,576 bytes return 413, as do REST
+preparation bodies above 1 MiB. These limits protect the installation one agent
+at a time. They never cap the shop's daily work, other agents or browser
+sessions, and they are not company policy.
+
+**Pause agents** on `/agents` is the owner's local switch. Until the owner
+resumes there, every agent call through MCP or the REST preparation URLs is
+refused with `agents_paused`, including the replay of an earlier result, and
+changes nothing. When the installation is paired with Business, Pause all
+agents arrives in the signed company policy and holds until a newer signed
+policy resumes; the local switch never lifts it. No agent credential can resume
+either one: the local switch needs the owner's browser session, and a replayed
+earlier Business policy is refused as stale. Browser sessions keep working
+throughout.
+
+No preparation tool has a provider cost, so no agent call spends. Standalone
+spend caps cannot be saved (`spend_caps_not_enforced`); Business policy may
+carry caps, which the Agents page reports as not enforced. Spend estimates,
+reservations, `budget_exhausted` and a per-agent usage view of money moved and
+provider spend belong to the shared agent door and are not available yet.
+
 ## Scope and verification
 
 Runtime source is recorded at Base
