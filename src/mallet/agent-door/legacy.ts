@@ -45,7 +45,9 @@ export async function preparationAlias(request: Request, original: Bindings): Pr
   if (!response) return Response.json({ code: 'door_unavailable' }, { status: 503 })
   const rpc = await response.json() as any
   const refusal = rpc.result?._meta?.['com.runeditrun/error']
-  if (!response.ok || refusal || rpc.error || rpc.result?.isError) return Response.json(refusal ?? rpc.error?.data ?? { code: 'agent_refused' }, { status: response.ok ? 403 : response.status, headers: { 'cache-control': 'no-store' } })
+  // A capacity refusal keeps the door's Retry-After, so REST callers can back off like MCP callers.
+  const retry = response.headers.get('retry-after')
+  if (!response.ok || refusal || rpc.error || rpc.result?.isError) return Response.json(refusal ?? rpc.error?.data ?? { code: 'agent_refused' }, { status: response.ok ? 403 : response.status, headers: { 'cache-control': 'no-store', ...(retry ? { 'retry-after': retry } : {}) } })
   const value = rpc.result?.structuredContent ?? rpc.result
   const state = ['mallet.repairs.list', 'mallet.repairs.read'].includes(name) && rpc.result?.structuredContent
     ? { actor: { id: credential.agent.id.slice('mallet-key:'.length), name: credential.agent.name, role: 'agent' }, ...value }

@@ -63,8 +63,14 @@ export async function agentPauseFixture(h){
  return {h,owner,key,agent,prepare,dispatch,draft,cachedArgs,calls,rpc,done}
 }
 
-export async function pausedAgentCalls(f,pausedAt){
- const {h,agent}=f,before=(await h.state()).records,mailCount=h.messages.length
+// Every retained audit row, page by page, so a later Pause counts only its own refusals.
+export async function auditRows(h){
+ const rows=[]
+ for(let after='0';;){const page=await h.api('/agents/api/audit?after='+after);if(!page.rows.length)return rows;rows.push(...page.rows);after=page.cursor}
+}
+
+export async function pausedAgentCalls(f,pausedAt,label='6'){
+ const {h,agent}=f,before=(await h.state()).records,mailCount=h.messages.length,earlier=(await auditRows(h)).length
  let slowest=0
  const privateValues=[f.prepare.id,f.draft.id,'synthetic-mallet-1110','synthetic-mallet-1102']
  const attempts=[...f.calls,{name:'mallet.estimates.prepare',command:'estimate.prepare',args:f.cachedArgs}]
@@ -88,11 +94,11 @@ export async function pausedAgentCalls(f,pausedAt){
   assert.deepEqual(body,{code:'agents_paused'})
   assert.deepEqual((await h.state()).records,before,'Legacy route cannot bypass Pause: '+(call.command??call.path))
  }
- const audit=(await h.api('/agents/api/audit')).rows.filter(row=>row.code==='agents_paused')
+ const audit=(await auditRows(h)).slice(earlier)
  assert.equal(audit.length,attempts.length*2)
- for(const row of audit){assert.equal(row.classification_refusal,undefined,'Paused call uses a resolvable native target');assert.equal(row.classes[0].class,'standard')}
+ for(const row of audit){assert.equal(row.code,'agents_paused');assert.equal(row.classification_refusal,undefined,'Paused call uses a resolvable native target');assert.equal(row.classes[0].class,'standard')}
  assert.equal(h.messages.length,mailCount,'Pause hands off no outbound messages')
- console.log('PROBE BASE-AGENT-011 6: six MCP tools and six legacy routes with cached preparation replay on both transports -> agents_paused; unchanged business records; next-call maximum '+Math.ceil(slowest)+' ms')
+ console.log('PROBE BASE-AGENT-011 '+label+': six MCP tools and six legacy routes with cached preparation replay on both transports -> agents_paused; unchanged business records; next-call maximum '+Math.ceil(slowest)+' ms')
 }
 
 export async function refusedAgentResume(f){
