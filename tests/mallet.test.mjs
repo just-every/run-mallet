@@ -45,6 +45,9 @@ import {secondFactorJourney,policyRecoveryJourney,stepUpJourney} from './support
 import {run,installation,assetInput,booking,estimate,authorise,archive,restore,snapshots} from './harness.mjs'
 import {csvRecords} from './support/report-csv.mjs'
 import {preparationParityBrowser} from './agent-preparation-parity-browser.mjs'
+import {agentTransportJourney} from './support/agent-transport-journey.mjs'
+
+test('BASE-AGENT-001: oversized HTTP preparations preserve populated business records before one bounded draft',()=>run(agentTransportJourney,{entry:'tests/support/agent-transport-worker.ts',network:true,bindings:{AUTH_LOCAL:'true',RER_DEV_KEY:randomBytes(32).toString('base64url')}}))
 
 test('BASE-AGENT-002: native forms and MCP preparation parity under both policies at 1440 and 390',preparationParityBrowser)
 
