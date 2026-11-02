@@ -1986,7 +1986,7 @@ Agent surface · target · **partial**
 5. Bytes over budget return `budget_exhausted` and no partial content.
 6. Customer-sourced text carries the untrusted marker.
 
-**Evidence.** `agent-surface.json`; `tests/agent-door/owner.mjs`; `tests/agent-door/reviewer.mjs`; `tests/agent-door/fixtures.mjs` — SEED_VERIFY_SHARD=runtime npx -y @runeditrun/rer@0.2.91 verify: "Agent door conformance: 587/587 points passed", normal exit 0 (29 October 2026).
+**Evidence.** `agent-surface.json`; `tests/agent-door/owner.mjs`; `tests/agent-door/reviewer.mjs`; `tests/agent-door/fixtures.mjs` — SEED_VERIFY_SHARD=runtime npx -y @runeditrun/rer@0.2.91 verify: "Agent door conformance: 587/587 points passed", normal exit 0 (29 October 2026). Additional candidate evidence: `agent-surface.json`; `tests/agent-door/resources.mjs` — afterStep native outcome comparisons under autonomous and held-standard-review conformance, resources missing and revoked-key refusals (built-app conformance 661 of 661 passing); `tests/agent-door/resource-authority.mjs` — resourceAuthorityJourney, registered in `tests/mallet.test.mjs`: populated owner and member reads, identical missing and restricted refusals, scope and consent revocation, suspended sponsor, erasure replay, private-note and original-byte exclusion, exact proposal readback and attributable native browser readback at 1440 and 390.
 **Gap.** Undeclared family: resources. Public record resources and resource refresh are not offered; internal visibility adapters do not prove the planned ten-family public catalogue.
 
 #### BASE-AGENT-004 — Business identity and short-lived, audience-bound tokens
