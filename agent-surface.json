@@ -144,7 +144,7 @@
         "prepare"
       ]
     },
-    "journey": "tests/agent-door/sponsor-admission.mjs"
+    "journey": "tests/agent-door/journey.mjs"
   },
   "journey": [
     {
