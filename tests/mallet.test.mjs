@@ -1,4 +1,5 @@
 import {agentRetryConflictsJourney} from './support/agent-retry-conflicts-journey.mjs'
+import {agentPauseBrowser} from './agent-pause-browser.mjs'
 import {preparationKeyBrowser} from './browser-journey.mjs'
 import {agentAttributionBrowser} from './agent-attribution-browser.mjs'
 import {blockerJourney} from './support/blocker-journey.mjs'
@@ -52,6 +53,8 @@ test('BASE-AGENT-002: native forms and MCP preparation parity under both policie
 test('BASE-AGENT-005: native admin sponsor changes revoke preparation and cached reads at 1440 and 390',sponsorAdmissionBrowser)
 
 test('BASE-AGENT-008: exact agent preparation and distinct native owner approval at 1440',agentAttributionBrowser)
+test('BASE-AGENT-011: native Pause fences all six tools and legacy routes, owner work and bearer resume at 1440 and 390',agentPauseBrowser)
+
 test('ADV-003: source-cited blockers require actual evidence, exact consent and physical receipt, preserve handlers and recover privately',()=>run(blockerJourney))
 test('ADV-003: native blocker packet, handlers and proposal review at 1440 and 390',blockerBrowser)
 
