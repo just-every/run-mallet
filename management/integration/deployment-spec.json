@@ -340,6 +340,12 @@
       "name": "core-0122_mallet_business_people.sql",
       "sha256": "51aa39622d866b987d71b6e37c9a8300e7f24c54a55611edaab669ed051b01cd",
       "sql": "ALTER TABLE bs_settings ADD COLUMN owner_id TEXT CHECK(owner_id IS NULL OR owner_id <> '');\nALTER TABLE bs_team ADD COLUMN business_id TEXT CHECK(business_id IS NULL OR business_id <> '');\nALTER TABLE bs_team ADD COLUMN business_role TEXT CHECK(business_role IS NULL OR business_role IN('admin','member'));\nCREATE UNIQUE INDEX bs_team_business_id ON bs_team(business_id) WHERE business_id IS NOT NULL;\n"
+    },
+    {
+      "binding": "DB",
+      "name": "core-0123_woocommerce.sql",
+      "sha256": "907358e9b1d07ed528dec3316f9f0fa45fa2d59b4594997203ca252c7cf558af",
+      "sql": "-- Installation-local enabling authority never travels with historical orders.\nCREATE TABLE IF NOT EXISTS mallet_woo_authority (\n singleton INTEGER PRIMARY KEY CHECK(singleton=1),\n connection_id TEXT NOT NULL,\n generation TEXT NOT NULL,\n origin TEXT NOT NULL,\n owner_id TEXT NOT NULL,\n enabled INTEGER NOT NULL CHECK(enabled IN (0,1))\n);\n"
     }
   ],
   "compatibilityDate": "2026-09-08",
