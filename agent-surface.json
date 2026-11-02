@@ -115,7 +115,13 @@
       "reason": "connector"
     }
   ],
-  "resources": [],
+  "resources": [
+    "mallet://assets/{id}",
+    "mallet://repairs/{id}",
+    "mallet://jobs/{id}",
+    "mallet://estimates/{id}",
+    "mallet://invoices/{id}"
+  ],
   "witness": {
     "tool": "mallet.repairs.list",
     "args": {}
@@ -144,7 +150,7 @@
         "prepare"
       ]
     },
-    "journey": "tests/agent-door/sponsor-admission.mjs"
+    "journey": "tests/agent-door/preparation-journey.mjs"
   },
   "journey": [
     {
@@ -317,6 +323,7 @@
   ],
   "capabilities": [
     "tools",
+    "resources",
     "policy",
     "pause",
     "audit",
