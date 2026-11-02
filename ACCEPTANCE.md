@@ -2037,7 +2037,7 @@ Agent surface · target · **partial**
 5. No tool in `tools / list` declares a class outside the fleet list, and `rer check` fails on one.
 6. A refused call's audit row still records its computed classes.
 
-**Evidence.** `agent-surface.json`; `tests/agent-door/owner.mjs`; `tests/agent-door/reviewer.mjs`; `tests/agent-door/fixtures.mjs` — SEED_VERIFY_SHARD=runtime npx -y @runeditrun/rer@0.2.91 verify: "Agent door conformance: 587/587 points passed", normal exit 0 (29 October 2026).
+**Evidence.** `agent-surface.json`; `tests/agent-door/owner.mjs`; `tests/agent-door/reviewer.mjs`; `tests/agent-door/fixtures.mjs`; `tests/agent-door/refused-classification.mjs` — afterStep qualifies point 6 through native customer authorization and an exact two-line estimate revision: estimate_frozen retains standard measure 2, the current policy revision and refused audit, no completed review or business changes; a separate draft persists the exact content under autonomous and standard-review policy. Existing standard-tool fixtures: SEED_VERIFY_SHARD=runtime npx -y @runeditrun/rer@0.2.91 verify: "Agent door conformance: 587/587 points passed", normal exit 0 (29 October 2026).
 **Gap.** Only native standard preparation effects are adopted. The other ten classes in the ct surface remain unadopted; no spend, provider or target-only capability is claimed.
 
 #### BASE-AGENT-007 — The company's policy decides, at one chokepoint
