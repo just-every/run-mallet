@@ -26,6 +26,7 @@ export async function verifyStripePayment(env:Bindings,actor:Actor,authority:Aut
  if(!['owner','admin'].includes(actor.role))fail('FORBIDDEN','An owner or service advisor must check processor evidence.',null,403)
  const s=await load(env.DB),invoice=find(s,'invoice',input.invoiceId);expectVersion(invoice,input.version)
  if(!['approved','exported'].includes(invoice.status))fail('PAYMENT_INVOICE','Approve the exact invoice first.')
+ if(invoice.locationId&&invoice.locationId!=='shop')fail('LOCATION_MERCHANT','Connected evidence for this location needs verified merchant routing.')
  const receipt=await stripeReceipt(env,text(input.paymentIntentId,'processor payment id',200),invoice)
  return execute(env.DB,actor as any,'payment.verified',{invoiceId:invoice.id,version:invoice.version,receipt},authority)
 }
