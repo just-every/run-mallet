@@ -2143,7 +2143,7 @@ Agent surface · target · **partial**
 4. A stale revision returns a conflict naming the current revision.
 5. A job handle used by another person's token reads as not found.
 
-**Evidence.** `agent-surface.json`; `tests/agent-door/owner.mjs`; `tests/agent-door/reviewer.mjs`; `tests/agent-door/fixtures.mjs` — SEED_VERIFY_SHARD=runtime npx -y @runeditrun/rer@0.2.91 verify: "Agent door conformance: 587/587 points passed", normal exit 0 (29 October 2026).
+**Evidence.** `agent-surface.json`; `tests/agent-door/owner.mjs`; `tests/agent-door/reviewer.mjs`; `tests/agent-door/fixtures.mjs` — SEED_VERIFY_SHARD=runtime npx -y @runeditrun/rer@0.2.91 verify: "Agent door conformance: 587/587 points passed", normal exit 0 (29 October 2026).; `tests/support/agent-retry-conflicts-journey.mjs` — native estimate retries retain one outcome and refuse changed arguments or stale revisions, registered in `tests/mallet.test.mjs`: dropped-response replay with a new JSON-RPC id, changed-line refusal, current native revision readback, unchanged business records and distinct replay audit under autonomous and review policies.
 **Gap.** Native preparation replay and current-authority replay admission are proved. Queued lifecycle and uncertain-provider recovery remain outside this registry and unproved.
 
 #### BASE-AGENT-013 — Manifest, docs and the conformance journey

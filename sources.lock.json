@@ -572,7 +572,7 @@
       "executable": false
     },
     "ACCEPTANCE.md": {
-      "sha256": "e93bf7fee341daeb567e16cb2582ea610c97b2c68285016a94a4de44c0199ce1",
+      "sha256": "81ca3b1abf26e1a1b3093bff9fcbf60a05be23f254aab15360e257b3e2a25ff2",
       "executable": false
     },
     "agent-surface.json": {
@@ -592,7 +592,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "27a34dd3fbe87b8b078c5bfdb4d5d52160f168bbd388a547b5147ba376dada61",
+      "sha256": "a0526190b1a720f658d7c223c18bf057a4baa3454f7bc0d9edd853d79dd35baa",
       "executable": false
     },
     "deploy-demo.json": {
@@ -5416,7 +5416,7 @@
       "executable": false
     },
     "tests/mallet.test.mjs": {
-      "sha256": "16401c84b12bb8dfa0aae24a245acb5b5d685415306241b54af4059d61c15a5a",
+      "sha256": "360d4aeafab1d71d1e8f0a212c8a11012e897527dbd711b07ff3e58e68facda3",
       "executable": false
     },
     "tests/media-browser.mjs": {
@@ -5557,6 +5557,14 @@
     },
     "tests/support/ach-browser-steps.mjs": {
       "sha256": "71bc7930ca555673ed84d45afd6d5da62967b6fd6a9b1fd6894180a3e37e6f3a",
+      "executable": false
+    },
+    "tests/support/agent-retry-conflicts-journey.mjs": {
+      "sha256": "1965afd37f474d35b33cce0785aa66e8fa1d58071f06bddba3df6ebb68a3d9b1",
+      "executable": false
+    },
+    "tests/support/agent-retry-worker.ts": {
+      "sha256": "a781b8dbe493340eacf1fcd06d7e4dd23bbdd79f3387ab5611dfa66539bed9b5",
       "executable": false
     },
     "tests/support/approval-journey.mjs": {
