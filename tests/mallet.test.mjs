@@ -47,6 +47,9 @@ import {run,installation,assetInput,booking,estimate,authorise,archive,restore,s
 import {csvRecords} from './support/report-csv.mjs'
 import {preparationParityBrowser} from './agent-preparation-parity-browser.mjs'
 import {sponsorAdmissionBrowser} from './agent-sponsor-admission-browser.mjs'
+import {agentTransportJourney} from './support/agent-transport-journey.mjs'
+
+test('BASE-AGENT-001: oversized HTTP preparations preserve populated business records before one bounded draft',()=>run(agentTransportJourney,{entry:'tests/support/agent-transport-worker.ts',network:true,bindings:{AUTH_LOCAL:'true',RER_DEV_KEY:randomBytes(32).toString('base64url')}}))
 
 test('BASE-AGENT-002: native forms and MCP preparation parity under both policies at 1440 and 390',preparationParityBrowser)
 test('BASE-AGENT-005: native admin sponsor changes revoke preparation and cached reads at 1440 and 390',sponsorAdmissionBrowser)
