@@ -576,7 +576,7 @@
       "executable": false
     },
     "agent-surface.json": {
-      "sha256": "e28c100179e060e6c8c86232a438d9581ef48060591fa9ee63268e546c099ab0",
+      "sha256": "7e7f46b2017213468654c577ef47e124461cf685266c6bb553f44588c4db2e2d",
       "executable": false
     },
     "AGENTS.md": {
@@ -592,7 +592,7 @@
       "executable": false
     },
     "CONTRACT.md": {
-      "sha256": "a5c8c4d02bb289e85b6c9d8e14878aec7591546e627daa20bb24aab8cbe33ea6",
+      "sha256": "27a34dd3fbe87b8b078c5bfdb4d5d52160f168bbd388a547b5147ba376dada61",
       "executable": false
     },
     "deploy-demo.json": {
@@ -5232,7 +5232,7 @@
       "executable": false
     },
     "tests/agent-door/preparation-parity.mjs": {
-      "sha256": "8f622d9df1f4bc8a8dea06099919f2c0c4a372e1491d34031979ced2dd0002e4",
+      "sha256": "1d433243011df0d07ad4564b54c7f5369bad5db40329cff160c2f3bc25fe0ff2",
       "executable": false
     },
     "tests/agent-door/prompts.mjs": {
@@ -5243,8 +5243,16 @@
       "sha256": "3cffb2cbb195bad291b1ce75e1a3f22679c826e4c06e620be389072c2ae5029c",
       "executable": false
     },
+    "tests/agent-door/sponsor-admission.mjs": {
+      "sha256": "4e069de06296570c534236b962f5bcc5cd2bf32165961b9fe9d7bbadfef67dc3",
+      "executable": false
+    },
     "tests/agent-preparation-parity-browser.mjs": {
       "sha256": "e0f50e8a57f7d076ebf8fdbfe3e79281569bea668342e0c51ea825c0a25907b9",
+      "executable": false
+    },
+    "tests/agent-sponsor-admission-browser.mjs": {
+      "sha256": "3225f9b1fa082892a6424fc74138846a169ffee90b46302e4c74cfa92ae83705",
       "executable": false
     },
     "tests/approval-browser.mjs": {
@@ -5408,7 +5416,7 @@
       "executable": false
     },
     "tests/mallet.test.mjs": {
-      "sha256": "173b4b1f1556c48f576e1432265ada507155b21940b949fe901a1708c7b5f2d8",
+      "sha256": "16401c84b12bb8dfa0aae24a245acb5b5d685415306241b54af4059d61c15a5a",
       "executable": false
     },
     "tests/media-browser.mjs": {

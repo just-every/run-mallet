@@ -38,7 +38,7 @@ export async function nativePeer(){
   assert.equal(confirmed.status,303)
   const reviewer={cookie:confirmed.headers.getSetCookie().map(value=>value.split(';',1)[0]).join('; ')}
   await confirmed.body?.cancel()
-  return {door,reviewer,close:()=>hosted.close()}
+  return {door,reviewer,messages,close:()=>hosted.close()}
  }catch(error){await hosted.close();throw error}
 }
 

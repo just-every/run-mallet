@@ -125,7 +125,6 @@
     "none": true
   },
   "verification": {
-    "journey": "tests/agent-door/native-attribution.mjs",
     "owner": {
       "initializer": "tests/agent-door/owner.mjs"
     },
@@ -145,7 +144,7 @@
         "prepare"
       ]
     },
-    "journey": "tests/agent-door/prompts.mjs"
+    "journey": "tests/agent-door/sponsor-admission.mjs"
   },
   "journey": [
     {

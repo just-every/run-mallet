@@ -45,8 +45,10 @@ import {secondFactorJourney,policyRecoveryJourney,stepUpJourney} from './support
 import {run,installation,assetInput,booking,estimate,authorise,archive,restore,snapshots} from './harness.mjs'
 import {csvRecords} from './support/report-csv.mjs'
 import {preparationParityBrowser} from './agent-preparation-parity-browser.mjs'
+import {sponsorAdmissionBrowser} from './agent-sponsor-admission-browser.mjs'
 
 test('BASE-AGENT-002: native forms and MCP preparation parity under both policies at 1440 and 390',preparationParityBrowser)
+test('BASE-AGENT-005: native admin sponsor changes revoke preparation and cached reads at 1440 and 390',sponsorAdmissionBrowser)
 
 test('BASE-AGENT-008: exact agent preparation and distinct native owner approval at 1440',agentAttributionBrowser)
 test('ADV-003: source-cited blockers require actual evidence, exact consent and physical receipt, preserve handlers and recover privately',()=>run(blockerJourney))
