@@ -49,6 +49,8 @@ import {preparationParityBrowser} from './agent-preparation-parity-browser.mjs'
 test('BASE-AGENT-002: native forms and MCP preparation parity under both policies at 1440 and 390',preparationParityBrowser)
 
 test('BASE-AGENT-008: exact agent preparation and distinct native owner approval at 1440',agentAttributionBrowser)
+test('BASE-AGENT-007: standard blocking and next-call policy revision on native preparations at 1440 and 390',async()=>{const {agentStandardPolicyBrowser}=await import('./agent-standard-policy-browser.mjs');await agentStandardPolicyBrowser()})
+
 test('ADV-003: source-cited blockers require actual evidence, exact consent and physical receipt, preserve handlers and recover privately',()=>run(blockerJourney))
 test('ADV-003: native blocker packet, handlers and proposal review at 1440 and 390',blockerBrowser)
 
