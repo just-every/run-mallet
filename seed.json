@@ -1,14 +1,14 @@
 {
   "id": "mallet",
-  "name": "mallet",
+  "name": "Mallet",
   "version": "0.1.0",
   "maturity": "first-release-candidate; independent stranger and hosted acceptance pending",
-  "category": "status",
+  "category": "business",
   "spine": {
     "id": "foundation",
     "record": "No domain record selected"
   },
-  "description": "Owner-run Australian workshop repair jobs: assets, bay bookings, exact-revision partial customer authorisation, authorised parts and labour, saved invoice CSV and visit history.",
+  "description": "Owner-run repair shop management with customer and vehicle history, appointments, inspections, exact-revision approvals, technician work, parts, invoices and portable records. The contract distinguishes shipped behavior from planned capabilities.",
   "capabilities": [
     {
       "id": "http-dispatch",
@@ -94,5 +94,12 @@
       "operator-auth",
       "owner-claim"
     ]
-  }
+  },
+  "replaces": [
+    "Tekmetric",
+    "Shopmonkey",
+    "Mitchell 1 Manager SE",
+    "Shop-Ware",
+    "AutoLeap"
+  ]
 }

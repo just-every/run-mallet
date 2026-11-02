@@ -1,3 +1,4 @@
+import {handoverInput} from './support/handover-input.mjs'
 import assert from 'node:assert/strict'
 import {randomBytes} from 'node:crypto'
 import {mkdir} from 'node:fs/promises'
@@ -36,8 +37,8 @@ export async function flowBrowser(){
   panel=p.locator('#flow');assert.match(await panel.innerText(),/Priority: urgent/);await shot('03-priority',panel)
   await p.goto(h.origin+'/app/jobs/'+spare.id);panel=p.locator('#flow');await panel.getByText('Cancel or mark lost').click();await panel.getByLabel('Outcome').selectOption('canceled');await panel.getByLabel('Reason').fill('Customer sold the car');await submit(panel.getByRole('button',{name:'Close repair order'}))
   panel=p.locator('#flow');assert.match(await panel.innerText(),/Stage: Closed[\s\S]*Canceled at Intake[\s\S]*Customer sold the car/)
-  await p.goto(h.origin+'/app/jobs/'+done.id);panel=p.locator('#flow');await panel.getByLabel('Collected by').fill('Dana Cedar');await submit(panel.getByRole('button',{name:'Record collection'}))
-  panel=p.locator('#flow');assert.match(await panel.innerText(),/Stage: Collected[\s\S]*Collected by Dana Cedar[\s\S]*did not record or verify payment/);await shot('04-collected',panel)
+  const handover=await handoverInput(h,done.id,'Dana Cedar');await p.goto(h.origin+'/app/jobs/'+done.id);await p.getByRole('link',{name:'Document handover',exact:true}).click();const handoverForm=p.locator('form:has(input[value="flow.collect"])');for(const name of ['collectorName','identityEvidence','warrantyAdvice'])await handoverForm.locator(`[name="${name}"]`).fill(handover[name]);for(const name of ['delegateId','comparisonId','readingId','overrideId'])await handoverForm.locator(`[name="${name}"]`).selectOption(handover[name]);await submit(handoverForm.getByRole('button',{name:'Record documented handover'}));assert.ok((await p.locator('main').innerText()).includes('settlement is not verified'));await p.goto(h.origin+'/app/jobs/'+done.id)
+  panel=p.locator('#flow');assert.match(await panel.innerText(),/Stage: Collected[\s\S]*Collected by Dana Cedar[\s\S]*identity was checked by staff, not verified by Mallet/);await shot('04-collected',panel)
   await p.goto(h.origin+'/app?stage=closed#board');assert.match(await board.innerText(),/Closed[\s\S]*Canceled/);await shot('05-closed',board)
   await p.goto(h.origin+'/app?priority=urgent');assert.match(await board.locator('a.ro').innerText(),/Urgent[\s\S]*Rivera Plumbing/)
   assert.deepEqual(errors,[])

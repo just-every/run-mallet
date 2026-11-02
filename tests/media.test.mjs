@@ -13,8 +13,9 @@ const photo=Buffer.concat([pixel.subarray(0,pixel.length-12),length,type,text,cr
 const path='/api/mallet/media'
 const chunk=(bytes,index)=>{const b=bytes.subarray(index*65536,Math.min(bytes.length,(index+1)*65536));return{sha256:hash(b),base64:b.toString('base64')}}
 
-test('DVI-002 / OPS-001: private original/shared custody, interrupted upload, exact replay, assignment/revocation and full archive recovery',()=>run(async h=>{
+test('DVI-002 and OPS-001: private original and shared custody, interrupted upload, exact replay, assignment and revocation and full archive recovery',()=>run(async h=>{
  const tech=await h.person('brake-tech@example.test'),other=await h.person('other-tech@example.test')
+ const unassigned=await h.person(tech.session.operator.email.replace('brake-tech','synthetic-mallet-3'))
  let {job}=await booking(h,{technicianId:tech.id})
  const started=Date.now(),input={jobId:job.id,clientId:randomUUID(),title:'Front brake pad wear',capturedAt:'2026-10-01T09:15:00-04:00'}
  await h.api(path+'/findings',input,{as:'',status:401})
@@ -23,7 +24,9 @@ test('DVI-002 / OPS-001: private original/shared custody, interrupted upload, ex
  await h.api(path+'/findings',{...input,capturedAt:'2026-02-31T09:15:00Z'},{status:400})
  const finding=await h.api(path+'/findings',input,{as:tech.cookie})
  assert.equal(finding.by.id,tech.id);assert.equal(finding.capturedAt,'2026-10-01T13:15:00.000Z');assert.ok(Date.parse(finding.createdAt)>=started)
+ const createdAudit=(await h.api('/api/mallet/audit?q='+finding.id)).entries
  assert.deepEqual(await h.api(path+'/findings',input,{as:tech.cookie}),finding)
+ assert.deepEqual((await h.api('/api/mallet/audit?q='+finding.id)).entries,createdAudit,'Finding replay adds no change')
  await h.api(path+'/findings',{...input,title:'Changed replay'},{status:409})
  const originalInput={findingId:finding.id,clientId:randomUUID(),variant:'original',filename:'front-brake.png',mime:'image/png',size:photo.length,sha256:hash(photo),capturedAt:finding.capturedAt}
  await h.api(path+'/uploads',{...originalInput,size:8*1024*1024+1},{status:400})
@@ -43,18 +46,41 @@ test('DVI-002 / OPS-001: private original/shared custody, interrupted upload, ex
  await h.command('dispatch.approve',{proposalId:proposal.id,version:proposal.version})
  await h.api(path+'/uploads/'+upload.id,undefined,{as:tech.cookie,status:404})
  await h.api(path+'/uploads/'+upload.id+'/chunks/1',chunk(photo,1),{method:'PUT',as:tech.cookie,status:404})
- await h.api('/auth/operator/status',{operatorId:other.id,status:'inactive'})
- await h.api(path+'/uploads/'+upload.id,undefined,{as:other.cookie,status:401})
  // Explicit resume reads stored progress; only unconfirmed chunks are submitted.
  upload=await h.api(path+'/uploads',originalInput)
  assert.deepEqual(upload.received,[0])
  for(let i=1;i<Math.ceil(photo.length/65536);i++)await h.api(path+'/uploads/'+upload.id+'/chunks/'+i,chunk(photo,i),{method:'PUT'})
  upload=await h.api(path+'/uploads/'+upload.id+'/complete',{})
+ const mediaAudit=(await h.api('/api/mallet/audit?q='+job.id)).entries.filter(e=>e.action.startsWith('media.'));assert.ok(mediaAudit.some(e=>e.actor.id===tech.id&&e.evidence.includes('job:'+job.id)),'Private media writes retain the real actor and repair reference');assert.ok(!JSON.stringify(mediaAudit).includes(photo.toString('base64')),'Audit never copies media bytes')
+ assert.deepEqual(mediaAudit.find(e=>e.action==='media.finding.created').changes,[{kind:'mediaFinding',id:finding.id,beforeRevision:null,afterRevision:1}]);assert.deepEqual(mediaAudit.find(e=>e.action==='media.upload.completed').changes,[{kind:'mediaUpload',id:upload.id,beforeRevision:1,afterRevision:2}]);assert.equal(upload.revision,2)
  assert.equal(upload.complete,true);assert.equal(upload.sha256,hash(photo));assert.equal(upload.by.id,tech.id);assert.equal(upload.capturedAt,finding.capturedAt);assert.ok(Date.parse(upload.receivedAt)>=started)
  const duplicate=await h.api(path+'/uploads',{...originalInput,clientId:randomUUID()});assert.equal(duplicate.id,upload.id)
  await h.api(path+'/uploads',{...originalInput,filename:'changed.png'},{status:409})
  assert.deepEqual(await h.api(path+'/uploads/'+upload.id+'/complete',{}),upload)
- assert.deepEqual(Buffer.from(await (await h.request(upload.contentUrl)).arrayBuffer()),photo)
+ for(const as of [h.owner,other.cookie]){
+  const response=await h.request(upload.contentUrl,{as});assert.equal(response.status,200)
+  const bytes=Buffer.from(await response.arrayBuffer());assert.deepEqual(bytes,photo);assert.equal(hash(bytes),originalInput.sha256)
+  const ranged=await h.request(upload.contentUrl,{as,headers:{Range:'bytes=65530-65550'}});assert.equal(ranged.status,206)
+  assert.deepEqual(Buffer.from(await ranged.arrayBuffer()),photo.subarray(65530,65551))
+ }
+ await h.api('/auth/operator/status',{operatorId:other.id,status:'inactive'})
+ await h.api(path+'/uploads/'+upload.id,undefined,{as:other.cookie,status:401})
+ // Read the raw refusal, including range requests, so a denial status cannot
+ // conceal an original or a fragment of its bytes in the response body.
+ const refuseOriginal=async(client,label,as,status,headers={})=>{
+  for(const range of [null,'bytes=0-63','bytes=65530-65550','bytes=-32']){
+   const response=await client.request(upload.contentUrl,{as,headers:{...headers,...(range?{Range:range}:{})}}),bytes=Buffer.from(await response.arrayBuffer())
+   const context=label+' '+(range??'full original')
+   assert.equal(response.status,status,context);assert.match(response.headers.get('content-type'),/^application\/json\b/,context)
+   assert.equal(response.headers.get('content-range'),null,context)
+   assert.equal(bytes.includes(photo),false,context+' discloses no original')
+   for(let offset=0;offset+16<=bytes.length;offset++)assert.equal(photo.includes(bytes.subarray(offset,offset+16)),false,context+' discloses no source fragment')
+   const refusal=JSON.parse(bytes.toString('utf8'));assert.equal(refusal.error,status===401?'sign_in_required':status===403?'FORBIDDEN':'NOT_FOUND',context)
+   assert.equal(refusal.details??null,null,context)
+  }
+ }
+ for(const [label,as,status] of [['signed out','',401],['unassigned',unassigned.cookie,404],['reassigned',tech.cookie,404],['revoked',other.cookie,401]])await refuseOriginal(h,label,as,status)
+ const retained=await h.request(upload.contentUrl);assert.equal(retained.status,200);assert.equal(hash(Buffer.from(await retained.arrayBuffer())),originalInput.sha256)
  await h.api(upload.contentUrl,undefined,{as:tech.cookie,status:404})
  await h.api(upload.contentUrl,undefined,{method:'DELETE',status:405})
  const range=await h.request(upload.contentUrl,{headers:{Range:'bytes=65530-65550'}});assert.equal(range.status,206);assert.deepEqual(Buffer.from(await range.arrayBuffer()),photo.subarray(65530,65551))
@@ -70,13 +96,16 @@ test('DVI-002 / OPS-001: private original/shared custody, interrupted upload, ex
  await h.api(path+'/findings?jobId='+job.id,undefined,{as:'',headers:{authorization:'Bearer '+key.token},status:403})
  await h.api(upload.contentUrl,undefined,{as:'',status:401})
  await h.api(upload.contentUrl,undefined,{as:'',headers:{authorization:'Bearer '+key.token},status:403})
+ await refuseOriginal(h,'agent without media authority','',403,{authorization:'Bearer '+key.token})
  // The same native archive door carries finding metadata and every exact byte.
  const backup=await archive(h),fresh=await installation({bindings:{OWNER_EMAIL:'media-recovery@example.test'}})
  try{
   await restore(fresh,backup)
+  assert.deepEqual((await fresh.api('/api/mallet/audit?q='+job.id)).entries.filter(e=>e.action.startsWith('media.')),(await h.api('/api/mallet/audit?q='+job.id)).entries.filter(e=>e.action.startsWith('media.')))
   assert.deepEqual((await fresh.api(path+'/findings?jobId='+job.id)).findings,findings)
   for(const m of [upload,shared]){const response=await fresh.request(m.contentUrl);assert.equal(response.status,200);assert.equal(hash(Buffer.from(await response.arrayBuffer())),m.sha256)}
   await fresh.api(upload.contentUrl,undefined,{as:h.owner,status:401})
+  await refuseOriginal(fresh,'source installation owner after restore',h.owner,401)
  }finally{await fresh.close()}
 }))
 
@@ -106,7 +135,9 @@ test('DVI-004 / OPS-001: compare same-asset measurements/images, imported proven
  await h.api(path+'/carry',input,{as:other.cookie,status:404});await h.api(path+'/carry',input,{headers:{origin:'https://elsewhere.test'},status:403})
  const carried=await h.api(path+'/carry',{...input,capturedAt:'2026-10-01T09:10:00Z',observation:{measurements:[]}},{as:tech.cookie})
  assert.equal(carried.capturedAt,source.capturedAt);assert.equal(carried.observation,null);assert.equal(carried.carriedFrom.id,source.id);assert.equal(carried.carriedFrom.by.id,tech.id);assert.deepEqual(carried.carriedFrom.measurements,base.observation.measurements);assert.equal(carried.carriedFrom.declinedWorkId,decline.id)
+ const carriedAudit=(await h.api('/api/mallet/audit?action=media.finding.carried&q='+source.id)).entries;assert.equal(carriedAudit.length,1);assert.deepEqual(carriedAudit[0].changes,[{kind:'mediaFinding',id:carried.id,beforeRevision:null,afterRevision:1}]);assert.ok(carriedAudit[0].evidence.includes('declinedWork:'+decline.id))
  assert.deepEqual(await h.api(path+'/carry',input,{as:tech.cookie}),carried)
+ assert.deepEqual((await h.api('/api/mallet/audit?action=media.finding.carried&q='+source.id)).entries,carriedAudit)
  const history=await h.api(path+'/history?jobId='+next.id,undefined,{as:tech.cookie})
  assert.deepEqual(history.visits.map(v=>v.job.id),[job.id,next.id]);assert.equal(history.visits[0].findings.find(f=>f.id===source.id).media[0].id,upload.id)
  assert.equal(history.visits[0].findings.find(f=>f.id===imported.id).observation.provenance.observer,'Pat, prior technician')
@@ -117,6 +148,7 @@ test('DVI-004 / OPS-001: compare same-asset measurements/images, imported proven
  const unrelated=(await booking(h,{asset:await h.command('asset.create',{customerName:'Someone Else',label:'Different vehicle',identifier:'OTHER-VEHICLE'}),bayId:'Bay 3',technicianId:'Someone',startAt:'2026-11-01T09:00:00Z',endAt:'2026-11-01T10:00:00Z'})).job
  await h.api(path+'/carry',{...input,jobId:unrelated.id},{status:400});await h.api(path+'/carry',{jobId:job.id,findingId:measured.id},{status:400})
  const resolution=await h.api(path+'/findings/'+source.id+'/resolve',{reason:'Pads replaced under a later separately authorized repair'},{as:tech.cookie})
+ const resolvedAudit=(await h.api('/api/mallet/audit?action=media.finding.resolved&q='+source.id)).entries;assert.equal(resolvedAudit.length,1);assert.deepEqual(resolvedAudit[0].changes,[{kind:'mediaFinding',id:source.id,beforeRevision:1,afterRevision:2},{kind:'mediaResolution',id:source.id,beforeRevision:null,afterRevision:1}]);assert.deepEqual(await h.api(path+'/findings/'+source.id+'/resolve',{reason:resolution.reason},{as:tech.cookie}),resolution);assert.deepEqual((await h.api('/api/mallet/audit?action=media.finding.resolved&q='+source.id)).entries,resolvedAudit)
  assert.equal(JSON.parse(resolution.actor_json).id,tech.id);await h.api(path+'/carry',input,{status:409})
  const after=await h.api(path+'/history?jobId='+next.id)
  assert.equal(after.visits[0].findings.find(f=>f.id===source.id).resolution.reason,resolution.reason)
@@ -128,3 +160,53 @@ test('DVI-004 / OPS-001: compare same-asset measurements/images, imported proven
 test('DVI-004: second-visit comparison, imported source, declined carry and resolved history on desktop and phone',async()=>{
  const {inspectionHistoryBrowser}=await import('./inspection-history-browser.mjs');await inspectionHistoryBrowser()
 })
+
+test('INTAKE-001 / INTAKE-004 / OPS-001: signed condition and custody, exact checklist comparison, private temporary secrets and fresh-owner recovery',()=>run(async h=>{
+ const {intakeJourney}=await import('./support/intake-journey.mjs'),{job,before}=await intakeJourney(h)
+ // Check the populated public doors directly while the distinctive value is live.
+ const secret=' synthetic-mallet-904-unlock ',purpose='Customer consents to diagnosis only',reason='Read for the agreed diagnosis',expiresAt=new Date(Date.now()+600000).toISOString(),owner=(await h.state()).actor
+ const started=new Date().toISOString(),stored=await h.command('intake.secretStore',{jobId:job.id,purpose,secret,expiresAt,consent:true})
+ assert.equal(JSON.stringify(stored).includes(secret.trim()),false,'Store response contains no unlock material')
+ const revealed=await h.command('intake.secretReveal',{jobId:job.id,secretId:stored.id,reason})
+ assert.deepEqual(revealed,{id:stored.id,secret},'Only the authorized reveal returns the exact entered value, including spaces')
+ const state=await h.state(),custody=state.records.intakeSecretAudit.filter(row=>row.secretId===stored.id)
+ assert.equal(custody.length,2,'Store and reveal each retain one non-secret custody entry')
+ for(const action of ['intake.secretStore','intake.secretReveal']){
+  const row=custody.find(row=>row.action===action);assert.ok(row,action+' retains custody evidence')
+  assert.ok(row.at>=started&&row.at<=new Date().toISOString())
+  assert.deepEqual(row,{id:row.id,version:1,jobId:job.id,secretId:stored.id,action,by:{id:owner.id,name:owner.name,role:'owner'},at:row.at,...(action==='intake.secretStore'?{purpose,expiresAt,consent:true}:{reason})})
+ }
+ assert.equal(JSON.stringify(state).includes(secret.trim()),false,'Populated public state contains no unlock material')
+ assert.equal(JSON.stringify(custody).includes(secret.trim()),false,'Retained custody audit contains no unlock material')
+ const query='/api/mallet/audit',report=await h.api(query)
+ assert.ok(report.entries.some(row=>row.action==='intake.record'&&row.changes.some(change=>change.kind==='intake'&&change.id===before.id)),'Audit inspection is populated by this exact signed receipt')
+ for(const format of ['json','csv']){
+  const response=await h.request(query+'?format='+format);assert.equal(response.status,200);assert.match(response.headers.get('content-disposition'),/attachment/)
+  const body=await response.text();assert.ok(body.includes(before.id));assert.ok(body.includes('intake.record'))
+  assert.equal(body.includes(secret.trim()),false,format+' audit download contains no unlock material')
+  if(format==='json')assert.deepEqual(JSON.parse(body).entries,report.entries)
+ }
+ assert.equal(JSON.stringify(await h.api('/api/mallet/audit')).includes(secret.trim()),false,'General audit response contains no unlock material')
+ const denied=await h.request('/api/mallet/commands',{method:'POST',as:'',body:{command:'intake.secretReveal',input:{jobId:job.id,secretId:stored.id,reason}}})
+ assert.equal(denied.status,401);assert.equal((await denied.text()).includes(secret.trim()),false)
+ assert.deepEqual((await h.state()).records,state.records,'A refused reveal changes no business or custody records')
+ const downloaded=await archive(h),items=downloaded.flatMap(part=>part.kind==='part'?part.items:[])
+ assert.ok(downloaded[0].excludedTables.includes('mallet_intake_secrets'),'Archive declares the secret table excluded')
+ assert.equal(downloaded[0].tables.some(table=>table.name==='mallet_intake_secrets'),false,'Secret table is absent from the archive inventory')
+ assert.equal(items.some(item=>item.table==='mallet_intake_secrets'),false,'No downloaded archive part carries secret rows')
+ assert.equal(JSON.stringify(downloaded).includes(secret.trim()),false,'Downloaded portability archive contains no unlock material')
+ const retained=items.filter(item=>item.kind==='row'&&item.table==='mallet_records'&&item.row.kind==='intakeSecretAudit'&&custody.some(row=>row.id===item.row.id)).map(item=>JSON.parse(item.row.value))
+ assert.deepEqual(retained.sort((a,b)=>a.id.localeCompare(b.id)),custody.sort((a,b)=>a.id.localeCompare(b.id)),'Archive retains the exact non-secret store and reveal history')
+ await h.command('intake.secretEnd',{jobId:job.id,secretId:stored.id})
+}))
+
+test('INTAKE-001: vehicle and device signed custody and actual checklist comparison at 1440/390',async()=>{const {intakeBrowser}=await import('./intake-browser.mjs');await intakeBrowser()})
+
+test('INTAKE-002 / OPS-001: two templates, retained required-field draft, original signed terms and exact delivered copy with recovery',()=>run(async h=>{const {intakeFormsJourney}=await import('./support/intake-forms-journey.mjs');await intakeFormsJourney(h)}))
+
+test('INTAKE-002: publish two templates, retain phone draft and retrieve original signed copy after terms change at 1440/390',async()=>{const {intakeFormsBrowser}=await import('./intake-forms-browser.mjs');await intakeFormsBrowser()})
+
+
+test('INTAKE-003 / OPS-001: private after-hours request, exact diagnostic consent, advisor-confirmed match, duplicate refusal and recovery',()=>run(async h=>{const {checkInRecoveryJourney}=await import('./support/check-in-journey.mjs');await checkInRecoveryJourney(h)}))
+
+test('INTAKE-003: after-hours customer request, counter match and diagnostic-only booking at 1440/390',async()=>{const {checkInBrowser}=await import('./check-in-browser.mjs');await checkInBrowser()})

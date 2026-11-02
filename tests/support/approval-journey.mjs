@@ -14,6 +14,7 @@ export async function approvalJourney(h,{person=h.person}={}){
  const [pads,labor]=q.revisions[0].lines
  await h.command('approvalLink.create',{estimateId:q.id,version:q.version,revision:1,days:7},{...T,status:403})
  await h.command('estimate.customerDecide',{linkId:'x',approvedLineIds:[],typedName:'Forged',consent:true},{status:404});await h.command('approvalLink.delivery',{linkId:'x',version:1,status:'accepted',provider:'resend'},{status:404})
+ await h.command('approvalLink.create',{estimateId:q.id,version:q.version,revision:1,days:8},{...ADV,status:400})
  const sent=await h.command('approvalLink.create',{estimateId:q.id,version:q.version,revision:1,days:7},ADV)
  assert.equal(sent.delivery.status,'accepted');const mail=h.messages.findLast(m=>JSON.stringify(m.to).includes(asset.customerEmail));assert.ok(mail.text.includes(sent.url),'EST-003 the link is emailed to the customer')
  const path=new URL(sent.url).pathname,token=path.split('/').at(-1),before=await h.state()

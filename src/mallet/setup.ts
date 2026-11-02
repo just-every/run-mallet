@@ -27,10 +27,11 @@ export async function firstRunResponse(request:Request,bindings:any,auth:any,opt
    return redirect()
   }
   const settings=rows(await load(bindings.DB),'taxSettings')[0]
-  const response=await page('Finish setup',`<section class="card"><p>Review your owner account and set your shop's sales tax before opening Mallet.</p><p>${e(session.operator.email)}</p><form method="post" action="/setup"><label>Your name<input name="displayName" required maxlength="120" autocomplete="name" value="${e(actor.name)}"></label>${taxFields(settings)}<p><label class="check"><input type="checkbox" name="confirm" value="yes" required> I confirm this owner account is ready to use.</label></p><button>Finish setup</button></form><p><a href="/restore">Restore a workshop backup before finishing setup</a></p></section>`)
+  const response=await page('Finish setup',`<section class="card"><p>Review your owner account and set your shop's sales tax before opening Mallet.</p><p>${e(session.operator.email)}</p><p>Protect your owner account: <a href="/app/security?returnTo=%2Fsetup">enrol your own authenticator app or passkey</a>. You can require one for everyone later in Security; it starts optional.</p><form method="post" action="/setup"><label>Your name<input name="displayName" required maxlength="120" autocomplete="name" value="${e(actor.name)}"></label>${taxFields(settings)}<p><label class="check"><input type="checkbox" name="confirm" value="yes" required> I confirm this owner account is ready to use.</label></p><button>Finish setup</button></form><p><a href="/restore">Restore a workshop backup before finishing setup</a></p></section>`)
   return request.method==='HEAD'?new Response(null,response):response
  } catch(error) {
   if(error instanceof HttpError&&error.status===401)return new Response(null,{status:303,headers:{location:'/signin?returnTo=%2Fsetup','cache-control':'no-store'}})
+  if(error instanceof HttpError&&error.code==='second_factor_required')return new Response(null,{status:303,headers:{location:'/app/security?returnTo=%2Fsetup','cache-control':'no-store'}})
   const known=error instanceof HttpError||error instanceof MalletError
   return Response.json({error:known?error.code:'setup_unavailable',message:known?error.message:'Setup is unavailable.'},{status:known?error.status:503,headers:{'cache-control':'no-store'}})
  }

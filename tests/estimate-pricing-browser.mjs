@@ -16,8 +16,8 @@ export async function estimatePricingBrowser(){
   const context=await browser.newContext({viewport:{width:1440,height:1000},locale:'en-US'})
   await context.addCookies(h.owner.split('; ').map(pair=>({name:pair.slice(0,pair.indexOf('=')),value:pair.slice(pair.indexOf('=')+1),url:h.origin})))
   const p=await context.newPage(),errors=[];p.on('pageerror',e=>errors.push(e.message))
-  await mkdir('.cache/estimate-pricing-browser',{recursive:true})
-  const shot=async(name,target)=>{for(const width of [1440,390]){await p.setViewportSize({width,height:1000});await target.scrollIntoViewIfNeeded();await p.evaluate(()=>new Promise(requestAnimationFrame));assert.ok(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'EST-001 no clipped actions: '+name+' '+width);await target.screenshot({path:`.cache/estimate-pricing-browser/${name}-${width}.png`})}await p.setViewportSize({width:1440,height:1000})}
+  const proofDir=process.env.MALLET_PRICING_PROOF_DIR??'.cache/estimate-pricing-browser';await mkdir(proofDir,{recursive:true})
+  const shot=async(name,target)=>{for(const width of [1440,390]){await p.setViewportSize({width,height:1000});await target.scrollIntoViewIfNeeded();await p.evaluate(()=>new Promise(requestAnimationFrame));assert.ok(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'EST-001 no clipped actions: '+name+' '+width);await target.screenshot({path:`${proofDir}/${name}-${width}.png`})}await p.setViewportSize({width:1440,height:1000})}
   const form=command=>p.locator(`form:has(input[name="command"][value="${command}"])`).first()
   const submit=async(f,label)=>{await f.getByRole('button',{name:label,exact:true}).click();await p.waitForLoadState('domcontentloaded')}
   await p.goto(h.origin+'/app/jobs');await p.getByText('Create a rate profile',{exact:true}).click()
@@ -40,18 +40,18 @@ export async function estimatePricingBrowser(){
   await p.goto(h.origin+'/app?ro='+job.id);assert.match(await p.locator('#ro').innerText(),/2 × \$45\.00[\s\S]*2.5 × \$90\.00/);await shot('07-board-estimate',p.locator('#ro'))
   let q=(await h.state()).records.estimate[0]
   const print=await context.newPage();await print.goto(h.origin+'/app/estimates/'+q.id+'/print');assert.match(await print.locator('main').innerText(),/\$45\.00[\s\S]*\$90\.00[\s\S]*\$335\.19/)
-  for(const width of [1440,390]){await print.setViewportSize({width,height:1000});await print.screenshot({path:`.cache/estimate-pricing-browser/05-print-${width}.png`})}await print.close()
+  for(const width of [1440,390]){await print.setViewportSize({width,height:1000});await print.screenshot({path:`${proofDir}/05-print-${width}.png`})}await print.close()
   q=await h.command('estimate.approve',{estimateId:q.id,version:q.version,revision:1})
   const link=await h.command('approvalLink.create',{estimateId:q.id,version:q.version,revision:1,days:7})
   const customer=await context.newPage();await customer.goto(link.url)
   const customerText=await customer.locator('main').innerText();for(const amount of ['$45.00','$90.00','$335.19'])assert.ok(customerText.includes(amount),'EST-001 customer sees exact discounted price '+amount)
   assert.doesNotMatch(await customer.locator('main').innerText(),/Unit cost/)
-  for(const width of [1440,390]){await customer.setViewportSize({width,height:1000});await customer.screenshot({path:`.cache/estimate-pricing-browser/08-customer-approval-${width}.png`,fullPage:true})}
+  for(const width of [1440,390]){await customer.setViewportSize({width,height:1000});await customer.screenshot({path:`${proofDir}/08-customer-approval-${width}.png`,fullPage:true})}
   q=(await h.state()).records.estimate[0]
   for(const line of q.revisions[0].lines)await customer.locator(`select[name="line-${line.id}"]`).selectOption('approve')
   await customer.getByLabel('Your full name',{exact:true}).fill('Cedar Fleet Manager');await customer.locator('input[name="consent"]').check();await customer.getByRole('button',{name:'Sign and submit decision',exact:true}).click();await customer.waitForLoadState('domcontentloaded')
   assert.match(await customer.locator('main').innerText(),/Approved total \$335\.19/)
-  for(const width of [1440,390]){await customer.setViewportSize({width,height:1000});await customer.screenshot({path:`.cache/estimate-pricing-browser/09-customer-receipt-${width}.png`,fullPage:true})}
+  for(const width of [1440,390]){await customer.setViewportSize({width,height:1000});await customer.screenshot({path:`${proofDir}/09-customer-receipt-${width}.png`,fullPage:true})}
   await customer.close();q=(await h.state()).records.estimate[0]
   const receipt=await h.api('/api/mallet/approval-receipts/'+link.id)
   assert.equal(receipt.receipt.approved[0].unitCents,4500,'EST-001 / EST-003 exact signed receipt retains discounted unit price')
@@ -68,6 +68,14 @@ export async function estimatePricingBrowser(){
   const invoice=p.locator('section.card').filter({has:p.getByRole('heading',{name:'Handover invoice',exact:true})})
   assert.match(await invoice.innerText(),/\$45\.00[\s\S]*\$90\.00[\s\S]*\$335\.19/)
   await shot('06-invoice',invoice)
+  await submit(form('invoice.approve'),'Approve invoice')
+  assert.match(await invoice.innerText(),/Balance due \$335\.19/);await shot('14-invoice-balance',invoice)
+  const pay=async(amount,reference)=>{
+   await p.goto(h.origin+'/app/jobs/'+job.id+'/return');const tender=form('payment.record')
+   await tender.locator('[name="amountUsd"]').fill(amount);await tender.locator('[name="method"]').selectOption('cash');await tender.locator('[name="reference"]').fill(reference);await tender.locator('[name="evidence"]').fill('Staff counted this exact cash tender at the counter');await submit(tender,'Record tender evidence');await p.goto(h.origin+'/app/jobs/'+job.id)
+  }
+  await pay('100.00','synthetic-mallet-233');assert.match(await invoice.innerText(),/Balance due \$235\.19/);await shot('15-partial-tender-balance',invoice)
+  await pay('235.19','synthetic-mallet-234');assert.match(await invoice.innerText(),/Balance due \$0\.00/);await shot('16-fully-allocated-balance',invoice)
   await p.goto(h.origin+'/app/jobs');await p.getByText('Metro fleet · fleet · $100.00 per hour · revision 1',{exact:true}).click()
   const edit=form('rateProfile.save');await edit.getByLabel('Labor hourly rate (USD)',{exact:true}).fill('110');await edit.getByLabel('Reason for this revision',{exact:true}).fill('Next-period fleet agreement')
   await shot('10-rate-revision-form',edit);await submit(edit,'Save rate revision')

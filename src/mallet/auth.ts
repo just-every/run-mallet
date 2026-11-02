@@ -1,23 +1,38 @@
+import {clientIdentity} from './api/clients'
 import { operatorAuth, runtimeBindings, type Bindings } from '../auth.server'
-export type Actor = { id: string; name: string; role: 'owner'|'admin'|'member'|'agent' }
+import {enterpriseAuthority} from './enterprise/session'
+import {staffGrant,staffRoute,staffAuthority,type StaffGrant} from './staff'
+import {blocked,gateState,proofAuthority,type Gate} from './strong-auth/gate'
+export type Actor = { id: string; name: string; role: 'owner'|'admin'|'member'|'agent';staff?:StaffGrant;assistantGrantId?:string;attribution?:{agent:{id:string;name:string};for:{id:string;name:string};label:string};policyApprovers?:{id:string;name:string}[] }
 export type Authority = { sql: string; params: any[] }
 export class HttpError extends Error { constructor(public status: number, public code: string, message = code) { super(message) } }
 export const digest = async (value: string) => Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(value))), x => x.toString(16).padStart(2,'0')).join('')
 export const human = (actor: Actor) => ['owner','admin'].includes(actor.role)
-export async function identity(request: Request, original: Bindings): Promise<{actor:Actor;authority:Authority;bearer:boolean}> {
+export type Identity={actor:Actor;authority:Authority;bearer:boolean;apiClient?:{id:string;scopes:string[]};session?:{id:string;kind?:string};gate?:Gate}
+// pending: the second-factor door itself, which must work before this session has shown its factor.
+export async function identity(request: Request, original: Bindings, options:{pending?:boolean}={}): Promise<Identity> {
  const env=runtimeBindings(original), bearer=request.headers.get('authorization')
  if(bearer) {
   if(!/^Bearer [A-Za-z0-9_-]{43}$/.test(bearer)) throw new HttpError(401,'invalid_agent_key')
   const hash=await digest(bearer.slice(7)), now=Date.now()
   const sql="EXISTS(SELECT 1 FROM mallet_agent_keys k JOIN oa_operators o ON o.id=k.created_by WHERE k.token_hash=? AND k.revoked_at IS NULL AND k.expires_at>? AND o.status='active' AND o.version=k.creator_version AND o.role IN ('owner','admin'))"
   const key=await env.DB.prepare(`SELECT k.id,k.label FROM mallet_agent_keys k WHERE k.token_hash=? AND (${sql})`).bind(hash,hash,now).first<{id:string;label:string}>()
-  if(!key) throw new HttpError(401,'invalid_agent_key')
+  if(!key) {
+   const client=await clientIdentity(env.DB,hash);if(client)return client
+   const scopedSql="EXISTS(SELECT 1 FROM mallet_assistant_keys k JOIN oa_operators o ON o.id=k.owner_id JOIN mallet_records r ON r.kind='assistantGrant' AND r.id=k.grant_id WHERE k.token_hash=? AND o.status='active' AND o.role='owner' AND o.version=k.owner_version AND json_extract(r.value,'$.revokedAt') IS NULL AND julianday(json_extract(r.value,'$.notBefore'))<=julianday('now') AND julianday(json_extract(r.value,'$.expiresAt'))>julianday('now'))"
+   const scoped=await env.DB.prepare(`SELECT k.grant_id FROM mallet_assistant_keys k WHERE k.token_hash=? AND (${scopedSql})`).bind(hash,hash).first<{grant_id:string}>()
+   if(!scoped)throw new HttpError(401,'invalid_agent_key')
+   return {actor:{id:scoped.grant_id,name:'Scoped AI assistant',role:'agent',assistantGrantId:scoped.grant_id},authority:{sql:scopedSql,params:[hash]},bearer:true}
+  }
   return {actor:{id:key.id,name:key.label,role:'agent'},authority:{sql,params:[hash,now]},bearer:true}
  }
- const session=await operatorAuth(env).getSession(request)
+ const session=await (await operatorAuth(env)).getSession(request)
  if(!session) throw new HttpError(401,'sign_in_required')
- const {operator:o}=session
- return {actor:{id:o.id,name:o.displayName,role:o.role},bearer:false,authority:{sql:"EXISTS(SELECT 1 FROM oa_sessions s JOIN oa_operators o ON o.id=s.operator_id WHERE s.id=? AND s.revoked_at IS NULL AND s.expires_at>? AND s.operator_version=o.version AND o.version=? AND o.status='active' AND o.role=?)",params:[session.id,Date.now(),o.version,o.role]}}
+ const {operator:o}=session,gate=await gateState(env,session,o.id)
+ if(blocked(gate)&&!options.pending)throw new HttpError(403,'second_factor_required','Confirm with your second factor first.')
+ const base:Authority={sql:"EXISTS(SELECT 1 FROM oa_sessions s JOIN oa_operators o ON o.id=s.operator_id WHERE s.id=? AND s.revoked_at IS NULL AND s.expires_at>? AND s.operator_version=o.version AND o.version=? AND o.status='active' AND o.role=?)",params:[session.id,Date.now(),o.version,o.role]}
+ const actor:Actor={id:o.id,name:o.displayName,role:o.role,...(o.role==='member'?{staff:await staffGrant(env.DB,o.id)??undefined}:{})};staffRoute(request,actor)
+ return {actor,bearer:false,session:{id:session.id,kind:session.kind},gate,authority:await enterpriseAuthority(env,o.id,session.id,staffAuthority(actor,gate.required||gate.enrolled?proofAuthority(base,session.id):base))}
 }
 export function originGuard(request:Request, env:Bindings, bearer=false) {
  const url=new URL(request.url), origin=runtimeBindings(env).AUTH_ORIGIN
@@ -28,12 +43,15 @@ export async function agentKey(db:D1Database, actor:Actor, authority:Authority, 
  if(!human(actor)) throw new HttpError(403,'manager_required')
  const guard=db.prepare(`INSERT INTO mallet_assert(ok) SELECT CASE WHEN (${authority.sql}) THEN 1 ELSE 0 END`).bind(...authority.params)
  if(command==='agent.revoke') {
-  await db.batch([guard,db.prepare('UPDATE mallet_agent_keys SET revoked_at=? WHERE id=?').bind(Date.now(),String(input.id)),db.prepare('DELETE FROM mallet_assert')]); return {revoked:true}
+  await db.batch([guard,db.prepare('UPDATE mallet_agent_keys SET revoked_at=? WHERE id=?').bind(Date.now(),String(input.id)),db.prepare('INSERT INTO oa_auth_audit(id,actor_id,action,value,created_at) VALUES(?,?,?,?,?)').bind(crypto.randomUUID(),actor.id,'mallet:agent.revoked',JSON.stringify({id:String(input.id)}),Date.now()),db.prepare('DELETE FROM mallet_assert')]); return {revoked:true}
  }
- if(command!=='agent.create') throw new HttpError(404,'unknown_command')
- const label=String(input.label??'').trim();if(!label || label.length>100) throw new HttpError(400,'agent_label_required')
+ if(command!=='agent.create'&&command!=='agent.rotate') throw new HttpError(404,'unknown_command')
+ // Rotation keeps the label and authority shape: the new key is created and the old one revoked in one transaction.
+ const previous=command==='agent.rotate'?await db.prepare('SELECT label FROM mallet_agent_keys WHERE id=? AND revoked_at IS NULL AND expires_at>?').bind(String(input.id??''),Date.now()).first<{label:string}>():null
+ if(command==='agent.rotate'&&!previous) throw new HttpError(404,'not_found')
+ const label=String((previous?.label??input.label)??'').trim();if(!label || label.length>100) throw new HttpError(400,'agent_label_required')
  const token=btoa(String.fromCharCode(...crypto.getRandomValues(new Uint8Array(32)))).replaceAll('+','-').replaceAll('/','_').replaceAll('=','')
  const id=crypto.randomUUID(),now=Date.now(),expiresAt=now+30*86400000
- await db.batch([guard,db.prepare('INSERT INTO mallet_agent_keys SELECT ?,?,?,id,version,?,NULL,? FROM oa_operators WHERE id=?').bind(id,await digest(token),label,expiresAt,now,actor.id),db.prepare('DELETE FROM mallet_assert')])
- return {id,label,token,expiresAt}
+ await db.batch([guard,...(previous?[db.prepare('INSERT INTO mallet_assert(ok) SELECT CASE WHEN EXISTS(SELECT 1 FROM mallet_agent_keys WHERE id=? AND revoked_at IS NULL) THEN 1 ELSE 0 END').bind(String(input.id))]:[]),db.prepare('INSERT INTO mallet_agent_keys SELECT ?,?,?,id,version,?,NULL,? FROM oa_operators WHERE id=?').bind(id,await digest(token),label,expiresAt,now,actor.id),db.prepare('INSERT INTO oa_auth_audit(id,actor_id,action,value,created_at) VALUES(?,?,?,?,?)').bind(crypto.randomUUID(),actor.id,'mallet:agent.created',JSON.stringify({id}),now),...(previous?[db.prepare('UPDATE mallet_agent_keys SET revoked_at=? WHERE id=? AND revoked_at IS NULL').bind(now,String(input.id)),db.prepare('INSERT INTO oa_auth_audit(id,actor_id,action,value,created_at) VALUES(?,?,?,?,?)').bind(crypto.randomUUID(),actor.id,'mallet:agent.rotated',JSON.stringify({replaced:String(input.id),id}),now)]:[]),db.prepare('DELETE FROM mallet_assert')])
+ return {id,label,token,expiresAt,...(previous?{replaced:String(input.id)}:{})}
 }

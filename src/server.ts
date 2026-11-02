@@ -1,4 +1,5 @@
-import {runRouting} from './mallet/routing-door'
+import {runMalletScheduled} from './mallet/scheduled'
+import {salesReportResponse} from './mallet/sales-report-door'
 import { withDemo } from './modules/demo/index.mjs'
 import { seedDemo } from './demo'
 import { rejectedResponse } from './base/rejected-response'
@@ -12,7 +13,9 @@ import { setupStateResponse } from './base/setup-state'
 import { authResponse, runtimeBindings, type Bindings } from './auth.server'
 import { identity } from './identity'
 import { malletResponse } from './mallet/http'
-import { runApprovalChase } from './mallet/approval-door'
+import { agentResponse } from './mallet/agent-door/index.ts'
+import { businessSettings } from './mallet/business.ts'
+import { preparationAlias } from './mallet/agent-door/legacy.ts'
 
 const api = new Hono<{ Bindings: Bindings }>()
 api.get('/health', (context) => context.json({ status: 'ok', ...deploymentHealth(context.env) }))
@@ -30,9 +33,17 @@ export default withDemo<Bindings, ExportedHandler<Bindings>>({
   async fetch(request, env, execution) {
     const asset = await staticAssetResponse(request, env)
     if (asset) return asset
+    if (['/api/rer/business-settings', '/rer-business-logo', '/rer-business.css'].includes(new URL(request.url).pathname)) {
+      const business = await (await businessSettings(runtimeBindings(env))).handle(request)
+      if (business) return rejectedResponse(request, business)
+    }
+    const agent = await agentResponse(request, env)
+    if (agent) return rejectedResponse(request, agent)
+    const preparation = await preparationAlias(request, env)
+    if (preparation) return rejectedResponse(request, preparation)
     const auth = await authResponse(request, env)
     if (auth) return auth
-    const workshop = await malletResponse(request, env)
+    const workshop = await salesReportResponse(request, env) ?? await malletResponse(request, env, execution)
     if (workshop) return rejectedResponse(request, workshop)
     // The installed variant: the Lobby at / and the public claim state it reads.
     // Local dev serves the saved origin's data at its own port (RER_DEV_ORIGIN).
@@ -44,6 +55,6 @@ export default withDemo<Bindings, ExportedHandler<Bindings>>({
   },
   // EST-006: the cron trigger in wrangler.jsonc sends due estimate reminders.
   async scheduled(controller, env, execution) {
-    execution.waitUntil((async()=>{await runApprovalChase(env, controller.scheduledTime);await runRouting(env, controller.scheduledTime)})())
+    execution.waitUntil(runMalletScheduled(env,controller.scheduledTime))
   },
 } satisfies ExportedHandler<Bindings>, { seed: seedDemo })

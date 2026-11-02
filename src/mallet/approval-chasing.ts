@@ -78,7 +78,7 @@ export const approvalChasing:Handler=(c,command,p)=>{
  }
  advisor(c)
  if(command==='chasePolicy.save') {
-  const linkDays=integer(p.linkDays,'link lifetime in days',1,30),days=Array.isArray(p.reminderDays)?p.reminderDays.map((d:unknown)=>integer(d,'reminder day',1,29)):fail('INPUT','List reminder days.',null,400)
+  const linkDays=integer(p.linkDays,'link lifetime in days',1,7),days=Array.isArray(p.reminderDays)?p.reminderDays.map((d:unknown)=>integer(d,'reminder day',1,6)):fail('INPUT','List reminder days.',null,400)
   if(days.length>3||days.some((d:number,i:number)=>i&&d<=days[i-1])||days.some((d:number)=>d>=linkDays))fail('INPUT','Use up to three increasing reminder days, each before the link expires.',null,400)
   const current=chasePolicy(c.s),value={linkDays,reminderDays:days,savedBy:who(c),savedAt:c.now}
   if(current)expectVersion(current,p.version)

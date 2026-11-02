@@ -93,7 +93,8 @@ export function validateReplacements(c: Context, job: Row, newLines: ScopedLine[
   }
   for (const { estimate, original, ref, quantityMilli } of groups.values()) {
     const actualQuantity = (job.actuals ?? []).filter((a: any) => a.estimateId === ref.estimateId && a.revision === ref.revision && a.lineId === ref.lineId).reduce((sum: number, a: any) => sum + a.quantityMilli, 0)
-    const available = remaining(c.s, estimate, original, excludeEstimateId) - actualQuantity
+    const reserved = (c.s.records.sublet??[]).flatMap(r=>r.scopes).filter((x:any)=>x.estimateId===ref.estimateId&&x.revision===ref.revision&&x.lineId===ref.lineId).reduce((n:number,x:any)=>n+x.charge.quantityMilli,0)
+    const available = remaining(c.s, estimate, original, excludeEstimateId) - Math.max(actualQuantity,reserved)
     if (!Number.isSafeInteger(quantityMilli) || !Number.isSafeInteger(actualQuantity) || quantityMilli > available) fail('REPLACEMENT_QUANTITY', 'Replacement scope cannot exceed the original authorized quantity still unworked and unreplaced.', { estimateId: ref.estimateId, revision: ref.revision, lineId: ref.lineId, availableQuantity: available / 1000, replacementQuantity: quantityMilli / 1000 })
   }
 }

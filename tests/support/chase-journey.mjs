@@ -17,10 +17,10 @@ export async function chaseJourney(){
   // Configure expiry and reminder steps (owner/advisor only, validated before expiry).
   await h.command('chasePolicy.save',{linkDays:10,reminderDays:[2,5]},{...T,status:403})
   await h.command('chasePolicy.save',{linkDays:5,reminderDays:[2,5]},{...ADV,status:400})
-  const policy=await h.command('chasePolicy.save',{linkDays:10,reminderDays:[2,5]},ADV);assert.deepEqual([policy.linkDays,policy.reminderDays],[10,[2,5]])
+  await h.command('chasePolicy.save',{linkDays:10,reminderDays:[2,5]},{...ADV,status:400});const policy=await h.command('chasePolicy.save',{linkDays:7,reminderDays:[2,5]},ADV);assert.deepEqual([policy.linkDays,policy.reminderDays],[7,[2,5]])
   const {asset,job}=await booking(h,{technicianId:tech.id});let q=await quote(job)
   const sent=await h.command('approvalLink.create',{estimateId:q.id,version:q.version,revision:1},ADV),email=asset.customerEmail
-  assert.equal(Date.parse(sent.expiresAt)-Date.parse(sent.createdAt),10*DAY,'EST-006 the configured expiry applies to a new link')
+  assert.equal(Date.parse(sent.expiresAt)-Date.parse(sent.createdAt),7*DAY,'EST-006 the configured expiry applies to a new link')
   let chase=await chaseOf(sent.id);assert.deepEqual(chase.steps.map(s=>[s.dueAt,s.status]),[[new Date(at(sent.createdAt,2,0)).toISOString(),'pending'],[new Date(at(sent.createdAt,5,0)).toISOString(),'pending']],'EST-006 the link snapshots its reminder schedule')
   assert.match(h.messages.findLast(m=>m.text?.includes(sent.url)).text,/Stop reminders/,'EST-006 every approval email offers a way to stop reminders')
   await h.cron(at(sent.createdAt,1));assert.equal(reminders(email).length,0,'EST-006 nothing is sent before a step is due')
@@ -57,7 +57,7 @@ export async function chaseJourney(){
   const third=(await booking(h,{asset:await h.command('asset.create',{...assetInput('3'),customerEmail:'riley@example.test'}),technicianId:tech.id,startAt:'2026-11-04T09:00:00Z',endAt:'2026-11-04T10:00:00Z'})).job
   let q3=await quote(third);const bounced=await h.command('approvalLink.create',{estimateId:q3.id,version:q3.version,revision:1},ADV)
   assert.equal(bounced.delivery.status,'rejected');assert.equal((await chaseOf(bounced.id)).stopReason,'delivery-failed')
-  let tasks=(await st()).chaseTask;assert.deepEqual(tasks.map(t=>[t.linkId,t.kind]),[[bounced.id,'delivery-failed']],'EST-006 a failed send opens an advisor task')
+  let tasks=(await st()).chaseTask;assert.deepEqual(tasks.map(t=>[t.linkId,t.kind]),[[bounced.id,'delivery-failed']],'EST-007 a failed send opens an advisor task')
   status=202;await h.command('approvalLink.revoke',{linkId:bounced.id,version:(await st()).approvalLink.find(l=>l.id===bounced.id).version},ADV)
   q3=(await st()).estimate.find(x=>x.id===q3.id);const resent=await h.command('approvalLink.create',{estimateId:q3.id,version:q3.version,revision:1},ADV);assert.equal(resent.delivery.status,'accepted')
   status=422;const before=calls;await h.cron(at(resent.createdAt,2));await h.cron(at(resent.createdAt,2,20))
@@ -89,6 +89,6 @@ export async function chaseJourney(){
   for(const kind of ['approvalChase','chaseTask','chaseOptOut'])assert.equal(agentView[kind],undefined)
   // OPS-001: policy, chases, tasks and opt-outs restore exactly; reminder tokens do not.
   const state=await st(),backup=await archive(h),target=await installation()
-  try{await restore(target,backup);const restored=(await target.state()).records;for(const kind of ['chasePolicy','approvalChase','chaseTask','chaseOptOut'])assert.deepEqual(restored[kind],state[kind],'EST-006 restores '+kind);assert.equal((await target.request(replacementPath,{as:''})).status,404)}finally{await target.close()}
+  try{await restore(target,backup);const restored=(await target.state()).records;for(const kind of ['chasePolicy','approvalChase','chaseTask','chaseOptOut'])assert.deepEqual(restored[kind],state[kind],'EST-006 / EST-007 restores '+kind);assert.equal((await target.request(replacementPath,{as:''})).status,404)}finally{await target.close()}
  }finally{await h.close()}
 }

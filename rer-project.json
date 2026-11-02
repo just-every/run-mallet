@@ -1,7 +1,22 @@
 {
   "schema": 1,
   "projectId": "just-every/run-mallet",
-  "name": "mallet",
+  "name": "Mallet",
   "sourceRepository": "https://github.com/just-every/run-mallet",
-  "license": "MIT"
+  "license": "MIT",
+  "deployment": {
+    "target": "cloudflare-workers",
+    "artifactFile": "rer-worker-artifact.json"
+  },
+  "operations": {
+    "setup": "pnpm install --frozen-lockfile && pnpm exec rer install",
+    "build": "pnpm run build",
+    "verify": "pnpm run verify && pnpm exec rer check --profile first-party && pnpm check:deployment-spec",
+    "artifact": "node scripts/delivery/base/cli.mjs artifact --config packaging.json",
+    "recovery": "Follow docs/operations.md and OPERATIONS.md. Pause writes and scheduled jobs, retain exact source and private configuration, export all declared database and object storage data, restore only into fresh empty resources with fresh native owner authority, re-export and reconcile before routing traffic. Keep applied migration names and bytes unchanged; uncertain provider actions require human review."
+  },
+  "setup": {
+    "path": "rer-setup.json",
+    "sha256": "78fe71aeeb388f03db6f61e962fb8a863bdae473fd7f2e815f6b52db9540992a"
+  }
 }

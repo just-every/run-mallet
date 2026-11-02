@@ -29,7 +29,7 @@ export async function approvalBrowser(){
   assert.deepEqual(errors,[])
  }finally{await browser?.close();await h.close()}
 }
-// EST-006: chase policy, advisor queue, per-link reminders and the customer's Stop reminders door at 1440/390.
+// EST-006 / EST-007: chase policy, advisor queue, per-link reminders and the customer's Stop reminders door at 1440/390.
 export async function chaseBrowser(){
  const h=await installation({entry:'tests/dev-worker.ts',network:true,assets:true,bindings:{AUTH_LOCAL:'true',RER_DEV_KEY:randomBytes(32).toString('base64url')}});let browser
  try{
@@ -39,19 +39,19 @@ export async function chaseBrowser(){
   browser=await chromium.launch({headless:true,args:['--use-mock-keychain','--password-store=basic']})
   const errors=[],open=async(cookie,width)=>{const c=await browser.newContext({viewport:{width,height:1000},timezoneId:'America/Los_Angeles',locale:'en-US',hasTouch:width<500});if(cookie)await c.addCookies(cookie.split('; ').map(pair=>({name:pair.slice(0,pair.indexOf('=')),value:pair.slice(pair.indexOf('=')+1),url:h.origin})));const p=await c.newPage();p.on('pageerror',e=>errors.push(e.message));return p}
   await mkdir('.cache/chase-browser',{recursive:true})
-  const shot=async(p,name,target)=>{for(const width of [390,1440]){await p.setViewportSize({width,height:1000});await target.scrollIntoViewIfNeeded();await p.evaluate(()=>new Promise(requestAnimationFrame));assert.ok(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'EST-006 responsive '+name+' '+width);await p.screenshot({path:`.cache/chase-browser/${name}-${width}.png`})}await p.setViewportSize({width:1440,height:1000})}
+  const shot=async(p,name,target)=>{for(const width of [390,1440]){await p.setViewportSize({width,height:1000});await target.scrollIntoViewIfNeeded();await p.evaluate(()=>new Promise(requestAnimationFrame));assert.ok(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'EST-006 / EST-007 responsive '+name+' '+width);await p.screenshot({path:`.cache/chase-browser/${name}-${width}.png`})}await p.setViewportSize({width:1440,height:1000})}
   const o=await open(h.owner,1440);await o.goto(h.origin+'/app/approvals');const policy=o.locator('#chase-policy')
-  await policy.getByLabel('Approval links expire after (days, 1–30)').fill('10');await policy.getByLabel('Reminder days after sending (up to three, comma separated)').fill('2, 6');await shot(o,'01-chase-policy',policy)
+  await policy.getByLabel('Approval links expire after (days, 1–7)').fill('7');await policy.getByLabel('Reminder days after sending (up to three, comma separated)').fill('2, 6');await shot(o,'01-chase-policy',policy)
   await policy.getByRole('button',{name:'Save chase policy'}).click();await o.waitForLoadState('domcontentloaded')
-  assert.deepEqual((await h.state()).records.chasePolicy.map(p=>[p.linkDays,p.reminderDays]),[[10,[2,6]]],'EST-006 the native form saves expiry and reminder steps')
-  await o.goto(h.origin+'/app/jobs/'+first.id);const panel=o.locator('#approval-links');assert.equal(await panel.getByLabel('Valid for days (1–30)').inputValue(),'10')
+  assert.deepEqual((await h.state()).records.chasePolicy.map(p=>[p.linkDays,p.reminderDays]),[[7,[2,6]]],'EST-006 the native form saves expiry and reminder steps')
+  await o.goto(h.origin+'/app/jobs/'+first.id);const panel=o.locator('#approval-links');assert.equal(await panel.getByLabel('Valid for days (1–7)').inputValue(),'7')
   await panel.getByRole('button',{name:'Email approval link',exact:true}).click();await o.waitForLoadState('domcontentloaded');const url=(await o.locator('pre').innerText()).trim()
   await o.goto(h.origin+'/app/jobs/'+first.id);assert.match(await panel.innerText(),/Reminder 1 \(day 2\)[\s\S]*scheduled[\s\S]*Reminder 2 \(day 6\)/);await shot(o,'02-job-reminders',panel)
   const phone=await open('',390);await phone.goto(url);const stop=phone.getByRole('button',{name:'Stop reminders',exact:true});await shot(phone,'03-customer-stop',stop)
   await stop.click();await phone.waitForLoadState('domcontentloaded');assert.match(await phone.locator('main').innerText(),/will not send you automatic estimate reminders/);await shot(phone,'04-customer-stopped',phone.locator('main'))
   await o.goto(h.origin+'/app/jobs/'+first.id);assert.match(await panel.innerText(),/Reminders stopped[\s\S]*the customer opted out of reminders/,'EST-006 staff see why reminders stopped')
   // A one-day link expires unanswered; the advisor resolves the task from the queue.
-  await o.goto(h.origin+'/app/jobs/'+second.id);await panel.getByLabel('Valid for days (1–30)').fill('1');await panel.getByRole('button',{name:'Email approval link',exact:true}).click();await o.waitForLoadState('domcontentloaded')
+  await o.goto(h.origin+'/app/jobs/'+second.id);await panel.getByLabel('Valid for days (1–7)').fill('1');await panel.getByRole('button',{name:'Email approval link',exact:true}).click();await o.waitForLoadState('domcontentloaded')
   const link=(await h.state()).records.approvalLink.find(l=>l.jobId===second.id);await h.cron(Date.parse(link.expiresAt)+60_000)
   await o.goto(h.origin+'/app/approvals');const tasks=o.locator('#chase-tasks');assert.match(await tasks.innerText(),/Estimate unanswered[\s\S]*expired undecided/);await shot(o,'05-advisor-task',tasks);await shot(o,'06-opt-outs',o.locator('#chase-opt-outs'))
   await tasks.getByLabel('What you did').fill('Phoned the customer; decision by Friday');await tasks.getByRole('button',{name:'Resolve task'}).click();await o.waitForLoadState('domcontentloaded')

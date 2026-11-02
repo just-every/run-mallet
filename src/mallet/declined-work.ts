@@ -16,6 +16,14 @@ export const declinedWork:Handler=(c,command,p)=>{
   const row=put(c.s,'declinedWork',{assetId:job.assetId,jobId:job.id,estimateId:estimate.id,revision:rev.n,line:structuredClone(line),decision:structuredClone(auth),disposition:choice(p.disposition??'declined',['declined','deferred'],'disposition'),reason:text(p.reason,'reason',2000),evidence:text(p.evidence,'evidence',4000),reading:structuredClone(reading),owner:who(c),at:c.now,dueDate,dueValue,unit:reading.unit,proposals:[]})
   event(c,command,job.id,row.id,{line:row.line,reason:row.reason,dueDate,dueValue,unit:reading.unit});return row
  }
+ if(command==='decline.inapplicable'){
+  if(c.actor.role!=='owner')fail('FORBIDDEN','Only the owner records that a finding no longer applies.',null,403)
+  const item=find(c.s,'declinedWork',p.declinedWorkId);expectVersion(item,p.version)
+  if(item.inapplicable)fail('DECLINE_STOP','This finding is already stopped.')
+  const evidence=text(p.evidence,'current finding review evidence',2000)
+  const row=bump(c.s,'declinedWork',item,{inapplicable:{by:who(c),at:c.now,evidence}})
+  event(c,command,item.jobId,item.id,{evidence});return row
+ }
  if(command==='decline.reprice') {
   const item=find(c.s,'declinedWork',p.declinedWorkId);expectVersion(item,p.itemVersion)
   const job=find(c.s,'job',p.jobId)

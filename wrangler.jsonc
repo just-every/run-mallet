@@ -7,7 +7,9 @@
     "nodejs_compat"
   ],
   "triggers": {
-    "crons": ["*/15 * * * *"]
+    "crons": [
+      "* * * * *"
+    ]
   },
   "d1_databases": [
     {
@@ -16,5 +18,22 @@
       "database_id": "local-foundation-only",
       "migrations_dir": "migrations/core"
     }
-  ]
+  ],
+  "r2_buckets": [
+    {
+      "binding": "INTAKE_VAULT",
+      "bucket_name": "mallet-intake-vault"
+    }
+  ],
+  "vars": {
+    "AUTH_ORIGIN": "",
+    "AUTH_LOCAL": "false",
+    "MAIL_PROVIDER": "",
+    "MAIL_FROM": "",
+    "MAIL_RELAY_URL": "",
+    "MAIL_ACCOUNT_ID": "",
+    "IDENTITY_PROVIDER": "",
+    "PIER_ORIGIN": "",
+    "MALLET_SUPPLIER_ORIGIN": ""
+  }
 }

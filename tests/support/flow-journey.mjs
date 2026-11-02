@@ -1,3 +1,6 @@
+import {downloadWorkbook} from './report-xlsx.mjs'
+import {handoverInput} from './handover-input.mjs'
+import {downloadReport} from './report-csv.mjs'
 import assert from 'node:assert/strict'
 import {archive,assetInput,authorise,booking,estimate,installation,restore} from '../harness.mjs'
 import {coilDiagnosis,shopSetup} from './diagnosis-journey.mjs'
@@ -13,17 +16,21 @@ export async function flowJourney(h){
  const board=async(query='',options={})=>h.api('/api/mallet/board'+(query?'?'+query:''),undefined,options)
  const job=async id=>(await h.state()).records.job.find(j=>j.id===id),stage=async(id,o)=>stagesOf(await board('',o))[id]
  const first=await booking(h,{technicianId:andre.id}),ro=first.job
+ const promisedAt=new Date(Date.now()+86400000).toISOString()
  const b=await board();assert.deepEqual(b.stages.map(s=>s.id),['intake','diagnosis','approval','parts','work','quality','ready','collected','closed'],'FLOW-001 the nine stages')
  assert.equal(stagesOf(b)[ro.id],'intake');assert.equal(cardOf(b,ro.id).customer,'Cedar Bikes');assert.equal(cardOf(b,ro.id).technicianId,andre.id);assert.equal(cardOf(b,ro.id).priority,'normal');assert.deepEqual(cardOf(b,ro.id).due,{at:ro.endAt,kind:'booking'})
+ await h.command('promise.set',{jobId:ro.id,version:ro.version,pickupAt:promisedAt,reason:'Tomorrow pickup after brake service'},ADV)
  await h.command('diagnosis.record',{jobId:ro.id,version:(await job(ro.id)).version,...coilDiagnosis,dtcs:[{code:'P0301',description:'Cylinder 1 misfire'}],measurements:[],attachmentIds:[]},A)
  assert.equal(await stage(ro.id),'diagnosis','FLOW-001 diagnosis evidence moves the card')
  let quote=await estimate(h,await job(ro.id));assert.equal(await stage(ro.id),'approval')
+ await new Promise(resolve=>setTimeout(resolve,50)) // a real, measured customer-approval wait
  assert.ok(cardOf(await board(),ro.id).blockers.includes('Estimate waiting for a person to approve'),'FLOW-001 blocker named')
  // Skipping authorization: work cannot be recorded, and the card stays in approval.
  await h.command('work.record',{jobId:ro.id,version:(await job(ro.id)).version,estimateId:quote.id,revision:1,lineId:quote.revisions[0].lines[0].id,quantity:1},{...A,status:409})
  assert.equal(await stage(ro.id),'approval','FLOW-001 the authorization gate cannot be skipped')
  quote=await authorise(h,quote);assert.equal(await stage(ro.id),'work')
  let plan=await h.command('promise.partETA',{jobId:ro.id,version:(await job(ro.id)).version,planVersion:0,partId:'pads',name:'Brake pads',eta:new Date(Date.now()+86400000).toISOString(),sourceNote:'Supplier phone call',reason:'Pads on order'},A)
+ await new Promise(resolve=>setTimeout(resolve,50)) // a real, measured parts wait
  assert.equal(await stage(ro.id),'parts');assert.match(cardOf(await board(),ro.id).blockers.join('|'),/Waiting for Brake pads: staff-reported ETA/)
  plan=await h.command('promise.partETA',{jobId:ro.id,version:(await job(ro.id)).version,planVersion:plan.version,partId:'pads',name:'Brake pads',eta:new Date(Date.now()+86400000).toISOString(),receivedAt:new Date(Date.now()-1000).toISOString(),sourceNote:'Counted at the parts desk',reason:'Pads arrived'},A)
  for(const line of quote.revisions[0].lines)await h.command('work.record',{jobId:ro.id,version:(await job(ro.id)).version,estimateId:quote.id,revision:1,lineId:line.id,quantity:line.quantity},A)
@@ -40,8 +47,8 @@ export async function flowJourney(h){
  await h.command('flow.collect',{jobId:ro.id,version:(await job(ro.id)).version,flowVersion:0,collectorName:'Dana Cedar'},{...A,status:403})
  const key=await h.command('agent.create',{label:'Board boundary'}),agent={as:'',headers:{authorization:`Bearer ${key.token}`}}
  await h.command('flow.collect',{jobId:ro.id,version:(await job(ro.id)).version,flowVersion:0,collectorName:'Dana Cedar'},{...agent,status:403})
- const flow=await h.command('flow.collect',{jobId:ro.id,version:(await job(ro.id)).version,flowVersion:0,collectorName:'Dana Cedar',note:'Paid at the counter'},ADV)
- assert.equal(flow.collection.invoiceNumber,invoice.number);assert.match(flow.collection.label,/did not record or verify payment/);assert.equal(await stage(ro.id),'collected')
+ const flow=await h.command('flow.collect',{...await handoverInput(h,ro.id,'Dana Cedar'),note:'Owner-approved handover; payment is not inferred'},ADV)
+ assert.equal(flow.collection.invoiceNumber,invoice.number);assert.match(flow.collection.label,/identity was checked by staff, not verified by Mallet/);assert.ok((await h.state()).records.handover.find(r=>r.id===flow.collection.handoverId).settlement.override);assert.equal(await stage(ro.id),'collected')
  await h.command('flow.collect',{jobId:ro.id,version:(await job(ro.id)).version,flowVersion:flow.version,collectorName:'Again'},{...ADV,status:409})
  invoice=(await h.state()).records.invoice.find(i=>i.id===invoice.id);await h.command('invoice.export',{invoiceId:invoice.id,version:invoice.version})
  assert.equal(await stage(ro.id),'closed','FLOW-001 collected and exported repairs close')
@@ -59,7 +66,8 @@ export async function flowJourney(h){
  assert.deepEqual(ids(await board('stage=closed')),[ro.id]);assert.deepEqual(ids(await board('',M)),[late.id],'FLOW-001 a technician board holds only their repairs')
  const html=await (await h.request('/app?technician='+mei.id+'&due=overdue')).text()
  assert.match(html,/Rivera Plumbing/);assert.doesNotMatch(html,/Cedar Bikes/);for(const label of ['Intake','Diagnosis','Approval','Parts','Work','Quality','Ready','Collected','Closed'])assert.match(html,new RegExp(`<h2>${label} <span>`))
- assert.match(html,/Urgent/);assert.match(html,/Promise overdue/);assert.match(html,/http-equiv="refresh" content="60"/,'FLOW-001 the board re-reads current records every minute')
+ assert.match(html,/Urgent/);assert.match(html,/Promise overdue/)
+ // Native peer-board updates and retained drafts/focus are proved by board-live-journey.mjs.
  // Canceled and lost work is retained under Closed and frees its bay and technician.
  const cancel=await booking(h,{technicianId:mei.id,asset:await h.command('asset.create',assetInput('3')),bayId:'Bay 3',startAt:'2026-10-21T09:00:00-04:00',endAt:'2026-10-21T11:00:00-04:00'})
  await h.command('flow.close',{jobId:cancel.job.id,version:cancel.job.version,outcome:'canceled',reason:'Customer sold the car'},{...M,status:403})
@@ -74,8 +82,56 @@ export async function flowJourney(h){
  const asset5=await h.command('asset.create',assetInput('5'))
  await h.command('job.book',{assetId:asset5.id,version:asset5.version,title:'Rebooked slot',technicianId:mei.id,bayId:'Bay 3',startAt:'2026-10-21T09:00:00-04:00',endAt:'2026-10-21T10:00:00-04:00'})
  const jobHtml=await (await h.request('/app/jobs/'+cancel.job.id)).text();assert.match(jobHtml,/Canceled[\s\S]*Customer sold the car/)
+ // REPORT-004: stage delay and promise variance drill to the actual command events.
+ const reportQuery='?from='+ro.createdAt.slice(0,10)+'&to='+ro.createdAt.slice(0,10)
+ const report=await h.api('/api/mallet/reports/turnaround'+reportQuery)
+ const measured=report.repairs.find(r=>r.jobId===ro.id),completed=await job(ro.id)
+ assert.equal(measured.historyComplete,true,'REPORT-004 a newly booked repair has history from intake')
+ assert.deepEqual(measured.intervals.map(i=>i.stage),['intake','diagnosis','approval','work','parts','work','quality','ready','collected','closed'])
+ assert.ok(measured.stageTotalsMs.approval>=50,'REPORT-004 the report includes the actual customer-decision wait')
+ assert.ok(measured.stageTotalsMs.parts>=50,'REPORT-004 the report includes the actual unreceived-parts wait')
+ assert.equal(measured.cycleMs,Date.parse(completed.completedAt)-Date.parse(ro.createdAt))
+ assert.equal(measured.promise.pickupAt,promisedAt)
+ assert.equal(measured.promise.completionVarianceMs,Date.parse(completed.completedAt)-Date.parse(promisedAt))
+ assert.ok(measured.promise.completionVarianceMs<0,'REPORT-004 completed before the promised pickup')
+ assert.equal(measured.promise.overdue,false)
+ assert.equal(Object.values(measured.stageTotalsMs).reduce((a,b)=>a+b,0),measured.elapsedMs,'REPORT-004 all observed stage time reconciles to booking-to-closure elapsed time')
+ const evidence=(await h.state()).records.event
+ for(const interval of measured.intervals)for(const id of interval.eventIds){const event=evidence.find(e=>e.id===id);assert.equal(event.jobId,ro.id);assert.equal(event.at,interval.from);assert.ok(interval.commands.includes(event.kind),'REPORT-004 every drill-through resolves to the real same-repair command event')}
+ const lateRow=report.repairs.find(r=>r.jobId===late.id)
+ assert.equal(lateRow.promise.overdue,true,'REPORT-004 the still-open passed promise is overdue')
+ assert.equal(lateRow.promise.completionVarianceMs,null,'REPORT-004 an unfinished repair has no invented completion')
+ assert.equal(lateRow.cycleMs,null)
+ const mine=await h.api('/api/mallet/reports/turnaround'+reportQuery,undefined,A)
+ assert.ok(mine.repairs.some(r=>r.jobId===ro.id));assert.ok(!mine.repairs.some(r=>r.jobId===late.id),'REPORT-004 existing native assignment scope applies')
+ await h.api('/api/mallet/reports/turnaround'+reportQuery,undefined,{...agent,status:403})
+ await h.api('/api/mallet/reports/turnaround'+reportQuery,undefined,{as:'',status:401})
+ await h.api('/api/mallet/reports/turnaround?from=2026-10-22&to=2026-10-21',undefined,{status:400})
+ const nextDay=new Date(Date.parse(ro.createdAt.slice(0,10))+86400000).toISOString().slice(0,10)
+ assert.deepEqual((await h.api('/api/mallet/reports/turnaround?from='+nextDay+'&to='+nextDay)).repairs,[],'REPORT-004 the inclusive booking-date filter excludes other dates')
+ // REPORT-006: stage CSV retains exact measured intervals, missing values and current job visibility.
+ const exportPath='/api/mallet/reports/turnaround'+reportQuery+'&format=csv',beforeExport=await h.state()
+ const workbook=await downloadWorkbook(h,exportPath.replace('format=csv','format=xlsx'))
+ assert.equal(workbook.find(x=>x.JobId===ro.id&&x.Metric==='cycleMs').Value,String(measured.cycleMs))
+ await h.api(exportPath.replace('format=csv','format=xlsx'),undefined,{...agent,status:403})
+ const exported=await downloadReport(h,exportPath),ownExport=await downloadReport(h,exportPath,A)
+ const closedRows=exported.filter(x=>x.JobId===ro.id)
+ assert.equal(closedRows.find(x=>x.Metric==='cycleMs').Value,String(measured.cycleMs))
+ for(const interval of measured.intervals){const row=closedRows.find(x=>x.Record==='stage'&&x.SourceId===interval.stageEventId);assert.equal(row.Value,String(interval.durationMs));assert.equal(row.From,interval.from);assert.equal(row.To,interval.to);assert.equal(row.Unit,'milliseconds')}
+ assert.equal(exported.find(x=>x.JobId===late.id&&x.Metric==='cycleMs').Value,'','Unfinished cycle is blank')
+ assert.ok(ownExport.some(x=>x.JobId===ro.id));assert.ok(!ownExport.some(x=>x.JobId===late.id))
+ const variance=closedRows.find(x=>x.Metric==='completionVarianceMs');assert.equal(variance.Value,String(measured.promise.completionVarianceMs),'Negative numeric variance remains a number, without spreadsheet text escaping')
+ assert.equal((await h.request(variance.JobURL,A)).status,200)
+ await h.api(exportPath,undefined,{...agent,status:403});await h.api(exportPath,undefined,{as:'',status:401})
+ for(const bad of ['&format=pdf','&location=other','&to=2000-01-01'])await h.api('/api/mallet/reports/turnaround'+reportQuery+bad,undefined,{status:400})
+ assert.deepEqual(await h.state(),beforeExport,'REPORT-006 exports do not write product records')
  // OPS-001: board records restore exactly.
  const state=await h.state(),backup=await archive(h),target=await installation()
- try{await restore(target,backup);const restored=await target.state();assert.deepEqual(restored.records.flow,state.records.flow);assert.deepEqual(restored.records.job,state.records.job)
+ try{await restore(target,backup);const restored=await target.state();assert.deepEqual(restored.records.flow,state.records.flow);assert.deepEqual(restored.records.job,state.records.job);assert.deepEqual(restored.records.stageEvent,state.records.stageEvent,'REPORT-004 / OPS-001 stage evidence restores exactly')
+  const restoredReport=await target.api('/api/mallet/reports/turnaround'+reportQuery)
+  assert.deepEqual((await downloadReport(target,exportPath)).filter(x=>x.JobId===ro.id),closedRows,'REPORT-006 closed report CSV reproduces exactly after restore')
+  assert.deepEqual(restoredReport.repairs.find(r=>r.jobId===ro.id),measured,'REPORT-004 a closed repair report is identical under fresh native authority')
   assert.deepEqual(stagesOf(await target.api('/api/mallet/board')),stagesOf(await board()),'FLOW-001 stages survive restore')}finally{await target.close()}
+ await h.api('/auth/operator/status',{operatorId:advisor.id,status:'inactive'})
+ for(const route of ['technicians','turnaround'])await h.api('/api/mallet/reports/'+route+reportQuery+'&format=csv',undefined,{as:advisor.cookie,status:401})
 }

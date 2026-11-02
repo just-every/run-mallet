@@ -2,9 +2,18 @@ import { Done, SectionHead } from '../parts'
 import { count, ro } from '../record'
 import run from '../../run.json'
 
-// The repository is kept on one line when the command wraps on a phone.
-const repo = run.clone.split(' ').at(-1)!
-const command = run.clone.slice(0, -repo.length)
+// The one start line every Run Edit Run page shows (the installer, then rer dev), and the alternative for people who already have Node.
+const START = `curl -fsSL https://runeditrun.com/install.sh | sh -s -- ${run.clone.slice('npx -y @runeditrun/rer '.length)}`
+const ALTERNATIVE = `Already have Node 22 or later? ${run.clone}`
+
+/** A command that wraps only between words, keeping the installer's `install.sh | sh` together. */
+function words(line: string) {
+  return line.split(/(\S*install\.sh \| sh|\S+)/).map((part, index) => {
+    const pipe = /^(.*\/)(install\.sh \| sh)$/.exec(part)
+    if (pipe) return <span key={index}><span className="nw">{pipe[1]}</span><wbr /><span className="nw">{pipe[2]}</span></span>
+    return part.trim() ? <span key={index} className="nw">{part}</span> : part
+  })
+}
 
 const rows: [string, string][] = [
   ['Customers', `${count(4812)} / ${count(4812)}`],
@@ -28,7 +37,7 @@ export function MovingIn() {
             lead="Customers, vehicles, history, canned jobs and open work come across before cutover. Run it yourself with one line." />
           <figure className="terminal" aria-label="Start Mallet on your computer">
             <p className="terminal-dots" aria-hidden="true"><i /><i /><i /></p>
-            <pre><code><span className="prompt" aria-hidden="true">$ </span>{command}<span className="repo">{repo}</span>{'\n'}<span className="comment"># clones, installs and starts Mallet on your computer</span></code></pre>
+            <pre><code><span className="prompt" aria-hidden="true">$ </span>{words(START)}{'\n'}<span className="comment"># {words('installs rer, then gets and starts Mallet on your computer')}</span>{'\n'}<span className="comment"># {words(ALTERNATIVE)}</span></code></pre>
           </figure>
         </div>
         <article className="card import" aria-label="Tekmetric import, reviewed Sunday October 4 at 6:12 pm">

@@ -1,8 +1,10 @@
+import {shopSetup} from './diagnosis-journey.mjs'
 import assert from 'node:assert/strict'
 import {booking,authorise,archive,restore,installation} from '../harness.mjs'
 import {qualityReady} from './quality-ready.mjs'
 
 export async function estimatePricingJourney(h){
+ await shopSetup(h)
  const tech=await h.person('pricing-technician@example.test'),advisor=await h.person('pricing-advisor@example.test','admin')
  const key=await h.command('agent.create',{label:'Pricing preparation'}),agent={as:'',headers:{authorization:`Bearer ${key.token}`}}
  const profileInput={version:0,name:'Metro fleet',kind:'fleet',laborRateCents:10000,reason:'Agreed fleet hourly price'}
@@ -38,6 +40,15 @@ export async function estimatePricingJourney(h){
  for(let i=0;i<3;i++){assert.equal(invoice.lines[i].unitDiscountCents,revision.lines[i].unitDiscountCents);assert.equal(invoice.lines[i].totalCents,revision.lines[i].totalCents)}
  assert.deepEqual(invoice.sources[0].rateProfile,revision.rateProfile)
  invoice=await h.command('invoice.approve',{invoiceId:invoice.id,version:invoice.version,revision:1})
+ const tender={jobId:job.id,invoiceId:invoice.id,version:invoice.version,invoiceRevision:invoice.revision,method:'cash',amountCents:10000,reference:'synthetic-mallet-231',evidence:'Counter staff counted this partial cash tender'}
+ const balancePage=async()=>{const response=await h.request('/app/jobs/'+job.id);assert.equal(response.status,200);return response.text()}
+ assert.match(await balancePage(),/Balance due \$335\.19/)
+ await h.command('payment.record',tender)
+ assert.match(await balancePage(),/Recorded tender net of refunds and account credit \$100\.00[\s\S]*Balance due \$235\.19/)
+ await h.command('payment.record',{...tender,amountCents:23520,reference:'synthetic-mallet-232'},{status:409})
+ await h.command('payment.record',{...tender,amountCents:23519,reference:'synthetic-mallet-232'})
+ assert.match(await balancePage(),/Balance due \$0\.00/)
+ assert.deepEqual((await h.state()).records.invoice.find(i=>i.id===invoice.id).totals,revision.totals,'Tender allocations never reprice the accepted invoice')
  const exported=await h.command('invoice.export',{invoiceId:invoice.id,version:invoice.version})
  const csv=await (await h.request('/api/mallet/exports/'+exported.id)).text()
  assert.match(csv,/"45.00","90.00","6.75","96.75"/);assert.match(csv,/"90.00","225.00","0.00","225.00"/)
@@ -50,5 +61,5 @@ export async function estimatePricingJourney(h){
  assert.equal(household.revisions[0].lines[0].salesTaxCents,360,'EST-001 the later taxable-labor setting rounds $3.5964 half up to $3.60')
  assert.equal(household.revisions[0].lines[1].salesTaxCents,0,'EST-001 explicit fee exemption is frozen separately from parts/labor taxability')
  const saved=await archive(h),fresh=await installation({bindings:{OWNER_EMAIL:'new-pricing-owner@example.test'}})
- try{await restore(fresh,saved);const before=await h.state(),after=await fresh.state();for(const kind of ['rateProfile','estimate','invoice','export'])assert.deepEqual(after.records[kind],before.records[kind],'EST-001 / OPS-001 exact pricing, consent and invoice evidence restores');await fresh.state({as:advisor.cookie,status:401})}finally{await fresh.close()}
+ try{await restore(fresh,saved);const before=await h.state(),after=await fresh.state();for(const kind of ['rateProfile','estimate','invoice','payment','export'])assert.deepEqual(after.records[kind],before.records[kind],'EST-001 / OPS-001 exact pricing, consent and invoice evidence restores');await fresh.state({as:advisor.cookie,status:401})}finally{await fresh.close()}
 }

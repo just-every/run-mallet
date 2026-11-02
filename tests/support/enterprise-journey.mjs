@@ -1,0 +1,58 @@
+import assert from 'node:assert/strict'
+import {randomBytes,createHash} from 'node:crypto'
+import {installation,booking,archive,restore,assetInput} from '../harness.mjs'
+import {enterpriseProviderEdge,enableConnection,scim} from './enterprise-provider.mjs'
+export async function enterpriseJourney(){
+ const edge=enterpriseProviderEdge(),h=await installation({bindings:{MALLET_ENTERPRISE_OIDC:JSON.stringify(edge.providers),OIDC_TRANSACTION_SECRET:'synthetic-mallet-independent-transaction-secret'},outboundService:edge.outbound})
+ try{
+  const admin=await h.person('synthetic-mallet-admin@example.test','admin')
+  await h.api('/api/mallet/enterprise/enable',{provider:edge.providers[0].id,role:'technician',location:'shop',reason:'No owner proof',consent:'yes'},{as:admin.cookie,status:403})
+  await h.api('/api/mallet/enterprise/enable',{provider:edge.providers[0].id,role:'technician',location:'shop',reason:'No factor',consent:'yes'},{status:403})
+  const ownerFactor=await h.stepUp()
+  for(const [i,p] of edge.providers.entries()){
+   const {token}=await enableConnection(h,p),email=`synthetic-mallet-${i}@example.com`,externalId='synthetic-mallet-subject-'+i
+   const user=await scim(h,p,token,'',{method:'POST',body:{userName:email,externalId,displayName:'Taylor Technician '+i,active:true},status:201})
+   assert.equal(user.roles[0].value,'technician')
+   await scim(h,p,token,'',{method:'POST',body:{userName:'owner@example.test',externalId:'synthetic-mallet-collision'},status:409})
+   await scim(h,p,token,'',{method:'POST',body:{userName:'synthetic-mallet-denied@example.com',externalId:'synthetic-mallet-denied',roles:[{value:'owner'}]},status:403})
+   const {job}=await booking(h,{asset:await h.command('asset.create',assetInput('enterprise-'+i)),technicianId:user.id,startAt:`2026-11-${10+i}T09:00:00Z`,endAt:`2026-11-${10+i}T10:00:00Z`,bayId:'Bay '+i})
+   let {cookie}=await edge.signIn(h,p,externalId,email)
+   await h.api('/api/mallet/security/policy',{requireAll:true})
+   await h.api('/api/mallet/state',undefined,{as:cookie,status:403})
+   const factor=await h.stepUp(cookie)
+   assert.equal((await h.api('/auth/session',undefined,{as:cookie})).operator.id,user.id)
+   assert.ok((await h.api('/api/mallet/state',undefined,{as:cookie})).records.job.some(j=>j.id===job.id))
+   assert.equal((await h.request('/app/jobs/'+job.id,{as:cookie})).status,200)
+   const wrong=await edge.signIn(h,p,'synthetic-mallet-unmapped',email,{status:403});await h.api('/auth/session',undefined,{as:wrong.cookie,status:401})
+   const forged=await h.signInAs(email);await h.api('/auth/session',undefined,{as:forged,status:401});await h.api('/auth/operators',undefined,{as:forged,status:401});await h.api('/api/mallet/state',undefined,{as:forged,status:401})
+   const mail=h.messages.length;await h.api('/auth/magic-link',{email},{as:'',status:202});assert.equal(h.messages.length,mail)
+   const filtered=await scim(h,p,token,'?filter='+encodeURIComponent('userName eq '+JSON.stringify(email)));assert.equal(filtered.totalResults,1);assert.equal(filtered.Resources[0].id,user.id)
+   await scim(h,p,token,'/'+user.id,{method:'PATCH',body:{Operations:[{op:'replace',path:'active',value:false}]}})
+   await h.api('/api/mallet/state',undefined,{as:cookie,status:401});await h.api('/auth/session',undefined,{as:cookie,status:401});assert.ok([303,401].includes((await h.request('/app/jobs/'+job.id,{as:cookie})).status))
+   assert.equal((await h.state()).records.job.find(j=>j.id===job.id).technicianId,user.id)
+   await edge.signIn(h,p,externalId,email,{status:403})
+   await scim(h,p,token,'/'+user.id,{method:'PATCH',body:{Operations:[{op:'replace',value:{active:true}}]}})
+   await h.api('/api/mallet/state',undefined,{as:cookie,status:401})
+   const again=await edge.signIn(h,p,externalId,email);await h.api('/api/mallet/state',undefined,{as:again.cookie,status:403});await h.api('/api/mallet/security/verify/recovery',{code:factor.recoveryCodes[0]},{as:again.cookie});assert.equal((await h.api('/auth/session',undefined,{as:again.cookie})).operator.id,user.id)
+   const rotated=await h.api('/api/mallet/enterprise/rotate',{provider:p.id,reason:'Credential rotation',consent:'yes'})
+   await scim(h,p,token,'',{status:401});await scim(h,p,rotated.token)
+   await h.api('/api/mallet/enterprise/revoke',{provider:p.id,reason:'Connection withdrawn',consent:'yes'})
+   await scim(h,p,rotated.token,'',{status:401});await h.api('/api/mallet/state',undefined,{as:again.cookie,status:401})
+   const dump=JSON.stringify(await archive(h));assert.ok(!dump.includes(token));assert.ok(!dump.includes(rotated.token));assert.ok(!dump.includes(email));assert.ok(!dump.includes(externalId))
+  }
+  const history=(await h.api('/api/mallet/audit?action=enterprise.user.updated')).entries;assert.equal(history.length,6)
+  const backup=await archive(h),fresh=await installation();try{await restore(fresh,backup);assert.equal((await fresh.state()).records.job.length,3);assert.equal((await fresh.api('/api/mallet/enterprise')).users.length,0);assert.ok((await fresh.api('/api/mallet/audit?action=enterprise.user.provisioned')).entries.length===3)}finally{await fresh.close()}
+  await enableConnection(h,edge.providers[2]);edge.setAvailable(false)
+  // The deployment-authorized mint is the external Cloudflare edge; admission,
+  // one-time consumption and the owner's own factor use the real public doors.
+  const db=await h.mf.getD1Database('DB'),owner=await db.prepare("SELECT id,version FROM oa_operators WHERE role='owner' AND status='active'").first(),token=randomBytes(32).toString('base64url'),now=Date.now()
+  await db.prepare('INSERT INTO oa_owner_signins(id,token_hash,operator_id,operator_version,created_at,expires_at) VALUES(?,?,?,?,?,?)').bind('synthetic-mallet-enterprise-recovery',createHash('sha256').update('owner-signin\0'+token).digest('hex'),owner.id,owner.version,now,now+600000).run()
+  const recovered=await h.request('/auth/owner-signin',{method:'POST',as:'',body:{token}});assert.equal(recovered.status,303)
+  const recovery=recovered.headers.getSetCookie().map(value=>value.split(';')[0]).join('; ')
+  assert.equal((await h.api('/api/mallet/security',undefined,{as:recovery})).session.deploymentRecovery,true)
+  await h.api('/api/mallet/state',undefined,{as:recovery,status:403})
+  await h.api('/api/mallet/security/verify/recovery',{code:ownerFactor.recoveryCodes[0]},{as:recovery})
+  assert.equal((await h.state({as:recovery})).records.job.length,3)
+  assert.equal((await h.request('/auth/owner-signin',{method:'POST',as:'',body:{token}})).status,400)
+ }finally{await h.close()}
+}

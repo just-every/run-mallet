@@ -1,0 +1,3 @@
+export type ProjectionDocument={doc_id:number;kind:string;source_id:string;account_id:string|null;merged_into:string|null;terms:string;phone_digits:string;search_text:string;has_unicode:number}
+export function buildSearchProjection(records:Iterable<{kind:string;id:string;value:string|Record<string,any>}>,firstDocId?:number):{mallet_search_documents:ProjectionDocument[];mallet_search_grams:{gram:string;doc_id:number}[];mallet_search_members:{account_id:string;contact_id:string}[]}
+export function validateSearchProjection(db:{prepare(sql:string):any},tables:Record<string,string>):Promise<boolean>

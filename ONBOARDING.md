@@ -19,7 +19,7 @@ The foundation edition owns:
 - `src/branding.json`, which stores the app's actual name and color.
 
 The current manifest collects `APP_NAME`, `PRIMARY_COLOR`, `OWNER_EMAIL`,
-`SESSION_SECRET` and `SETUP_TOKEN`. The owner email is required; the local CLI
+`SESSION_SECRET`, `INTAKE_VAULT_KEY` and `SETUP_TOKEN`. The owner email is required; the local CLI
 may prompt for it or accept the documented owner-email flag. Managed secrets
 are kept private. The branding hook writes application values before the real
 build; the owner-claim step uses the declared owner and setup-token fields.

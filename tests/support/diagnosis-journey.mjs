@@ -22,7 +22,7 @@ export async function diagnosisJourney(h,{person=h.person}={}){
  d=await h.command('diagnosis.share',{diagnosisId:d.id,version:d.version,revision:2,share:true},ADV)
  d=await h.command('diagnosis.record',{jobId:job.id,version:await version(),diagnosisId:d.id,diagnosisVersion:d.version,...entry,customerExplanation:'UNREVIEWED draft explanation'},T)
  assert.equal(d.revisions.length,3);assert.equal(d.shared.revision,2,'DIAG-001 a later revision stays private until an advisor shares it')
- await h.command('diagnosisLink.create',{jobId:job.id},{...T,status:403});await h.command('diagnosisLink.create',{jobId:job.id,days:31},{status:400})
+ await h.command('diagnosisLink.create',{jobId:job.id},{...T,status:403});await h.command('diagnosisLink.create',{jobId:job.id,days:32},{status:400})
  const link=await h.command('diagnosisLink.create',{jobId:job.id,days:7}),path=new URL(link.url).pathname,before=await h.state()
  assert.equal(link.sentByMallet,false);assert.ok(!JSON.stringify(before.records.diagnosisLink).includes(path.split('/').at(-1)),'DIAG-001 only a hash of the token is stored')
  const view=await h.request(path,{as:''}),html=await view.text()

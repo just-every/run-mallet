@@ -1,4 +1,4 @@
-Mallet runs on your own computer with one command, `rer dev`. You need no account anywhere, and nothing you type into Mallet leaves your machine.
+Mallet runs on your own computer with one line. You need no account anywhere, and nothing you type into Mallet leaves your machine.
 
 ## What you need
 
@@ -8,21 +8,15 @@ Mallet runs on your own computer with one command, `rer dev`. You need no accoun
 
 ## Get Mallet and start it
 
-These are the two lines the [Run page](https://run-mallet.com/run) shows. First install `rer`, the Run Edit Run command that installs, starts and stops Mallet. It brings its own Node when you have no Node 22 or later:
+This is the line the [Run page](https://run-mallet.com/run) shows. It installs `rer`, the Run Edit Run command that installs, starts and stops Mallet (it brings its own Node when you have no Node 22 or later), then gets Mallet and starts it:
 
 ```sh
-curl -fsSL https://runeditrun.com/install.sh | sh
+curl -fsSL https://runeditrun.com/install.sh | sh -s -- dev just-every/run-mallet
 ```
 
-If the installer ends with a line to run, run it: it puts `rer` on your PATH. Then get Mallet and start it:
+Git is required; rer brings Node and pnpm. Already have Node 22 or later? `npx -y @runeditrun/rer dev just-every/run-mallet` does the same. If the installer prints a line that puts `rer` on your PATH, run that line too.
 
-```sh
-rer dev just-every/run-mallet
-```
-
-Already have Node 22 or later? `npx -y @runeditrun/rer dev just-every/run-mallet` does both steps in one line.
-
-`rer dev` clones Mallet into a `run-mallet` folder, installs everything it needs, makes you the owner and starts the app. To start it again later, run `cd run-mallet && rer dev`. The first launch takes a few minutes. If it is interrupted, run the same command again: it carries on from where it stopped.
+`rer dev` clones Mallet into a `run-mallet` folder, installs everything it needs, makes you the owner and starts the app. To start it again later, run the same line from the same folder, or `cd run-mallet && rer dev`. The first launch takes a few minutes. If it is interrupted, run the same command again: it carries on from where it stopped.
 
 When it is ready it prints three lines:
 

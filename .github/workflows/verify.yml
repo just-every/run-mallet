@@ -39,12 +39,13 @@ jobs:
   shards:
     needs: plan
     runs-on: ubuntu-24.04
-    timeout-minutes: ${{ inputs.timeout || 12 }}
+    timeout-minutes: ${{ inputs.timeout || (matrix.name == 'workshop-core' && 19) || 12 }}
     strategy:
       fail-fast: false
       matrix: ${{ fromJSON(needs.plan.outputs.matrix) }}
     env:
       CI: 'true'
+      GH_TOKEN: ${{ github.token }}
       WRANGLER_SEND_METRICS: 'false'
       PLAYWRIGHT_SKIP_BROWSER_GC: '1'
     steps:
@@ -55,6 +56,8 @@ jobs:
         with:
           node-version: '22.20.0'
           package-manager-cache: false
+      - name: Check generated contract documents
+        run: node src/base/contract-docs.mjs check
       - name: Check edition source lock freshness
         if: ${{ hashFiles('edition.json', 'sources.lock.json') != '' }}
         run: node scripts/edition-authoring/cli.mjs check

@@ -5,20 +5,37 @@ import { firstRunResponse } from './mallet/setup'
 import { fontDocumentResponse } from './base/font-response'
 import { createOperatorAuth, createAuthHandler, createSignInHandler, type AuthConfig } from './modules/operator-auth/index.mjs'
 import { operatorMail } from './mail.server.mjs'
+import { authGate } from './mallet/strong-auth/base-gate'
+import { confirmFreshSignIn } from './mallet/strong-auth/sign-in-proof'
 import branding from './branding.json'
+import {samlResponse,samlSignInAuth} from './mallet/enterprise/saml-door'
+import {enterpriseSignInResponse} from './mallet/enterprise/sign-in-response'
+import {enterpriseProviders} from './mallet/enterprise/config'
+import {enterpriseHooks,enterpriseSessionAllowed} from './mallet/enterprise/session'
+import { businessSettings } from './mallet/business.ts'
 
 // The edition's declared theme (public/rer-theme.css), as Base frames link it.
 const theme = { href: '/rer-theme.css', productName: branding.name, accentColor: branding.primaryColor }
 
 export interface Bindings {
+ /** Optional shop-owned Stripe credential, configured privately; never part of product archives. */
+ MALLET_SUPPLIER_ORIGIN?: string
+ MALLET_SUPPLIER_KEY?: string
+ STRIPE_SECRET_KEY?: string
  PIER_ORIGIN?: string
  PIER_SESSION?: string
+ /** Per-secret data keys, excluded from archives and D1 point-in-time recovery. */
+ INTAKE_VAULT?: R2Bucket
+ INTAKE_VAULT_KEY?: string
  DB: D1Database
  /** Built browser files; hosted deploys run the Worker first (staticAssetResponse). */
  ASSETS?: Fetcher
  RER_DEPLOY_SOURCE?: string
  RER_DEPLOY_FINGERPRINT?: string
  RER_VERSION?: { id: string }
+ MALLET_ENTERPRISE_SAML?: string
+ MALLET_ENTERPRISE_OIDC?: string
+ OIDC_TRANSACTION_SECRET?: string
  IDENTITY_PROVIDER?: string
  AUTH_ORIGIN: string
  AUTH_LOCAL?: string
@@ -33,26 +50,36 @@ export interface Bindings {
  RER_OWNER_CLAIM_ISSUER?: string
  RER_OWNER_CLAIM_INSTALLATION_ID?: string
  RER_OWNER_CLAIM_PUBLIC_KEYS?: string
+ RER_BUSINESS_TRUST?: string
  RER_MANAGEMENT_ORIGIN?: string
  OWNER_EMAIL: string
+ INSTALLATION_KEY?: string
+ INSTALLATION_KEY_PREVIOUS?: string
  SESSION_SECRET: string
  SETUP_TOKEN?: string
- MAIL_PROVIDER?: 'development' | 'resend' | 'sendgrid' | 'cloudflare'
+ MAIL_PROVIDER?: 'development' | 'rer' | 'resend' | 'sendgrid' | 'cloudflare'
+ MAIL_RELAY_URL?: string
  MAIL_FROM?: string
+ MAIL_EVENT_KEY?: string
  MAIL_API_KEY?: string
  MAIL_ACCOUNT_ID?: string
 }
 
 export const runtimeBindings = (env: Bindings): Bindings => env.RER_DEV_ORIGIN && env.AUTH_LOCAL === 'true' ? { ...env, AUTH_ORIGIN: env.RER_DEV_ORIGIN } : env
-export const authConfig = (env: Bindings): AuthConfig => ({ dependencies: true, origin: env.AUTH_ORIGIN, local: env.AUTH_LOCAL === 'true', OWNER_EMAIL: env.OWNER_EMAIL, SESSION_SECRET: env.SESSION_SECRET, SETUP_TOKEN: env.SETUP_TOKEN, MAIL_FROM: env.MAIL_FROM, branding: { productName: branding.name, accentColor: branding.primaryColor, signInPath: '/signin', theme: theme.href } })
-export function operatorAuth(env: Bindings) {
- return createOperatorAuth({ db: env.DB, config: authConfig(env), mailSender: operatorMail(env), clientIp: request => request.headers.get('CF-Connecting-IP') ?? '' })
+export const authConfig = (env: Bindings): AuthConfig => ({ dependencies: true, origin: env.AUTH_ORIGIN, local: env.AUTH_LOCAL === 'true', OWNER_EMAIL: env.OWNER_EMAIL, SESSION_SECRET: env.SESSION_SECRET, INSTALLATION_KEY: env.INSTALLATION_KEY, INSTALLATION_KEY_PREVIOUS: env.INSTALLATION_KEY_PREVIOUS, SETUP_TOKEN: env.SETUP_TOKEN, MAIL_FROM: env.MAIL_FROM, branding: { productName: branding.name, accentColor: branding.primaryColor, signInPath: '/signin', theme: theme.href } })
+export async function operatorAuth(env: Bindings) {
+ const auth=createOperatorAuth({ db: env.DB, config: {...authConfig(env),providers:await enterpriseProviders(env),OIDC_TRANSACTION_SECRET:env.OIDC_TRANSACTION_SECRET}, hooks:enterpriseHooks(env), mailSender: operatorMail(env), clientIp: request => request.headers.get('CF-Connecting-IP') ?? '', businessSettings: await businessSettings(env) })
+ return {...auth,rejectedEnterpriseSession:async(request:Request)=>{const session=await auth.getSession(request);return !!session&&!await enterpriseSessionAllowed(env,session)},getSession:async(request:Request)=>{const session=await auth.getSession(request);return session&&await enterpriseSessionAllowed(env,session)?session:null}}
 }
 
 async function handleAuthResponse(request: Request, original: Bindings): Promise<Response | null> {
  const env = runtimeBindings(original), url = new URL(request.url)
+ if(!url.pathname.startsWith('/auth/')&&!url.pathname.startsWith('/.well-known/rer-')&&url.pathname!=='/signin'&&url.pathname!=='/setup'&&url.pathname!=='/app'&&!url.pathname.startsWith('/app/'))return null
+ const saml=await samlResponse(request,env);if(saml)return saml
+ // Deployment recovery has no dependency on enterprise configuration or provider reachability.
+ const auth=url.pathname==='/auth/owner-signin'?{...createOperatorAuth({db:env.DB,config:authConfig(env),mailSender:operatorMail(env),clientIp:req=>req.headers.get('CF-Connecting-IP')??''}),rejectedEnterpriseSession:async()=>false}:await operatorAuth(env)
  if (url.pathname.startsWith('/.well-known/rer-') || url.pathname.startsWith('/auth/dependencies/')) {
-  const linked = await createDependencies({ db: env.DB, origin: env.AUTH_ORIGIN, name: branding.name, provider: env.IDENTITY_PROVIDER, local: env.AUTH_LOCAL === 'true', auth: operatorAuth(env), claimOwner: token => createIdpOwnerClaimHandler({db:env.DB,authConfig:authConfig(env),clientIp:()=>request.headers.get('CF-Connecting-IP')??''})(new Request(env.AUTH_ORIGIN+'/auth/owner-claim',{method:'POST',headers:{Host:new URL(env.AUTH_ORIGIN).host,Origin:env.AUTH_ORIGIN,'Content-Type':'application/json'},body:JSON.stringify({token})})) }).handle(request)
+  const linked = await createDependencies({ db: env.DB, origin: env.AUTH_ORIGIN, name: branding.name, provider: env.IDENTITY_PROVIDER, INSTALLATION_KEY: env.INSTALLATION_KEY, INSTALLATION_KEY_PREVIOUS: env.INSTALLATION_KEY_PREVIOUS, local: env.AUTH_LOCAL === 'true', auth, claimOwner: token => createIdpOwnerClaimHandler({db:env.DB,authConfig:authConfig(env),clientIp:()=>request.headers.get('CF-Connecting-IP')??''})(new Request(env.AUTH_ORIGIN+'/auth/owner-claim',{method:'POST',headers:{Host:new URL(env.AUTH_ORIGIN).host,Origin:env.AUTH_ORIGIN,'Content-Type':'application/json'},body:JSON.stringify({token})})) }).handle(request)
   if (linked) return linked
  }
  // A signed owner claim (a hosted demo's front) when its keys are configured; a missing part fails closed.
@@ -63,14 +90,17 @@ async function handleAuthResponse(request: Request, original: Bindings): Promise
  if (url.pathname === '/auth/owner-claim') return createIdpOwnerClaimHandler({db:env.DB,authConfig:authConfig(env),clientIp:req=>req.headers.get('CF-Connecting-IP')??''})(request)
  // The shared server-rendered sign-in page: plain forms that work before any script.
  if (url.pathname === '/signin') {
-  const page = await createSignInHandler(operatorAuth(env), {
+  const page = await createSignInHandler(await samlSignInAuth(env,auth), {
    defaultReturnTo: '/setup',
   })(request)
   if (page) return fontDocumentResponse(page)
  }
- if (url.pathname.startsWith('/auth/')) return fontDocumentResponse(await createAuthHandler(operatorAuth(env))(request))
- if (url.pathname === '/setup' || url.pathname === '/app' || url.pathname.startsWith('/app/')) {
-  const setup = await firstRunResponse(request, env, operatorAuth(env), { theme })
+ if(url.pathname.startsWith('/auth/')&&!/^\/auth\/(oidc\/|signout$|confirm$|magic-link$|owner-signin$)/.test(url.pathname)&&await auth.rejectedEnterpriseSession(request))return Response.json({error:'enterprise_provider_required'},{status:401,headers:{'cache-control':'no-store'}})
+ const held = await authGate(request, env, req => auth.getSession(req))
+ if (held) return held
+ if (url.pathname.startsWith('/auth/')) return fontDocumentResponse(await createAuthHandler(auth)(request))
+ if (url.pathname === '/setup' || url.pathname === '/app' || (url.pathname.startsWith('/app/') && !url.pathname.startsWith('/app/security'))) {
+  const setup = await firstRunResponse(request, env, auth, { theme })
   if (setup) return setup
  }
  return null
@@ -78,5 +108,6 @@ async function handleAuthResponse(request: Request, original: Bindings): Promise
 
 export async function authResponse(request: Request, original: Bindings): Promise<Response | null> {
  const response = await handleAuthResponse(request, original)
- return response ? rejectedResponse(request, response) : null
+ if(response)await confirmFreshSignIn(request,original,response)
+ return response ? rejectedResponse(request, await enterpriseSignInResponse(request,response,async req=>(await operatorAuth(runtimeBindings(original))).getSession(req))) : null
 }

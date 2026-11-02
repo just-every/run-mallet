@@ -1,3 +1,5 @@
+import {handover} from './returns'
+import {assertSubletsReady,jobSublets} from './sublet'
 import {bump,choice,event,expectVersion,fail,find,integer,put,rows,text,who,type Context,type Handler,type Row,type State} from './model'
 import {openJob} from './workshop'
 import {jobEstimates} from './supplement-scope'
@@ -34,6 +36,7 @@ export function flowStage(s:State,job:Row):Stage {
 export function flowBlockers(s:State,job:Row,stage:Stage,projection:any):string[] {
  const blockers:string[]=[],quotes=jobEstimates(s,job),invoice=list(s,'invoice').find(i=>i.jobId===job.id),flow=flowRecord(s,job.id)
  if(stage==='closed')return blockers
+ for(const r of jobSublets(s,job.id))if(!r.receipt)blockers.push(`Outside custody: ${r.item} at ${r.supplier}; ETA ${r.etaHistory.at(-1).eta}`)
  for(const q of quotes){
   const label=q.supplementOf?`Supplement ${q.sequence}`:'Estimate'
   if(q.status==='draft')blockers.push(`${label} waiting for a person to approve`)
@@ -97,9 +100,14 @@ export const flow:Handler=(c,command,p)=>{
  }
  if(command==='flow.close'){
   const job=openJob(c,p),outcome=choice(p.outcome,['canceled','lost'] as const,'outcome'),reason=text(p.reason,'reason',2000)
+  if(jobSublets(c.s,job.id).length)fail('SUBLET_CUSTODY','Keep the repair open until its approved outsourced work is received, quality-cleared and billed.')
   if(job.actuals.length)fail('WORK_RECORDED','Recorded work stays on this repair: complete and invoice it instead of canceling.')
   if(list(c.s,'timeEntry').some(t=>t.kind==='job'&&t.jobId===job.id&&timeRange(t).endAt===null))fail('TIMER_RUNNING','Pause the running job timer before closing this repair.')
   const stage=flowStage(c.s,job)
+  for(const reservation of rows(c.s,'stockReservation').filter(r=>r.jobId===job.id&&!r.release)){
+   bump(c.s,'stockReservation',reservation,{release:{kind:'cancellation',by:who(c),at:c.now,reason}})
+   event(c,'stock.release',job.id,reservation.id,{reason,outcome})
+  }
   const saved=bump(c.s,'job',job,{status:outcome,closure:{outcome,reason,stage,by:who(c),at:c.now}})
   event(c,command,job.id,job.id,{outcome,reason,stage});return saved
  }
@@ -107,8 +115,10 @@ export const flow:Handler=(c,command,p)=>{
  const current=flowFor(c,job.id,p.flowVersion),invoice=list(c.s,'invoice').find(i=>i.jobId===job.id)
  if(!['completed','invoiced'].includes(job.status))fail('NOT_READY','Only a completed, quality-cleared repair can be collected.')
  if(!invoice||!['approved','exported'].includes(invoice.status))fail('INVOICE_REQUIRED','A person must approve this repair’s invoice before collection is recorded.')
+ assertSubletsReady(c.s,job)
  if(current?.collection)fail('COLLECTED','Collection is already recorded for this repair.')
- const collection={collectorName:text(p.collectorName,'collector name',200),note:text(p.note,'collection note',2000,true),invoiceId:invoice.id,invoiceNumber:invoice.number,invoiceStatus:invoice.status,label:COLLECTION_LABEL,by:who(c),at:c.now}
+ const receipt=handover(c,job,invoice,p)
+ const collection={handoverId:receipt.id,collectorName:text(p.collectorName,'collector name',200),note:text(p.note,'collection note',2000,true),invoiceId:invoice.id,invoiceNumber:invoice.number,invoiceStatus:invoice.status,label:receipt.label,by:who(c),at:c.now}
  const saved=save(c,job.id,current,{collection});event(c,command,job.id,saved.id,{collectorName:collection.collectorName,invoiceNumber:invoice.number,invoiceStatus:invoice.status});return saved
 }
 /** Members see board records only for repairs they are on. */
