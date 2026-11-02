@@ -951,3 +951,6 @@ test('RETURN-002: reviewed CA and TX storage versions, notice clocks, disposal r
 test('RETURN-002: native storage rules, notices, legal refusal and released ledger at 1440 and 390',async()=>{const {storageBrowser}=await import('./storage-browser.mjs');await storageBrowser()})
 
 test('agent preparation resources retain exact outcomes and enforce current native authority with attributable browser readback',resourceAuthorityJourney)
+test('SHOP-001: two-state locations, local invoices, custody transfers, reconciled results and manager isolation recover without grants',()=>run(async h=>{const {locationJourney}=await import('./support/locations-journey.mjs');await locationJourney(h)}))
+
+test('SHOP-001: native one-location manager grant and scoped staff workspace at 1440 and 390',async()=>{const {locationsBrowser}=await import('./locations-browser.mjs');await locationsBrowser()})

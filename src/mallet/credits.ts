@@ -1,3 +1,4 @@
+import {recordLocation} from './locations'
 import {bump,choice,event,expectVersion,fail,find,integer,put,rows,text,who,type Handler,type State,type Row} from './model'
 import {quantity,totals} from './money'
 import {invoiceBalance,depositReferenceUsed} from './payments'
@@ -59,7 +60,7 @@ export const credits:Handler=(c,command,p)=>{
   event(c,command,invoice.jobId,note.id,{number:note.number,totalCents:note.totals.totalCents});return note
  }
  if(command==='credit.apply'||command==='credit.exchange'){
-  const note=find(c.s,'creditNote',p.creditNoteId),invoice=find(c.s,'invoice',p.invoiceId);expectVersion(invoice,p.version)
+  const note=find(c.s,'creditNote',p.creditNoteId),invoice=find(c.s,'invoice',p.invoiceId);if(recordLocation(c.s,'creditNote',note)!==recordLocation(c.s,'invoice',invoice))fail('LOCATION_FUNDS','Customer credit cannot cross location ledgers.');expectVersion(invoice,p.version)
   const amountCents=integer(p.amountCents,'credit allocation cents',1),reference=text(p.reference,'unique allocation reference'),reason=text(p.reason,'allocation or exchange reason',2000)
   if(p.confirm!=='apply-credit')fail('CREDIT_REVIEW','Confirm this exact credit allocation.')
   const redirected=rows(c.s,'refund').find(r=>r.creditNoteId===note.id)?.redirect
