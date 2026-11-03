@@ -491,7 +491,7 @@ test('dispatch proposal is inert until a person approves current free resources'
  assert.equal(saved.jobId,job.id);assert.equal(saved.jobVersion,job.version);assert.equal(saved.status,'pending')
  assert.deepEqual(saved.preparedBy,{id:key.id,name:'Dispatcher',role:'agent'})
  assert.ok(Number.isFinite(Date.parse(saved.preparedAt)))
- assert.deepEqual(saved.plan,{liftId:'',loanerId:'',requiredSkill:'',bayId:'Bay 2',technicianId:'Jordan',startAt:'2026-10-19T23:00:00.000Z',endAt:'2026-10-20T00:00:00.000Z'})
+ assert.deepEqual(saved.plan,{locationId:'shop',liftId:'',loanerId:'',requiredSkill:'',bayId:'Bay 2',technicianId:'Jordan',startAt:'2026-10-19T23:00:00.000Z',endAt:'2026-10-20T00:00:00.000Z'})
  assert.equal((await h.state()).records.job[0].bayId,'Bay 1')
  await h.command('dispatch.approve',{proposalId:p.id,version:p.version},{...agent,status:403})
  await h.command('dispatch.approve',{proposalId:p.id,version:p.version})
@@ -951,3 +951,6 @@ test('RETURN-002: reviewed CA and TX storage versions, notice clocks, disposal r
 test('RETURN-002: native storage rules, notices, legal refusal and released ledger at 1440 and 390',async()=>{const {storageBrowser}=await import('./storage-browser.mjs');await storageBrowser()})
 
 test('agent preparation resources retain exact outcomes and enforce current native authority with attributable browser readback',resourceAuthorityJourney)
+test('SHOP-001: two-state locations, local invoices, custody transfers, reconciled results and manager isolation recover without grants',()=>run(async h=>{const {locationJourney}=await import('./support/locations-journey.mjs');await locationJourney(h)}))
+
+test('SHOP-001: native one-location manager grant and scoped staff workspace at 1440 and 390',async()=>{const {locationsBrowser}=await import('./locations-browser.mjs');await locationsBrowser()})

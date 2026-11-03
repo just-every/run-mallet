@@ -8,7 +8,7 @@ import type {ErasurePlan,MediaInventory} from './plans'
 import type {Sql} from '../media/types'
 
 export function erasedAsset(asset:Row,at:string):Row{
- return {id:asset.id,version:asset.version+1,label:asset.label,identifier:asset.identifier,visits:asset.visits??[],createdAt:asset.createdAt,customerAccountId:asset.customerAccountId,customerName:'Erased customer',customerEmail:'',driverContactId:null,privacyErasedAt:at,updatedAt:at}
+ return {...(asset.locationId?{locationId:asset.locationId}:{}),id:asset.id,version:asset.version+1,label:asset.label,identifier:asset.identifier,visits:asset.visits??[],createdAt:asset.createdAt,customerAccountId:asset.customerAccountId,customerName:'Erased customer',customerEmail:'',driverContactId:null,privacyErasedAt:at,updatedAt:at}
 }
 export function personalCleanup(state:State,scope:CustomerScope,at:string){
  const queries:Sql[]=[],counts={accounts:0,contacts:0,sharedContactsRetained:0}
