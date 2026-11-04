@@ -504,8 +504,8 @@ Core · target · **partial** · From EST-006 · Cites BASE-MAIL-001, BASE-AGENT
 1. Reject or interrupt an estimate send or reminder; one visible advisor task retains the related repair and outcome.
 2. Let the current revision expire undecided, including after opt-out; its unanswered task remains until an authorized person resolves it with a note.
 
-**Evidence.** `src/mallet/approval-chasing.ts`; `src/mallet/approval-door.ts`; `src/mallet/approval-links.ts`; `src/mallet/ui/chasing.ts`; `migrations/core/0023_approval_reminders.sql`; `tests/support/chase-journey.mjs`; `tests/approval-browser.mjs`
-**Gap.** Not asserted in the old cited evidence: An interrupted uncertain send opens the distinct recovery outcome. Asserted: A rejected send opens one advisor task; The task retains the rejected reminder outcome; An expired undecided revision has an unanswered task; Resolution retains the authorized person; Resolution retains the entered note.
+**Evidence.** `tests/support/chase-journey.mjs` — chaseJourney: rejected and interrupted sends retain one repair, link, estimate and revision task; scheduler replay preserves uncertainty without another handoff; technician and agent resolution refusals preserve records; admin resolution retains actor and note; unanswered expiry and exact archive recovery. `tests/approval-browser.mjs` — chaseBrowser and uncertainTaskBrowser, registered in `tests/mallet.test.mjs`: native opt-out, unanswered expiry and owner resolution of interrupted delivery, with repair and queue readback at 1440 and 390.
+**Gap.** Not asserted in the old cited evidence: An interrupted uncertain send opens the distinct recovery outcome. Asserted: A rejected send opens one advisor task; The task retains the rejected reminder outcome; An expired undecided revision has an unanswered task; Resolution retains the authorized person; Resolution retains the entered note. Agent reminder evaluation as external under the company’s class policy remains unimplemented and unproved under BASE-AGENT-005, BASE-AGENT-006 and BASE-AGENT-007. Expanded native authority remains held under ADV-008 and GOV-001.
 
 ### Workshop execution and technician work
 
