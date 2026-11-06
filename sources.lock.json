@@ -1488,7 +1488,7 @@
       "executable": false
     },
     "scripts/verify-app.mjs": {
-      "sha256": "a175c55f800ad25fae8f30fc0020cc90ca4b2bd72ad7853c8b610174b67038c3",
+      "sha256": "572f84b8b02315fd5b24ce5b12970db2dba30556ddc4a9c8996c69e08ead714b",
       "executable": false
     },
     "scripts/verify-ci.mjs": {

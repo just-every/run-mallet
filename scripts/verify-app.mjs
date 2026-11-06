@@ -40,9 +40,11 @@ function balancedPush(push) {
   'ADV-008|FLOW-002|FLOW-004|CUS-001|PART-008|GOV-001|DIAG-001|DATA-001|OPS-001|booking',
  ];
  const patterns = prefixes.map(prefix => `^(?:${prefix})\\b`);
- patterns.push(`^(?!(?:${prefixes.join('|')})\\b)`);
+ patterns.push(`^(?:${prefixes.join('|')})\\b`);
  const tax = (pattern, skip = false) => take('sales-tax').map(command => command.replace(' tests/sales-tax.test.mjs', ` --test-${skip ? 'skip' : 'name'}-pattern='${pattern}' tests/sales-tax.test.mjs`));
- const mallet = index => `node --test --test-concurrency=1 --test-name-pattern='${patterns[index]}' tests/mallet.test.mjs`;
+ // A negative name pattern can match Node's file container and select every
+ // child. Skip the positive union instead, leaving only unassigned journeys.
+ const mallet = index => `node --test --test-concurrency=1 --test-${index === prefixes.length ? 'skip' : 'name'}-pattern='${patterns[index]}' tests/mallet.test.mjs`;
  const shard = (name, index, commands = [], hosted = false) => ({ name, browser: true, hosted, commands: [...commands, mallet(index)] });
  const result = [
   // Only this job builds and retains rer verify's hosted-output, hydration and
