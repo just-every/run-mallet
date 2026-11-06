@@ -13,7 +13,7 @@ The primary journey: check in the customer and asset, diagnose and inspect, pric
 | Later | 0 | 0 | 0 | 0 |
 | Full target | 23 | 88 | 59 | 170 |
 
-Judged from the code and tests at commit `39e7b596fc2a2a9cd592c139276f47f1611565d0` (30 October 2026). Field proof register: 12 rows; 0 passed, 0 failed, 12 not run.
+Judged from the code and tests at commit `ef05bdd98623be2787920e14bf3aedb0d8d4f812` (30 October 2026). Field proof register: 12 rows; 0 passed, 0 failed, 12 not run.
 
 ## Core
 
@@ -40,7 +40,7 @@ Core · published · **partial** · Rules D-1, D-2, D-3
 **Acceptance.**
 1. Register an asset through the counter form, book repeat visits and try overlapping bay and technician bookings through the command API; inspect the conflict and complete service history.
 
-**Evidence.** `src/mallet/workshop.ts`; `tests/mallet.test.mjs`; `tests/browser-journey.mjs`
+**Evidence.** `tests/mallet.test.mjs` — booking rejects bay and technician collisions and keeps every asset visit; `tests/browser-journey.mjs` — workshopBrowser, registered as WORKSHOP-001 and INVOICE-001: native registration, repeat visits and exact saved invoice at 1440 and 390 in `tests/mallet.test.mjs`
 **Gap.** Not asserted in the old cited evidence: Counter registration creates the asset; Technician collision outcome is read back; History download names the second visit. Asserted: Repeated visits remain in history; Bay collision is read back.
 
 #### ESTIMATE-001 — Exact decision
@@ -64,7 +64,7 @@ Core · published · **partial** · Cites BASE-ROLE-001 · Rules D-1, D-2, D-3
 **Acceptance.**
 1. As an assigned member record an authorized line; refuse another job, an unapproved line and excess quantity, then complete and inspect actor and revision evidence.
 
-**Evidence.** `src/mallet/workshop.ts`; `src/mallet/model.ts`; `tests/mallet.test.mjs`
+**Evidence.** `src/mallet/workshop.ts`; `src/mallet/model.ts`; `tests/mallet.test.mjs`; tests/browser-journey.mjs — estimateDecisionBrowser proves persisted actuals and completion.
 **Gap.** Not asserted in the old cited evidence: Assigned member actual is read back; Another-job refusal has unchanged actuals; Unapproved-line refusal has unchanged actuals; Excess-quantity refusal has unchanged actuals; Completed job retains actual actor; Completed job retains exact source revision. The native journeys exercise the workflow, but their title, performed step or uncited helper is not a point-level assertion here.
 
 #### INVOICE-001 — One saved export
@@ -76,7 +76,7 @@ Core · published · **partial** · Rules D-1, D-2, D-3
 **Acceptance.**
 1. Complete authorized work, prepare and approve the invoice through the app, export twice with current and preceding versions, and compare saved identity, lines, totals and approval history.
 
-**Evidence.** `src/mallet/invoices.ts`; `tests/mallet.test.mjs`; `tests/browser-journey.mjs`
+**Evidence.** `tests/mallet.test.mjs` — INVOICE-001: exact actual-work lines, approval and both saved export retrieval versions; `tests/browser-journey.mjs` — counterInvoice and savedInvoiceReadback, invoked by workshopBrowser in the WORKSHOP-001 and INVOICE-001 native registration journey in `tests/mallet.test.mjs` ; `tests/mallet.test.mjs` — INVOICE-001: exact approval history, actual-work rows and saved export retrieval; `tests/browser-journey.mjs` — browserJourney exact downloaded CSV and saved-export retry assertions; `tests/sales-tax.test.mjs` — pre-US records migrate without changing amounts and request unknown shop rate; `tests/support/portable-repair.mjs` — portableRepair, registered as OPS-001: complete native archive restores every current record and finishes repair under fresh authority
 **Gap.** Not asserted in the old cited evidence: Approval history retains exact deciding actor and revision; Retry using the preceding version returns the same saved export; Actual-work invoice has the expected lines. Asserted: Exact invoice cent total; Repeated export identity is equal; Exactly one saved export; Exact approval history count.
 
 #### AGENT-001 — Scoped preparation keys
@@ -90,7 +90,7 @@ Core · published · **partial** · Cites BASE-AGENT-004, BASE-AGENT-005, BASE-A
 2. With that preparation grant, attempt approval, sharing, customer authorization, invoice export, erasure and access management; each exceeds its scope.
 3. Record a person’s exact decision, revoke the preparation key, and verify both the old key and a concurrent revoked write are refused.
 
-**Evidence.** `src/mallet/auth.ts`; `src/mallet/model.ts`; `tests/mallet.test.mjs`
+**Evidence.** `src/mallet/auth.ts`; `src/mallet/model.ts`; `tests/mallet.test.mjs`; `tests/browser-journey.mjs` — preparationKeyBrowser, invoked by that push journey, proves native owner issuance, exact revised draft and person decision readback, native revocation and unchanged refused preparation with credential-masked screens at 1440 and 390
 **Gap.** Not asserted in the old cited evidence: Native issuance returns a key (assertion is in uncited tests/browser-journey.mjs); Preparation succeeds with exact draft content; Preparation scope refuses approval; Preparation scope refuses sharing; Preparation scope refuses customer authorization; Preparation scope refuses invoice export; Preparation scope refuses erasure; Preparation scope refuses access management; Person decision is retained with attribution; Revoked key cannot write; Concurrent revoked write changes nothing. The native journeys exercise the workflow, but their title, performed step or uncited helper is not a point-level assertion here.
 
 #### IMPORT-001 — Reviewed register move
@@ -102,7 +102,7 @@ Core · published · **partial** · Cites BASE-INPUT-003, BASE-OPS-003, BASE-OPS
 **Acceptance.**
 1. Upload customers and customer-assets API snapshots, preview and apply the fingerprint, replay, resume and undo; inspect originals and journal, and prove an asset used by a new visit survives undo.
 
-**Evidence.** `src/mallet/imports/service.ts`; `src/mallet/imports/snapshots.ts`; `tests/mallet.test.mjs`
+**Evidence.** `src/mallet/imports/service.ts`; `src/mallet/imports/snapshots.ts`; `tests/mallet.test.mjs`; "import undo preserves an asset once it has a native repair visit" compares the complete used asset and native visit across refused undo. These added assertions retain the current main judgment pending review.
 **Gap.** Not asserted in the old cited evidence: An asset with a native visit itself survives undo; Journal retains resumed batches. Asserted: Preview leaves the asset population absent; Exact reviewed import population; Apply replay has one job identity; Journal retains originals; Undo removes untouched assets.
 
 #### DATA-001 — Custody and erasure
@@ -209,7 +209,7 @@ Core · target · **partial** · From INTAKE-001 · Cites BASE-ROLE-001, BASE-AU
 2. End its purpose, let its lifetime expire and erase the customer; the material becomes inaccessible, including after an older database is recovered.
 3. Retain the non-secret custody history under fresh destination authority.
 
-**Evidence.** `tests/media.test.mjs`; `tests/intake-browser.mjs`
+**Evidence.** `tests/media.test.mjs` — “INTAKE-001 / INTAKE-004 / OPS-001: signed condition and custody, exact checklist comparison, private temporary secrets and fresh-owner recovery” directly stores and exactly reveals a distinctive consented unlock value, inspects populated public state, exact non-secret store and reveal custody entries, downloaded audit JSON and CSV and every downloaded portability archive part; it refuses signed-out reveal without changing business or custody records and excludes the secret table while retaining exact non-secret history. `tests/intake-browser.mjs` — intakeBrowser, registered by “INTAKE-001: vehicle and device signed custody and actual checklist comparison at 1440/390”, reloads native custody pages after storage and reveal, independently reads persisted consent, purpose, actor and access reason, preserves the exact entered value only on reveal and verifies empty general-page secret fields. Existing `tests/support/intake-journey.mjs` retains customer erasure and recovery coverage.
 **Gap.** Not asserted in the old cited evidence: No material is copied to public state; No material is copied to audit; No material is copied to archives; Purpose end destroys readability; Lifetime expiry destroys readability; Older database cannot recover the secret; Destination authority is fresh. Asserted: Consented material is readable only through the authorized vault; Customer erasure removes reveal; Non-secret custody history restores exactly. Additional vault, state/audit/archive absence and recovery assertions live in uncited tests/support/intake-journey.mjs.
 
 #### INTAKE-002 — Custom forms and signed shop terms
@@ -504,8 +504,8 @@ Core · target · **partial** · From EST-006 · Cites BASE-MAIL-001, BASE-AGENT
 1. Reject or interrupt an estimate send or reminder; one visible advisor task retains the related repair and outcome.
 2. Let the current revision expire undecided, including after opt-out; its unanswered task remains until an authorized person resolves it with a note.
 
-**Evidence.** `src/mallet/approval-chasing.ts`; `src/mallet/approval-door.ts`; `src/mallet/approval-links.ts`; `src/mallet/ui/chasing.ts`; `migrations/core/0023_approval_reminders.sql`; `tests/support/chase-journey.mjs`; `tests/approval-browser.mjs`
-**Gap.** Not asserted in the old cited evidence: An interrupted uncertain send opens the distinct recovery outcome. Asserted: A rejected send opens one advisor task; The task retains the rejected reminder outcome; An expired undecided revision has an unanswered task; Resolution retains the authorized person; Resolution retains the entered note.
+**Evidence.** `tests/support/chase-journey.mjs` — chaseJourney: rejected and interrupted sends retain one repair, link, estimate and revision task; scheduler replay preserves uncertainty without another handoff; technician and agent resolution refusals preserve records; admin resolution retains actor and note; unanswered expiry and exact archive recovery. `tests/approval-browser.mjs` — chaseBrowser and uncertainTaskBrowser, registered in `tests/mallet.test.mjs`: native opt-out, unanswered expiry and owner resolution of interrupted delivery, with repair and queue readback at 1440 and 390.
+**Gap.** Not asserted in the old cited evidence: An interrupted uncertain send opens the distinct recovery outcome. Asserted: A rejected send opens one advisor task; The task retains the rejected reminder outcome; An expired undecided revision has an unanswered task; Resolution retains the authorized person; Resolution retains the entered note. Agent reminder evaluation as external under the company’s class policy remains unimplemented and unproved under BASE-AGENT-005, BASE-AGENT-006 and BASE-AGENT-007. Expanded native authority remains held under ADV-008 and GOV-001.
 
 ### Workshop execution and technician work
 
@@ -554,8 +554,8 @@ Core · target · **partial** · Cites BASE-ROLE-001, BASE-AGENT-005, BASE-AGENT
 **Acceptance.**
 1. Clock in, run two jobs with a break, correct a missed stop with manager approval and compare attendance, actual and sold hours; a member cannot alter a colleague’s time.
 
-**Evidence.** `src/mallet/time.ts`; `src/mallet/ui/time.ts`; `src/mallet/http.ts`; `tests/mallet.test.mjs`; `tests/support/time-journey.mjs`; `tests/time-browser.mjs`
-**Gap.** Not asserted in the old cited evidence: A member’s attempt leaves a colleague’s original time unchanged. Asserted: Attendance is computed from clock events; Breaks remain separate; Actual nonbillable and rework time remains separate; Sold hours are independently displayed; Approved correction retains original intervals; Correction retains manager and reason.
+**Evidence.** `tests/support/time-journey.mjs` timeJourney (registered in `tests/mallet.test.mjs` as "TIME-001: two assigned job timers, breaks, approved corrections, isolation and recovery"): attendance, separate breaks and job categories, authorized sold hours, immutable owner-approved correction history and immediate unchanged colleague entry and correction readback; `tests/time-browser.mjs` timeBrowser ("TIME-001: native clocks, reasoned correction decisions and actual board time at 1440/390"): native clock forms, exact self-proposal and owner decision, elapsed board time and retained history at both widths.
+**Gap.** Not asserted in the old cited evidence: A member’s attempt leaves a colleague’s original time unchanged. Asserted: Attendance is computed from clock events; Breaks remain separate; Actual nonbillable and rework time remains separate; Sold hours are independently displayed; Approved correction retains original intervals; Correction retains manager and reason. Candidate assertions now read back the unchanged colleague entry and every correction record after refusal, including an existing self-proposal. Main’s partial judgment is retained pending clause review; this replay does not promote acceptance.
 
 #### FLOW-004 — Technician crews and subtasks
 
@@ -603,7 +603,7 @@ Core · target · **partial** · Cites BASE-ROLE-001, BASE-AGENT-005, BASE-AGENT
 **Acceptance.**
 1. Try collection with a failed test and unpaid invoice, then settle through the processor and hand keys to an authorized delegate; inspect receipt and any override.
 
-**Evidence.** `tests/mallet.test.mjs`; `tests/return-browser.mjs`; `tests/support/return-revision.mjs`
+**Evidence.** `tests/mallet.test.mjs`; `tests/return-browser.mjs`; `tests/support/return-revision.mjs`; `tests/support/return-journey.mjs`; immutable printable receipts and exact fresh-owner recovery without restored credentials are asserted. Unpaid refusal, processor captured funds, returned keys and visible owner-exception evidence remain asserted. GOV-001 complete role, limit and cost coverage, custody and contact delegation, provider communications and reconciliation, destructive rights, SHOP-001 and policy review remain held. Expanded unpaid-release authority, independently verified identity, connected payment and settlement extensions and RETURN-002 actual California and Texas statutory coverage, calendar and conditional procedures and approval of adopted defaults remain outside this evidence.
 **Gap.** Not asserted in the old cited evidence: Failed quality result prevents collection; Actual delegate authorization and identity are read back. Asserted: Unpaid collection is visibly refused; Processor captured funds are read back; Printable receipt retains returned key count; Override reason remains visible in the final handover receipt.
 
 #### RETURN-002 — Storage, abandoned property and repair liens
@@ -1812,8 +1812,8 @@ Core · target · **partial** · From OPS-002 · Cites BASE-ROLE-001, BASE-DATA-
 2. Archives preserve outcomes but cannot grant destination provider/customer-link authority.
 3. Recover an uncertain outbound effect explicitly; a restored or retried record alone grants no new sending authority.
 
-**Evidence.** `tests/mallet.test.mjs`; `tests/support/capacity-import-journey.mjs`; `tests/support/search-journey.mjs`; `tests/search-browser.mjs`; `tests/support/repair-read-journey.mjs`; `tests/support/jobs-journey.mjs`; `tests/support/provider-jobs-journey.mjs`; `tests/jobs-browser.mjs`; `tests/support/board-live-journey.mjs`; `docs/background-jobs.md`; `docs/performance.md`; `scripts/capacity/README.md`
-**Gap.** Small reminder and provider-read jobs prove restart and explicit recovery. Complete queued-authority lifecycle and every failed/uncertain resolution branch remain open for point-level completion proof.
+**Evidence.** `tests/mallet.test.mjs` — durable reminder jobs bound concurrent handoffs to four, survive restart and expose owner recovery; `tests/support/jobs-journey.mjs` — jobsJourney, reminderConcurrency and reminderLeaseRecovery; `tests/support/provider-jobs-journey.mjs` — providerJobsJourney: exact GET consent, explicit replay, restored quarantine and owner revocation before and during dispatch; `tests/jobs-browser.mjs` — jobsBrowser: owner backlog, durable outcomes and uncertain reminder resolution readback at 1440 and 390; `docs/background-jobs.md`
+**Gap.** Five distinct authorized estimate-reminder events prove the installation-wide four-job bound under overlapping deployed scheduler calls, with the fifth pending during four outstanding controlled mail responses. Releasing one response admits that exact fifth event into the freed slot while three original dispatches remain outstanding; overlapping schedulers retain the four-job bound, one handoff per event and exact source identities and durable outcomes. Concurrent outcome projections retry native optimistic conflicts without repeating a provider handoff. A dispatched reminder stays leased before the one-minute boundary, becomes uncertain at expiry, rejects a late provider-success overwrite, and survives restart without another handoff. Owner resolution retains exact source and outcome history; concurrent closure records one receipt; signed-out, non-owner, agent, revoked and cross-origin recovery attempts change nothing. Native archives quarantine the outstanding dispatch and preserve resolved outcomes without customer-link authority. Provider GET requests without fresh owner confirmation or consent are refused without jobs or money changes. Revocation before dispatch prevents the GET; revocation during a held GET prevents payment evidence from committing, including after restart. Interrupted never-dispatched reservation recovery, the remaining queued-authority lifecycle, other archive states and complete failed or uncertain recovery and replay branches remain unproved. Conservative job-authority defaults remain pending ct approval: owner-only fresh confirmation and explicit recorded consent for read-only provider GET jobs; restored runnable jobs quarantined; failed or uncertain outbound reminders require human resolution without automatic resend. OPS-002 retains its Base resumable archive-finalization and validation-cursor, Worker-safe older-schema migration-replay and declared-capacity holds.
 
 ### Open source and installation
 
@@ -1969,8 +1969,8 @@ Agent surface · target · **partial**
 5. The UI action and its tool, on the same fixture, give the same record state and the same audit event type.
 6. The seed's embedded agents appear in the audit as calls to the same tools.
 
-**Evidence.** `agent-surface.json`; `tests/agent-door/owner.mjs`; `tests/agent-door/reviewer.mjs`; `tests/agent-door/fixtures.mjs` — SEED_VERIFY_SHARD=runtime npx -y @runeditrun/rer@0.2.91 verify: "Agent door conformance: 587/587 points passed", normal exit 0 (29 October 2026).
-**Gap.** Six native preparation/read tools only. The ct service-advisor surface, separately scoped assistant and native API client adoption remain incomplete.
+**Evidence.** `agent-surface.json`; `tests/agent-door/owner.mjs`; `tests/agent-door/reviewer.mjs`; `tests/agent-door/fixtures.mjs`; `tests/agent-door/preparation-parity.mjs` — beforeStep and afterStep independently compare dispatch and invoice preparations with native owner forms on separate production Workers under autonomous and standard-review policies, including exact mapped source identities, frozen revision-two actual quantities and prices, tax cents, inert proposals, one native business event and person versus agent-for-person attribution; `tests/agent-preparation-parity-browser.mjs` — preparationParityBrowser, registered in `tests/mallet.test.mjs`, submits the owner forms and reads back both preparations at 1440 with browser proof at 1440 and 390.
+**Gap.** Point 5 is qualified only for existing dispatch and invoice preparation. Six native preparation and read tools only: complete Core job coverage, output and annotation conformance, error-code parity, estimate-workflow parity and embedded-agent registry adoption remain incomplete. The separately scoped assistant and native API client surfaces, owner-native administration and broader authority and escalation surfaces remain unadopted. Full repair-week and stranger-agent completion and wider surface conformance remain held. Expanded native authority awaits ct approval; expanded grants, customer sending and promise-changing authority, AGENT-001's four preparation commands, GOV-001 and SHOP-001 limits, queued-egress fences and all existing account, provider, retention and lifecycle holds remain unchanged.
 
 #### BASE-AGENT-003 — Records are resources
 
@@ -1986,7 +1986,7 @@ Agent surface · target · **partial**
 5. Bytes over budget return `budget_exhausted` and no partial content.
 6. Customer-sourced text carries the untrusted marker.
 
-**Evidence.** `agent-surface.json`; `tests/agent-door/owner.mjs`; `tests/agent-door/reviewer.mjs`; `tests/agent-door/fixtures.mjs` — SEED_VERIFY_SHARD=runtime npx -y @runeditrun/rer@0.2.91 verify: "Agent door conformance: 587/587 points passed", normal exit 0 (29 October 2026).
+**Evidence.** `agent-surface.json`; `tests/agent-door/owner.mjs`; `tests/agent-door/reviewer.mjs`; `tests/agent-door/fixtures.mjs` — SEED_VERIFY_SHARD=runtime npx -y @runeditrun/rer@0.2.91 verify: "Agent door conformance: 587/587 points passed", normal exit 0 (29 October 2026). Additional candidate evidence: `agent-surface.json`; `tests/agent-door/resources.mjs` — afterStep native outcome comparisons under autonomous and held-standard-review conformance, resources missing and revoked-key refusals (built-app conformance 661 of 661 passing); `tests/agent-door/resource-authority.mjs` — resourceAuthorityJourney, registered in `tests/mallet.test.mjs`: populated owner and member reads, identical missing and restricted refusals, scope and consent revocation, suspended sponsor, erasure replay, private-note and original-byte exclusion, exact proposal readback and attributable native browser readback at 1440 and 390.
 **Gap.** Undeclared family: resources. Public record resources and resource refresh are not offered; internal visibility adapters do not prove the planned ten-family public catalogue.
 
 #### BASE-AGENT-004 — Business identity and short-lived, audience-bound tokens
@@ -2020,8 +2020,8 @@ Agent surface · target · **partial**
 4. Calls that widen the agent's own grant or its sponsor's role, or change the policy or Pause, return `self_escalation` and change nothing, even under a policy with every class autonomous; dropping a scope from its own grant runs.
 5. An injection fixture yields no out-of-grant call and no change of class: record text asking for a wider action, or claiming that a recipient is internal.
 
-**Evidence.** `agent-surface.json`; `tests/agent-door/owner.mjs`; `tests/agent-door/reviewer.mjs`; `tests/agent-door/fixtures.mjs` — SEED_VERIFY_SHARD=runtime npx -y @runeditrun/rer@0.2.91 verify: "Agent door conformance: 587/587 points passed", normal exit 0 (29 October 2026).
-**Gap.** Native preparation authority stays narrow; no access/security mutation is registered. Owner-native administration and the broader ct authority/escalation surfaces remain unadopted.
+**Evidence.** `agent-surface.json`; `tests/agent-door/owner.mjs`; `tests/agent-door/reviewer.mjs`; `tests/agent-door/fixtures.mjs` — existing native conformance; `tests/agent-door/sponsor-admission.mjs` — sponsorAdmission, composed with the existing prompts and preparation parity journey; `tests/agent-sponsor-admission-browser.mjs` — sponsorAdmissionBrowser, registered in `tests/mallet.test.mjs` as “BASE-AGENT-005: native admin sponsor changes revoke preparation and cached reads at 1440 and 390”. For acceptance point 3, two invited and confirmed native admins issue their own existing preparation keys. Under autonomous and standard-review policies, exact repair reads, estimate drafts and successful MCP replay retain their native sponsor attribution. Owner role downgrade and deactivation make subsequent MCP and legacy reads, fresh preparation, revision and captured-success replay return 401 without private content, business changes or outbound handoff; original drafts and attribution remain exact.
+**Gap.** Acceptance point 3 is qualified only for already-supported local preparation keys. Points 1, 2, 4 and 5, complete role parity, resource-narrowed grants, self-narrowing, self-escalation and injection qualification remain unproved. Native preparation authority stays narrow; no access or security mutation is registered. Owner-native administration and the broader ct authority and escalation surfaces remain unadopted. Production Business delivery, standalone OAuth issuance, second-host operation and complete token-lifetime, consent and unpairing qualification remain unproved. Expanded native authority still awaits ct approval; expanded grants, customer sending and promise-changing authority, AGENT-001’s four preparation commands, GOV-001 and SHOP-001 limits, queued-egress fences and all existing account, provider, retention and lifecycle holds remain unchanged.
 
 #### BASE-AGENT-006 — Every action declares its risk class
 
@@ -2037,7 +2037,7 @@ Agent surface · target · **partial**
 5. No tool in `tools / list` declares a class outside the fleet list, and `rer check` fails on one.
 6. A refused call's audit row still records its computed classes.
 
-**Evidence.** `agent-surface.json`; `tests/agent-door/owner.mjs`; `tests/agent-door/reviewer.mjs`; `tests/agent-door/fixtures.mjs` — SEED_VERIFY_SHARD=runtime npx -y @runeditrun/rer@0.2.91 verify: "Agent door conformance: 587/587 points passed", normal exit 0 (29 October 2026).
+**Evidence.** `agent-surface.json`; `tests/agent-door/owner.mjs`; `tests/agent-door/reviewer.mjs`; `tests/agent-door/fixtures.mjs`; `tests/agent-door/refused-classification.mjs` — afterStep qualifies point 6 through native customer authorization and an exact two-line estimate revision: estimate_frozen retains standard measure 2, the current policy revision and refused audit, no completed review or business changes; a separate draft persists the exact content under autonomous and standard-review policy. Existing standard-tool fixtures: SEED_VERIFY_SHARD=runtime npx -y @runeditrun/rer@0.2.91 verify: "Agent door conformance: 587/587 points passed", normal exit 0 (29 October 2026).
 **Gap.** Only native standard preparation effects are adopted. The other ten classes in the ct surface remain unadopted; no spend, provider or target-only capability is claimed.
 
 #### BASE-AGENT-007 — The company's policy decides, at one chokepoint
@@ -2074,8 +2074,8 @@ Agent surface · target · **partial**
 6. Activity and exports at 1440 and 390 show `"<agent> for <person>"` for every agent act.
 7. Mail an agent sends to an outside address names `"<agent> for <person>"` as its sender.
 
-**Evidence.** `agent-surface.json`; `tests/agent-door/owner.mjs`; `tests/agent-door/reviewer.mjs`; `tests/agent-door/fixtures.mjs` — SEED_VERIFY_SHARD=runtime npx -y @runeditrun/rer@0.2.91 verify: "Agent door conformance: 587/587 points passed", normal exit 0 (29 October 2026).
-**Gap.** Native preparation retains agent and sponsor attribution. Complete specialist-week, outbound and queued attribution remain unproved; no unsupported Undo is invented.
+**Evidence.** `agent-surface.json`; `tests/agent-door/owner.mjs`; `tests/agent-door/reviewer.mjs`; `tests/agent-door/fixtures.mjs`; `tests/agent-door/native-attribution.mjs` — afterStep compares native estimate preparation, revision and owner approval under autonomous and held standard-review policies; `tests/mallet.test.mjs` — BASE-AGENT-008: exact agent preparation and distinct native owner approval at 1440, using `tests/agent-attribution-browser.mjs`.
+**Gap.** Point 5 is qualified only for adopted estimate preparation and revision with current-owner native exact-revision approval: the saved record and estimate card distinguish the agent for the sponsor from the deciding person. Other point-5 workflows, complete specialist-week attribution, other acceptance outcomes, outbound and queued attribution remain unproved. Expanded native authority awaits ct approval; expanded grants, customer sending and promise-changing authority remain held. AGENT-001, GOV-001 and SHOP-001 limits and existing account, provider, retention and lifecycle holds are unchanged.
 
 #### BASE-AGENT-009 — Every agent action is audited with its class and decision
 
@@ -2127,8 +2127,8 @@ Agent surface · target · **partial**
 6. Pause and Pause all agents each stop the next call within 60 seconds, and resume restores access.
 7. An agent token cannot resume.
 
-**Evidence.** `agent-surface.json`; `tests/agent-door/owner.mjs`; `tests/agent-door/reviewer.mjs`; `tests/agent-door/fixtures.mjs` — SEED_VERIFY_SHARD=runtime npx -y @runeditrun/rer@0.2.91 verify: "Agent door conformance: 587/587 points passed", normal exit 0 (29 October 2026).
-**Gap.** CORE Pause is adopted. Spend reservations, company-wide byte/spend budgets and timed lifecycle remain unproved; no provider cost is registered.
+**Evidence.** `agent-surface.json`; `tests/agent-door/owner.mjs`; `tests/agent-door/reviewer.mjs`; `tests/agent-door/fixtures.mjs` — SEED_VERIFY_SHARD=runtime npx -y @runeditrun/rer@0.2.91 verify: "Agent door conformance: 587/587 points passed", normal exit 0 (29 October 2026).  `tests/agent-pause-browser.mjs` — agentPauseBrowser, registered in `tests/mallet.test.mjs` as “BASE-AGENT-011: native Pause fences all six tools and legacy routes, owner work and bearer resume at 1440 and 390”; `tests/support/agent-pause-journey.mjs` — agentPauseFixture, pausedAgentCalls, refusedAgentResume and resumedPreparation. The emitted production Worker uses native owner setup and resolvable repair, draft and completed-work inputs. Local Pause refuses the six tools, a retained preparation replay and the six matching legacy routes without business mutation or private results; the preparation bearer cannot resume. An owner workshop form still saves while paused, and owner resume permits exactly one independently checked preparation on retry.
+**Gap.** CORE Pause is adopted; the existing six-tool local owner Pause and bearer-resume refusal are qualified. Spend reservations, company-wide byte and spend budgets and timed lifecycle remain unproved; no provider cost is registered. Rate-overrun, daily-threshold, provider-spend and complete usage-view acceptance, production Business Pause delivery and broader token and queued lifecycle qualification remain unproved. Full repair-week and stranger-agent completion, wider surface conformance, owner administration and expanded authority remain held. Expanded native authority still awaits ct approval; expanded grants, customer sending and promise-changing authority, GOV-001 and SHOP-001 limits, queued-egress fences and existing account, provider and retention holds remain unchanged.
 
 #### BASE-AGENT-012 — Writes are idempotent and conflict-safe
 
@@ -2143,7 +2143,7 @@ Agent surface · target · **partial**
 4. A stale revision returns a conflict naming the current revision.
 5. A job handle used by another person's token reads as not found.
 
-**Evidence.** `agent-surface.json`; `tests/agent-door/owner.mjs`; `tests/agent-door/reviewer.mjs`; `tests/agent-door/fixtures.mjs` — SEED_VERIFY_SHARD=runtime npx -y @runeditrun/rer@0.2.91 verify: "Agent door conformance: 587/587 points passed", normal exit 0 (29 October 2026).
+**Evidence.** `agent-surface.json`; `tests/agent-door/owner.mjs`; `tests/agent-door/reviewer.mjs`; `tests/agent-door/fixtures.mjs` — SEED_VERIFY_SHARD=runtime npx -y @runeditrun/rer@0.2.91 verify: "Agent door conformance: 587/587 points passed", normal exit 0 (29 October 2026).; `tests/support/agent-retry-conflicts-journey.mjs` — native estimate retries retain one outcome and refuse changed arguments or stale revisions, registered in `tests/mallet.test.mjs`: dropped-response replay with a new JSON-RPC id, changed-line refusal, current native revision readback, unchanged business records and distinct replay audit under autonomous and review policies.
 **Gap.** Native preparation replay and current-authority replay admission are proved. Queued lifecycle and uncertain-provider recovery remain outside this registry and unproved.
 
 #### BASE-AGENT-013 — Manifest, docs and the conformance journey
