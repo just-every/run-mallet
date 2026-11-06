@@ -16,7 +16,11 @@ export async function declinedReviewFixture(h){
   inspection=await h.command('inspection.assign',{jobId:f.job.id,version:(await job()).version,templateId:template.id,templateVersion:template.version,templateRevision:1,technicianId:(await job()).technicianId,reason:'Replacement checklist for the same brake-pad point'})
   return record(outcome,value)
  }
- return {...f,reading,inspection,originalResult,record,replace,jobNow:job,findingKey:inspection.id+':pads'}
+ const replacement=async(outcome,value)=>{
+  const assigned=await h.command('inspection.assign',{jobId:f.job.id,version:(await job()).version,templateId:template.id,templateVersion:template.version,templateRevision:1,technicianId:(await job()).technicianId,reason:'Replacement checklist after the earlier observation'})
+  return h.command('inspection.record',{jobId:f.job.id,version:(await job()).version,inspectionId:assigned.id,inspectionVersion:assigned.version,itemId:'pads',outcome,measurementValue:value,measurementUnit:'mm',photoUploadId:photo.id,reason:'Replacement measured pad evidence '+value})
+ }
+ return {...f,reading,inspection,originalResult,record,replace,replacement,jobNow:job,findingKey:inspection.id+':pads'}
 }
 export async function declinedReviewJourney(){
  const h=await installation()
