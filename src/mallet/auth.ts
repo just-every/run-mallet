@@ -3,7 +3,7 @@ import { operatorAuth, runtimeBindings, type Bindings } from '../auth.server'
 import {enterpriseAuthority} from './enterprise/session'
 import {staffGrant,staffRoute,staffAuthority,type StaffGrant} from './staff'
 import {blocked,gateState,proofAuthority,type Gate} from './strong-auth/gate'
-export type Actor = { id: string; name: string; role: 'owner'|'admin'|'member'|'agent';staff?:StaffGrant;assistantGrantId?:string }
+export type Actor = { id: string; name: string; role: 'owner'|'admin'|'member'|'agent';staff?:StaffGrant;assistantGrantId?:string;attribution?:{agent:{id:string;name:string};for:{id:string;name:string};label:string};policyApprovers?:{id:string;name:string}[] }
 export type Authority = { sql: string; params: any[] }
 export class HttpError extends Error { constructor(public status: number, public code: string, message = code) { super(message) } }
 export const digest = async (value: string) => Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(value))), x => x.toString(16).padStart(2,'0')).join('')

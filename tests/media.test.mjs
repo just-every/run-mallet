@@ -161,7 +161,44 @@ test('DVI-004: second-visit comparison, imported source, declined carry and reso
  const {inspectionHistoryBrowser}=await import('./inspection-history-browser.mjs');await inspectionHistoryBrowser()
 })
 
-test('INTAKE-001 / INTAKE-004 / OPS-001: signed condition and custody, exact checklist comparison, private temporary secrets and fresh-owner recovery',()=>run(async h=>{const {intakeJourney}=await import('./support/intake-journey.mjs');await intakeJourney(h)}))
+test('INTAKE-001 / INTAKE-004 / OPS-001: signed condition and custody, exact checklist comparison, private temporary secrets and fresh-owner recovery',()=>run(async h=>{
+ const {intakeJourney}=await import('./support/intake-journey.mjs'),{job,before}=await intakeJourney(h)
+ // Check the populated public doors directly while the distinctive value is live.
+ const secret=' synthetic-mallet-904-unlock ',purpose='Customer consents to diagnosis only',reason='Read for the agreed diagnosis',expiresAt=new Date(Date.now()+600000).toISOString(),owner=(await h.state()).actor
+ const started=new Date().toISOString(),stored=await h.command('intake.secretStore',{jobId:job.id,purpose,secret,expiresAt,consent:true})
+ assert.equal(JSON.stringify(stored).includes(secret.trim()),false,'Store response contains no unlock material')
+ const revealed=await h.command('intake.secretReveal',{jobId:job.id,secretId:stored.id,reason})
+ assert.deepEqual(revealed,{id:stored.id,secret},'Only the authorized reveal returns the exact entered value, including spaces')
+ const state=await h.state(),custody=state.records.intakeSecretAudit.filter(row=>row.secretId===stored.id)
+ assert.equal(custody.length,2,'Store and reveal each retain one non-secret custody entry')
+ for(const action of ['intake.secretStore','intake.secretReveal']){
+  const row=custody.find(row=>row.action===action);assert.ok(row,action+' retains custody evidence')
+  assert.ok(row.at>=started&&row.at<=new Date().toISOString())
+  assert.deepEqual(row,{id:row.id,version:1,jobId:job.id,secretId:stored.id,action,by:{id:owner.id,name:owner.name,role:'owner'},at:row.at,...(action==='intake.secretStore'?{purpose,expiresAt,consent:true}:{reason})})
+ }
+ assert.equal(JSON.stringify(state).includes(secret.trim()),false,'Populated public state contains no unlock material')
+ assert.equal(JSON.stringify(custody).includes(secret.trim()),false,'Retained custody audit contains no unlock material')
+ const query='/api/mallet/audit',report=await h.api(query)
+ assert.ok(report.entries.some(row=>row.action==='intake.record'&&row.changes.some(change=>change.kind==='intake'&&change.id===before.id)),'Audit inspection is populated by this exact signed receipt')
+ for(const format of ['json','csv']){
+  const response=await h.request(query+'?format='+format);assert.equal(response.status,200);assert.match(response.headers.get('content-disposition'),/attachment/)
+  const body=await response.text();assert.ok(body.includes(before.id));assert.ok(body.includes('intake.record'))
+  assert.equal(body.includes(secret.trim()),false,format+' audit download contains no unlock material')
+  if(format==='json')assert.deepEqual(JSON.parse(body).entries,report.entries)
+ }
+ assert.equal(JSON.stringify(await h.api('/api/mallet/audit')).includes(secret.trim()),false,'General audit response contains no unlock material')
+ const denied=await h.request('/api/mallet/commands',{method:'POST',as:'',body:{command:'intake.secretReveal',input:{jobId:job.id,secretId:stored.id,reason}}})
+ assert.equal(denied.status,401);assert.equal((await denied.text()).includes(secret.trim()),false)
+ assert.deepEqual((await h.state()).records,state.records,'A refused reveal changes no business or custody records')
+ const downloaded=await archive(h),items=downloaded.flatMap(part=>part.kind==='part'?part.items:[])
+ assert.ok(downloaded[0].excludedTables.includes('mallet_intake_secrets'),'Archive declares the secret table excluded')
+ assert.equal(downloaded[0].tables.some(table=>table.name==='mallet_intake_secrets'),false,'Secret table is absent from the archive inventory')
+ assert.equal(items.some(item=>item.table==='mallet_intake_secrets'),false,'No downloaded archive part carries secret rows')
+ assert.equal(JSON.stringify(downloaded).includes(secret.trim()),false,'Downloaded portability archive contains no unlock material')
+ const retained=items.filter(item=>item.kind==='row'&&item.table==='mallet_records'&&item.row.kind==='intakeSecretAudit'&&custody.some(row=>row.id===item.row.id)).map(item=>JSON.parse(item.row.value))
+ assert.deepEqual(retained.sort((a,b)=>a.id.localeCompare(b.id)),custody.sort((a,b)=>a.id.localeCompare(b.id)),'Archive retains the exact non-secret store and reveal history')
+ await h.command('intake.secretEnd',{jobId:job.id,secretId:stored.id})
+}))
 
 test('INTAKE-001: vehicle and device signed custody and actual checklist comparison at 1440/390',async()=>{const {intakeBrowser}=await import('./intake-browser.mjs');await intakeBrowser()})
 

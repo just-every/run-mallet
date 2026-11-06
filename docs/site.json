@@ -61,6 +61,12 @@
       "title": "Reference",
       "pages": [
         {
+          "slug": "agent-door",
+          "title": "Company agents in Mallet",
+          "file": "agent-door.md",
+          "summary": "Use the shared MCP preparation door with company policy, named approvals, Pause and audit."
+        },
+        {
           "slug": "agent-commands",
           "title": "Commands and API",
           "file": "agent-commands.md",

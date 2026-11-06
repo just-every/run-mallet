@@ -6,8 +6,8 @@ const DAY=86_400_000,at=(iso,days,minutes=1)=>Date.parse(iso)+days*DAY+minutes*6
 // EST-006: a scheduled reminder chases only the current undecided revision; replies, decisions and opt-outs stop it;
 // failed sends and unanswered estimates open advisor tasks. Mail is faked only at the provider edge.
 export async function chaseJourney(){
- let status=202,calls=0
- const h=await installation({outboundService:async request=>{assert.equal(new URL(request.url).hostname,'api.sendgrid.com');calls++;return new Response(null,{status})}})
+ let status=202,calls=0,interrupt=false,observed
+ const h=await installation({outboundService:async request=>{assert.equal(new URL(request.url).hostname,'api.sendgrid.com');calls++;if(interrupt){observed=await request.json();throw new Error('synthetic-mallet-interrupted-approval-handoff')}return new Response(null,{status})}})
  try{
   await shopSetup(h)
   const advisor=await h.person('casey-chase@example.test','admin'),tech=await h.person('morgan-chase@example.test'),ADV={as:advisor.cookie},T={as:tech.cookie}
@@ -87,8 +87,59 @@ export async function chaseJourney(){
   for(const command of ['approvalChase.sweep','approvalChase.outcome','chaseOptOut.customer'])await h.command(command,{},{status:404})
   const key=await h.command('agent.create',{label:'Chase boundary'}),agentView=(await h.state({as:'',headers:{authorization:`Bearer ${key.token}`}})).records
   for(const kind of ['approvalChase','chaseTask','chaseOptOut'])assert.equal(agentView[kind],undefined)
+  // An interrupted first handoff is distinct from a provider rejection, and never becomes a resend.
+  const interruptedJob=(await booking(h,{asset:await h.command('asset.create',{...assetInput('synthetic-mallet-uncertain'),customerEmail:['synthetic-mallet-uncertain','example.test'].join('@')}),technicianId:tech.id,startAt:'2026-11-07T09:00:00Z',endAt:'2026-11-07T10:00:00Z'})).job
+  const interruptedQuote=await quote(interruptedJob)
+  await h.configure({MAIL_PROVIDER:'sendgrid'});interrupt=true;const beforeInterrupted=calls
+  const uncertain=await h.command('approvalLink.create',{estimateId:interruptedQuote.id,version:interruptedQuote.version,revision:1},ADV)
+  interrupt=false
+  assert.equal(calls,beforeInterrupted+1,'The native approval command reaches the controlled mail edge once before interruption')
+  assert.match(JSON.stringify(observed),/\/approve\//,'The interrupted provider request contains the native approval link')
+  let uncertainRecords=await st(),savedLink=uncertainRecords.approvalLink.find(l=>l.id===uncertain.id)
+  assert.equal(savedLink.delivery.status,'uncertain','An interrupted first email retains uncertainty separately from rejection')
+  const uncertainTasks=uncertainRecords.chaseTask.filter(t=>t.linkId===uncertain.id)
+  assert.equal(uncertainTasks.length,1)
+  const uncertainTask=uncertainTasks[0]
+  assert.deepEqual([uncertainTask.jobId,uncertainTask.linkId,uncertainTask.estimateId,uncertainTask.revision,uncertainTask.kind],[interruptedJob.id,uncertain.id,interruptedQuote.id,1,'delivery-failed'])
+  assert.match(uncertainTask.detail,/uncertain/)
+  assert.equal((await chaseOf(uncertain.id)).stopReason,'delivery-failed')
+  const snapshot=records=>Object.fromEntries(['chaseTask','approvalChase','approvalLink','estimate','job'].map(kind=>[kind,records[kind]]))
+  await h.restart()
+  assert.deepEqual(snapshot(await st()),snapshot(uncertainRecords),'Restart retains the original delivery, task and repair before scheduler replay')
+  await h.cron(at(uncertain.createdAt,2));await h.cron(at(uncertain.createdAt,5))
+  assert.equal(calls,beforeInterrupted+1,'Scheduler replay cannot retry the interrupted handoff')
+  assert.deepEqual((await st()).chaseTask.filter(t=>t.linkId===uncertain.id),[uncertainTask],'Scheduler replay retains exactly the original uncertain task')
+  assert.deepEqual((await st()).approvalLink.find(l=>l.id===uncertain.id).delivery,savedLink.delivery)
+  for(const path of ['/app/jobs/'+interruptedJob.id,'/app/approvals']){
+   const page=await (await h.request(path,ADV)).text()
+   assert.ok(page.includes(interruptedJob.id));assert.match(page,/Approval email failed[\s\S]*uncertain/)
+  }
+  const resolution={taskId:uncertainTask.id,version:uncertainTask.version,note:'Advisor reviewed the interrupted handoff; called customer; no resend'}
+  const boundary=snapshot(await st())
+  await h.command('chaseTask.resolve',resolution,{...T,status:403})
+  assert.deepEqual(snapshot(await st()),boundary,'Denied technician resolution changes no task, delivery or repair')
+  await h.command('chaseTask.resolve',resolution,{as:'',headers:{authorization:'Bearer '+key.token},status:403})
+  assert.deepEqual(snapshot(await st()),boundary,'Denied agent resolution changes no task, delivery or repair')
+  const resolved=await h.command('chaseTask.resolve',resolution,ADV)
+  assert.equal(resolved.resolvedBy.id,advisor.id);assert.equal(resolved.resolvedBy.role,'admin');assert.equal(resolved.note,resolution.note)
+  await h.cron(at(uncertain.createdAt,5,30))
+  uncertainRecords=await st()
+  assert.deepEqual(uncertainRecords.chaseTask.filter(t=>t.linkId===uncertain.id),[resolved])
+  assert.deepEqual(uncertainRecords.approvalLink.find(l=>l.id===uncertain.id).delivery,savedLink.delivery,'Human resolution preserves the original uncertainty')
+  assert.equal(calls,beforeInterrupted+1,'Resolution grants no additional handoff')
   // OPS-001: policy, chases, tasks and opt-outs restore exactly; reminder tokens do not.
   const state=await st(),backup=await archive(h),target=await installation()
-  try{await restore(target,backup);const restored=(await target.state()).records;for(const kind of ['chasePolicy','approvalChase','chaseTask','chaseOptOut'])assert.deepEqual(restored[kind],state[kind],'EST-006 / EST-007 restores '+kind);assert.equal((await target.request(replacementPath,{as:''})).status,404)}finally{await target.close()}
+  try{
+   const freshOwner=(await target.state()).actor
+   assert.notEqual(freshOwner.id,(await h.state()).actor.id)
+   await restore(target,backup);const restored=(await target.state()).records
+   for(const kind of ['chasePolicy','approvalChase','chaseTask','chaseOptOut'])assert.deepEqual(restored[kind],state[kind],'EST-006 / EST-007 restores '+kind)
+   assert.equal((await target.request(replacementPath,{as:''})).status,404)
+   assert.equal((await target.request(new URL(uncertain.url).pathname,{as:''})).status,404,'Recovery restores no approval-link authority for an uncertain send')
+   await target.cron(at(uncertain.createdAt,5,45))
+   assert.deepEqual((await target.state()).records.chaseTask,restored.chaseTask,'Recovered resolution history cannot create a fresh task')
+   assert.equal(target.messages.length,0,'Recovery cannot reissue the interrupted email')
+   assert.equal((await target.state()).actor.id,freshOwner.id)
+  }finally{await target.close()}
  }finally{await h.close()}
 }
