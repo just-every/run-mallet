@@ -5332,7 +5332,7 @@
       "executable": false
     },
     "tests/declined-work-review-browser.mjs": {
-      "sha256": "da5cdf4a8ec86a3f59197d702a12acb9d766552b12c556ad5a0d71654b165907",
+      "sha256": "4b5e6450b4a7c2affa3ab69b0c2e81740346240d48a86d7e8e7569ee0f982a53",
       "executable": false
     },
     "tests/demo-worker.ts": {
@@ -5440,7 +5440,7 @@
       "executable": false
     },
     "tests/mallet.test.mjs": {
-      "sha256": "8f5eecbc4c66726f9c9ca7ebfc04744cd0c27e8be6bc40aa36a8c402ce6adbac",
+      "sha256": "1469aa57f330306c5182d31e802c66c0665514de6e0ddcb62f9b9e21e6ec8deb",
       "executable": false
     },
     "tests/media-browser.mjs": {
@@ -5676,7 +5676,7 @@
       "executable": false
     },
     "tests/support/declined-work-review-journey.mjs": {
-      "sha256": "9d5bea1294edcdc735153f322bb8924818f542956004f145c7604bd932d2e4e4",
+      "sha256": "875f41db1002ec5e6cfdcc5d7e6cbf647ebcfcf9dbdc1f5060a4c05b7f5c0870",
       "executable": false
     },
     "tests/support/deposits-journey.mjs": {
