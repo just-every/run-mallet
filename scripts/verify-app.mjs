@@ -31,8 +31,8 @@ function balancedPush(push) {
   return suite.commands;
  });
  const prefixes = [
-  'PAY-005|PART-006|RETURN-001|DIAG-002|RETURN-002|API-002|EST-004|Stripe|native',
-  'OPS-002|DVI-003|EST-001|GOV-006|INV-001|INVOICE-001|QUALITY-001|BASE-AGENT-011|GOV-005|VEH-002',
+  'PAY-005|PART-006|RETURN-001|DIAG-002|RETURN-002|API-002|EST-004|BASE-AGENT-011|Stripe|native',
+  'OPS-002|DVI-003|EST-001|GOV-006|INV-001|INVOICE-001|QUALITY-001|GOV-005|VEH-002',
   'AUTO-002|WARRANTY-001|ASSET-001|ADV-005|PORTAL-001|EST-002|BASE-AGENT-008|BASE-AGENT-012',
   'ADV-003|API-001|BUY-001|PART-005|AR-001|agent|BASE-AGENT-005|GOV-002|RepairShopr',
   'PAY-001|BASE-AGENT-002|EST-006|PART-002|PART-004|PART-003|REPORT-003|DVI-001|AUTO-004|import',
@@ -46,7 +46,8 @@ function balancedPush(push) {
  const shard = (name, index, commands = [], hosted = false) => ({ name, browser: true, hosted, commands: [...commands, mallet(index)] });
  const result = [
   // Only this job builds and retains rer verify's hosted-output, hydration and
-  // agent-door checks. Harness browser journeys serve public/ directly.
+  // agent-door checks, plus the Pause journey against dist/server/index.js.
+  // Other harness browser journeys serve public/ directly.
   shard('core', 0, [...take('source', 'typecheck', 'runtime'), ...tax('^shop setup|^pre-US')], true),
   shard('work-graph-core', 1),
   shard('journeys-2', 2, [...take('media'), 'node --test --test-concurrency=1 tests/demo.test.mjs']),
