@@ -560,7 +560,7 @@
       "executable": false
     },
     ".github/workflows/verify.yml": {
-      "sha256": "026f0ad875ab96e0ce8aab2a54edf20ca4d29913944eed2fb4f67aeb4288b310",
+      "sha256": "94604177d6b9604dbc7257c7cd69297b2ec0efd0cb61af63082f38c47fd11398",
       "executable": false
     },
     ".gitignore": {
@@ -1488,7 +1488,7 @@
       "executable": false
     },
     "scripts/verify-app.mjs": {
-      "sha256": "4c3a87c809e2b671a555dc36171b60675f87be96362de7d2269d9f5e1c3100b6",
+      "sha256": "ac922ed46f0de0dd4bab2d3f9a6f30872ff0b82457307f65720067a31dbabb2b",
       "executable": false
     },
     "scripts/verify-ci.mjs": {
