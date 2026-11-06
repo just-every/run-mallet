@@ -1,0 +1,28 @@
+{
+  "command": "cloud_run node scripts/verify-ci.mjs core",
+  "head": "3bfa2d7f572e2ee621da214b2f19f0a1de423349",
+  "exit_code": 0,
+  "complete": true,
+  "test_summaries": [
+    {
+      "tests": 2,
+      "pass": 2,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0,
+      "todo": 0
+    },
+    {
+      "tests": 18,
+      "pass": 18,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0,
+      "todo": 0
+    }
+  ],
+  "explicit_build_count": 1,
+  "fixture_build_note": "The unchanged Pause fixture also invokes Vite internally; this count covers explicit rer build commands only.",
+  "agent_conformance": "671/671 points passed.",
+  "result": "verify: complete (exit 0)"
+}

@@ -1,0 +1,163 @@
+shards (journeys-3, true)	Run this shard	﻿2026-11-06T22:52:58.2745137Z ##[group]Run node scripts/verify-ci.mjs "$SHARD"
+shards (journeys-3, true)	Run this shard	2026-11-06T22:52:58.2745526Z [36;1mnode scripts/verify-ci.mjs "$SHARD"[0m
+shards (journeys-3, true)	Run this shard	2026-11-06T22:52:58.2763351Z shell: /usr/bin/bash -e {0}
+shards (journeys-3, true)	Run this shard	2026-11-06T22:52:58.2763609Z env:
+shards (journeys-3, true)	Run this shard	2026-11-06T22:52:58.2763799Z   CI: true
+shards (journeys-3, true)	Run this shard	2026-11-06T22:52:58.2766256Z   GH_TOKEN: ***
+shards (journeys-3, true)	Run this shard	2026-11-06T22:52:58.2766485Z   WRANGLER_SEND_METRICS: false
+shards (journeys-3, true)	Run this shard	2026-11-06T22:52:58.2766757Z   PLAYWRIGHT_SKIP_BROWSER_GC: 1
+shards (journeys-3, true)	Run this shard	2026-11-06T22:52:58.2767064Z   SHARD: journeys-3
+shards (journeys-3, true)	Run this shard	2026-11-06T22:52:58.2767269Z ##[endgroup]
+shards (journeys-3, true)	Run this shard	2026-11-06T22:52:58.3067808Z > pnpm run verify:app
+shards (journeys-3, true)	Run this shard	2026-11-06T22:52:58.5750590Z 
+shards (journeys-3, true)	Run this shard	2026-11-06T22:52:58.5751416Z > @workshop/mallet@0.1.0 verify:app /home/runner/work/run-mallet/run-mallet
+shards (journeys-3, true)	Run this shard	2026-11-06T22:52:58.5751990Z > node scripts/verify-app.mjs
+shards (journeys-3, true)	Run this shard	2026-11-06T22:52:58.5752204Z 
+shards (journeys-3, true)	Run this shard	2026-11-06T22:52:58.6037548Z > node --test --test-concurrency=1 --test-skip-pattern='^shop setup|^pre-US|1440|390' tests/sales-tax.test.mjs
+shards (journeys-3, true)	Run this shard	2026-11-06T22:52:58.6461381Z TAP version 13
+shards (journeys-3, true)	Run this shard	2026-11-06T22:53:15.6712201Z # Subtest: TAX-002: private certificate dates and declared jurisdiction tax reverse exact issued credits without repricing
+shards (journeys-3, true)	Run this shard	2026-11-06T22:53:15.6741906Z ok 1 - TAX-002: private certificate dates and declared jurisdiction tax reverse exact issued credits without repricing
+shards (journeys-3, true)	Run this shard	2026-11-06T22:53:15.6748006Z   ---
+shards (journeys-3, true)	Run this shard	2026-11-06T22:53:15.6770980Z   duration_ms: 15653.730138
+shards (journeys-3, true)	Run this shard	2026-11-06T22:53:15.6800925Z   type: 'test'
+shards (journeys-3, true)	Run this shard	2026-11-06T22:53:15.6830741Z   ...
+shards (journeys-3, true)	Run this shard	2026-11-06T22:53:26.4042399Z # Subtest: TAX-002: dedicated filing-period deposit attribution, observed check clearance, exact partial receipt cents and completed refund recovery
+shards (journeys-3, true)	Run this shard	2026-11-06T22:53:26.4045005Z ok 2 - TAX-002: dedicated filing-period deposit attribution, observed check clearance, exact partial receipt cents and completed refund recovery
+shards (journeys-3, true)	Run this shard	2026-11-06T22:53:26.4046409Z   ---
+shards (journeys-3, true)	Run this shard	2026-11-06T22:53:26.4047326Z   duration_ms: 10735.233623
+shards (journeys-3, true)	Run this shard	2026-11-06T22:53:26.4048147Z   type: 'test'
+shards (journeys-3, true)	Run this shard	2026-11-06T22:53:26.4049196Z   ...
+shards (journeys-3, true)	Run this shard	2026-11-06T22:53:26.4591129Z 1..2
+shards (journeys-3, true)	Run this shard	2026-11-06T22:53:26.4591536Z # tests 2
+shards (journeys-3, true)	Run this shard	2026-11-06T22:53:26.4592599Z # suites 0
+shards (journeys-3, true)	Run this shard	2026-11-06T22:53:26.4593316Z # pass 2
+shards (journeys-3, true)	Run this shard	2026-11-06T22:53:26.4593912Z # fail 0
+shards (journeys-3, true)	Run this shard	2026-11-06T22:53:26.4594591Z # cancelled 0
+shards (journeys-3, true)	Run this shard	2026-11-06T22:53:26.4595226Z # skipped 0
+shards (journeys-3, true)	Run this shard	2026-11-06T22:53:26.4595839Z # todo 0
+shards (journeys-3, true)	Run this shard	2026-11-06T22:53:26.4596514Z # duration_ms 27827.220728
+shards (journeys-3, true)	Run this shard	2026-11-06T22:53:26.4636276Z > node --test --test-concurrency=1 --test-name-pattern='^(?:ADV-003|API-001|BUY-001|PART-005|AR-001|agent|BASE-AGENT-005|GOV-002|RepairShopr)\b' tests/mallet.test.mjs
+shards (journeys-3, true)	Run this shard	2026-11-06T22:53:26.5033542Z TAP version 13
+shards (journeys-3, true)	Run this shard	2026-11-06T22:53:29.8548607Z # Subtest: BASE-AGENT-005: native admin sponsor changes revoke preparation and cached reads at 1440 and 390
+shards (journeys-3, true)	Run this shard	2026-11-06T22:53:29.8550763Z not ok 1 - BASE-AGENT-005: native admin sponsor changes revoke preparation and cached reads at 1440 and 390
+shards (journeys-3, true)	Run this shard	2026-11-06T22:53:29.8563230Z   ---
+shards (journeys-3, true)	Run this shard	2026-11-06T22:53:29.8563523Z   duration_ms: 1852.017549
+shards (journeys-3, true)	Run this shard	2026-11-06T22:53:29.8563784Z   type: 'test'
+shards (journeys-3, true)	Run this shard	2026-11-06T22:53:29.8564217Z   location: '/home/runner/work/run-mallet/run-mallet/tests/mallet.test.mjs:54:1'
+shards (journeys-3, true)	Run this shard	2026-11-06T22:53:29.8564909Z   failureType: 'testCodeFailure'
+shards (journeys-3, true)	Run this shard	2026-11-06T22:53:29.8565421Z   error: 'No production build at dist/server/wrangler.json. Run rer build, then rer verify.'
+shards (journeys-3, true)	Run this shard	2026-11-06T22:53:29.8565900Z   code: 'hosted_output_missing'
+shards (journeys-3, true)	Run this shard	2026-11-06T22:53:29.8566179Z   stack: |-
+shards (journeys-3, true)	Run this shard	2026-11-06T22:53:29.8567100Z     serveHosted (file:///home/runner/work/run-mallet/run-mallet/node_modules/.pnpm/@runeditrun+rer@0.2.91/node_modules/@runeditrun/rer/cli/hosted-output.mjs:53:16)
+shards (journeys-3, true)	Run this shard	2026-11-06T22:53:29.8568291Z     async nativePeer (file:///home/runner/work/run-mallet/run-mallet/tests/agent-door/preparation-parity.mjs:18:15)
+shards (journeys-3, true)	Run this shard	2026-11-06T22:53:29.8569206Z     async sponsorAdmission (file:///home/runner/work/run-mallet/run-mallet/tests/agent-door/sponsor-admission.mjs:73:13)
+shards (journeys-3, true)	Run this shard	2026-11-06T22:53:29.8570499Z     async TestContext.sponsorAdmissionBrowser (file:///home/runner/work/run-mallet/run-mallet/tests/agent-sponsor-admission-browser.mjs:12:3)
+shards (journeys-3, true)	Run this shard	2026-11-06T22:53:29.8571883Z     async Test.run (node:internal/test_runner/test:1054:7)
+shards (journeys-3, true)	Run this shard	2026-11-06T22:53:29.8573274Z     async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+shards (journeys-3, true)	Run this shard	2026-11-06T22:53:29.8574010Z   ...
+shards (journeys-3, true)	Run this shard	2026-11-06T22:54:01.6445400Z # Subtest: ADV-003: source-cited blockers require actual evidence, exact consent and physical receipt, preserve handlers and recover privately
+shards (journeys-3, true)	Run this shard	2026-11-06T22:54:01.6447297Z ok 2 - ADV-003: source-cited blockers require actual evidence, exact consent and physical receipt, preserve handlers and recover privately
+shards (journeys-3, true)	Run this shard	2026-11-06T22:54:01.6448384Z   ---
+shards (journeys-3, true)	Run this shard	2026-11-06T22:54:01.6448737Z   duration_ms: 31798.030329
+shards (journeys-3, true)	Run this shard	2026-11-06T22:54:01.6449520Z   type: 'test'
+shards (journeys-3, true)	Run this shard	2026-11-06T22:54:01.6449865Z   ...
+shards (journeys-3, true)	Run this shard	2026-11-06T22:54:29.0689828Z # Subtest: ADV-003: native blocker packet, handlers and proposal review at 1440 and 390
+shards (journeys-3, true)	Run this shard	2026-11-06T22:54:29.0693922Z ok 3 - ADV-003: native blocker packet, handlers and proposal review at 1440 and 390
+shards (journeys-3, true)	Run this shard	2026-11-06T22:54:29.0694405Z   ---
+shards (journeys-3, true)	Run this shard	2026-11-06T22:54:29.0694626Z   duration_ms: 27426.433055
+shards (journeys-3, true)	Run this shard	2026-11-06T22:54:29.0695075Z   type: 'test'
+shards (journeys-3, true)	Run this shard	2026-11-06T22:54:29.0695295Z   ...
+shards (journeys-3, true)	Run this shard	2026-11-06T22:54:43.0274116Z # Subtest: agent prepares, person approves, immutable actual-work invoice exports once
+shards (journeys-3, true)	Run this shard	2026-11-06T22:54:43.0275624Z ok 4 - agent prepares, person approves, immutable actual-work invoice exports once
+shards (journeys-3, true)	Run this shard	2026-11-06T22:54:43.0276489Z   ---
+shards (journeys-3, true)	Run this shard	2026-11-06T22:54:43.0277003Z   duration_ms: 13958.911853
+shards (journeys-3, true)	Run this shard	2026-11-06T22:54:43.0277491Z   type: 'test'
+shards (journeys-3, true)	Run this shard	2026-11-06T22:54:43.0279624Z   ...
+shards (journeys-3, true)	Run this shard	2026-11-06T22:54:45.8007326Z # Subtest: RepairShopr dry run, reviewed fingerprint, original custody, replay and undo
+shards (journeys-3, true)	Run this shard	2026-11-06T22:54:45.8008755Z ok 5 - RepairShopr dry run, reviewed fingerprint, original custody, replay and undo
+shards (journeys-3, true)	Run this shard	2026-11-06T22:54:45.8009510Z   ---
+shards (journeys-3, true)	Run this shard	2026-11-06T22:54:45.8009865Z   duration_ms: 2771.78516
+shards (journeys-3, true)	Run this shard	2026-11-06T22:54:45.8010663Z   type: 'test'
+shards (journeys-3, true)	Run this shard	2026-11-06T22:54:45.8011446Z   ...
+shards (journeys-3, true)	Run this shard	2026-11-06T22:55:01.4549239Z # Subtest: BUY-001 / OPS-001: approved spend, partial receipt, repair allocation, backorder, bill exceptions, closure and fresh recovery
+shards (journeys-3, true)	Run this shard	2026-11-06T22:55:01.4551791Z ok 6 - BUY-001 / OPS-001: approved spend, partial receipt, repair allocation, backorder, bill exceptions, closure and fresh recovery
+shards (journeys-3, true)	Run this shard	2026-11-06T22:55:01.4552975Z   ---
+shards (journeys-3, true)	Run this shard	2026-11-06T22:55:01.4553621Z   duration_ms: 15653.578431
+shards (journeys-3, true)	Run this shard	2026-11-06T22:55:01.4554138Z   type: 'test'
+shards (journeys-3, true)	Run this shard	2026-11-06T22:55:01.4554472Z   ...
+shards (journeys-3, true)	Run this shard	2026-11-06T22:55:17.4351228Z # Subtest: BUY-001: two-line spend approval, partial receiving, backorder and changed bill exception through native forms at 1440/390
+shards (journeys-3, true)	Run this shard	2026-11-06T22:55:17.4352678Z ok 7 - BUY-001: two-line spend approval, partial receiving, backorder and changed bill exception through native forms at 1440/390
+shards (journeys-3, true)	Run this shard	2026-11-06T22:55:17.4353801Z   ---
+shards (journeys-3, true)	Run this shard	2026-11-06T22:55:17.4354305Z   duration_ms: 15979.497845
+shards (journeys-3, true)	Run this shard	2026-11-06T22:55:17.4354832Z   type: 'test'
+shards (journeys-3, true)	Run this shard	2026-11-06T22:55:17.4355308Z   ...
+shards (journeys-3, true)	Run this shard	2026-11-06T22:55:24.9756080Z # Subtest: PART-005 / OPS-001: installed and unused supplier returns, PO provenance, quarantine, authorization, shipment, partial credit and warranty costs survive recovery
+shards (journeys-3, true)	Run this shard	2026-11-06T22:55:24.9758680Z ok 8 - PART-005 / OPS-001: installed and unused supplier returns, PO provenance, quarantine, authorization, shipment, partial credit and warranty costs survive recovery
+shards (journeys-3, true)	Run this shard	2026-11-06T22:55:24.9759697Z   ---
+shards (journeys-3, true)	Run this shard	2026-11-06T22:55:24.9759930Z   duration_ms: 7540.580638
+shards (journeys-3, true)	Run this shard	2026-11-06T22:55:24.9760179Z   type: 'test'
+shards (journeys-3, true)	Run this shard	2026-11-06T22:55:24.9760765Z   ...
+shards (journeys-3, true)	Run this shard	2026-11-06T22:55:31.5682637Z # Subtest: PART-005: remove failed part, authorize RMA, ship and reconcile partial credit at 1440/390
+shards (journeys-3, true)	Run this shard	2026-11-06T22:55:31.5688951Z ok 9 - PART-005: remove failed part, authorize RMA, ship and reconcile partial credit at 1440/390
+shards (journeys-3, true)	Run this shard	2026-11-06T22:55:31.5689982Z   ---
+shards (journeys-3, true)	Run this shard	2026-11-06T22:55:31.5690702Z   duration_ms: 6593.85988
+shards (journeys-3, true)	Run this shard	2026-11-06T22:55:31.5691204Z   type: 'test'
+shards (journeys-3, true)	Run this shard	2026-11-06T22:55:31.5691570Z   ...
+shards (journeys-3, true)	Run this shard	2026-11-06T22:56:29.7589200Z # Subtest: AR-001 and FLEET-001: owner-reviewed terms, credit limits, fleet authorizer, check allocation, disputes, promises and private recovered statements
+shards (journeys-3, true)	Run this shard	2026-11-06T22:56:29.7591862Z ok 10 - AR-001 and FLEET-001: owner-reviewed terms, credit limits, fleet authorizer, check allocation, disputes, promises and private recovered statements
+shards (journeys-3, true)	Run this shard	2026-11-06T22:56:29.7593451Z   ---
+shards (journeys-3, true)	Run this shard	2026-11-06T22:56:29.7593808Z   duration_ms: 58187.359034
+shards (journeys-3, true)	Run this shard	2026-11-06T22:56:29.7594170Z   type: 'test'
+shards (journeys-3, true)	Run this shard	2026-11-06T22:56:29.7594392Z   ...
+shards (journeys-3, true)	Run this shard	2026-11-06T22:57:36.9520053Z # Subtest: AR-001, FLEET-001 and TAX-002: native terms, fleet PO, disputed statement, promise and observed-clearance preview at 1440 and 390
+shards (journeys-3, true)	Run this shard	2026-11-06T22:57:36.9522443Z ok 11 - AR-001, FLEET-001 and TAX-002: native terms, fleet PO, disputed statement, promise and observed-clearance preview at 1440 and 390
+shards (journeys-3, true)	Run this shard	2026-11-06T22:57:36.9523791Z   ---
+shards (journeys-3, true)	Run this shard	2026-11-06T22:57:36.9524181Z   duration_ms: 67195.68822
+shards (journeys-3, true)	Run this shard	2026-11-06T22:57:36.9524609Z   type: 'test'
+shards (journeys-3, true)	Run this shard	2026-11-06T22:57:36.9524942Z   ...
+shards (journeys-3, true)	Run this shard	2026-11-06T22:57:47.8964731Z # Subtest: GOV-002: private searchable audit retains decisions after revocation and fresh-owner recovery
+shards (journeys-3, true)	Run this shard	2026-11-06T22:57:47.8966090Z ok 12 - GOV-002: private searchable audit retains decisions after revocation and fresh-owner recovery
+shards (journeys-3, true)	Run this shard	2026-11-06T22:57:47.8966736Z   ---
+shards (journeys-3, true)	Run this shard	2026-11-06T22:57:47.8967092Z   duration_ms: 10944.305727
+shards (journeys-3, true)	Run this shard	2026-11-06T22:57:47.8967505Z   type: 'test'
+shards (journeys-3, true)	Run this shard	2026-11-06T22:57:47.8967774Z   ...
+shards (journeys-3, true)	Run this shard	2026-11-06T22:57:54.7379820Z # Subtest: API-001: versioned resource pages, retained repair history and stable identities recover without credentials
+shards (journeys-3, true)	Run this shard	2026-11-06T22:57:54.7381988Z ok 13 - API-001: versioned resource pages, retained repair history and stable identities recover without credentials
+shards (journeys-3, true)	Run this shard	2026-11-06T22:57:54.7382678Z   ---
+shards (journeys-3, true)	Run this shard	2026-11-06T22:57:54.7382922Z   duration_ms: 6841.568107
+shards (journeys-3, true)	Run this shard	2026-11-06T22:57:54.7383210Z   type: 'test'
+shards (journeys-3, true)	Run this shard	2026-11-06T22:57:54.7383428Z   ...
+shards (journeys-3, true)	Run this shard	2026-11-06T22:58:01.8587838Z # Subtest: API-001: scoped preparation retries are atomic across transports and preserve each existing person decision
+shards (journeys-3, true)	Run this shard	2026-11-06T22:58:01.8589791Z ok 14 - API-001: scoped preparation retries are atomic across transports and preserve each existing person decision
+shards (journeys-3, true)	Run this shard	2026-11-06T22:58:01.8591200Z   ---
+shards (journeys-3, true)	Run this shard	2026-11-06T22:58:01.8592413Z   duration_ms: 7120.641415
+shards (journeys-3, true)	Run this shard	2026-11-06T22:58:01.8592865Z   type: 'test'
+shards (journeys-3, true)	Run this shard	2026-11-06T22:58:01.8593211Z   ...
+shards (journeys-3, true)	Run this shard	2026-11-06T22:58:05.1166855Z # Subtest: API-001: missing scopes, alternate transports and expired or revoked authority fail closed
+shards (journeys-3, true)	Run this shard	2026-11-06T22:58:05.1168511Z ok 15 - API-001: missing scopes, alternate transports and expired or revoked authority fail closed
+shards (journeys-3, true)	Run this shard	2026-11-06T22:58:05.1169257Z   ---
+shards (journeys-3, true)	Run this shard	2026-11-06T22:58:05.1169729Z   duration_ms: 3255.914575
+shards (journeys-3, true)	Run this shard	2026-11-06T22:58:05.1170407Z   type: 'test'
+shards (journeys-3, true)	Run this shard	2026-11-06T22:58:05.1170893Z   ...
+shards (journeys-3, true)	Run this shard	2026-11-06T22:58:08.6473257Z # PROBE BASE-AGENT-003 authority-autonomous: populated owner and member resources -> current scope, identical missing refusal, no notes or original bytes
+shards (journeys-3, true)	Run this shard	2026-11-06T22:58:09.0328867Z # PROBE BASE-AGENT-003 authority-held: populated owner and member resources -> current scope, identical missing refusal, no notes or original bytes
+shards (journeys-3, true)	Run this shard	2026-11-06T22:58:10.2364365Z # PROBE BASE-AGENT-003 attributable-readback: native repair page -> exact prepared estimate and retained proposal, agent for sponsor; browser proof 1440 and 390
+shards (journeys-3, true)	Run this shard	2026-11-06T22:58:10.4020101Z # PROBE BASE-AGENT-003 erasure: native asset erasure then repeated MCP reads -> resource unavailable, no content or resurrection
+shards (journeys-3, true)	Run this shard	2026-11-06T22:58:10.4842123Z # PROBE BASE-AGENT-003 revocation: revoked consent and suspended sponsor resource replay -> 401 with no content or business changes
+shards (journeys-3, true)	Run this shard	2026-11-06T22:58:10.5053224Z # Subtest: agent preparation resources retain exact outcomes and enforce current native authority with attributable browser readback
+shards (journeys-3, true)	Run this shard	2026-11-06T22:58:10.5055188Z ok 16 - agent preparation resources retain exact outcomes and enforce current native authority with attributable browser readback
+shards (journeys-3, true)	Run this shard	2026-11-06T22:58:10.5056237Z   ---
+shards (journeys-3, true)	Run this shard	2026-11-06T22:58:10.5056596Z   duration_ms: 5390.481038
+shards (journeys-3, true)	Run this shard	2026-11-06T22:58:10.5056884Z   type: 'test'
+shards (journeys-3, true)	Run this shard	2026-11-06T22:58:10.5057092Z   ...
+shards (journeys-3, true)	Run this shard	2026-11-06T22:58:10.5715242Z 1..16
+shards (journeys-3, true)	Run this shard	2026-11-06T22:58:10.5715684Z # tests 16
+shards (journeys-3, true)	Run this shard	2026-11-06T22:58:10.5720970Z # suites 0
+shards (journeys-3, true)	Run this shard	2026-11-06T22:58:10.5731265Z # pass 15
+shards (journeys-3, true)	Run this shard	2026-11-06T22:58:10.5731662Z # fail 1
+shards (journeys-3, true)	Run this shard	2026-11-06T22:58:10.5732062Z # cancelled 0
+shards (journeys-3, true)	Run this shard	2026-11-06T22:58:10.5732409Z # skipped 0
+shards (journeys-3, true)	Run this shard	2026-11-06T22:58:10.5732650Z # todo 0
+shards (journeys-3, true)	Run this shard	2026-11-06T22:58:10.5732911Z # duration_ms 284080.536834
+shards (journeys-3, true)	Run this shard	2026-11-06T22:58:10.5907493Z  ELIFECYCLE  Command failed with exit code 1.
+shards (journeys-3, true)	Run this shard	2026-11-06T22:58:10.6341573Z ##[error]Process completed with exit code 1.

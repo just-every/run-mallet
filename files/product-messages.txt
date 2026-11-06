@@ -1,0 +1,12 @@
+05f12bb25287d22654fda8b2a549712d14e94c1c
+Use positive skip selection for the fallback test shard
+
+f0316b3a7b651ef3e9597e804812b028ead0fe62
+Keep hosted parity and sponsor journeys with their production build
+
+3bfa2d7f572e2ee621da214b2f19f0a1de423349
+Keep the emitted-worker Pause journey with the single build
+
+8aabf89351f18f4e3be8ab17d064e101dd6e11f3
+Balance Verify journeys across eight bounded shards
+

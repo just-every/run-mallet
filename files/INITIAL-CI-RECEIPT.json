@@ -1,0 +1,81 @@
+{
+  "run": 42307875520,
+  "head": "8aabf89351f18f4e3be8ab17d064e101dd6e11f3",
+  "status": "failed initial candidate; interrupted by next push",
+  "mean_seconds": 384.25,
+  "longest_seconds": 669.0,
+  "balance_proven": false,
+  "reason": "Two assertion jobs failed and two other shards were cancelled by the next push; cancelled durations are censored.",
+  "jobs": [
+    {
+      "job_id": 128201716380,
+      "name": "plan",
+      "conclusion": "success",
+      "seconds": 5.0,
+      "head_sha": "8aabf89351f18f4e3be8ab17d064e101dd6e11f3"
+    },
+    {
+      "job_id": 128201758109,
+      "name": "shards (journeys-3, true)",
+      "conclusion": "failure",
+      "seconds": 355.0,
+      "head_sha": "8aabf89351f18f4e3be8ab17d064e101dd6e11f3"
+    },
+    {
+      "job_id": 128201758134,
+      "name": "shards (work-graph-core, true)",
+      "conclusion": "cancelled",
+      "seconds": 669.0,
+      "head_sha": "8aabf89351f18f4e3be8ab17d064e101dd6e11f3"
+    },
+    {
+      "job_id": 128201758135,
+      "name": "shards (journeys-6, true)",
+      "conclusion": "success",
+      "seconds": 274.0,
+      "head_sha": "8aabf89351f18f4e3be8ab17d064e101dd6e11f3"
+    },
+    {
+      "job_id": 128201758141,
+      "name": "shards (journeys-4, true)",
+      "conclusion": "failure",
+      "seconds": 288.0,
+      "head_sha": "8aabf89351f18f4e3be8ab17d064e101dd6e11f3"
+    },
+    {
+      "job_id": 128201758165,
+      "name": "shards (journeys-2, true)",
+      "conclusion": "success",
+      "seconds": 373.0,
+      "head_sha": "8aabf89351f18f4e3be8ab17d064e101dd6e11f3"
+    },
+    {
+      "job_id": 128201758211,
+      "name": "shards (journeys-5, true)",
+      "conclusion": "success",
+      "seconds": 238.0,
+      "head_sha": "8aabf89351f18f4e3be8ab17d064e101dd6e11f3"
+    },
+    {
+      "job_id": 128201758240,
+      "name": "shards (journeys-7, true)",
+      "conclusion": "cancelled",
+      "seconds": 668.0,
+      "head_sha": "8aabf89351f18f4e3be8ab17d064e101dd6e11f3"
+    },
+    {
+      "job_id": 128201758284,
+      "name": "shards (core, true)",
+      "conclusion": "success",
+      "seconds": 209.0,
+      "head_sha": "8aabf89351f18f4e3be8ab17d064e101dd6e11f3"
+    },
+    {
+      "job_id": 128206191130,
+      "name": "verify",
+      "conclusion": "failure",
+      "seconds": 2.0,
+      "head_sha": "8aabf89351f18f4e3be8ab17d064e101dd6e11f3"
+    }
+  ]
+}

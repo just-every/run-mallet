@@ -1,0 +1,91 @@
+{
+  "push": [
+    {
+      "name": "core",
+      "browser": true,
+      "hosted": true,
+      "commands": [
+        "pnpm run check --profile first-party",
+        "node scripts/contract-docs.mjs check",
+        "pnpm run typecheck",
+        "pnpm run build",
+        "pnpm run test:runtime",
+        "node --test --test-concurrency=1 --test-name-pattern='^shop setup|^pre-US' tests/sales-tax.test.mjs",
+        "node --test --test-concurrency=1 --test-name-pattern='^(?:PAY-005|PART-006|RETURN-001|DIAG-002|RETURN-002|API-002|EST-004|BASE-AGENT-002|BASE-AGENT-005|BASE-AGENT-011|Stripe|native)\\b' tests/mallet.test.mjs"
+      ]
+    },
+    {
+      "name": "work-graph-core",
+      "browser": true,
+      "hosted": false,
+      "commands": [
+        "node --test --test-concurrency=1 --test-name-pattern='^(?:OPS-002|DVI-003|EST-001|GOV-006|INV-001|INVOICE-001|QUALITY-001|GOV-005|VEH-002)\\b' tests/mallet.test.mjs"
+      ]
+    },
+    {
+      "name": "journeys-2",
+      "browser": true,
+      "hosted": false,
+      "commands": [
+        "node --test --test-concurrency=1 tests/media.test.mjs",
+        "node --test --test-concurrency=1 tests/demo.test.mjs",
+        "node --test --test-concurrency=1 --test-name-pattern='^(?:AUTO-002|WARRANTY-001|ASSET-001|ADV-005|PORTAL-001|EST-002|BASE-AGENT-008|BASE-AGENT-012)\\b' tests/mallet.test.mjs"
+      ]
+    },
+    {
+      "name": "journeys-3",
+      "browser": true,
+      "hosted": false,
+      "commands": [
+        "node --test --test-concurrency=1 --test-skip-pattern='^shop setup|^pre-US|1440|390' tests/sales-tax.test.mjs",
+        "node --test --test-concurrency=1 --test-name-pattern='^(?:ADV-003|API-001|BUY-001|PART-005|AR-001|agent|GOV-002|RepairShopr)\\b' tests/mallet.test.mjs"
+      ]
+    },
+    {
+      "name": "journeys-4",
+      "browser": true,
+      "hosted": false,
+      "commands": [
+        "node --test --test-concurrency=1 tests/pier-journey.mjs",
+        "node --test --test-concurrency=1 --test-name-pattern='^(?:PAY-001|EST-006|PART-002|PART-004|PART-003|REPORT-003|DVI-001|AUTO-004|import)\\b' tests/mallet.test.mjs"
+      ]
+    },
+    {
+      "name": "journeys-5",
+      "browser": true,
+      "hosted": false,
+      "commands": [
+        "node --test --test-concurrency=1 --test-name-pattern='1440|390' tests/sales-tax.test.mjs",
+        "node --test --test-concurrency=1 --test-name-pattern='^(?:BOOK-001|AUTO-005|SUBLET-001|PART-007|PAY-004|GOV-004|TIME-001|FLOW-003|HTTP-001|dispatch)\\b' tests/mallet.test.mjs"
+      ]
+    },
+    {
+      "name": "journeys-6",
+      "browser": true,
+      "hosted": false,
+      "commands": [
+        "node --test --test-concurrency=1 tests/restore.test.mjs",
+        "node --test --test-concurrency=1 --test-name-pattern='^(?:ADV-008|FLOW-002|FLOW-004|CUS-001|PART-008|GOV-001|DIAG-001|DATA-001|OPS-001|booking)\\b' tests/mallet.test.mjs"
+      ]
+    },
+    {
+      "name": "journeys-7",
+      "browser": true,
+      "hosted": false,
+      "commands": [
+        "node --test --test-concurrency=1 tests/sales-report.test.mjs",
+        "node --test --test-concurrency=1 --test-skip-pattern='^(?:PAY-005|PART-006|RETURN-001|DIAG-002|RETURN-002|API-002|EST-004|BASE-AGENT-002|BASE-AGENT-005|BASE-AGENT-011|Stripe|native|OPS-002|DVI-003|EST-001|GOV-006|INV-001|INVOICE-001|QUALITY-001|GOV-005|VEH-002|AUTO-002|WARRANTY-001|ASSET-001|ADV-005|PORTAL-001|EST-002|BASE-AGENT-008|BASE-AGENT-012|ADV-003|API-001|BUY-001|PART-005|AR-001|agent|GOV-002|RepairShopr|PAY-001|EST-006|PART-002|PART-004|PART-003|REPORT-003|DVI-001|AUTO-004|import|BOOK-001|AUTO-005|SUBLET-001|PART-007|PAY-004|GOV-004|TIME-001|FLOW-003|HTTP-001|dispatch|ADV-008|FLOW-002|FLOW-004|CUS-001|PART-008|GOV-001|DIAG-001|DATA-001|OPS-001|booking)\\b' tests/mallet.test.mjs"
+      ]
+    }
+  ],
+  "nightly": [
+    {
+      "name": "clone-journey",
+      "browser": true,
+      "hosted": false,
+      "commands": [
+        "node tests/clone-journey.mjs"
+      ]
+    }
+  ]
+}

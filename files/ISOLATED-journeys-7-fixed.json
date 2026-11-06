@@ -1,0 +1,10 @@
+{
+  "shard": "journeys-7",
+  "head": "05f12bb25287d22654fda8b2a549712d14e94c1c",
+  "exit_code": 0,
+  "seconds": 435.952,
+  "started_at": "2026-11-06T23:19:59.322367+00:00",
+  "completed_at": "2026-11-06T23:27:15.274669+00:00",
+  "isolated_checkout": true,
+  "dist_initially_absent": true
+}

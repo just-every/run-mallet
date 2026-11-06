@@ -1,0 +1,1162 @@
+{
+  "captured_at": "2026-11-06T23:20:42.624736+00:00",
+  "node": "22.20.0 for journey diagnostics and build (pinned rer selects Node); shell source/typecheck Node 24.19.0",
+  "chromium": "/usr/bin/chromium; no sandbox",
+  "batches": [
+    {
+      "batch": "core",
+      "complete": true,
+      "counts": {
+        "tests": 97,
+        "pass": 97,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0
+      },
+      "tests": [
+        {
+          "name": "QUALITY-001: demo opens on a lived-in workshop whose prepared work a person can decide, and sends nothing",
+          "status": "pass",
+          "seconds": 4.689
+        },
+        {
+          "name": "ADV-003: source-cited blockers require actual evidence, exact consent and physical receipt, preserve handlers and recover privately",
+          "status": "pass",
+          "seconds": 31.906
+        },
+        {
+          "name": "native sign-in, CSRF, member isolation and immediate session revocation",
+          "status": "pass",
+          "seconds": 2.837
+        },
+        {
+          "name": "HTTP-001: populated private doors refuse unsafe requests without business writes",
+          "status": "pass",
+          "seconds": 3.603
+        },
+        {
+          "name": "booking rejects bay and technician collisions and keeps every asset visit",
+          "status": "pass",
+          "seconds": 2.915
+        },
+        {
+          "name": "exact revision, partial authorisation and quantity ceilings protect customer consent",
+          "status": "pass",
+          "seconds": 17.959
+        },
+        {
+          "name": "BASE-AGENT-012: native estimate retries retain one outcome and refuse changed arguments or stale revisions",
+          "status": "pass",
+          "seconds": 6.897
+        },
+        {
+          "name": "agent prepares, person approves, immutable actual-work invoice exports once",
+          "status": "pass",
+          "seconds": 16.057
+        },
+        {
+          "name": "INVOICE-001: exact actual-work lines, approval and both saved export retrieval versions",
+          "status": "pass",
+          "seconds": 2.963
+        },
+        {
+          "name": "INVOICE-001: exact approval history, actual-work rows and saved export retrieval",
+          "status": "pass",
+          "seconds": 2.836
+        },
+        {
+          "name": "dispatch proposal is inert until a person approves current free resources",
+          "status": "pass",
+          "seconds": 2.346
+        },
+        {
+          "name": "RepairShopr dry run, reviewed fingerprint, original custody, replay and undo",
+          "status": "pass",
+          "seconds": 2.861
+        },
+        {
+          "name": "import undo preserves an asset once it has a native repair visit",
+          "status": "pass",
+          "seconds": 2.435
+        },
+        {
+          "name": "OPS-001: complete native archive restores every current record and finishes repair under fresh authority",
+          "status": "pass",
+          "seconds": 9.713
+        },
+        {
+          "name": "DATA-001: native erasure fences known old archives and labels unknown fresh recovery",
+          "status": "pass",
+          "seconds": 16.947
+        },
+        {
+          "name": "VEH-002: visit readings, reasoned corrections, regression warnings and observed service due",
+          "status": "pass",
+          "seconds": 3.102
+        },
+        {
+          "name": "EST-005: decline tires at 60000 miles, retain exact evidence and reprice on the next visit for a fresh decision",
+          "status": "pass",
+          "seconds": 3.502
+        },
+        {
+          "name": "QUALITY-001 / OPS-001: failed brake test blocks ready; corrective work, independent sign-off, reasoned override and immutable restore",
+          "status": "pass",
+          "seconds": 7.033
+        },
+        {
+          "name": "EST-004: separate incremental decisions, prospective price changes, exact actuals/invoice and recovery",
+          "status": "pass",
+          "seconds": 14.931
+        },
+        {
+          "name": "DVI-001 / DVI-004: exact assigned template, measured/photo outcomes, not-inspected state, canned-job estimate and archive",
+          "status": "pass",
+          "seconds": 8.541
+        },
+        {
+          "name": "EST-002: cost-priced packages, finding overrides, immutable rules and fresh-owner recovery",
+          "status": "pass",
+          "seconds": 7.218
+        },
+        {
+          "name": "TIME-001: two assigned job timers, breaks, approved corrections, isolation and recovery",
+          "status": "pass",
+          "seconds": 6.99
+        },
+        {
+          "name": "REPORT-003 / REPORT-006: sold versus actual hours, recomputed corrections, drill-through, owner-only pay rates and recovery",
+          "status": "pass",
+          "seconds": 10.059
+        },
+        {
+          "name": "DIAG-001: codes, measurements, staff-only notes, reviewed sharing and a read-only customer link",
+          "status": "pass",
+          "seconds": 8.353
+        },
+        {
+          "name": "EST-003: emailed approval link, signed line decision, replay, stale and revoked links and receipt recovery",
+          "status": "pass",
+          "seconds": 7.851
+        },
+        {
+          "name": "EST-006 / EST-007: scheduled reminders chase only the current undecided revision; reply, decision and opt-out stop them; rejected and interrupted sends and silence retain one attributable advisor task",
+          "status": "pass",
+          "seconds": 12.411
+        },
+        {
+          "name": "FLOW-002: delayed required parts, resource/labor plan, advisor promise notices and archive recovery",
+          "status": "pass",
+          "seconds": 10.658
+        },
+        {
+          "name": "FLOW-002: failed/uncertain provider outcome claims one send and remains visible",
+          "status": "pass",
+          "seconds": 3.681
+        },
+        {
+          "name": "FLOW-004 / FLOW-005: helper crew, dependent subtasks, mentioned advisor with media, acknowledged handoff, per-person time and recovery",
+          "status": "pass",
+          "seconds": 10.596
+        },
+        {
+          "name": "FLOW-001 / REPORT-004 / REPORT-006: nine-stage board, measured delays, promises, gated moves, technician, overdue, priority and search filters, canceled and lost retention, recorded collection and recovery",
+          "status": "pass",
+          "seconds": 11.212
+        },
+        {
+          "name": "PART-006: supplier backorder, approved charge, internal advisor changes, actual receipt, invoice once and fresh-owner archive recovery",
+          "status": "pass",
+          "seconds": 11.184
+        },
+        {
+          "name": "FLOW-003 / OPS-001: deterministic routing, closed-day deadlines, durable escalation and resolution through public doors",
+          "status": "pass",
+          "seconds": 13.823
+        },
+        {
+          "name": "EST-001 / OPS-001: fleet/customer rates, direct costs, fees and discounts freeze through consent, actuals, invoice and recovery",
+          "status": "pass",
+          "seconds": 7.471
+        },
+        {
+          "name": "SUBLET-001 / OPS-001: approved outsourced scope, delayed custody, supplier bills, receiving and quality gates, exact margin and fresh recovery",
+          "status": "pass",
+          "seconds": 17.846
+        },
+        {
+          "name": "PART-002 / OPS-001: barcode receiving, separate balances, blind and cycle variances, approval fences, reports and fresh recovery",
+          "status": "pass",
+          "seconds": 7.497
+        },
+        {
+          "name": "BUY-001 / OPS-001: approved spend, partial receipt, repair allocation, backorder, bill exceptions, closure and fresh recovery",
+          "status": "pass",
+          "seconds": 16.199
+        },
+        {
+          "name": "CUS-001 / OPS-001: owner/admin accounts, previewed merges, payer sessions, frozen invoices and recovery",
+          "status": "pass",
+          "seconds": 9.219
+        },
+        {
+          "name": "PART-001 / OPS-001: declared catalog, two supplier lots, serial identity, exact installed costs, affected repairs, count reconciliation and recovery",
+          "status": "pass",
+          "seconds": 8.545
+        },
+        {
+          "name": "WARRANTY-001 / OPS-001: paid original, linked lot and no-charge comeback, coverage decision, supplier claim and preserved invoice recovery",
+          "status": "pass",
+          "seconds": 35.571
+        },
+        {
+          "name": "RETURN-001 / PAY-004 / OPS-001: failed quality and unpaid gates, processor receipts, exact cash delegate and identity evidence, immutable receipt and recovery",
+          "status": "pass",
+          "seconds": 27.832
+        },
+        {
+          "name": "PORTAL-001: known and unknown requests answer before mail; address and client limits disclose nothing",
+          "status": "pass",
+          "seconds": 2.791
+        },
+        {
+          "name": "PORTAL-001: confirmation, separate sessions, sign-out and contact changes fence account access",
+          "status": "pass",
+          "seconds": 3.093
+        },
+        {
+          "name": "PAY-005 / PAY-008 / OPS-001: reviewed original-tender refunds, exact tax credits, exchanges, account isolation and recovery",
+          "status": "pass",
+          "seconds": 12.269
+        },
+        {
+          "name": "PAY-005 / PAY-008: one approved Stripe refund, uncertain recovery and duplicate or failed provider outcomes",
+          "status": "pass",
+          "seconds": 11.077
+        },
+        {
+          "name": "PAY-005: full original cash, check and other manual refunds preserve issued invoices and zero the balance",
+          "status": "pass",
+          "seconds": 4.894
+        },
+        {
+          "name": "BOOK-001: final-slot contenders retain one exact confirmation, cancel, reclaim and recover with fresh authority",
+          "status": "pass",
+          "seconds": 18.126
+        },
+        {
+          "name": "BOOK-001: opening windows, skills, duration, lead time and expiring tentative capacity",
+          "status": "pass",
+          "seconds": 3.794
+        },
+        {
+          "name": "DVI-003: reviewed private evidence, exact proposed lines, delivery and read-only view analytics survive recovery",
+          "status": "pass",
+          "seconds": 40.054
+        },
+        {
+          "name": "BOOK-001: failed or uncertain confirmation mail preserves the appointment without an automatic resend",
+          "status": "pass",
+          "seconds": 3.654
+        },
+        {
+          "name": "DVI-003: rejected or uncertain report mail retains one honest attempt without an automatic resend",
+          "status": "pass",
+          "seconds": 12.227
+        },
+        {
+          "name": "BOOK-001: anonymous tentative holds are bounded per source and normalized email",
+          "status": "pass",
+          "seconds": 3.646
+        },
+        {
+          "name": "BOOK-002: qualified resources, absences, recurring DST reservations and dispatch contention recover",
+          "status": "pass",
+          "seconds": 8.954
+        },
+        {
+          "name": "BOOK-002 / BOOK-003: cancellation offers FIFO eligible customers one private bounded reservation",
+          "status": "pass",
+          "seconds": 8.337
+        },
+        {
+          "name": "BOOK-002 / BOOK-003: waitlist offer expiry requires explicit staff advancement",
+          "status": "pass",
+          "seconds": 3.849
+        },
+        {
+          "name": "BOOK-002 / BOOK-003: existing tentative email holds preserve waitlist eligibility",
+          "status": "pass",
+          "seconds": 3.104
+        },
+        {
+          "name": "BOOK-002 / BOOK-003: waitlist offers share the tentative source capacity bound",
+          "status": "pass",
+          "seconds": 2.805
+        },
+        {
+          "name": "BOOK-002 / BOOK-003: failed or uncertain waitlist mail never automatically retries",
+          "status": "pass",
+          "seconds": 4.047
+        },
+        {
+          "name": "PART-007 / OPS-001: consumed stock, location demand, open-order deduction, replay-safe drafts, stale approval and recovery",
+          "status": "pass",
+          "seconds": 8.45
+        },
+        {
+          "name": "PART-004 / OPS-001: separate taxed core deposit, tender, due alerts, returned condition, shipment, adjusted supplier credit and immutable invoice correction",
+          "status": "pass",
+          "seconds": 10.002
+        },
+        {
+          "name": "PART-005 / OPS-001: installed and unused supplier returns, PO provenance, quarantine, authorization, shipment, partial credit and warranty costs survive recovery",
+          "status": "pass",
+          "seconds": 9.244
+        },
+        {
+          "name": "PART-008 / OPS-001: serialized inter-store request, approval, dispatch, shortage/damage custody, exact corrections and recovery",
+          "status": "pass",
+          "seconds": 8.5
+        },
+        {
+          "name": "BUY-002 / OPS-001: supplier comparison, exact cart approval, timed-out submit replay, rejected substitution, cancellation, rejected orders and recovery",
+          "status": "pass",
+          "seconds": 9.129
+        },
+        {
+          "name": "ASSET-001 / OPS-001: typed bicycle, device, equipment and auto repairs retain custody, parts, tax, paid returns and recovery",
+          "status": "pass",
+          "seconds": 12.036
+        },
+        {
+          "name": "DIAG-002 / OPS-001: private Phonecheck result imports retain raw tests, quarantine serial mismatches and recover without shared authority",
+          "status": "pass",
+          "seconds": 7.45
+        },
+        {
+          "name": "INV-001: exact mixed USD copies, linked corrections, single Base mail handoff and private archive recovery",
+          "status": "pass",
+          "seconds": 8.376
+        },
+        {
+          "name": "PAY-004 / OPS-001: pre-order deposits, cross-invoice allocations, split tender, cancellation refunds and fresh recovery",
+          "status": "pass",
+          "seconds": 9.847
+        },
+        {
+          "name": "PART-003 / OPS-001: atomic reserved lot usage, last-item conflicts, cancellation release, recorded returns and recovery",
+          "status": "pass",
+          "seconds": 7.396
+        },
+        {
+          "name": "AR-001 and FLEET-001: owner-reviewed terms, credit limits, fleet authorizer, check allocation, disputes, promises and private recovered statements",
+          "status": "pass",
+          "seconds": 64.224
+        },
+        {
+          "name": "GOV-002: private searchable audit retains decisions after revocation and fresh-owner recovery",
+          "status": "pass",
+          "seconds": 12.639
+        },
+        {
+          "name": "GOV-001: owner-only grants bound staff commands, private projections, handoffs and revoked authority",
+          "status": "pass",
+          "seconds": 12.265
+        },
+        {
+          "name": "Stripe public doors treat inherited handler names as unknown without exposing bindings",
+          "status": "pass",
+          "seconds": 2.355
+        },
+        {
+          "name": "PAY-001: owner checkout, authenticated event replay, exact fee and payout membership and inert recovery",
+          "status": "pass",
+          "seconds": 7.487
+        },
+        {
+          "name": "PAY-001: explicit expiration and uncertain checkout stay stopped without allocating money",
+          "status": "pass",
+          "seconds": 3.965
+        },
+        {
+          "name": "PAY-001: owner reader collection, authenticated payment and exact replay survive recovery",
+          "status": "pass",
+          "seconds": 8.51
+        },
+        {
+          "name": "PAY-001: uncertain reader initiation and cancellation reconcile without outbound replay",
+          "status": "pass",
+          "seconds": 4.047
+        },
+        {
+          "name": "PAY-001: authenticated ACH returns and reinstatement preserve captured payments across replay and recovery",
+          "status": "pass",
+          "seconds": 7.94
+        },
+        {
+          "name": "AUTO-001: appointment email quiet hours across DST, replacement, cancellation, failure and inert recovery",
+          "status": "pass",
+          "seconds": 7.684
+        },
+        {
+          "name": "AUTO-004: approved refreshed quote, observed mileage, explicit stop and repeat decline preserve decisions",
+          "status": "pass",
+          "seconds": 61.367
+        },
+        {
+          "name": "GOV-003: explicit provider sign-in, SCIM employment revocation and repair attribution survive recovery",
+          "status": "pass",
+          "seconds": 11.179
+        },
+        {
+          "name": "GOV-003: signed SAML admission, employment revocation and repair attribution survive recovery",
+          "status": "pass",
+          "seconds": 9.147
+        },
+        {
+          "name": "AUTO-005: paid collection permits one consented review handoff with private and inert recovery",
+          "status": "pass",
+          "seconds": 25.992
+        },
+        {
+          "name": "AUTO-005: poor private feedback keeps the public invitation and creates an owner task with erasure and recovery",
+          "status": "pass",
+          "seconds": 14.193
+        },
+        {
+          "name": "AUTO-002: approved stage email sends once, uncollected pickup reaches the owner and recovery is inert",
+          "status": "pass",
+          "seconds": 9.456
+        },
+        {
+          "name": "AUTO-002: quiet hours, changed repairs, failed contact, withdrawal and collection stop unsafe notices",
+          "status": "pass",
+          "seconds": 23.388
+        },
+        {
+          "name": "API-002: signed business outbox, bounded delivery, rotation, replay and inert recovery",
+          "status": "pass",
+          "seconds": 17.582
+        },
+        {
+          "name": "API-002: pinned public Crank workflow receives signed events and applies replay once",
+          "status": "pass",
+          "seconds": 5.267
+        },
+        {
+          "name": "ADV-008: separate scoped authority refuses unsafe roles, channels, spending, expiry and preparation-key expansion",
+          "status": "pass",
+          "seconds": 2.09
+        },
+        {
+          "name": "ADV-008: disclosed receptionist captures requested intake, reserves actual capacity and escalates to a person",
+          "status": "pass",
+          "seconds": 1.823
+        },
+        {
+          "name": "ADV-008: every note proposal preserves raw technician evidence and measured facts without publication",
+          "status": "pass",
+          "seconds": 5.717
+        },
+        {
+          "name": "ADV-008: exact human email review, queued revocation, single handoff and inert archive recovery",
+          "status": "pass",
+          "seconds": 6.109
+        },
+        {
+          "name": "ADV-008: failed or uncertain appointment email survives restart without an automatic retry and reaches human recovery",
+          "status": "pass",
+          "seconds": 4.778
+        },
+        {
+          "name": "API-001: versioned resource pages, retained repair history and stable identities recover without credentials",
+          "status": "pass",
+          "seconds": 5.749
+        },
+        {
+          "name": "API-001: scoped preparation retries are atomic across transports and preserve each existing person decision",
+          "status": "pass",
+          "seconds": 5.984
+        },
+        {
+          "name": "API-001: missing scopes, alternate transports and expired or revoked authority fail closed",
+          "status": "pass",
+          "seconds": 3.059
+        },
+        {
+          "name": "ADV-005: cited declined-work review preserves decisions, refuses stale or unsafe preparation and recovers erased history",
+          "status": "pass",
+          "seconds": 16.845
+        },
+        {
+          "name": "RETURN-002: reviewed CA and TX storage versions, notice clocks, disposal refusal, payment release and private recovery",
+          "status": "pass",
+          "seconds": 7.3
+        },
+        {
+          "name": "agent preparation resources retain exact outcomes and enforce current native authority with attributable browser readback",
+          "status": "pass",
+          "seconds": 5.34
+        }
+      ]
+    },
+    {
+      "batch": "browser",
+      "complete": true,
+      "counts": {
+        "tests": 52,
+        "pass": 52,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0
+      },
+      "tests": [
+        {
+          "name": "BASE-AGENT-002: native forms and MCP preparation parity under both policies at 1440 and 390",
+          "status": "pass",
+          "seconds": 42.87
+        },
+        {
+          "name": "BASE-AGENT-005: native admin sponsor changes revoke preparation and cached reads at 1440 and 390",
+          "status": "pass",
+          "seconds": 16.375
+        },
+        {
+          "name": "BASE-AGENT-008: exact agent preparation and distinct native owner approval at 1440",
+          "status": "pass",
+          "seconds": 7.304
+        },
+        {
+          "name": "BASE-AGENT-011: native Pause fences all six tools and legacy routes, owner work and bearer resume at 1440 and 390",
+          "status": "pass",
+          "seconds": 12.253
+        },
+        {
+          "name": "ADV-003: native blocker packet, handlers and proposal review at 1440 and 390",
+          "status": "pass",
+          "seconds": 30.461
+        },
+        {
+          "name": "WORKSHOP-001 and INVOICE-001: native registration, repeat visits and exact saved invoice at 1440 and 390",
+          "status": "pass",
+          "seconds": 8.462
+        },
+        {
+          "name": "INVOICE-001: native invoice and downloaded CSV readback at 1440 and 390",
+          "status": "pass",
+          "seconds": 22.943
+        },
+        {
+          "name": "QUALITY-001: counter/technician failed test, corrective work and independent Ready clearance at 1440/390",
+          "status": "pass",
+          "seconds": 16.552
+        },
+        {
+          "name": "DVI-001: native template/recipe/assignment and technician inspection at 1440/390",
+          "status": "pass",
+          "seconds": 10.536
+        },
+        {
+          "name": "EST-002: native matrix/package editors and reasoned override at 1440 and 390",
+          "status": "pass",
+          "seconds": 10.712
+        },
+        {
+          "name": "TIME-001: native clocks, reasoned correction decisions and actual board time at 1440/390",
+          "status": "pass",
+          "seconds": 16.304
+        },
+        {
+          "name": "REPORT-003: native technician report, rate form and role views at 1440/390",
+          "status": "pass",
+          "seconds": 26.043
+        },
+        {
+          "name": "DIAG-001: native diagnosis form, advisor sharing and customer link at 1440/390",
+          "status": "pass",
+          "seconds": 7.657
+        },
+        {
+          "name": "EST-003: customer approves and declines lines on a phone with a signed receipt at 390/1440",
+          "status": "pass",
+          "seconds": 6.44
+        },
+        {
+          "name": "EST-006 / EST-007: native chase policy, reminder history, customer opt-out and uncertain-task resolution at 1440/390",
+          "status": "pass",
+          "seconds": 13.504
+        },
+        {
+          "name": "FLOW-002: revised pickup promise and customer notice through native forms at 1440/390",
+          "status": "pass",
+          "seconds": 11.641
+        },
+        {
+          "name": "FLOW-004 / FLOW-005: native helper, dependent subtasks, mention and acknowledged handoff at 1440/390",
+          "status": "pass",
+          "seconds": 22.838
+        },
+        {
+          "name": "FLOW-001: native board filters, priority, cancel and recorded collection at 1440/390",
+          "status": "pass",
+          "seconds": 12.642
+        },
+        {
+          "name": "PART-006: approved special order, retained delay, advisor review and physical receipt through native forms at 1440/390",
+          "status": "pass",
+          "seconds": 11.754
+        },
+        {
+          "name": "EST-001: rate profile and discounted mixed estimate through native forms at 1440/390",
+          "status": "pass",
+          "seconds": 14.835
+        },
+        {
+          "name": "SUBLET-001: outside handoff, delay, added-scope decision, supplier bill, receipt, quality and margin through native forms at 1440/390",
+          "status": "pass",
+          "seconds": 18.494
+        },
+        {
+          "name": "PART-002: scan shipment and bins, approve shortage and reconcile through native forms at 1440/390",
+          "status": "pass",
+          "seconds": 22.803
+        },
+        {
+          "name": "BUY-001: two-line spend approval, partial receiving, backorder and changed bill exception through native forms at 1440/390",
+          "status": "pass",
+          "seconds": 24.038
+        },
+        {
+          "name": "CUS-001: admin intake, merge preview and payer-only account billing through native forms at 1440/390",
+          "status": "pass",
+          "seconds": 22.027
+        },
+        {
+          "name": "PART-001: maintain catalog, receive two lots, identify installation and find only affected vehicles at 1440/390",
+          "status": "pass",
+          "seconds": 8.297
+        },
+        {
+          "name": "WARRANTY-001: original invoice, linked rework, no-charge costs and supplier claim at 1440/390",
+          "status": "pass",
+          "seconds": 21.289
+        },
+        {
+          "name": "RETURN-001: failed quality and unpaid refusal, processor confirmation, exact cash delegate receipt, recovery and owner exception at 1440/390",
+          "status": "pass",
+          "seconds": 25.533
+        },
+        {
+          "name": "PAY-005 / PAY-008: payer refund privacy, current-payer refusal and credit statements at 1440 and 390",
+          "status": "pass",
+          "seconds": 16.783
+        },
+        {
+          "name": "BOOK-001: embedded service selection, final-slot contention and released capacity at 1440 and 390",
+          "status": "pass",
+          "seconds": 13.815
+        },
+        {
+          "name": "DVI-003: advisor review, email, mobile video and proposed repair at 1440 and 390",
+          "status": "pass",
+          "seconds": 14.828
+        },
+        {
+          "name": "BOOK-002 / BOOK-003: native day week resources and cancellation offers at 1440 and 390",
+          "status": "pass",
+          "seconds": 15.254
+        },
+        {
+          "name": "PART-007: low stock, repeated preparation and exact cart approval at 1440/390",
+          "status": "pass",
+          "seconds": 6.99
+        },
+        {
+          "name": "PART-004: core deposit, expiry alert, shipment and adjusted credit correction at 1440/390",
+          "status": "pass",
+          "seconds": 15.576
+        },
+        {
+          "name": "PART-005: remove failed part, authorize RMA, ship and reconcile partial credit at 1440/390",
+          "status": "pass",
+          "seconds": 10.397
+        },
+        {
+          "name": "PART-008: serialized inter-store transfer received short and approved correction at 1440/390",
+          "status": "pass",
+          "seconds": 10.782
+        },
+        {
+          "name": "BUY-002: compare suppliers, approve cart, reconcile timeout, reject substitution and inspect cancellation/rejection at 1440/390",
+          "status": "pass",
+          "seconds": 14.554
+        },
+        {
+          "name": "ASSET-001: typed intake, bench booking and paid return through native forms at 1440/390",
+          "status": "pass",
+          "seconds": 49.445
+        },
+        {
+          "name": "DIAG-002: native private result import, mismatch and raw evidence at 1440/390",
+          "status": "pass",
+          "seconds": 5.734
+        },
+        {
+          "name": "INV-001: owner issues, prints, emails and corrects invoice copies through native forms at 1440 and 390",
+          "status": "pass",
+          "seconds": 6.69
+        },
+        {
+          "name": "PAY-004: owner records pre-order deposits, allocates customer credit and refunds canceled deposits through native forms at 1440 and 390",
+          "status": "pass",
+          "seconds": 33.003
+        },
+        {
+          "name": "PART-003: reserved work, inspected stock returns and cancellation release through native forms at 1440 and 390",
+          "status": "pass",
+          "seconds": 13.461
+        },
+        {
+          "name": "AR-001, FLEET-001 and TAX-002: native terms, fleet PO, disputed statement, promise and observed-clearance preview at 1440 and 390",
+          "status": "pass",
+          "seconds": 81.912
+        },
+        {
+          "name": "GOV-001 and GOV-002: owner grants, bounded staff handoff and private audit search and downloads at 1440 and 390",
+          "status": "pass",
+          "seconds": 30.086
+        },
+        {
+          "name": "PAY-001: native merchant connection, invoice checkout and fee reconciliation at 1440 and 390",
+          "status": "pass",
+          "seconds": 14.617
+        },
+        {
+          "name": "AUTO-001 and AUTO-004: owner schedules and stops email through native forms at 1440 and 390",
+          "status": "pass",
+          "seconds": 32.581
+        },
+        {
+          "name": "GOV-003: owner provisions and revokes a technician through native settings at 1440 and 390",
+          "status": "pass",
+          "seconds": 9.45
+        },
+        {
+          "name": "GOV-003: signed SAML browser admission and old-session refusal at 1440 and 390",
+          "status": "pass",
+          "seconds": 7.779
+        },
+        {
+          "name": "AUTO-005: owner request, customer feedback and completed-repair task through native forms at 1440 and 390",
+          "status": "pass",
+          "seconds": 10.061
+        },
+        {
+          "name": "AUTO-002: owner reviews status email, failed contact and pickup follow-up through native forms at 1440 and 390",
+          "status": "pass",
+          "seconds": 16.84
+        },
+        {
+          "name": "ADV-008: owner scopes, reviews and revokes assistant work with human handoff at 1440 and 390",
+          "status": "pass",
+          "seconds": 6.65
+        },
+        {
+          "name": "ADV-005: owner reviews later mileage, replacement inspection and advisory history at 1440 and 390",
+          "status": "pass",
+          "seconds": 14.04
+        },
+        {
+          "name": "RETURN-002: native storage rules, notices, legal refusal and released ledger at 1440 and 390",
+          "status": "pass",
+          "seconds": 12.529
+        }
+      ]
+    },
+    {
+      "batch": "tax",
+      "complete": true,
+      "counts": {
+        "tests": 5,
+        "pass": 4,
+        "fail": 1,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0
+      },
+      "tests": [
+        {
+          "name": "shop setup, taxability, frozen Dana invoice and USD CSV use per-line sales tax",
+          "status": "pass",
+          "seconds": 3.921
+        },
+        {
+          "name": "pre-US records migrate without changing amounts and request unknown shop rate",
+          "status": "pass",
+          "seconds": 2.142
+        },
+        {
+          "name": "TAX-002: private certificate dates and declared jurisdiction tax reverse exact issued credits without repricing",
+          "status": "pass",
+          "seconds": 12.999
+        },
+        {
+          "name": "TAX-002: owner retains an expired certificate and declares invoice jurisdiction through native forms at 1440 and 390",
+          "status": "fail",
+          "seconds": 3.272
+        },
+        {
+          "name": "TAX-002: dedicated filing-period deposit attribution, observed check clearance, exact partial receipt cents and completed refund recovery",
+          "status": "pass",
+          "seconds": 11.73
+        }
+      ],
+      "note": "Initial browser case failed because the bundled Playwright executable was absent; system Chromium paths were then configured and this unchanged case passed in tax-browser."
+    },
+    {
+      "batch": "tax-browser",
+      "complete": true,
+      "counts": {
+        "tests": 1,
+        "pass": 1,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0
+      },
+      "tests": [
+        {
+          "name": "TAX-002: owner retains an expired certificate and declares invoice jurisdiction through native forms at 1440 and 390",
+          "status": "pass",
+          "seconds": 37.041
+        }
+      ]
+    },
+    {
+      "batch": "special",
+      "complete": true,
+      "counts": {
+        "tests": 16,
+        "pass": 15,
+        "fail": 1,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0
+      },
+      "tests": [
+        {
+          "name": "GOV-004: authenticator app, passkey and recovery-code sign-in with replay, clone, origin and guessing fences",
+          "status": "pass",
+          "seconds": 4.896
+        },
+        {
+          "name": "GOV-004: owner-required policy, lost-device reset and deployment owner recovery",
+          "status": "pass",
+          "seconds": 3.909
+        },
+        {
+          "name": "GOV-004: refunds, agent keys, erasure and custody reveals need a fresh second factor and refusals write nothing",
+          "status": "pass",
+          "seconds": 3.622
+        },
+        {
+          "name": "GOV-004 / GOV-007: stolen, revoked and expired customer links look unknown on every door, misses are paced and no link grants payer authority",
+          "status": "pass",
+          "seconds": 3.641
+        },
+        {
+          "name": "GOV-004 / GOV-005: authenticator app, passkey, sign-in confirmation, step-up and sealed connector credentials through native forms at 1440/390",
+          "status": "pass",
+          "seconds": 12.152
+        },
+        {
+          "name": "GOV-005: sealed provider secrets rotate and revoke behind a fresh proof, webhooks prove their origin, and no secret reaches a response, archive, audit row or log",
+          "status": "pass",
+          "seconds": 8.0
+        },
+        {
+          "name": "GOV-006: explicit holds, customer erasure, import custody and manual retention survive fresh-owner recovery without resurrecting media",
+          "status": "pass",
+          "seconds": 30.446
+        },
+        {
+          "name": "GOV-006: owner reviews financial and media holds, erases eligible photos and releases a hold for manual retention at 1440/390",
+          "status": "pass",
+          "seconds": 13.482
+        },
+        {
+          "name": "OPS-002 / OPS-003: durable reminder jobs bound concurrent handoffs to four, survive restart and expose owner recovery",
+          "status": "fail",
+          "seconds": 11.422
+        },
+        {
+          "name": "OPS-002: account search is paged, indexed, exact across aliases and Unicode, and survives restore",
+          "status": "pass",
+          "seconds": 9.787
+        },
+        {
+          "name": "OPS-002 / OPS-003: approved provider GET jobs survive restart, require explicit replay and deduplicate payment evidence",
+          "status": "pass",
+          "seconds": 10.866
+        },
+        {
+          "name": "OPS-002: core RO reads keep lines, inspections and decisions with current crew authority and exact recovery",
+          "status": "pass",
+          "seconds": 9.067
+        },
+        {
+          "name": "OPS-002: native capacity import verifies record and media graphs before publishing",
+          "status": "pass",
+          "seconds": 29.663
+        },
+        {
+          "name": "OPS-002 / OPS-003: owner queues, inspects and recovers background jobs through native forms at 1440/390",
+          "status": "pass",
+          "seconds": 11.805
+        },
+        {
+          "name": "OPS-002: staff search phone and plate and page native account results at 1440/390",
+          "status": "pass",
+          "seconds": 6.198
+        },
+        {
+          "name": "OPS-002: native peer boards update stages and priority while preserving drafts and focus at 1440/390",
+          "status": "pass",
+          "seconds": 15.383
+        }
+      ],
+      "note": "Original OPS-002 concurrent cron assertion observed exception rather than ok; preserved without weakening. The later diagnostic run passed."
+    },
+    {
+      "batch": "extras",
+      "complete": true,
+      "counts": {
+        "tests": 17,
+        "pass": 17,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0
+      },
+      "tests": [
+        {
+          "name": "DVI-002 and OPS-001: private original and shared custody, interrupted upload, exact replay, assignment and revocation and full archive recovery",
+          "status": "pass",
+          "seconds": 10.763
+        },
+        {
+          "name": "DVI-002: phone/tablet markup, compression, visible interruption/resume, original/shared photo and playable video",
+          "status": "pass",
+          "seconds": 16.03
+        },
+        {
+          "name": "DVI-004 / OPS-001: compare same-asset measurements/images, imported provenance, declined carry without new tests/consent, resolution and exact restore",
+          "status": "pass",
+          "seconds": 8.441
+        },
+        {
+          "name": "DVI-004: second-visit comparison, imported source, declined carry and resolved history on desktop and phone",
+          "status": "pass",
+          "seconds": 11.022
+        },
+        {
+          "name": "INTAKE-001 / INTAKE-004 / OPS-001: signed condition and custody, exact checklist comparison, private temporary secrets and fresh-owner recovery",
+          "status": "pass",
+          "seconds": 15.545
+        },
+        {
+          "name": "INTAKE-001: vehicle and device signed custody and actual checklist comparison at 1440/390",
+          "status": "pass",
+          "seconds": 25.349
+        },
+        {
+          "name": "INTAKE-002 / OPS-001: two templates, retained required-field draft, original signed terms and exact delivered copy with recovery",
+          "status": "pass",
+          "seconds": 7.552
+        },
+        {
+          "name": "INTAKE-002: publish two templates, retain phone draft and retrieve original signed copy after terms change at 1440/390",
+          "status": "pass",
+          "seconds": 13.839
+        },
+        {
+          "name": "INTAKE-003 / OPS-001: private after-hours request, exact diagnostic consent, advisor-confirmed match, duplicate refusal and recovery",
+          "status": "pass",
+          "seconds": 9.286
+        },
+        {
+          "name": "INTAKE-003: after-hours customer request, counter match and diagnostic-only booking at 1440/390",
+          "status": "pass",
+          "seconds": 12.545
+        },
+        {
+          "name": "PIER-001: real Pier catalog, observation, revocation and credential rotation never move source stock",
+          "status": "pass",
+          "seconds": 10.014
+        },
+        {
+          "name": "DATA-001: fresh restore asks for the latest journal before acceptance and labels missing evidence honestly",
+          "status": "pass",
+          "seconds": 15.199
+        },
+        {
+          "name": "REPORT-001 / REPORT-007: known native repairs reconcile sales and decisions, download sources and recover without new authority",
+          "status": "pass",
+          "seconds": 13.426
+        },
+        {
+          "name": "REPORT-001 / REPORT-007: local calendar boundaries, empty ratios, filter refusal and native report authority",
+          "status": "pass",
+          "seconds": 3.287
+        },
+        {
+          "name": "REPORT-002: higher purchase cost, discounted repair, loaded labor and comeback reconcile margins and recover sources",
+          "status": "pass",
+          "seconds": 22.269
+        },
+        {
+          "name": "REPORT-002: incomplete costs stay unavailable and private reports refuse unauthorized or invalid requests",
+          "status": "pass",
+          "seconds": 4.567
+        },
+        {
+          "name": "REPORT-002: native cost settings, margins, comparisons and source events at 1440 and 390",
+          "status": "pass",
+          "seconds": 22.575
+        }
+      ]
+    },
+    {
+      "batch": "jobs-isolated",
+      "complete": true,
+      "counts": {
+        "tests": 1,
+        "pass": 0,
+        "fail": 1,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0
+      },
+      "tests": [
+        {
+          "name": "OPS-002 / OPS-003: durable reminder jobs bound concurrent handoffs to four, survive restart and expose owner recovery",
+          "status": "fail",
+          "seconds": 12.74
+        }
+      ],
+      "note": "Original OPS-002 concurrent cron assertion observed exception rather than ok; preserved without weakening. The later diagnostic run passed."
+    },
+    {
+      "batch": "jobs-diagnostic",
+      "complete": true,
+      "counts": {
+        "tests": 1,
+        "pass": 1,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0
+      },
+      "tests": [
+        {
+          "name": "OPS-002 / OPS-003: durable reminder jobs bound concurrent handoffs to four, survive restart and expose owner recovery",
+          "status": "pass",
+          "seconds": 13.267
+        }
+      ],
+      "note": "A temporary loader outside the checkout emitted only recognized infrastructure error codes if cron failed; original assertion and test source preserved. Test passed, no infrastructure codes emitted."
+    }
+  ],
+  "unique_passing_tests_measured": 187,
+  "composition_measured_subtotals": [
+    {
+      "name": "core",
+      "tests": 22,
+      "measured": 22,
+      "measured_seconds": 274.872
+    },
+    {
+      "name": "work-graph-core",
+      "tests": 24,
+      "measured": 24,
+      "measured_seconds": 317.874
+    },
+    {
+      "name": "journeys-2",
+      "tests": 26,
+      "measured": 26,
+      "measured_seconds": 371.986
+    },
+    {
+      "name": "journeys-3",
+      "tests": 17,
+      "measured": 17,
+      "measured_seconds": 344.799
+    },
+    {
+      "name": "journeys-4",
+      "tests": 21,
+      "measured": 21,
+      "measured_seconds": 278.211
+    },
+    {
+      "name": "journeys-5",
+      "tests": 25,
+      "measured": 25,
+      "measured_seconds": 296.238
+    },
+    {
+      "name": "journeys-6",
+      "tests": 23,
+      "measured": 23,
+      "measured_seconds": 240.244
+    },
+    {
+      "name": "journeys-7",
+      "tests": 29,
+      "measured": 29,
+      "measured_seconds": 298.887
+    }
+  ],
+  "checks": [
+    {
+      "command": "node --check scripts/verify-app.mjs; node --check scripts/verify-ci.mjs",
+      "result": "pass"
+    },
+    {
+      "command": "node scripts/verify-ci.mjs --matrix push / --matrix all",
+      "result": "pass; 8 push jobs, unchanged nightly clone journey"
+    },
+    {
+      "command": "node /tmp/mallet-mapping.mjs",
+      "result": "pass; all 187 registered tests exactly once, all other assertions retained, duplicate build removed"
+    },
+    {
+      "command": "pnpm run check --profile first-party",
+      "result": "pass"
+    },
+    {
+      "command": "pnpm run typecheck",
+      "result": "pass"
+    },
+    {
+      "command": "pnpm run build",
+      "result": "pass"
+    },
+    {
+      "command": "node src/base/contract-docs.mjs check",
+      "result": "pass"
+    },
+    {
+      "command": "node scripts/edition-authoring/cli.mjs lock; node scripts/edition-authoring/cli.mjs check",
+      "result": "pass; regeneration last"
+    },
+    {
+      "command": "git diff --check",
+      "result": "pass"
+    }
+  ]
+}

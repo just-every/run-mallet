@@ -1,0 +1,28 @@
+{
+  "tag": "sx-mallet-ci-critical-path-1",
+  "repository": "just-every/run-mallet",
+  "branch": "cloud/sx-mallet-ci-critical-path-1",
+  "head": "05f12bb25287d22654fda8b2a549712d14e94c1c",
+  "status": "READY",
+  "ci_run_id": 42310937549,
+  "shards_before": 15,
+  "shards_after": 8,
+  "tests_before": 187,
+  "tests_after": 187,
+  "explicit_builds_before": 2,
+  "explicit_builds_after": 1,
+  "longest_seconds": 407,
+  "mean_seconds": 327.625,
+  "longest_over_mean": 1.2423,
+  "margin_seconds": 313,
+  "clause_changes": [],
+  "full_target": {
+    "done": 23,
+    "partial": 88,
+    "missing": 59,
+    "total": 170
+  },
+  "pr": null,
+  "blockers": [],
+  "local_intermittent_failure": "OPS-002 concurrent cron assertion; unchanged and documented; final hosted shard passed."
+}

@@ -1,0 +1,1043 @@
+{
+  "base": "1331aef49644cea21ff44371ae4d7218bb588646",
+  "head": "05f12bb25287d22654fda8b2a549712d14e94c1c",
+  "changed": [
+    ".github/workflows/verify.yml",
+    "scripts/verify-app.mjs",
+    "sources.lock.json"
+  ],
+  "unchanged_files": [
+    {
+      "file": "ACCEPTANCE.md",
+      "sha256": "713bec6f12d5b92592cb7f5b9b69fdbabd69d7056a477ee6cbaacc0193fc1bb2"
+    },
+    {
+      "file": "CONTRACT.md",
+      "sha256": "06599a1925257db80e861355487f0642d04a93042428760932dc8e944f158803"
+    },
+    {
+      "file": "docs/CLAIMS.md",
+      "sha256": "9a421f24e72baf389c31f270dd993c0bafd6485989401119a8ec83bd12dadaa9"
+    },
+    {
+      "file": "migrations/core/0001_owner.sql",
+      "sha256": "389e6fc3201a73ab5e7280bbe4fdb793b652b84f157e444bab48cc3c25eb8c41"
+    },
+    {
+      "file": "migrations/core/0002_outbox.sql",
+      "sha256": "45d6b03eadfe1e91737763ae85cdff74e7216f859869e34431550bba48294996"
+    },
+    {
+      "file": "migrations/core/0003_portability.sql",
+      "sha256": "c7db9042f6d5c571e10297c02df858ad2f3466beb4fa85649fee407cc228747b"
+    },
+    {
+      "file": "migrations/core/0004_first_run.sql",
+      "sha256": "aef92de36233195e5a03cce67b192c5c0c38033b695f7ebce6062fc89152c2a9"
+    },
+    {
+      "file": "migrations/core/0005_identity_providers.sql",
+      "sha256": "f879fb86b079e591dfe4a8513752a8e0394e252b940aa35d3f7430f27b7382c6"
+    },
+    {
+      "file": "migrations/core/0006_provider_control.sql",
+      "sha256": "f19cc7a792538a8ff36d87760a3cad58fccab0316984488d1834af14fbf37cfe"
+    },
+    {
+      "file": "migrations/core/0007_dependencies.sql",
+      "sha256": "3481d8aef870a9eda153a1617e99bb71a408e61a25dea92bb132efa7dd1c2526"
+    },
+    {
+      "file": "migrations/core/0008_owner_claim.sql",
+      "sha256": "c3ffe653727bb4867b064dc2489df5013613f08f4b5998d2fe2b6a8485cdb815"
+    },
+    {
+      "file": "migrations/core/0009_idp_owner.sql",
+      "sha256": "a870102648a2226b18a2fe8168d096389b698af88333d112fa8137e582fc2b33"
+    },
+    {
+      "file": "migrations/core/0010_provider_pins.sql",
+      "sha256": "f0cfb6b3740869fd098ee449efb25807f8b1ef51c353fd07bafeb00ce38aeb63"
+    },
+    {
+      "file": "migrations/core/0011_dependency_setup.sql",
+      "sha256": "7b36f7e1fb0991fe3e808613d911393bbad3386ead06427082c69a48c5738108"
+    },
+    {
+      "file": "migrations/core/0012_dependency_approval.sql",
+      "sha256": "7d3742369189b69ea28bdc000097f150f83221c6474f7e177c7b5590691b67e9"
+    },
+    {
+      "file": "migrations/core/0013_erasure.sql",
+      "sha256": "44fd4fac1aee4fda0d1d580373cbed9ef3da837e0186e7fe2130fb68dfceadbe"
+    },
+    {
+      "file": "migrations/core/0014_owner_signin.sql",
+      "sha256": "98da904e768e35b43fb1be83d9dcc9c9b5d86ab3a795234ed5223c4fddc567d9"
+    },
+    {
+      "file": "migrations/core/0015_mallet.sql",
+      "sha256": "99e1d673490a386cc6918c2b4e8ec0234965d81c1300dde22482ec8bd7624a22"
+    },
+    {
+      "file": "migrations/core/0016_import_kit.sql",
+      "sha256": "9a1ed1e20b16014c6923f02425b1873cd952531d4f3651fc5574a9a035fffa8a"
+    },
+    {
+      "file": "migrations/core/0017_agent_keys.sql",
+      "sha256": "2542bf3d2112f462a68025635ba8fae6dfc6b27afea19d0c91eef77c53c89823"
+    },
+    {
+      "file": "migrations/core/0018_sales_tax.sql",
+      "sha256": "fb2e1d4a08c03a7b7ca688b5c7c41d9034d070315836d1905064424231637447"
+    },
+    {
+      "file": "migrations/core/0019_inspection_media.sql",
+      "sha256": "61bda97fbd202268f55623e4da30e198b12dee97bf8233e068b6adb121a3fb54"
+    },
+    {
+      "file": "migrations/core/0020_inspection_resolution.sql",
+      "sha256": "14bc9a0493fc6317536bcb042902f75d4a12eb8f38d3bfeef95b929539963953"
+    },
+    {
+      "file": "migrations/core/0021_customer_links.sql",
+      "sha256": "25eb128c606f4b78825692e3ec5cef29bc4d7366a801954802d032fb9f6ab901"
+    },
+    {
+      "file": "migrations/core/0022_approval_links.sql",
+      "sha256": "cd4801811a72cf1de68b2c819d196b94167560ae188223581542495ac48e5adf"
+    },
+    {
+      "file": "migrations/core/0023_approval_reminders.sql",
+      "sha256": "82e207d7f8da93f44a9667c8a796856e4a0ecfaa7a58a588ada2a8c016b3cf55"
+    },
+    {
+      "file": "migrations/core/0024_intake_secrets.sql",
+      "sha256": "7062a4011db1900b961c0569687539ff7b5808cd7d38b44a1a3afe004776d739"
+    },
+    {
+      "file": "migrations/core/0025_intake_form_links.sql",
+      "sha256": "ce8bca0ec6e69f2aace8a622f98a3813fc3202d7735bc03e71837e492ab09ae2"
+    },
+    {
+      "file": "migrations/core/0026_portal_sessions.sql",
+      "sha256": "87bec250e60136dc802a604a575c31cfc0bd92cc0eda353f6237694f886415ae"
+    },
+    {
+      "file": "migrations/core/0027_checkin_links.sql",
+      "sha256": "b489cf7d8bc547e871e4e2e7f4590633eacc407cfb18011e8861eb00ec0f302b"
+    },
+    {
+      "file": "migrations/core/0028_online_bookings.sql",
+      "sha256": "7e9bf3d0147d4bce78f0d69384da8ebdd0112fba207e003c43445adc3c465eed"
+    },
+    {
+      "file": "migrations/core/0029_inspection_report_delivery_events.sql",
+      "sha256": "c18a168f27d6994d2930730e775422d65cb97023f5550cdccc2d95fdf64440b1"
+    },
+    {
+      "file": "migrations/core/0030_strong_auth.sql",
+      "sha256": "eb2e993f4bcb32caf4ebb1f815de9052f0d0abdf77b90fcf7dcc44fc0f4ad278"
+    },
+    {
+      "file": "migrations/core/0031_connector_secrets.sql",
+      "sha256": "b46d94cdd8ef5bd0e4663f601de7562266879a0a156b23750cd5918c977a965a"
+    },
+    {
+      "file": "migrations/core/0090_mallet_retention.sql",
+      "sha256": "53f56aada5987124195bba93398b4d15d5cdfce81483dd4974790b0d10a0b6d8"
+    },
+    {
+      "file": "migrations/core/0091_mallet_jobs.sql",
+      "sha256": "af2a039ffa0451052fc5cb7f8a8f548fb9c3c1e35077bdff846912d0974b2e4d"
+    },
+    {
+      "file": "migrations/core/0092_mallet_search.sql",
+      "sha256": "f64ebe550bfdceb83c63270acc680c851a4cf1d49eaa6cafc7a3b426d430307e"
+    },
+    {
+      "file": "migrations/core/0094_mallet_record_indexes.sql",
+      "sha256": "e951678ba22eada08757397b281ae5ba2b43cdc768a3714e62ed08fc071a57e6"
+    },
+    {
+      "file": "migrations/core/0095_last_signin.sql",
+      "sha256": "289f99fd90e5263e9bb421f14887b0540e0686f7c7aa72110dd1ad20374bc945"
+    },
+    {
+      "file": "migrations/core/0096_dependency_keys_sealed.sql",
+      "sha256": "9c8fa5f94c48a230f326cd4d666cbc2bd1e7d5a18327b89e65b339ac6a533d9a"
+    },
+    {
+      "file": "migrations/core/0097_mallet_audit.sql",
+      "sha256": "1edd864e3f1e20fe54ee60d526fe1d0a90282254b35a0c50f13b787fe7247d47"
+    },
+    {
+      "file": "migrations/core/0098_mallet_staff_grants.sql",
+      "sha256": "6a108e1522aea09def6b8b1c536f8919990e9a2c7a43364bdd707cdb1e76413e"
+    },
+    {
+      "file": "migrations/core/0099_mallet_report_schedules.sql",
+      "sha256": "a78b34d0b8bed6b13be6b6b30af22cdbd36c84a037914c3c35569a5567bf4cff"
+    },
+    {
+      "file": "migrations/core/0110_mallet_outreach.sql",
+      "sha256": "df179aab1fd4621e7179695acf3d32f13b1b169a3db8d3619de2144383299c4e"
+    },
+    {
+      "file": "migrations/core/0111_mallet_enterprise.sql",
+      "sha256": "f47473bdf243fc0ca7cf6bd0e30a4e4fc9b9c1c0028b1d66264350ebbab18a0c"
+    },
+    {
+      "file": "migrations/core/0112_mallet_saml.sql",
+      "sha256": "0cb3be5c7724ffbdcd260dc24bea1b7d4a2b7f570362a1724d7357db49e090e2"
+    },
+    {
+      "file": "migrations/core/0113_mallet_audit_coverage.sql",
+      "sha256": "942e166a68d7292ea5ccf836f3c613095c42ab5ff68915c96fc1699611025248"
+    },
+    {
+      "file": "migrations/core/0114_mallet_reviews.sql",
+      "sha256": "0cf1c50074111eb0d2ffc49f4f011f70ab92792f6bc968bace8307dd57a54d5a"
+    },
+    {
+      "file": "migrations/core/0117_mallet_status_authority.sql",
+      "sha256": "c1701c046b57515654dd21ae897791164b2a33f72883d46a69eef05475df9462"
+    },
+    {
+      "file": "migrations/core/0118_mallet_assistant_keys.sql",
+      "sha256": "aa3cae7afc3809f17243f5ad4474150af750e071b98b51f32ba4e40c9b9d7d41"
+    },
+    {
+      "file": "migrations/core/0118_mallet_media_revisions.sql",
+      "sha256": "193dd9a710153db9408b2787ba0ee14eaeed4afbd388a7ad7ac145c7ea99430f"
+    },
+    {
+      "file": "migrations/core/0118_mallet_shop_api.sql",
+      "sha256": "14371801ffc73128ab59c2597ac4c239d3ee631786f21d279de4cd882072b69b"
+    },
+    {
+      "file": "migrations/core/0118_mallet_webhooks.sql",
+      "sha256": "c492b2e580ac03c3144f6fdafbaf4592a9bdec1fb17121fb5c7900a2bbd538b8"
+    },
+    {
+      "file": "migrations/core/0119_mallet_coverage_authority.sql",
+      "sha256": "e05a8bf1fe9ffe539ba77f86b014942cebca5ee96a282fab962b48310a7d4a47"
+    },
+    {
+      "file": "migrations/core/0120_mallet_agent_door.sql",
+      "sha256": "016d8a98b964385f5c4a13447361c3c783910a76aaf4606b0e0081482bc819cc"
+    },
+    {
+      "file": "migrations/core/0120_mallet_declined_withdrawal.sql",
+      "sha256": "4c40cdf736660b80911229f561cda6b6519c79dfe9c46b31eb67e2eec6ae8f5a"
+    },
+    {
+      "file": "migrations/core/0121_mallet_business_settings.sql",
+      "sha256": "a16f736a781aa3fe02a2e090c993f8c360c904f9fb6d86126acdab6e1f24e773"
+    },
+    {
+      "file": "migrations/core/0122_mallet_business_people.sql",
+      "sha256": "51aa39622d866b987d71b6e37c9a8300e7f24c54a55611edaab669ed051b01cd"
+    },
+    {
+      "file": "tests/agent-attribution-browser.mjs",
+      "sha256": "630d6628be941c9f91367704e493dde88df0cd7b4655eb2e35c80d6589e6961e"
+    },
+    {
+      "file": "tests/agent-door/fixtures.mjs",
+      "sha256": "8fe7231f50f3e420b51d7143c52ae60a7d3d665e64708d10d8b44db6c11d204c"
+    },
+    {
+      "file": "tests/agent-door/native-attribution.mjs",
+      "sha256": "7ad8394e969ee98e29358b288467c06a4a939117b71201c9f096b6d7b5bc3a27"
+    },
+    {
+      "file": "tests/agent-door/owner.mjs",
+      "sha256": "3ef18ccac79ab452fda36299a95dccc57fbca050bd0d4ed1ffd19b382d78c219"
+    },
+    {
+      "file": "tests/agent-door/preparation-fixtures.mjs",
+      "sha256": "5f62e91362e1e4f9b440a15f2b8932b427e7971afc05dbc0740d126fa5a3e6cb"
+    },
+    {
+      "file": "tests/agent-door/preparation-journey.mjs",
+      "sha256": "0764f428bc2646c201e9a588c59f6924dce28b37a2143ea2a6b0dcaec6b39a30"
+    },
+    {
+      "file": "tests/agent-door/preparation-parity.mjs",
+      "sha256": "1d433243011df0d07ad4564b54c7f5369bad5db40329cff160c2f3bc25fe0ff2"
+    },
+    {
+      "file": "tests/agent-door/prompts.mjs",
+      "sha256": "7081bc5cbfd2837776840c1afdefac6cd7cbd89b95716c4df1a5d024fe3b5a40"
+    },
+    {
+      "file": "tests/agent-door/refused-classification.mjs",
+      "sha256": "aaef354105a656aac8704b1df2f0cc72f638f49dc1db2842e45774e33eeb8b0c"
+    },
+    {
+      "file": "tests/agent-door/resource-authority.mjs",
+      "sha256": "38f3ff83d3a5471ffd382a93eafc4396b959c5f7680cd3ca3a9640100b6475da"
+    },
+    {
+      "file": "tests/agent-door/resources.mjs",
+      "sha256": "27b093eed45f96e97b7cbcaa9760385c3a1264a9113eba12c97bd69e57297e19"
+    },
+    {
+      "file": "tests/agent-door/reviewer.mjs",
+      "sha256": "3cffb2cbb195bad291b1ce75e1a3f22679c826e4c06e620be389072c2ae5029c"
+    },
+    {
+      "file": "tests/agent-door/sponsor-admission.mjs",
+      "sha256": "4e069de06296570c534236b962f5bcc5cd2bf32165961b9fe9d7bbadfef67dc3"
+    },
+    {
+      "file": "tests/agent-door/worker.ts",
+      "sha256": "c1e63a06ea446e58a7ebf0a21d603592206e7bfb996eb996ed4da1ab5e81d22f"
+    },
+    {
+      "file": "tests/agent-pause-browser.mjs",
+      "sha256": "aaae03240c9c544066bb87f0016edd74472507f831373d92845a706133f4f462"
+    },
+    {
+      "file": "tests/agent-preparation-parity-browser.mjs",
+      "sha256": "e0f50e8a57f7d076ebf8fdbfe3e79281569bea668342e0c51ea825c0a25907b9"
+    },
+    {
+      "file": "tests/agent-sponsor-admission-browser.mjs",
+      "sha256": "3225f9b1fa082892a6424fc74138846a169ffee90b46302e4c74cfa92ae83705"
+    },
+    {
+      "file": "tests/approval-browser.mjs",
+      "sha256": "d2157ea022206f10c7958a0f5addc8bd0ca31f38d8beaac0a1b08f3befdcd52a"
+    },
+    {
+      "file": "tests/asset-browser.mjs",
+      "sha256": "f756f922ae6e57da847f5ac98292115628ded7cb3f78bacd0c2f4882f2d69ce8"
+    },
+    {
+      "file": "tests/assistants-browser.mjs",
+      "sha256": "1e8ccb9d8547c57948cd96c813bd75ab368c50a0e4cefb5acb72834c8bb83b75"
+    },
+    {
+      "file": "tests/blocker-browser.mjs",
+      "sha256": "d73b14606b89ff38eeec1902780347b1114f0d08e34f813171d84b7679bc6c7e"
+    },
+    {
+      "file": "tests/bookings-browser.mjs",
+      "sha256": "dfd5ac573c58dc7ee28118dfce19b4cdcbf985430daa6743098ffb268e3240f2"
+    },
+    {
+      "file": "tests/browser-journey.mjs",
+      "sha256": "0c133723246cae34edf54cbedb615cc73dcf18e83f14ab8f1cb0326f8af01e1f"
+    },
+    {
+      "file": "tests/calendar-browser.mjs",
+      "sha256": "a247c9305c291c10a4bf9cd145bd096b5af5d9d9f0893b6fbe347fc38f7bb3a1"
+    },
+    {
+      "file": "tests/check-in-browser.mjs",
+      "sha256": "5fed8e45f3e38fef80f019d24121ad1c5501a8254748b8fbb712e85a94abff21"
+    },
+    {
+      "file": "tests/clone-journey.mjs",
+      "sha256": "0c4d29fa3659e2b36415861622bc07dff2e7cbdfa7c3565c39bf468bb13f1591"
+    },
+    {
+      "file": "tests/collaboration-browser.mjs",
+      "sha256": "cd01b2cc501b02ab191c92255c27ba4eb34aa2de131eacefe36f2ba825605b26"
+    },
+    {
+      "file": "tests/cores-browser.mjs",
+      "sha256": "cbf0e240dfd8b3968f15977d20c14320091f65b056d36adddd4146d152568fad"
+    },
+    {
+      "file": "tests/coverage-follow-up-browser.mjs",
+      "sha256": "7317ad6096eec649c4e2b95fdd08c2420a5def8e79d5db086c4dcba8b33aaf9f"
+    },
+    {
+      "file": "tests/customers-browser.mjs",
+      "sha256": "cb0c8cbedcb5b8dcd1a2f0707ba3c1669f23a3fe7a5e057a237a35d3ee92f226"
+    },
+    {
+      "file": "tests/declined-work-review-browser.mjs",
+      "sha256": "da5cdf4a8ec86a3f59197d702a12acb9d766552b12c556ad5a0d71654b165907"
+    },
+    {
+      "file": "tests/demo-worker.ts",
+      "sha256": "3e0ab6930950f7c914df6d6ec5664e9d146b60a166e9523caf0ff8c71078d911"
+    },
+    {
+      "file": "tests/demo.test.mjs",
+      "sha256": "cf367924585fa7f2963eb483096d2c18ee1f7ef9feb04a5eed12c7c2b10f51af"
+    },
+    {
+      "file": "tests/dev-worker.ts",
+      "sha256": "66f4c201157e5c643787c514fa807b46cca9e63831cf5066c36eafc6e9ed9746"
+    },
+    {
+      "file": "tests/diagnosis-browser.mjs",
+      "sha256": "6253418dddcc91cf3f1e31030e7a92a9bb59d937189cf6c069263e62666865ae"
+    },
+    {
+      "file": "tests/diagnostic-results-browser.mjs",
+      "sha256": "be66b7de7c9aa8d2cf35196426653a5519962dc2cc9eaa2d4b7d9f06f386bf6a"
+    },
+    {
+      "file": "tests/enterprise-browser.mjs",
+      "sha256": "c939b69681e409ab90fb5116ea47d7bb073fdedcc51044489e5755a2fb5f75b9"
+    },
+    {
+      "file": "tests/enterprise-saml-browser.mjs",
+      "sha256": "6e389022ba6201ce624302dc568a1d535dba0f1ab5f5be78da4e1b19565392d1"
+    },
+    {
+      "file": "tests/estimate-pricing-browser.mjs",
+      "sha256": "f225791e6cbb953c0e23a2cf785d11e67d683988cdd60ea7768d662f3dea8ac2"
+    },
+    {
+      "file": "tests/fixtures/dvi/README.md",
+      "sha256": "a74a17784aebd5400b75426e05f0722790fb01e53b3907ea7a96e8678355c438"
+    },
+    {
+      "file": "tests/fixtures/dvi/front-brake.png",
+      "sha256": "3e8e4f21323786f6bc722e52093bd08bc98cb2f930ff2c3d12597b577ad08fbb"
+    },
+    {
+      "file": "tests/fixtures/dvi/synthetic-inspection.webm",
+      "sha256": "fdddcb4bcc5d9d0de1ba9d26f6bf3cee48952ef4dd8b803270d6c72a6d6805bc"
+    },
+    {
+      "file": "tests/fixtures/repairshopr/README.md",
+      "sha256": "c64ff537c3ff76f08037503db423cfbcc60df70c11ffeb0841c61c71ee418263"
+    },
+    {
+      "file": "tests/fixtures/repairshopr/assets.json",
+      "sha256": "7d4f0fc95e354a4ee8d53a36f893324441df1adc45e2bc90a73a1b0594ef25e3"
+    },
+    {
+      "file": "tests/fixtures/repairshopr/customers.json",
+      "sha256": "3a3cf0309387793eac92297a6aa4a8e0043c51cd9c46b533c92da018b53bb323"
+    },
+    {
+      "file": "tests/fixtures/repairshopr/orphan-assets.json",
+      "sha256": "636502bb1352a9c566b952789ab015b79abfb122947fa13b02c4c0c89a158f31"
+    },
+    {
+      "file": "tests/flow-browser.mjs",
+      "sha256": "d94795455d637ee1b674de7f37b79ff9a087cd59f18a93128512ddd523569c6f"
+    },
+    {
+      "file": "tests/governance-browser.mjs",
+      "sha256": "7c3e937fda9d71866bb1a02b8543dce0bf0a2e4011973663499ef70324591254"
+    },
+    {
+      "file": "tests/harness.mjs",
+      "sha256": "4e73ed576e5d11143a601f542fb47dc3ea7c8df572e917ff7032d614e1276080"
+    },
+    {
+      "file": "tests/inspection-browser.mjs",
+      "sha256": "14602bd0e3dabea75472d4f0323da8fbed69a8690485e17286509b63add9b63b"
+    },
+    {
+      "file": "tests/inspection-history-browser.mjs",
+      "sha256": "17904a38025494fc559e56a18d4f94390ef7cf23637d1f6b7ceef43d86636394"
+    },
+    {
+      "file": "tests/inspection-report-browser.mjs",
+      "sha256": "15180f435c6a803d51c7cb8ac3d6426281241171b4885980f37fd4457571ec62"
+    },
+    {
+      "file": "tests/intake-browser.mjs",
+      "sha256": "79df6e72023bd5b574d5c8fa82f163234e46fc13b5ebbabe1ab263803709c6bc"
+    },
+    {
+      "file": "tests/intake-forms-browser.mjs",
+      "sha256": "ead57669be534c411135beeb02ce580a48e6cea2feec64375ae630fca5695111"
+    },
+    {
+      "file": "tests/inventory-browser.mjs",
+      "sha256": "5f69319f5fc67e13b29b33ce1158f272e4fab8c12d35f56fef01194beaee28da"
+    },
+    {
+      "file": "tests/invoice-documents-browser.mjs",
+      "sha256": "ec3b3c44f8c2c7f28c0d9015ec47fa6eeecb3612f692e240f957e0c947db0330"
+    },
+    {
+      "file": "tests/jobs-browser.mjs",
+      "sha256": "2ab681bf8a58ebff4ec6340a1f8dd2915d8dc73ecdab30af0dd5c46c3e3f5c47"
+    },
+    {
+      "file": "tests/mallet.test.mjs",
+      "sha256": "59ebb3fc6b0c73cbabf1c38cde6ccc908cbe41ac61022c02655a232ba791f8cb"
+    },
+    {
+      "file": "tests/media-browser.mjs",
+      "sha256": "b0a2f8e5624dc7a46c2217fc9c010a674cde631616725660bef91ce2236364dd"
+    },
+    {
+      "file": "tests/media.test.mjs",
+      "sha256": "309e6516c39012998b1f0b63192f68e0453ba9e9626b8315bcc0e6e747d3d18c"
+    },
+    {
+      "file": "tests/open-source-journey.mjs",
+      "sha256": "9ee1bb5d94b7f83e53a1bbcf9cf0fc4c82def98965c4e738643fb861e2172f42"
+    },
+    {
+      "file": "tests/outreach-browser.mjs",
+      "sha256": "c8b820c91cce4279f417e67ed5071ad114baa48c0d77c027a95918029c322bf4"
+    },
+    {
+      "file": "tests/pier-journey.mjs",
+      "sha256": "c6da14e074fc13d7b78663c38a36c46e48df801144e5030cf903a0a68fcdb838"
+    },
+    {
+      "file": "tests/pricing-browser.mjs",
+      "sha256": "31f0133534b70aa87cfae58e4f6499a3e3dae6e4d929b9354badf2ecade534bc"
+    },
+    {
+      "file": "tests/profitability-browser.mjs",
+      "sha256": "669a333c1b24c2b228c8a15f669ca5d622b20d8c2656af1808c5f8eb22f8a0d4"
+    },
+    {
+      "file": "tests/promise-browser.mjs",
+      "sha256": "b3b4be4d02d9cba9cd9f48c972b9f31879a874e0add309ff59845cbed6d7b0a6"
+    },
+    {
+      "file": "tests/purchasing-browser.mjs",
+      "sha256": "6d18a5f87ac74c60d815e1ffc4ed487047e59a41f88ebc21d4fa526692c41e6a"
+    },
+    {
+      "file": "tests/quality-browser.mjs",
+      "sha256": "1a8b2fdc76818aa6d6d3bae2840cde4b4d6870ea54ad379f94a606546219119f"
+    },
+    {
+      "file": "tests/receivables-browser.mjs",
+      "sha256": "7798a63dfd390ffd2bc44824414efe482cad67fcad21035215a89131948ff255"
+    },
+    {
+      "file": "tests/replenishment-browser.mjs",
+      "sha256": "5f0bed5b2be0a72f51fb5b91b99db268e48c36b18dd2fea534490fa06a705dba"
+    },
+    {
+      "file": "tests/report-browser.mjs",
+      "sha256": "762f63bec2cf9bad827a9398a391cebfbb67a704016b71416ba718dcde37330b"
+    },
+    {
+      "file": "tests/restore.test.mjs",
+      "sha256": "f95ce5875052b9e9abf7d0ef574d9ee4c0f545739f4121dbb8877c09b352ed56"
+    },
+    {
+      "file": "tests/retention-browser.mjs",
+      "sha256": "6732ed91c6a48ae309058d9407f72fff9e889fe5adc6254ceffa8dd256bde20e"
+    },
+    {
+      "file": "tests/return-browser.mjs",
+      "sha256": "5209e074d0dbdc12b2a7d67fd5818275588ce1613a58c562a55698cbf15219cc"
+    },
+    {
+      "file": "tests/reviews-browser.mjs",
+      "sha256": "11bebc9f9cdeb0c15fabd4582d1c61bf180a728f48979e223515050e9afeb9ad"
+    },
+    {
+      "file": "tests/runtime.mjs",
+      "sha256": "4572fe9a06bab6e983a02fec4f579a85ba4b4b3a203d9d0374862881ace07157"
+    },
+    {
+      "file": "tests/sales-report.test.mjs",
+      "sha256": "e668c6ec1d709012a5385d494007ed6617e70dcf51226e3bb603b39e934d71e8"
+    },
+    {
+      "file": "tests/sales-tax.test.mjs",
+      "sha256": "5e0180bec4aff9f3d1ec632ce6f9e127ff4f5eabf5fc03597485af1614d3d83b"
+    },
+    {
+      "file": "tests/search-browser.mjs",
+      "sha256": "b7b3e43f2760abc7e954fa842dc9fb14522c14df4926ea221c144d263cdb1f94"
+    },
+    {
+      "file": "tests/security-browser.mjs",
+      "sha256": "6ffd965463698d280675af3a515920d7f66f2efbcbdcb32846e2d6524ebacc6a"
+    },
+    {
+      "file": "tests/special-part-browser.mjs",
+      "sha256": "696f73a2a424e94836128829adc77566837c636840f81e827bc090a2d0dc8510"
+    },
+    {
+      "file": "tests/status-notices-browser.mjs",
+      "sha256": "006c0bd25baa5951c0cc0e8ac91d12e9c581561dcbb88e48c85e0f12bb8b99fc"
+    },
+    {
+      "file": "tests/stock-trace-browser.mjs",
+      "sha256": "dae32202dc4097d285f52c49823cec566edd3c14178ed815a50eba986ba3f541"
+    },
+    {
+      "file": "tests/storage-browser.mjs",
+      "sha256": "e9efcc8f9e138769c3136b6ab268105a58210c968036c251e2090d45e9d304ae"
+    },
+    {
+      "file": "tests/stripe-ach-sandbox.mjs",
+      "sha256": "c2fc81cf0a9c27a6d8631cdb59d33d5e4bc13108edfcdd3cf35abaf69e59cbf2"
+    },
+    {
+      "file": "tests/stripe-browser.mjs",
+      "sha256": "4917db66ae5ec2c53664e3e5bd90081f969cc12b3e020604024a83351693d6f9"
+    },
+    {
+      "file": "tests/stripe-sandbox.mjs",
+      "sha256": "f91c0a113f17be8b2e5d20bf34a945cd83bf26a9c213b1428f00365cf8b66e7d"
+    },
+    {
+      "file": "tests/stripe-terminal-sandbox.mjs",
+      "sha256": "24e0f32752a7649aeb3f29dfd703eb1497e5d7964c44fdba11c39c7b6b7b4854"
+    },
+    {
+      "file": "tests/sublet-browser.mjs",
+      "sha256": "7b662a6bc425966ebd70ebd08dcc7ab75602e7a99c086d5b4963e53bed59e58e"
+    },
+    {
+      "file": "tests/supplement-browser.mjs",
+      "sha256": "b57bf4656ac441e9c575e9208117f07486758a8cfd010e64709c9589d065ed48"
+    },
+    {
+      "file": "tests/supplier-orders-browser.mjs",
+      "sha256": "60d69a6866a7e001a51dc6a6c8a9890d5e5d21db6c252b88cd30e0a3620ed90b"
+    },
+    {
+      "file": "tests/supplier-returns-browser.mjs",
+      "sha256": "f5895e2b76bce1d0be243993da7791ec0e83a2ec126ea0702fcfefde44df9a14"
+    },
+    {
+      "file": "tests/support/ach-browser-steps.mjs",
+      "sha256": "71bc7930ca555673ed84d45afd6d5da62967b6fd6a9b1fd6894180a3e37e6f3a"
+    },
+    {
+      "file": "tests/support/agent-pause-journey.mjs",
+      "sha256": "199a0402da9d5f759f13b964ddacf880228c02be40ee578c84cd75b1bd0774f9"
+    },
+    {
+      "file": "tests/support/agent-retry-conflicts-journey.mjs",
+      "sha256": "1965afd37f474d35b33cce0785aa66e8fa1d58071f06bddba3df6ebb68a3d9b1"
+    },
+    {
+      "file": "tests/support/agent-retry-worker.ts",
+      "sha256": "a781b8dbe493340eacf1fcd06d7e4dd23bbdd79f3387ab5611dfa66539bed9b5"
+    },
+    {
+      "file": "tests/support/approval-journey.mjs",
+      "sha256": "303ad0f35a91ce29232a6d8d08eabf6a6791ace8f557f863b02a8338b83f2a56"
+    },
+    {
+      "file": "tests/support/asset-journey.mjs",
+      "sha256": "5eab8b63e3fec5d9bf949454818248242e799f8fe87e7860edbcdfe923b35f52"
+    },
+    {
+      "file": "tests/support/assistant-journey.mjs",
+      "sha256": "c10a2a1b30286c25596a80a47b8046fe5f839f1342bb447ae98eb7350b513c46"
+    },
+    {
+      "file": "tests/support/blocker-archive.mjs",
+      "sha256": "a0c8a488503a775d53d3540c8668e2c069b137c10433207ac224e21faa79c751"
+    },
+    {
+      "file": "tests/support/blocker-browser-follow-through.mjs",
+      "sha256": "6f5d20ae1f52153880096581ee5300e773e6e50cb979c3dfd904bb59446d0980"
+    },
+    {
+      "file": "tests/support/blocker-follow-through.mjs",
+      "sha256": "dd59e1eceb44fe63c1933726546ea5250e1de5c06919f3ee539da39c6fd59f82"
+    },
+    {
+      "file": "tests/support/blocker-journey.mjs",
+      "sha256": "8b5136d55c78266d25283871d29f39375d17b1392f11d7abae8c0d0799c8c41d"
+    },
+    {
+      "file": "tests/support/blocker-parts.mjs",
+      "sha256": "5233222f3a9dec79bda5197806aae03360d68c414b45aee39861014263b66f24"
+    },
+    {
+      "file": "tests/support/board-live-journey.mjs",
+      "sha256": "cbe2c1f22b7eb19038bd0a9561dd546dd311ca2667c33d93dbc1f6261882c162"
+    },
+    {
+      "file": "tests/support/booking-journey.mjs",
+      "sha256": "41419f9ae68fda0e9d98378d6cd0830fc8ca3af11b533d9dcf7727d5566603fc"
+    },
+    {
+      "file": "tests/support/calendar-journey.mjs",
+      "sha256": "a507d37897e499aa50e3cf762bd01b3fa73d066e176a11465ea782c4f7e0caed"
+    },
+    {
+      "file": "tests/support/capacity-import-journey.mjs",
+      "sha256": "120d6028f66032549fb7444b145f74567d7900d7ac30405910ebf241cee3ed3d"
+    },
+    {
+      "file": "tests/support/chase-journey.mjs",
+      "sha256": "d28e687df5fba94f44d312b1e5da01a6d9ca1b6b62a52ce6f55f5284009f57e8"
+    },
+    {
+      "file": "tests/support/check-in-journey.mjs",
+      "sha256": "4f93d72e78ba0c464a6627aaf1a1e54b39c9ec89b7ffac1d6f3b489c52b9667b"
+    },
+    {
+      "file": "tests/support/collaboration-journey.mjs",
+      "sha256": "61908dd326fd839dfc99d0a7809b5b831d5ccee848430b25c804ddaa0ac34426"
+    },
+    {
+      "file": "tests/support/connector-journey.mjs",
+      "sha256": "473fc846ebb5ec46a31a6e168c0956be9c135ea36946d7c59932d59ff79e0235"
+    },
+    {
+      "file": "tests/support/cores-journey.mjs",
+      "sha256": "46d211d399923c80aa44b51bdf9b704074e8b9e46b50fd819134cdda85198819"
+    },
+    {
+      "file": "tests/support/coverage-follow-up-journey.mjs",
+      "sha256": "a80985956ac28e0a411141db6478324079fedd5f519dba0de3725f6ac1f14cc0"
+    },
+    {
+      "file": "tests/support/customers-journey.mjs",
+      "sha256": "5ee247e9cb9fa35c8deb0d79b15cb3cc9109fbc7723b80bcc4428d7819b0505d"
+    },
+    {
+      "file": "tests/support/declined-outreach-journey.mjs",
+      "sha256": "ca5acc0af9cf5593fcf5ae2248b80790902730cb536900cb3552f69b527083e8"
+    },
+    {
+      "file": "tests/support/declined-work-review-journey.mjs",
+      "sha256": "9d5bea1294edcdc735153f322bb8924818f542956004f145c7604bd932d2e4e4"
+    },
+    {
+      "file": "tests/support/deposits-journey.mjs",
+      "sha256": "6262549cc2cfacb1af2d4919a66f4b7bdf676d805ae53c7eabfc8f45ecb86470"
+    },
+    {
+      "file": "tests/support/diagnosis-journey.mjs",
+      "sha256": "ad076ba61a4124bde6f9e4727ffaf775b6c9e14af90b250fad5c15940d46dbdd"
+    },
+    {
+      "file": "tests/support/diagnostic-results-journey.mjs",
+      "sha256": "17ccc7b4e1cc680bf7e32700435db68f5053a082f84229b03ed7c776ee509a5d"
+    },
+    {
+      "file": "tests/support/enterprise-journey.mjs",
+      "sha256": "46733ecfe3406a7367ad61af5077705df7faa76b254a4f7d480371c523dd8f14"
+    },
+    {
+      "file": "tests/support/enterprise-live-okta.mjs",
+      "sha256": "4639d2c9b85f710fb946e07dbb33002f352cc07994cc83447538328f1c7216e0"
+    },
+    {
+      "file": "tests/support/enterprise-provider.mjs",
+      "sha256": "f84d5bd55b98a1a67e45058a99f81753c664fc8d5aa054333f7d113cb5460695"
+    },
+    {
+      "file": "tests/support/estimate-pricing-journey.mjs",
+      "sha256": "19f8344f2086d09da4d86886cfef6e751be29639b48c0fe44fde44c703358c89"
+    },
+    {
+      "file": "tests/support/filing-tax-journey.mjs",
+      "sha256": "cb84cd08eba19c1412f792317d95b29cfcb196623ae19c123d43627dc3bea363"
+    },
+    {
+      "file": "tests/support/flow-journey.mjs",
+      "sha256": "7df431b593ca6351d496dc155f35522fc85d376e87b2d7db179e29411a3c7eab"
+    },
+    {
+      "file": "tests/support/governance-journey.mjs",
+      "sha256": "bd8f7e6a679d4ca1ad553c7af104f8445cd65cb8d152ccbd09499d9d55069452"
+    },
+    {
+      "file": "tests/support/handover-input.mjs",
+      "sha256": "b6c2afc09aa9b4205ac2105eaff1df04e6e6f24cc6fe98f62a553aa965f597e1"
+    },
+    {
+      "file": "tests/support/inspection-journey.mjs",
+      "sha256": "77119da8270a988644ef9d05bcb9a26057b58aea3556ed09adb33f359ebf3800"
+    },
+    {
+      "file": "tests/support/inspection-photo.mjs",
+      "sha256": "0f45fa64b3fc52e78a483a5acb6d9a91671209ac649dff49ea5a14ca95bd0f82"
+    },
+    {
+      "file": "tests/support/inspection-report-journey.mjs",
+      "sha256": "1274dacace65be140e377b462b1ddc2e787cbd05098bccdddaf7d8a8cd8f1a6e"
+    },
+    {
+      "file": "tests/support/intake-forms-journey.mjs",
+      "sha256": "23a0a95474cb785a8af4e5c51f408a060bf19ea8fe8c68d57e357e088ab10fd9"
+    },
+    {
+      "file": "tests/support/intake-journey.mjs",
+      "sha256": "7e1b46762d5dd0ec9c757dcb412ed35d51b2dcee5a0077f37c4a4c0d8723cc36"
+    },
+    {
+      "file": "tests/support/inventory-journey.mjs",
+      "sha256": "518fc2e96c4bad42044513281e8dc1b3e43858ca2ecb3fded0c740e40084f3f5"
+    },
+    {
+      "file": "tests/support/invoice-documents-journey.mjs",
+      "sha256": "b3cf9a0eaccd9da78412d51e09c490293eec586e8b23db1b3117dcea75356613"
+    },
+    {
+      "file": "tests/support/jobs-journey.mjs",
+      "sha256": "21a09558e07a07677d10bfff7d433305087e395f0107144cc429f0e8d0bb0c7c"
+    },
+    {
+      "file": "tests/support/link-protection-journey.mjs",
+      "sha256": "2490fb45204ea921c5ed1ce03f788fa54fcca52f0676f759c1f0126a63d52bcf"
+    },
+    {
+      "file": "tests/support/local-https.mjs",
+      "sha256": "b1cbe517f51c45a71921d6d848dad909c0f4a1ef0c7aaa21de9a3d96dc6537f7"
+    },
+    {
+      "file": "tests/support/local-people.mjs",
+      "sha256": "a0631847327adcb032ead78aef5ae9dc1f610d0d1bc8a1d267ef789b8622a285"
+    },
+    {
+      "file": "tests/support/outreach-journey.mjs",
+      "sha256": "a5893b3498c493e3e27bc37b95e54d70d0e5e99ab015fa3b6ddd6869f3726360"
+    },
+    {
+      "file": "tests/support/parts-browser.mjs",
+      "sha256": "2a87c99b12c87f4e25d75b0116280199b475f659c4ccfbcfdf74f3ae7ba2a74f"
+    },
+    {
+      "file": "tests/support/portable-repair.mjs",
+      "sha256": "b34118be2e38043303e374e7776d2f26f5c08a73660781f6babaa820936c0b46"
+    },
+    {
+      "file": "tests/support/portal-journey.mjs",
+      "sha256": "6b03d08f5f76784d56b605c0232ee59a0e523b8b6d39821734727d83e3045e83"
+    },
+    {
+      "file": "tests/support/preparation-worker.ts",
+      "sha256": "73fd97db93a1c05e6b12272edf60450dfcc55b1db0882eb6aca6785fb2862749"
+    },
+    {
+      "file": "tests/support/pricing-journey.mjs",
+      "sha256": "c75086025ce6c409a770582ab035ad39180fd960c3b92a558154b01e63718662"
+    },
+    {
+      "file": "tests/support/profitability-journey.mjs",
+      "sha256": "4afe757a1c4be05244ef72940e12db9397fbf939234ecf01349efdf7dbfb8f36"
+    },
+    {
+      "file": "tests/support/promise-journey.mjs",
+      "sha256": "e67d89f8888d5147f847401a93a04bdcc32e819740a8e581371d74803799a4fb"
+    },
+    {
+      "file": "tests/support/provider-https.mjs",
+      "sha256": "32f7f75061033a4f419ef140a8a91336228947dfa6a046662236b70384f1860e"
+    },
+    {
+      "file": "tests/support/provider-jobs-journey.mjs",
+      "sha256": "419cf7ba25075c9a144f602cd7c7eeb828559ee57e2efc4b021e9ff8d689d65c"
+    },
+    {
+      "file": "tests/support/purchasing-journey.mjs",
+      "sha256": "f62f757630dcbc6bac83f8efb2bb01794b641d594beb41bd3359a2f120bec090"
+    },
+    {
+      "file": "tests/support/quality-journey.mjs",
+      "sha256": "53961354bdc269c0289e62db2e2df67907559698aaabb81875bb45d30c861706"
+    },
+    {
+      "file": "tests/support/quality-ready.mjs",
+      "sha256": "93e1f77a08665d13f6e4512eee6d34c294bbb9d7970274729763075d65d0c07e"
+    },
+    {
+      "file": "tests/support/real-crank.mjs",
+      "sha256": "affcfbb458c9122d296632eeaa1d95f9c30dea9ea8da538b69eb3bedac9711d0"
+    },
+    {
+      "file": "tests/support/real-pier.mjs",
+      "sha256": "f9e00c82e6728ad2211260121306f55a0ead3d70eb56098bc2d542d5307bf51d"
+    },
+    {
+      "file": "tests/support/receivables-journey.mjs",
+      "sha256": "2efb544a65b869d7c73d94efc2f8d4e81600a0646dc35f67b008b8fde62fa5ca"
+    },
+    {
+      "file": "tests/support/refunds-journey.mjs",
+      "sha256": "eafa255c853a47266ca388ef0ff0747a5e5dde86ecd036250ea26678c3fbbb4e"
+    },
+    {
+      "file": "tests/support/repair-read-journey.mjs",
+      "sha256": "7a1f50078c636516ddd24fbcbdc49c02008209dda4ce248f1c29457908489f4d"
+    },
+    {
+      "file": "tests/support/replenishment-journey.mjs",
+      "sha256": "6e1a7a5f9edc6780f18d715be985cbc19b00c6c78f61749a6010b224a497e0c9"
+    },
+    {
+      "file": "tests/support/report-csv.mjs",
+      "sha256": "d2dcb2d00567ea29e57a71f0b31c970d1332befb704e57482fba83e34e228562"
+    },
+    {
+      "file": "tests/support/report-journey.mjs",
+      "sha256": "f127fd43e62528cad413e1e1a883f3209953a9451c1c8262432dee8feca00290"
+    },
+    {
+      "file": "tests/support/report-xlsx.mjs",
+      "sha256": "de461dc3ada1308f0219daca9c1cc2148a801944a796b53bdad1499ea34890a8"
+    },
+    {
+      "file": "tests/support/retention-journey.mjs",
+      "sha256": "2b8145396407c872d5cc3086d58bc5dc4074f77440bcf4dfae265bf3bc484bb5"
+    },
+    {
+      "file": "tests/support/return-journey.mjs",
+      "sha256": "2285de3145c597488778eb30c17a82d2bc5e37587d5344c5dfdc2cbd5f55b033"
+    },
+    {
+      "file": "tests/support/return-revision.mjs",
+      "sha256": "20adb33b4fd7a77fd29110c706583aff8ffb6df52f5b29d533473d5c0491b7ec"
+    },
+    {
+      "file": "tests/support/reviews-journey.mjs",
+      "sha256": "b75225351ba1af2db77635fdf649748146a83ba1e1bf596795fef6ce5d0864ad"
+    },
+    {
+      "file": "tests/support/routing-journey.mjs",
+      "sha256": "bbae98d06a05291db1a6dc46bc013bc79ccaa9a4a7885c252329f8219a440519"
+    },
+    {
+      "file": "tests/support/saml-journey.mjs",
+      "sha256": "a5164b8f31a39d2f72e5dfe82eb8b58074cfa93d86ba9647f968c0358bbdf81f"
+    },
+    {
+      "file": "tests/support/saml-provider.mjs",
+      "sha256": "39c4258c500f5a56cef451c7100c7728012576b3cca24f2a7fc78de79df7d992"
+    },
+    {
+      "file": "tests/support/search-journey.mjs",
+      "sha256": "57f7d93c02c133711e8b516911fa68a351909c989cc0cc6423a97791c7f5d563"
+    },
+    {
+      "file": "tests/support/second-factor.mjs",
+      "sha256": "0fe69150bf79dc6a972c0681a70e60f6b7d4138360e8b4ad06c5bb803220fc17"
+    },
+    {
+      "file": "tests/support/shop-api-journey.mjs",
+      "sha256": "8a47e33304bac5dfb7cfd52dd41b160249e6a7ec058ad67cd60ca46516a23bca"
+    },
+    {
+      "file": "tests/support/special-part-journey.mjs",
+      "sha256": "4a9ccfef0022054d80a9ab20b1d44fd24a56508e703416a5367f3ba20945173e"
+    },
+    {
+      "file": "tests/support/status-notices-journey.mjs",
+      "sha256": "b721a74b479b354bc5343f4b31151d2f5c529e0a6ce8980cdbf0f0497133da43"
+    },
+    {
+      "file": "tests/support/stock-consumption-journey.mjs",
+      "sha256": "ea5056c324a2d66f61354d4105b9359a4917b7bf1edcf456d1801c188f5494f6"
+    },
+    {
+      "file": "tests/support/stock-trace-journey.mjs",
+      "sha256": "10c48c703b49ba8ea78ef083cc5d527139fd315136ab88b59418da7d4c96dde6"
+    },
+    {
+      "file": "tests/support/storage-journey.mjs",
+      "sha256": "70d94dba2702df9d7a1cbb89eadd44ed6edb227838f1f6ea5a81769eb248bfaa"
+    },
+    {
+      "file": "tests/support/stripe-journey.mjs",
+      "sha256": "6655589c8b71e2ad4da8524764be163f9b644458981e0d89d26c7c569ba632c2"
+    },
+    {
+      "file": "tests/support/stripe-live.mjs",
+      "sha256": "1f3a36a1f6b2ca8f2b2374e7310f7b4dc251f2a04963dd4ba45e1f1f33a8af26"
+    },
+    {
+      "file": "tests/support/stripe-returns-journey.mjs",
+      "sha256": "4306b8d3a3a64d1855aa26445654c1be6d7f1bf3ba61bd0b3986b0061cb07203"
+    },
+    {
+      "file": "tests/support/strong-auth-journey.mjs",
+      "sha256": "8acf16b99b9f25d11df3198872639854ea52646af3b50fc14a365caeb6979df7"
+    },
+    {
+      "file": "tests/support/sublet-journey.mjs",
+      "sha256": "9bb150e5483364d29a8e8c9db546b849374608ccec202b3d397ebb699d2bbf0b"
+    },
+    {
+      "file": "tests/support/supplement-journey.mjs",
+      "sha256": "b9f25977f33e24568d14bea9139cfbc2d2baae471603d333456d8e3050cbd884"
+    },
+    {
+      "file": "tests/support/supplier-edge.mjs",
+      "sha256": "4e4c1e74d9535f8e068cf1ee0108d92e5839f66f97099bf73e745b46d0bfbaeb"
+    },
+    {
+      "file": "tests/support/supplier-orders-journey.mjs",
+      "sha256": "c1b4a9ea0f203980169a339bd7a185dd9eda62b86dfbb6c087e30cb38debba6a"
+    },
+    {
+      "file": "tests/support/supplier-returns-journey.mjs",
+      "sha256": "3a573738e04ebe2ac9cedd593d65525dd63e7c6c7c6f29155c20a07833ffcfb8"
+    },
+    {
+      "file": "tests/support/tax-custody-journey.mjs",
+      "sha256": "04f3fd21d412efd20f9b4ba3147d4ff894ab12408d5ebb3a086b873ff3bc504f"
+    },
+    {
+      "file": "tests/support/terminal-browser-steps.mjs",
+      "sha256": "a1ef85ca26d70c0af5f57f0735e48618df0dc2e451e68e1fb942a954b45c7083"
+    },
+    {
+      "file": "tests/support/terminal-journey.mjs",
+      "sha256": "ae80751e4e797fbd6bf799a0168d35122e6d63f24bcf56fe4948524ad6ce9ec4"
+    },
+    {
+      "file": "tests/support/time-journey.mjs",
+      "sha256": "3a6d9baf4241b306f231b370276e66de5f4c1eebd3b854eeaec72b6b0363e035"
+    },
+    {
+      "file": "tests/support/transfers-journey.mjs",
+      "sha256": "f5a90638f37db7881550d7228a3df80335e0f0b4ddee0b68a2e21c547bbc1ca2"
+    },
+    {
+      "file": "tests/support/waitlist-journey.mjs",
+      "sha256": "c05be01ad06d906979cd19e0100ef2505e3e748f4f716ff5cdd2eb63b4bd86e5"
+    },
+    {
+      "file": "tests/support/warranty-journey.mjs",
+      "sha256": "44c4e4d7d93f12eaaa1939c441b965ac19504ce3b1930b8e7d3aafa7f9a929e8"
+    },
+    {
+      "file": "tests/support/warranty-pattern-journey.mjs",
+      "sha256": "6befa6f7af4cd315580e8a413224df0cfe6e3d9251862e177adf626c54c10805"
+    },
+    {
+      "file": "tests/support/webhook-journey.mjs",
+      "sha256": "ab9916335492b85c81dc134ead29dbb5d4cf19e084ffec944fd69bfb9a3e17b0"
+    },
+    {
+      "file": "tests/support/worker-bundle.mjs",
+      "sha256": "a48fa09768e1bdfb38bc94b12c38785d834345677f43e68c6fcce1bcb0007ad2"
+    },
+    {
+      "file": "tests/time-browser.mjs",
+      "sha256": "67f2bb0972e5800affefaaf7888977d0c33bcace2457940e4a61ba2a0eaef3da"
+    },
+    {
+      "file": "tests/transfers-browser.mjs",
+      "sha256": "a021aa701a0f226477f721802c7113009e3de0a08d2d4129e745774d2d3058eb"
+    },
+    {
+      "file": "tests/warranty-browser.mjs",
+      "sha256": "476e2bff68790aa123ef0fad26b130b3fc0303ba744902da92e14c66ca888200"
+    },
+    {
+      "file": "tests/worker.ts",
+      "sha256": "556ed953d6da6f3ec5a41c2b98aa101892c5bea9030639891c2f9d247f11d70a"
+    },
+    {
+      "file": "verification.json",
+      "sha256": "e2e8c60f6550d9a81afd8a5ac2e5e18ffe46671201b1de115238c2665b60f979"
+    }
+  ]
+}

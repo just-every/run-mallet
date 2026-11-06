@@ -1,0 +1,39 @@
+{
+  "preceding_head": "f0316b3a7b651ef3e9597e804812b028ead0fe62",
+  "final_head": "05f12bb25287d22654fda8b2a549712d14e94c1c",
+  "checks": [
+    {
+      "shard": "core",
+      "commands_unchanged_from_preceding_head": true
+    },
+    {
+      "shard": "work-graph-core",
+      "commands_unchanged_from_preceding_head": true
+    },
+    {
+      "shard": "journeys-2",
+      "commands_unchanged_from_preceding_head": true
+    },
+    {
+      "shard": "journeys-3",
+      "commands_unchanged_from_preceding_head": true
+    },
+    {
+      "shard": "journeys-4",
+      "commands_unchanged_from_preceding_head": true
+    },
+    {
+      "shard": "journeys-5",
+      "commands_unchanged_from_preceding_head": true
+    },
+    {
+      "shard": "journeys-6",
+      "commands_unchanged_from_preceding_head": true
+    },
+    {
+      "shard": "journeys-7",
+      "commands_unchanged_from_preceding_head": false
+    }
+  ],
+  "note": "Only the fallback selector changed; all test/application sources remain identical. Receipts retain their actual producing heads."
+}

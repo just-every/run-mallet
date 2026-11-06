@@ -1,0 +1,10 @@
+{"time": "2026-11-06T22:41:28.826915+00:00", "args": ["api", "graphql", "-f", "query=query { repository(owner:\"just-every\", name:\"run-mallet\") { refs(refPrefix:\"refs/heads/cloud/sx-mallet-ci\", first:100) { nodes { name target { ... on Commit { oid committedDate } } } pageInfo { hasNextPage } } } }"]}
+{"time": "2026-11-06T22:41:36.374788+00:00", "args": ["api", "graphql", "-f", "query=query { repository(owner:\"just-every\", name:\"run-mallet\") { refs(refPrefix:\"refs/heads/\", query:\"cloud/sx-mallet-ci\", first:100) { nodes { name target { ... on Commit { oid committedDate } } } pageInfo { hasNextPage } } } }"]}
+{"time": "2026-11-06T22:41:44.154390+00:00", "args": ["run", "view", "42272728289", "--repo", "just-every/run-mallet", "--json", "jobs"]}
+{"time": "2026-11-06T22:42:57.780680+00:00", "args": ["run", "view", "42272728289", "--repo", "just-every/run-mallet", "--log"]}
+{"time": "2026-11-06T22:52:32.938523+00:00", "args": ["api", "repos/just-every/run-mallet/actions/runs?head_sha=8aabf89351f18f4e3be8ab17d064e101dd6e11f3&per_page=100"]}
+{"time": "2026-11-06T22:58:53.253812+00:00", "args": ["api", "repos/just-every/run-mallet/actions/runs/42307875520", "--jq", "{status,conclusion,head_sha,html_url}"]}
+{"time": "2026-11-06T23:03:55.023012+00:00", "args": ["api", "repos/just-every/run-mallet/actions/runs/42307875520/jobs?filter=all&per_page=100"]}
+{"time": "2026-11-06T23:08:57.046505+00:00", "args": ["run", "view", "42307875520", "--repo", "just-every/run-mallet", "--job", "128201758109", "--log-failed"]}
+{"time": "2026-11-06T23:13:59.175816+00:00", "args": ["run", "view", "42307875520", "--repo", "just-every/run-mallet", "--job", "128201758141", "--log-failed"]}
+{"time": "2026-11-06T23:31:00.063419+00:00", "args": ["api", "repos/just-every/run-mallet/commits/05f12bb25287d22654fda8b2a549712d14e94c1c/check-runs?per_page=100&filter=all"]}

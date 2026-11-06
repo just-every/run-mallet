@@ -1,0 +1,28 @@
+{
+  "shard": "core",
+  "actual_producing_head": "f0316b3a7b651ef3e9597e804812b028ead0fe62",
+  "final_head": "05f12bb25287d22654fda8b2a549712d14e94c1c",
+  "commands_identical_to_final": true,
+  "exit_code": 0,
+  "test_summaries": [
+    {
+      "tests": 2,
+      "pass": 2,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0,
+      "todo": 0
+    },
+    {
+      "tests": 20,
+      "pass": 20,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0,
+      "todo": 0
+    }
+  ],
+  "explicit_build_count": 1,
+  "agent_conformance": "671/671 points passed.",
+  "note": "Shared five-CPU VM was concurrently running isolated shards; these are not hosted job durations."
+}

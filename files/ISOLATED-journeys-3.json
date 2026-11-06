@@ -1,0 +1,10 @@
+{
+  "shard": "journeys-3",
+  "head": "f0316b3a7b651ef3e9597e804812b028ead0fe62",
+  "exit_code": 0,
+  "seconds": 793.571,
+  "started_at": "2026-11-06T23:12:27.659235+00:00",
+  "completed_at": "2026-11-06T23:25:41.230447+00:00",
+  "isolated_checkout": true,
+  "dist_initially_absent": true
+}

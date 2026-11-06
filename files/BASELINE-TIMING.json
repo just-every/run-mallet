@@ -1,0 +1,113 @@
+{
+  "run": 42272728289,
+  "head": "a873680e42f6776117d859f2070ffcfe4d1e5e46",
+  "attempt": 2,
+  "mean_seconds": 212.6,
+  "longest_seconds": 996.0,
+  "longest_over_mean": 4.685,
+  "cancelled_duration_is_censored": true,
+  "jobs": [
+    {
+      "job_id": 128100848042,
+      "name": "plan",
+      "conclusion": "success",
+      "seconds": 5.0
+    },
+    {
+      "job_id": 128100905389,
+      "name": "shards (runtime, true)",
+      "conclusion": "success",
+      "seconds": 95.0
+    },
+    {
+      "job_id": 128100905462,
+      "name": "shards (typecheck, false)",
+      "conclusion": "success",
+      "seconds": 34.0
+    },
+    {
+      "job_id": 128100905493,
+      "name": "shards (source, false)",
+      "conclusion": "success",
+      "seconds": 27.0
+    },
+    {
+      "job_id": 128100905519,
+      "name": "shards (operations-core, true)",
+      "conclusion": "success",
+      "seconds": 64.0
+    },
+    {
+      "job_id": 128100905524,
+      "name": "shards (workshop-core, true)",
+      "conclusion": "success",
+      "seconds": 996.0
+    },
+    {
+      "job_id": 128100905550,
+      "name": "shards (workshop-browser, true)",
+      "conclusion": "cancelled",
+      "seconds": 737.0
+    },
+    {
+      "job_id": 128100905563,
+      "name": "shards (restore, true)",
+      "conclusion": "success",
+      "seconds": 55.0
+    },
+    {
+      "job_id": 128100905616,
+      "name": "shards (sales-tax, true)",
+      "conclusion": "success",
+      "seconds": 664.0
+    },
+    {
+      "job_id": 128100905628,
+      "name": "shards (sales-report, true)",
+      "conclusion": "success",
+      "seconds": 85.0
+    },
+    {
+      "job_id": 128100905631,
+      "name": "shards (security, true)",
+      "conclusion": "success",
+      "seconds": 72.0
+    },
+    {
+      "job_id": 128100905685,
+      "name": "shards (pier, false)",
+      "conclusion": "success",
+      "seconds": 37.0
+    },
+    {
+      "job_id": 128100905746,
+      "name": "shards (retention, true)",
+      "conclusion": "success",
+      "seconds": 85.0
+    },
+    {
+      "job_id": 128100905761,
+      "name": "shards (operations-browser, true)",
+      "conclusion": "success",
+      "seconds": 53.0
+    },
+    {
+      "job_id": 128100905776,
+      "name": "shards (operations-import, true)",
+      "conclusion": "success",
+      "seconds": 58.0
+    },
+    {
+      "job_id": 128100905802,
+      "name": "shards (media, true)",
+      "conclusion": "success",
+      "seconds": 127.0
+    },
+    {
+      "job_id": 128109367299,
+      "name": "verify",
+      "conclusion": "failure",
+      "seconds": 3.0
+    }
+  ]
+}

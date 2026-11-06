@@ -1,0 +1,7 @@
+{
+  "captured_at": "2026-11-06T23:22:31.196669+00:00",
+  "node_selection": "Actual Node runner proves final 187/187 selections, exactly once.",
+  "invalid_fallback_diagnostic": "The f0316b3 journeys-7 diagnostic was intentionally stopped after proving duplicate selection and missing-build errors. Its actual exit 241 receipt is retained. Fixed fallback runs separately on 05f12bb.",
+  "load_context": "Seven isolated non-core diagnostics plus one core diagnostic share this five-CPU cloud VM. Their elapsed times are not GitHub runner timings and do not establish the 12-minute hosted limit or 1.5-times-mean criterion.",
+  "hosted_build_count": "One explicit rer build command remains; the unchanged Pause test fixture retains its internal Vite setup, preserving the existing journey."
+}

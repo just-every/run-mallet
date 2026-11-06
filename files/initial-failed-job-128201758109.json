@@ -1,0 +1,10 @@
+{
+  "command": "gh run view 42307875520 --repo just-every/run-mallet --job 128201758109 --log-failed",
+  "exit_code": 0,
+  "stdout_bytes": 19408,
+  "stderr_bytes": 0,
+  "sha256": "e279d0e47eefcb0a7ea59d8fc054d23df3187ed1f339caeec057143c6a66fde1",
+  "captured_at": "2026-11-06T23:09:01.971597+00:00",
+  "no_retry": true,
+  "nonempty_log": true
+}

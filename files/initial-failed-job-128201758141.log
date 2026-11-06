@@ -1,0 +1,181 @@
+shards (journeys-4, true)	Run this shard	﻿2026-11-06T22:52:59.9787945Z ##[group]Run node scripts/verify-ci.mjs "$SHARD"
+shards (journeys-4, true)	Run this shard	2026-11-06T22:52:59.9788341Z [36;1mnode scripts/verify-ci.mjs "$SHARD"[0m
+shards (journeys-4, true)	Run this shard	2026-11-06T22:52:59.9806460Z shell: /usr/bin/bash -e {0}
+shards (journeys-4, true)	Run this shard	2026-11-06T22:52:59.9806714Z env:
+shards (journeys-4, true)	Run this shard	2026-11-06T22:52:59.9806905Z   CI: true
+shards (journeys-4, true)	Run this shard	2026-11-06T22:52:59.9809317Z   GH_TOKEN: ***
+shards (journeys-4, true)	Run this shard	2026-11-06T22:52:59.9809545Z   WRANGLER_SEND_METRICS: false
+shards (journeys-4, true)	Run this shard	2026-11-06T22:52:59.9809813Z   PLAYWRIGHT_SKIP_BROWSER_GC: 1
+shards (journeys-4, true)	Run this shard	2026-11-06T22:52:59.9810063Z   SHARD: journeys-4
+shards (journeys-4, true)	Run this shard	2026-11-06T22:52:59.9810279Z ##[endgroup]
+shards (journeys-4, true)	Run this shard	2026-11-06T22:53:00.0117276Z > pnpm run verify:app
+shards (journeys-4, true)	Run this shard	2026-11-06T22:53:00.2883101Z 
+shards (journeys-4, true)	Run this shard	2026-11-06T22:53:00.2884123Z > @workshop/mallet@0.1.0 verify:app /home/runner/work/run-mallet/run-mallet
+shards (journeys-4, true)	Run this shard	2026-11-06T22:53:00.2884914Z > node scripts/verify-app.mjs
+shards (journeys-4, true)	Run this shard	2026-11-06T22:53:00.2885226Z 
+shards (journeys-4, true)	Run this shard	2026-11-06T22:53:00.3196695Z > node --test --test-concurrency=1 tests/pier-journey.mjs
+shards (journeys-4, true)	Run this shard	2026-11-06T22:53:00.3609449Z TAP version 13
+shards (journeys-4, true)	Run this shard	2026-11-06T22:53:07.5614050Z # Subtest: PIER-001: real Pier catalog, observation, revocation and credential rotation never move source stock
+shards (journeys-4, true)	Run this shard	2026-11-06T22:53:07.5622178Z ok 1 - PIER-001: real Pier catalog, observation, revocation and credential rotation never move source stock
+shards (journeys-4, true)	Run this shard	2026-11-06T22:53:07.5623793Z   ---
+shards (journeys-4, true)	Run this shard	2026-11-06T22:53:07.5624614Z   duration_ms: 6078.316525
+shards (journeys-4, true)	Run this shard	2026-11-06T22:53:07.5625376Z   type: 'test'
+shards (journeys-4, true)	Run this shard	2026-11-06T22:53:07.5625793Z   ...
+shards (journeys-4, true)	Run this shard	2026-11-06T22:53:07.6029703Z 1..1
+shards (journeys-4, true)	Run this shard	2026-11-06T22:53:07.6031227Z # tests 1
+shards (journeys-4, true)	Run this shard	2026-11-06T22:53:07.6031921Z # suites 0
+shards (journeys-4, true)	Run this shard	2026-11-06T22:53:07.6032879Z # pass 1
+shards (journeys-4, true)	Run this shard	2026-11-06T22:53:07.6034760Z # fail 0
+shards (journeys-4, true)	Run this shard	2026-11-06T22:53:07.6035436Z # cancelled 0
+shards (journeys-4, true)	Run this shard	2026-11-06T22:53:07.6036300Z # skipped 0
+shards (journeys-4, true)	Run this shard	2026-11-06T22:53:07.6037447Z # todo 0
+shards (journeys-4, true)	Run this shard	2026-11-06T22:53:07.6038086Z # duration_ms 7254.826742
+shards (journeys-4, true)	Run this shard	2026-11-06T22:53:07.6079465Z > node --test --test-concurrency=1 --test-name-pattern='^(?:PAY-001|BASE-AGENT-002|EST-006|PART-002|PART-004|PART-003|REPORT-003|DVI-001|AUTO-004|import)\b' tests/mallet.test.mjs
+shards (journeys-4, true)	Run this shard	2026-11-06T22:53:07.6474287Z TAP version 13
+shards (journeys-4, true)	Run this shard	2026-11-06T22:53:10.7348779Z # Subtest: BASE-AGENT-002: native forms and MCP preparation parity under both policies at 1440 and 390
+shards (journeys-4, true)	Run this shard	2026-11-06T22:53:10.7350427Z not ok 1 - BASE-AGENT-002: native forms and MCP preparation parity under both policies at 1440 and 390
+shards (journeys-4, true)	Run this shard	2026-11-06T22:53:10.7351338Z   ---
+shards (journeys-4, true)	Run this shard	2026-11-06T22:53:10.7351699Z   duration_ms: 1566.742697
+shards (journeys-4, true)	Run this shard	2026-11-06T22:53:10.7352151Z   type: 'test'
+shards (journeys-4, true)	Run this shard	2026-11-06T22:53:10.7353177Z   location: '/home/runner/work/run-mallet/run-mallet/tests/mallet.test.mjs:53:1'
+shards (journeys-4, true)	Run this shard	2026-11-06T22:53:10.7354016Z   failureType: 'testCodeFailure'
+shards (journeys-4, true)	Run this shard	2026-11-06T22:53:10.7354916Z   error: 'No production build at dist/server/wrangler.json. Run rer build, then rer verify.'
+shards (journeys-4, true)	Run this shard	2026-11-06T22:53:10.7355831Z   code: 'hosted_output_missing'
+shards (journeys-4, true)	Run this shard	2026-11-06T22:53:10.7356332Z   stack: |-
+shards (journeys-4, true)	Run this shard	2026-11-06T22:53:10.7357720Z     serveHosted (file:///home/runner/work/run-mallet/run-mallet/node_modules/.pnpm/@runeditrun+rer@0.2.91/node_modules/@runeditrun/rer/cli/hosted-output.mjs:53:16)
+shards (journeys-4, true)	Run this shard	2026-11-06T22:53:10.7360045Z     async checkAgentDoor (file:///home/runner/work/run-mallet/run-mallet/node_modules/.pnpm/@runeditrun+rer@0.2.91/node_modules/@runeditrun/rer/cli/agent-door.mjs:71:11)
+shards (journeys-4, true)	Run this shard	2026-11-06T22:53:10.7362346Z     async TestContext.preparationParityBrowser (file:///home/runner/work/run-mallet/run-mallet/tests/agent-preparation-parity-browser.mjs:82:19)
+shards (journeys-4, true)	Run this shard	2026-11-06T22:53:10.7364109Z     async Test.run (node:internal/test_runner/test:1054:7)
+shards (journeys-4, true)	Run this shard	2026-11-06T22:53:10.7365073Z     async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+shards (journeys-4, true)	Run this shard	2026-11-06T22:53:10.7365862Z   ...
+shards (journeys-4, true)	Run this shard	2026-11-06T22:53:13.4578037Z # Subtest: import undo preserves an asset once it has a native repair visit
+shards (journeys-4, true)	Run this shard	2026-11-06T22:53:13.4579551Z ok 2 - import undo preserves an asset once it has a native repair visit
+shards (journeys-4, true)	Run this shard	2026-11-06T22:53:13.4580393Z   ---
+shards (journeys-4, true)	Run this shard	2026-11-06T22:53:13.4580884Z   duration_ms: 2734.289232
+shards (journeys-4, true)	Run this shard	2026-11-06T22:53:13.4581399Z   type: 'test'
+shards (journeys-4, true)	Run this shard	2026-11-06T22:53:13.4581797Z   ...
+shards (journeys-4, true)	Run this shard	2026-11-06T22:53:22.7725089Z # Subtest: DVI-001 / DVI-004: exact assigned template, measured/photo outcomes, not-inspected state, canned-job estimate and archive
+shards (journeys-4, true)	Run this shard	2026-11-06T22:53:22.7727633Z ok 3 - DVI-001 / DVI-004: exact assigned template, measured/photo outcomes, not-inspected state, canned-job estimate and archive
+shards (journeys-4, true)	Run this shard	2026-11-06T22:53:22.7728831Z   ---
+shards (journeys-4, true)	Run this shard	2026-11-06T22:53:22.7729266Z   duration_ms: 9311.379962
+shards (journeys-4, true)	Run this shard	2026-11-06T22:53:22.7729756Z   type: 'test'
+shards (journeys-4, true)	Run this shard	2026-11-06T22:53:22.7730170Z   ...
+shards (journeys-4, true)	Run this shard	2026-11-06T22:53:31.6348954Z # Subtest: DVI-001: native template/recipe/assignment and technician inspection at 1440/390
+shards (journeys-4, true)	Run this shard	2026-11-06T22:53:31.6350462Z ok 4 - DVI-001: native template/recipe/assignment and technician inspection at 1440/390
+shards (journeys-4, true)	Run this shard	2026-11-06T22:53:31.6351699Z   ---
+shards (journeys-4, true)	Run this shard	2026-11-06T22:53:31.6352088Z   duration_ms: 8865.48775
+shards (journeys-4, true)	Run this shard	2026-11-06T22:53:31.6352742Z   type: 'test'
+shards (journeys-4, true)	Run this shard	2026-11-06T22:53:31.6353115Z   ...
+shards (journeys-4, true)	Run this shard	2026-11-06T22:53:41.8888834Z # Subtest: REPORT-003 / REPORT-006: sold versus actual hours, recomputed corrections, drill-through, owner-only pay rates and recovery
+shards (journeys-4, true)	Run this shard	2026-11-06T22:53:41.8890604Z ok 5 - REPORT-003 / REPORT-006: sold versus actual hours, recomputed corrections, drill-through, owner-only pay rates and recovery
+shards (journeys-4, true)	Run this shard	2026-11-06T22:53:41.8891409Z   ---
+shards (journeys-4, true)	Run this shard	2026-11-06T22:53:41.8891892Z   duration_ms: 10252.950652
+shards (journeys-4, true)	Run this shard	2026-11-06T22:53:41.8892586Z   type: 'test'
+shards (journeys-4, true)	Run this shard	2026-11-06T22:53:41.8893078Z   ...
+shards (journeys-4, true)	Run this shard	2026-11-06T22:54:03.3184268Z # Subtest: REPORT-003: native technician report, rate form and role views at 1440/390
+shards (journeys-4, true)	Run this shard	2026-11-06T22:54:03.3185701Z ok 6 - REPORT-003: native technician report, rate form and role views at 1440/390
+shards (journeys-4, true)	Run this shard	2026-11-06T22:54:03.3186714Z   ---
+shards (journeys-4, true)	Run this shard	2026-11-06T22:54:03.3187100Z   duration_ms: 21429.129306
+shards (journeys-4, true)	Run this shard	2026-11-06T22:54:03.3187517Z   type: 'test'
+shards (journeys-4, true)	Run this shard	2026-11-06T22:54:03.3187897Z   ...
+shards (journeys-4, true)	Run this shard	2026-11-06T22:54:14.7125807Z # Subtest: EST-006 / EST-007: scheduled reminders chase only the current undecided revision; reply, decision and opt-out stop them; rejected and interrupted sends and silence retain one attributable advisor task
+shards (journeys-4, true)	Run this shard	2026-11-06T22:54:14.7127963Z ok 7 - EST-006 / EST-007: scheduled reminders chase only the current undecided revision; reply, decision and opt-out stop them; rejected and interrupted sends and silence retain one attributable advisor task
+shards (journeys-4, true)	Run this shard	2026-11-06T22:54:14.7128882Z   ---
+shards (journeys-4, true)	Run this shard	2026-11-06T22:54:14.7129136Z   duration_ms: 11394.61964
+shards (journeys-4, true)	Run this shard	2026-11-06T22:54:14.7129390Z   type: 'test'
+shards (journeys-4, true)	Run this shard	2026-11-06T22:54:14.7129602Z   ...
+shards (journeys-4, true)	Run this shard	2026-11-06T22:54:25.4239627Z # Subtest: EST-006 / EST-007: native chase policy, reminder history, customer opt-out and uncertain-task resolution at 1440/390
+shards (journeys-4, true)	Run this shard	2026-11-06T22:54:25.4241835Z ok 8 - EST-006 / EST-007: native chase policy, reminder history, customer opt-out and uncertain-task resolution at 1440/390
+shards (journeys-4, true)	Run this shard	2026-11-06T22:54:25.4243879Z   ---
+shards (journeys-4, true)	Run this shard	2026-11-06T22:54:25.4244703Z   duration_ms: 10710.819457
+shards (journeys-4, true)	Run this shard	2026-11-06T22:54:25.4245154Z   type: 'test'
+shards (journeys-4, true)	Run this shard	2026-11-06T22:54:25.4245524Z   ...
+shards (journeys-4, true)	Run this shard	2026-11-06T22:54:32.4963195Z # Subtest: PART-002 / OPS-001: barcode receiving, separate balances, blind and cycle variances, approval fences, reports and fresh recovery
+shards (journeys-4, true)	Run this shard	2026-11-06T22:54:32.4964860Z ok 9 - PART-002 / OPS-001: barcode receiving, separate balances, blind and cycle variances, approval fences, reports and fresh recovery
+shards (journeys-4, true)	Run this shard	2026-11-06T22:54:32.4965583Z   ---
+shards (journeys-4, true)	Run this shard	2026-11-06T22:54:32.4965845Z   duration_ms: 7070.864818
+shards (journeys-4, true)	Run this shard	2026-11-06T22:54:32.4966093Z   type: 'test'
+shards (journeys-4, true)	Run this shard	2026-11-06T22:54:32.4966345Z   ...
+shards (journeys-4, true)	Run this shard	2026-11-06T22:54:50.8139063Z # Subtest: PART-002: scan shipment and bins, approve shortage and reconcile through native forms at 1440/390
+shards (journeys-4, true)	Run this shard	2026-11-06T22:54:50.8140750Z ok 10 - PART-002: scan shipment and bins, approve shortage and reconcile through native forms at 1440/390
+shards (journeys-4, true)	Run this shard	2026-11-06T22:54:50.8141633Z   ---
+shards (journeys-4, true)	Run this shard	2026-11-06T22:54:50.8141994Z   duration_ms: 18315.756021
+shards (journeys-4, true)	Run this shard	2026-11-06T22:54:50.8142773Z   type: 'test'
+shards (journeys-4, true)	Run this shard	2026-11-06T22:54:50.8143170Z   ...
+shards (journeys-4, true)	Run this shard	2026-11-06T22:54:59.1929855Z # Subtest: PART-004 / OPS-001: separate taxed core deposit, tender, due alerts, returned condition, shipment, adjusted supplier credit and immutable invoice correction
+shards (journeys-4, true)	Run this shard	2026-11-06T22:54:59.1931822Z ok 11 - PART-004 / OPS-001: separate taxed core deposit, tender, due alerts, returned condition, shipment, adjusted supplier credit and immutable invoice correction
+shards (journeys-4, true)	Run this shard	2026-11-06T22:54:59.1933431Z   ---
+shards (journeys-4, true)	Run this shard	2026-11-06T22:54:59.1933672Z   duration_ms: 8379.640987
+shards (journeys-4, true)	Run this shard	2026-11-06T22:54:59.1933931Z   type: 'test'
+shards (journeys-4, true)	Run this shard	2026-11-06T22:54:59.1934131Z   ...
+shards (journeys-4, true)	Run this shard	2026-11-06T22:55:10.8519015Z # Subtest: PART-004: core deposit, expiry alert, shipment and adjusted credit correction at 1440/390
+shards (journeys-4, true)	Run this shard	2026-11-06T22:55:10.8520662Z ok 12 - PART-004: core deposit, expiry alert, shipment and adjusted credit correction at 1440/390
+shards (journeys-4, true)	Run this shard	2026-11-06T22:55:10.8521480Z   ---
+shards (journeys-4, true)	Run this shard	2026-11-06T22:55:10.8521819Z   duration_ms: 11661.333661
+shards (journeys-4, true)	Run this shard	2026-11-06T22:55:10.8522145Z   type: 'test'
+shards (journeys-4, true)	Run this shard	2026-11-06T22:55:10.8522729Z   ...
+shards (journeys-4, true)	Run this shard	2026-11-06T22:55:17.5754705Z # Subtest: PART-003 / OPS-001: atomic reserved lot usage, last-item conflicts, cancellation release, recorded returns and recovery
+shards (journeys-4, true)	Run this shard	2026-11-06T22:55:17.5756052Z ok 13 - PART-003 / OPS-001: atomic reserved lot usage, last-item conflicts, cancellation release, recorded returns and recovery
+shards (journeys-4, true)	Run this shard	2026-11-06T22:55:17.5756619Z   ---
+shards (journeys-4, true)	Run this shard	2026-11-06T22:55:17.5756838Z   duration_ms: 6722.57356
+shards (journeys-4, true)	Run this shard	2026-11-06T22:55:17.5757109Z   type: 'test'
+shards (journeys-4, true)	Run this shard	2026-11-06T22:55:17.5757305Z   ...
+shards (journeys-4, true)	Run this shard	2026-11-06T22:55:28.0474369Z # Subtest: PART-003: reserved work, inspected stock returns and cancellation release through native forms at 1440 and 390
+shards (journeys-4, true)	Run this shard	2026-11-06T22:55:28.0476742Z ok 14 - PART-003: reserved work, inspected stock returns and cancellation release through native forms at 1440 and 390
+shards (journeys-4, true)	Run this shard	2026-11-06T22:55:28.0478051Z   ---
+shards (journeys-4, true)	Run this shard	2026-11-06T22:55:28.0478615Z   duration_ms: 10471.96004
+shards (journeys-4, true)	Run this shard	2026-11-06T22:55:28.0479064Z   type: 'test'
+shards (journeys-4, true)	Run this shard	2026-11-06T22:55:28.0479413Z   ...
+shards (journeys-4, true)	Run this shard	2026-11-06T22:55:35.7016986Z # Subtest: PAY-001: owner checkout, authenticated event replay, exact fee and payout membership and inert recovery
+shards (journeys-4, true)	Run this shard	2026-11-06T22:55:35.7019070Z ok 15 - PAY-001: owner checkout, authenticated event replay, exact fee and payout membership and inert recovery
+shards (journeys-4, true)	Run this shard	2026-11-06T22:55:35.7020204Z   ---
+shards (journeys-4, true)	Run this shard	2026-11-06T22:55:35.7020728Z   duration_ms: 7653.855124
+shards (journeys-4, true)	Run this shard	2026-11-06T22:55:35.7021279Z   type: 'test'
+shards (journeys-4, true)	Run this shard	2026-11-06T22:55:35.7021723Z   ...
+shards (journeys-4, true)	Run this shard	2026-11-06T22:55:46.7451026Z # Subtest: PAY-001: native merchant connection, invoice checkout and fee reconciliation at 1440 and 390
+shards (journeys-4, true)	Run this shard	2026-11-06T22:55:46.7453352Z ok 16 - PAY-001: native merchant connection, invoice checkout and fee reconciliation at 1440 and 390
+shards (journeys-4, true)	Run this shard	2026-11-06T22:55:46.7454627Z   ---
+shards (journeys-4, true)	Run this shard	2026-11-06T22:55:46.7455264Z   duration_ms: 11044.175023
+shards (journeys-4, true)	Run this shard	2026-11-06T22:55:46.7455580Z   type: 'test'
+shards (journeys-4, true)	Run this shard	2026-11-06T22:55:46.7455793Z   ...
+shards (journeys-4, true)	Run this shard	2026-11-06T22:55:49.8204583Z # Subtest: PAY-001: explicit expiration and uncertain checkout stay stopped without allocating money
+shards (journeys-4, true)	Run this shard	2026-11-06T22:55:49.8206501Z ok 17 - PAY-001: explicit expiration and uncertain checkout stay stopped without allocating money
+shards (journeys-4, true)	Run this shard	2026-11-06T22:55:49.8207403Z   ---
+shards (journeys-4, true)	Run this shard	2026-11-06T22:55:49.8207773Z   duration_ms: 3075.40264
+shards (journeys-4, true)	Run this shard	2026-11-06T22:55:49.8208164Z   type: 'test'
+shards (journeys-4, true)	Run this shard	2026-11-06T22:55:49.8208507Z   ...
+shards (journeys-4, true)	Run this shard	2026-11-06T22:55:58.0433515Z # Subtest: PAY-001: owner reader collection, authenticated payment and exact replay survive recovery
+shards (journeys-4, true)	Run this shard	2026-11-06T22:55:58.0435110Z ok 18 - PAY-001: owner reader collection, authenticated payment and exact replay survive recovery
+shards (journeys-4, true)	Run this shard	2026-11-06T22:55:58.0435991Z   ---
+shards (journeys-4, true)	Run this shard	2026-11-06T22:55:58.0436351Z   duration_ms: 8222.771833
+shards (journeys-4, true)	Run this shard	2026-11-06T22:55:58.0436735Z   type: 'test'
+shards (journeys-4, true)	Run this shard	2026-11-06T22:55:58.0437050Z   ...
+shards (journeys-4, true)	Run this shard	2026-11-06T22:56:01.5858079Z # Subtest: PAY-001: uncertain reader initiation and cancellation reconcile without outbound replay
+shards (journeys-4, true)	Run this shard	2026-11-06T22:56:01.5859878Z ok 19 - PAY-001: uncertain reader initiation and cancellation reconcile without outbound replay
+shards (journeys-4, true)	Run this shard	2026-11-06T22:56:01.5860830Z   ---
+shards (journeys-4, true)	Run this shard	2026-11-06T22:56:01.5861284Z   duration_ms: 3542.114399
+shards (journeys-4, true)	Run this shard	2026-11-06T22:56:01.5861900Z   type: 'test'
+shards (journeys-4, true)	Run this shard	2026-11-06T22:56:01.5863328Z   ...
+shards (journeys-4, true)	Run this shard	2026-11-06T22:56:09.2806951Z # Subtest: PAY-001: authenticated ACH returns and reinstatement preserve captured payments across replay and recovery
+shards (journeys-4, true)	Run this shard	2026-11-06T22:56:09.2808819Z ok 20 - PAY-001: authenticated ACH returns and reinstatement preserve captured payments across replay and recovery
+shards (journeys-4, true)	Run this shard	2026-11-06T22:56:09.2809732Z   ---
+shards (journeys-4, true)	Run this shard	2026-11-06T22:56:09.2810081Z   duration_ms: 7690.406273
+shards (journeys-4, true)	Run this shard	2026-11-06T22:56:09.2810963Z   type: 'test'
+shards (journeys-4, true)	Run this shard	2026-11-06T22:56:09.2811329Z   ...
+shards (journeys-4, true)	Run this shard	2026-11-06T22:57:03.2833069Z # Subtest: AUTO-004: approved refreshed quote, observed mileage, explicit stop and repeat decline preserve decisions
+shards (journeys-4, true)	Run this shard	2026-11-06T22:57:03.2835233Z ok 21 - AUTO-004: approved refreshed quote, observed mileage, explicit stop and repeat decline preserve decisions
+shards (journeys-4, true)	Run this shard	2026-11-06T22:57:03.2836418Z   ---
+shards (journeys-4, true)	Run this shard	2026-11-06T22:57:03.2836940Z   duration_ms: 54006.997549
+shards (journeys-4, true)	Run this shard	2026-11-06T22:57:03.2837539Z   type: 'test'
+shards (journeys-4, true)	Run this shard	2026-11-06T22:57:03.2838046Z   ...
+shards (journeys-4, true)	Run this shard	2026-11-06T22:57:03.3545347Z 1..21
+shards (journeys-4, true)	Run this shard	2026-11-06T22:57:03.3548682Z # tests 21
+shards (journeys-4, true)	Run this shard	2026-11-06T22:57:03.3549175Z # suites 0
+shards (journeys-4, true)	Run this shard	2026-11-06T22:57:03.3549598Z # pass 20
+shards (journeys-4, true)	Run this shard	2026-11-06T22:57:03.3550005Z # fail 1
+shards (journeys-4, true)	Run this shard	2026-11-06T22:57:03.3550417Z # cancelled 0
+shards (journeys-4, true)	Run this shard	2026-11-06T22:57:03.3550867Z # skipped 0
+shards (journeys-4, true)	Run this shard	2026-11-06T22:57:03.3551272Z # todo 0
+shards (journeys-4, true)	Run this shard	2026-11-06T22:57:03.3551733Z # duration_ms 235719.413034
+shards (journeys-4, true)	Run this shard	2026-11-06T22:57:03.3740630Z  ELIFECYCLE  Command failed with exit code 1.
+shards (journeys-4, true)	Run this shard	2026-11-06T22:57:03.4135150Z ##[error]Process completed with exit code 1.
