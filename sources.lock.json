@@ -5675,6 +5675,10 @@
       "sha256": "ca5acc0af9cf5593fcf5ae2248b80790902730cb536900cb3552f69b527083e8",
       "executable": false
     },
+    "tests/support/declined-work-cross-visit-journey.mjs": {
+      "sha256": "aabf2a5134962b887ef7e25dd6d27cf069a24c6e2783afafe84501d64fcd7364",
+      "executable": false
+    },
     "tests/support/declined-work-review-journey.mjs": {
       "sha256": "875f41db1002ec5e6cfdcc5d7e6cbf647ebcfcf9dbdc1f5060a4c05b7f5c0870",
       "executable": false
