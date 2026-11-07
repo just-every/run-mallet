@@ -54,8 +54,14 @@ test('shop setup, taxability, frozen Dana invoice and USD CSV use per-line sales
 
 test('pre-US records migrate without changing amounts and request unknown shop rate',()=>run(async h=>{
  const db=await h.mf.getD1Database('DB')
- const legacy={id:'legacy-invoice',version:1,number:'M-000001',totals:{currency:'AUD',subtotalCents:5000,gstCents:500,totalCents:5500},lines:[{id:'line-1',kind:'labour',quantity:1,quantityMilli:1000,unitCents:5000,gst:true,subtotalCents:5000,gstCents:500,totalCents:5500}]}
+ const person=(await h.state()).actor,at='2026-10-01T14:00:00.000Z'
+ const legacy={id:'legacy-invoice',version:3,revision:1,status:'exported',exportId:'synthetic-mallet-legacy-export',preparedBy:person,approval:{by:person,at,revision:1,totals:{subtotalCents:5000,salesTaxCents:500,totalCents:5500}},number:'M-000001',totals:{currency:'AUD',subtotalCents:5000,gstCents:500,totalCents:5500},lines:[{id:'line-1',kind:'labour',quantity:1,quantityMilli:1000,unitCents:5000,gst:true,subtotalCents:5000,gstCents:500,totalCents:5500}]}
+ const originalCsv='"InvoiceNumber","Description","Quantity","UnitAUD","SubtotalAUD","GSTAUD","TotalAUD","Currency"\r\n"M-000001","Retained service","1","50.00","50.00","5.00","55.00","AUD"\r\n'
+ const expectedCsv='"InvoiceNumber","Description","Quantity","UnitUSD","SubtotalUSD","SalesTaxUSD","TotalUSD","Currency"\r\n"M-000001","Retained service","1","50.00","50.00","5.00","55.00","USD"\r\n'
+ const exported={id:legacy.exportId,version:1,invoiceId:legacy.id,invoiceRevision:1,invoiceVersion:2,number:legacy.number,format:'mallet-invoice-csv',currency:'AUD',totals:legacy.totals,lines:legacy.lines,csv:originalCsv,by:person,at}
+ const approval={id:'synthetic-mallet-legacy-approval',version:1,subjectKind:'invoice',subjectId:legacy.id,revision:1,subjectVersion:2,preparedBy:person,approvedBy:person,decision:'approved',at}
  await db.prepare('INSERT INTO mallet_records(kind,id,revision,value) VALUES(?,?,?,?)').bind('invoice',legacy.id,1,JSON.stringify(legacy)).run()
+ for(const [kind,row] of [['export',exported],['approval',approval]])await db.prepare('INSERT INTO mallet_records(kind,id,revision,value) VALUES(?,?,?,?)').bind(kind,row.id,1,JSON.stringify(row)).run()
  await db.prepare("DELETE FROM mallet_records WHERE kind='taxSettings'").run()
  const migration=await readFile('migrations/core/0018_sales_tax.sql','utf8')
  await db.batch(unstable_splitSqlQuery(migration).map(sql=>db.prepare(sql)))
@@ -64,6 +70,17 @@ test('pre-US records migrate without changing amounts and request unknown shop r
  assert.equal(invoice.totals.salesTaxCents,500);assert.equal(invoice.totals.currency,'USD')
  assert.equal(invoice.lines[0].taxRatePercent,10);assert.equal(invoice.lines[0].kind,'labor')
  assert.equal(state.records.taxSettings[0].ratePercent,null)
+ assert.equal(invoice.id,legacy.id);assert.equal(invoice.exportId,exported.id);assert.equal(invoice.version,3)
+ assert.deepEqual(invoice.approval,legacy.approval);assert.deepEqual(state.records.approval,[approval])
+ const saved=state.records.export[0]
+ assert.equal(saved.id,exported.id);assert.equal(saved.invoiceId,legacy.id);assert.equal(saved.invoiceRevision,1);assert.equal(saved.invoiceVersion,2)
+ assert.deepEqual(saved.totals,{currency:'USD',subtotalCents:5000,salesTaxCents:500,totalCents:5500});assert.deepEqual(saved.lines,invoice.lines)
+ assert.equal(saved.csv,expectedCsv)
+ for(const version of [3,2])assert.deepEqual(await h.command('invoice.export',{invoiceId:legacy.id,version}),saved)
+ assert.equal(await (await h.request('/api/mallet/exports/'+exported.id)).text(),expectedCsv)
+ assert.equal(await (await h.request('/api/mallet/exports/'+exported.id)).text(),expectedCsv)
+ assert.equal((await h.state()).records.export.length,1);assert.deepEqual((await h.state()).records.approval,[approval])
+ console.log('PROBE INVOICE-001 migration: legacy invoice and export migration, public retrieval and downloads -> original cent amounts, export identity and approval preserved with USD labels')
 }))
 
 import {taxCustodyJourney} from './support/tax-custody-journey.mjs'
