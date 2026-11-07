@@ -4,11 +4,38 @@ import {qualityReady} from './quality-ready.mjs'
 import {shopSetup} from './diagnosis-journey.mjs'
 import {handoverInput} from './handover-input.mjs'
 import {refuseChangedReturnRevision} from './return-revision.mjs'
-export async function readyInvoice(h,{asset,reviewer,technicianId,free=false}={}){
+export async function readyInvoice(h,{asset,reviewer,technicianId,free=false,failedQuality=false,onFailed}={}){
  let {job}=await booking(h,{asset,technicianId}),q=await authorise(h,free?await h.command('estimate.prepare',{jobId:job.id,version:job.version,lines:[{kind:'labor',description:'Covered no-charge labor',quantity:1,unitCents:0}]}):await estimate(h,job));job=(await h.state()).records.job.find(j=>j.id===job.id)
  job=await h.command('work.record',{jobId:job.id,version:job.version,lineId:q.revisions[0].lines[0].id,quantity:1})
  await h.command('job.complete',{jobId:job.id,version:job.version},{status:409})
- await qualityReady(h,job,{reviewer});job=await h.command('job.complete',{jobId:job.id,version:job.version})
+ if(failedQuality){
+  assert.ok(reviewer,'An independent reviewer is required for the failed-quality collection journey')
+  let quality
+  const check=(command,more={},options={})=>h.command(command,{jobId:job.id,version:job.version,qualityVersion:quality?.version??0,...more},options)
+  quality=await check('quality.configure',{reason:'Physical checks before cash collection',items:[{label:'Before-work condition',stage:'pre',required:true,critical:false},{label:'Post-work brake function',stage:'post',required:true,critical:true}]})
+  const [pre,post]=quality.revisions.at(-1).items
+  quality=await check('quality.record',{itemId:pre.id,outcome:'pass',note:'Condition inspected before the recorded work'})
+  quality=await check('quality.record',{itemId:post.id,outcome:'fail',note:'Brake function failed the physical collection check'})
+  const failed=structuredClone(quality.results.at(-1))
+  const signTechnician=()=>check('quality.signTechnician',{qualification:'Qualified repair technician',note:'Personally inspected the current work and brake function'})
+  const signQuality=safetyDecision=>check('quality.signQuality',{qualification:'Independent qualified shop reviewer',note:'Independent physical collection inspection',safetyDecision},{as:reviewer.cookie})
+  quality=await signTechnician();quality=await signQuality('unsafe')
+  const before=await h.state(),board=await h.api('/api/mallet/board'),input={jobId:job.id,version:job.version,flowVersion:before.records.flow?.find(f=>f.jobId===job.id)?.version??0,collectorName:job.asset.customerName}
+  assert.equal((await h.command('job.complete',{jobId:job.id,version:job.version},{status:409})).error,'QUALITY_BLOCKED')
+  assert.equal((await h.command('flow.collect',input,{status:409})).error,'NOT_READY')
+  assert.deepEqual((await h.state()).records,before.records,'Failed quality and unpaid collection preserve work, quality, payment and handover history')
+  assert.deepEqual(await h.api('/api/mallet/board'),board,'Refused collection leaves the failed repair on its prior board stage')
+  assert.equal(before.records.invoice?.some(i=>i.jobId===job.id)??false,false)
+  assert.equal(before.records.handover?.some(r=>r.jobId===job.id)??false,false)
+  await onFailed?.({job,quality,failed,input})
+  job=await h.command('work.record',{jobId:job.id,version:job.version,lineId:q.revisions[0].lines[0].id,quantity:1,note:'Authorized corrective brake work after the failed check'})
+  quality=await check('quality.correct',{failedResultId:failed.id,workId:job.actuals.at(-1).id,reason:'Corrected the failed brake function before any collection'})
+  quality=await check('quality.record',{itemId:post.id,outcome:'pass',note:'Physical brake retest passed after the recorded correction'})
+  quality=await signTechnician();quality=await signQuality('safe')
+  assert.deepEqual(quality.results.find(r=>r.id===failed.id),failed,'Correction retains the original failed quality evidence')
+  assert.equal(quality.corrections.at(-1).failedResultId,failed.id)
+ }else await qualityReady(h,job,{reviewer})
+ job=await h.command('job.complete',{jobId:job.id,version:job.version})
  let invoice=await h.command('invoice.prepare',{jobId:job.id,version:job.version});invoice=await h.command('invoice.approve',{invoiceId:invoice.id,version:invoice.version})
  job=(await h.state()).records.job.find(j=>j.id===job.id);return {job,invoice}
 }
@@ -17,6 +44,17 @@ export function stripeEdge(){
  const edge=async request=>{const url=new URL(request.url);assert.equal(url.hostname,'api.stripe.com');assert.equal(request.method,'GET');assert.equal(request.headers.get('authorization'),'Bearer synthetic-mallet-91');calls.push(url.pathname);if(hook){const f=hook;hook=null;await f()}if(fail)return new Response('Unavailable',{status:503});const id=decodeURIComponent(url.pathname.split('/').at(-1));return Response.json(receipts.get(id)??{error:'unknown'})}
  const paid=(id,invoice,amount=invoice.totals.totalCents)=>({id,status:'succeeded',currency:'usd',amount_received:amount,metadata:{mallet_invoice_id:invoice.id},livemode:true,latest_charge:{id:'synthetic-mallet-charge',paid:true,captured:true,disputed:false,refunded:false,amount_refunded:0,currency:'usd',amount}})
  return {edge,receipts,calls,paid,setFailure(value){fail=value},setHook(value){hook=value}}
+}
+export function assertRecordedAt(at,before,after){
+ assert.equal(new Date(at).toISOString(),at,'The recording time is a retained UTC timestamp')
+ assert.ok(at>=before&&at<=after,'The recording time belongs to the public action that created it')
+}
+export function assertDelegateEvidence(saved,input,recorder,before,after){
+ assert.ok(saved,'Public state retains the delegate authorization')
+ for(const field of ['jobId','customerName','delegateName','consent','evidence'])assert.deepEqual(saved[field],input[field],'Saved delegate '+field+' matches the entered authorization')
+ assert.deepEqual(saved.by,recorder,'The authorization names its actual staff recorder')
+ assert.equal(saved.revoked,null)
+ assertRecordedAt(saved.at,before,after)
 }
 export async function returnJourney(){
  const edge=stripeEdge(),h=await installation({bindings:{STRIPE_SECRET_KEY:'synthetic-mallet-91'},outboundService:edge.edge})
@@ -68,16 +106,58 @@ export async function returnJourney(){
   try{await restore(destination,pendingArchive);await destination.command('flow.collect',unpaid,{status:409});assert.equal((await destination.state()).records.handover.length,1,'An archived owner exception grants no fresh-installation authority')}finally{await destination.close()}
   const overridden=await h.command('flow.collect',unpaid),r=(await h.state()).records.handover.find(r=>r.id===overridden.collection.handoverId);assert.equal(r.invoice.billing,undefined);assert.ok(!(await h.state({as:advisor.cookie})).records.handover.some(r=>r.invoice.billing));assert.equal(r.settlement.verifiedCents,0);assert.equal(r.settlement.override.id,unpaid.overrideId);assert.match(r.settlement.label,/not verified/);assert.match(r.settlement.label,/possessory lien/)
   for(const [n,method]of ['cash','check','other'].entries()){
-   const asset=await h.command('asset.create',{customerName:'Tender customer '+method,label:'Tender pickup',identifier:'synthetic-mallet-'+(103+n)}),manual=await readyInvoice(h,{asset}),pickup=await handoverInput(h,manual.job.id,asset.customerName);delete pickup.overrideId
+   const asset=await h.command('asset.create',{customerName:'Tender customer '+method,label:'Tender pickup',identifier:'synthetic-mallet-'+(103+n)}),manual=await readyInvoice(h,{asset,reviewer:advisor,failedQuality:method==='cash'}),pickup=await handoverInput(h,manual.job.id,method==='cash'?'Cash-authorized collector':asset.customerName);delete pickup.overrideId
+   const recorder=(await h.state({as:advisor.cookie})).actor
+   let authorization,delegateBefore,delegateAfter,savedDelegate
+   if(method==='cash'){
+    authorization={jobId:manual.job.id,version:pickup.version,customerName:'Tender customer cash',delegateName:'Cash-authorized collector',consent:true,evidence:'Customer signed collection authority synthetic-mallet-118 for this cash repair'}
+    delegateBefore=new Date().toISOString()
+    const recorded=await h.command('return.delegate',authorization,{as:advisor.cookie});delegateAfter=new Date().toISOString();pickup.delegateId=recorded.id
+    savedDelegate=(await h.state()).records.returnDelegate.find(d=>d.id===recorded.id)
+    assertDelegateEvidence(savedDelegate,authorization,recorder,delegateBefore,delegateAfter)
+    pickup.identityEvidence='Advisor checked the cash collector in person against the signed authority; no identity document copied'
+   }
    const allocation={jobId:manual.job.id,invoiceId:manual.invoice.id,version:manual.invoice.version,invoiceRevision:manual.invoice.revision,method,amountCents:manual.invoice.totals.totalCents,reference:'synthetic-mallet-'+(106+n),evidence:'Staff counted '+method+' tender for this exact invoice'}
    await h.command('payment.record',{...allocation,invoiceRevision:manual.invoice.revision+1},{as:advisor.cookie,status:409})
    const payment=await h.command('payment.record',allocation,{as:advisor.cookie});assert.equal(payment.invoiceRevision,manual.invoice.revision);assert.equal(payment.verified,false)
    if(method==='cash')await refuseChangedReturnRevision(h,manual.invoice,pickup)
    // Export changes record version, not price revision; that cannot invalidate exact-revision tender.
    await h.command('invoice.export',{invoiceId:manual.invoice.id,version:manual.invoice.version});pickup.version=(await h.state()).records.job.find(j=>j.id===manual.job.id).version
-   const beforeCalls=edge.calls.length;edge.setFailure(true);const collected=await h.command('flow.collect',pickup,{as:advisor.cookie});edge.setFailure(false);assert.equal(edge.calls.length,beforeCalls,'Full manual tender needs no processor observation')
+   const beforeCalls=edge.calls.length,handoverBefore=new Date().toISOString();edge.setFailure(true);const collected=await h.command('flow.collect',pickup,{as:advisor.cookie});const handoverAfter=new Date().toISOString();edge.setFailure(false);assert.equal(edge.calls.length,beforeCalls,'Full manual tender needs no processor observation')
    const saved=(await h.state()).records.handover.find(r=>r.id===collected.collection.handoverId);assert.equal(saved.settlement.override,null);assert.equal(saved.settlement.verifiedCents,0);assert.equal(saved.settlement.tender.recordedCents,manual.invoice.totals.totalCents);assert.match(saved.settlement.label,/Tender recorded by staff; Mallet did not verify funds/);assert.equal(saved.settlement.label.includes('not cleared'),method==='check')
    const printable=await (await h.request('/app/handovers/'+saved.id+'/print')).text();assert.ok(printable.includes('Staff-recorded tender for invoice revision'));assert.ok(printable.includes(saved.settlement.label))
+   if(method==='cash'){
+    assert.equal(saved.jobId,manual.job.id);assert.equal(saved.assetId,asset.id);assert.equal(saved.invoiceId,manual.invoice.id)
+    assert.equal(saved.collectorName,'Cash-authorized collector');assert.equal(saved.identityEvidence,pickup.identityEvidence);assert.equal(saved.identityVerifiedByMallet,false)
+    assert.deepEqual(saved.by,recorder);assertRecordedAt(saved.at,handoverBefore,handoverAfter);assert.equal(collected.collection.at,saved.at)
+    assertDelegateEvidence(saved.delegate,authorization,recorder,delegateBefore,delegateAfter);assert.deepEqual(saved.delegate,savedDelegate)
+    for(const text of [authorization.customerName,authorization.delegateName,authorization.evidence,pickup.identityEvidence,recorder.name])assert.ok(printable.includes(text),'Printable cash receipt retains '+text)
+    const immutable=(await h.state()).records
+    await h.command('return.delegate',{...authorization,evidence:'Attempted replacement after handover'},{as:advisor.cookie,status:409})
+    await h.command('return.revokeDelegate',{jobId:manual.job.id,version:pickup.version,delegateId:savedDelegate.id,delegateVersion:savedDelegate.version,reason:'Attempted post-handover revocation'},{as:advisor.cookie,status:409})
+    await h.command('flow.collect',pickup,{as:advisor.cookie,status:409})
+    assert.deepEqual((await h.state()).records,immutable,'Replacement, revocation and replay cannot overwrite the saved handover or authorization')
+    const recovered=await installation()
+    try{
+     const freshOwner=(await recovered.state()).actor;await restore(recovered,await archive(h));const restored=await recovered.state()
+     assert.equal(restored.actor.id,freshOwner.id);assert.notEqual(restored.actor.id,recorder.id)
+     for(const kind of ['handover','returnDelegate','returnOverride','payment','flow','quality'])assert.deepEqual(restored.records[kind],immutable[kind],'Fresh-owner recovery retains exact '+kind+' evidence')
+     const recoveredReceipt=restored.records.handover.find(r=>r.id===saved.id);assert.deepEqual(recoveredReceipt,saved)
+     await recovered.command('flow.collect',pickup,{as:advisor.cookie,status:401});await recovered.command('flow.collect',pickup,{...bearer,status:401})
+     await recovered.command('return.delegate',authorization,{status:409});await recovered.command('flow.collect',pickup,{status:409})
+     assert.deepEqual((await recovered.state()).records,restored.records,'Recovered history restores neither old credentials nor permission to replace a collection')
+     const tax=restored.records.taxSettings.find(r=>r.id==='shop-tax'),setupFields=new URLSearchParams({confirm:'yes',ratePercent:String(tax.ratePercent),...(tax.partsTaxable?{partsTaxable:'yes'}:{}),...(tax.laborTaxable?{laborTaxable:'yes'}:{})})
+     const confirmed=await recovered.mf.dispatchFetch(recovered.origin+'/setup',{method:'POST',redirect:'manual',headers:{origin:recovered.origin,cookie:recovered.owner,'content-type':'application/x-www-form-urlencoded'},body:setupFields.toString()});assert.equal(confirmed.status,303)
+     const beforePrint=(await recovered.state()).records
+     const recoveredPrint=await recovered.request('/app/handovers/'+saved.id+'/print');assert.equal(recoveredPrint.status,200)
+     const recoveredCopy=await recoveredPrint.text()
+     for(const text of [authorization.customerName,authorization.delegateName,authorization.evidence,pickup.identityEvidence,recorder.name])assert.ok(recoveredCopy.includes(text),'The fresh owner can print the exact retained cash evidence')
+     const deniedCopy=await recovered.request('/app/handovers/'+saved.id+'/print',{as:advisor.cookie});assert.equal(deniedCopy.status,303)
+     assert.equal((await deniedCopy.text()).includes(authorization.evidence),false,'An archived staff credential cannot expose the recovered receipt')
+     assert.deepEqual((await recovered.state()).records,beforePrint,'Printing and a denied archived session change no recovered records')
+     assert.deepEqual(beforePrint.handover,immutable.handover,'Fresh owner setup never rewrites retained handover evidence')
+    }finally{await recovered.close()}
+   }
   }
   const freeAsset=await h.command('asset.create',{customerName:'Warranty Customer',customerEmail:'free@example.test',label:'No-charge rework vehicle',identifier:'synthetic-mallet-100'}),free=await readyInvoice(h,{asset:freeAsset,free:true}),freeInput=await handoverInput(h,free.job.id,'Warranty Customer');delete freeInput.overrideId
   const freeFlow=await h.command('flow.collect',freeInput),freeReceipt=(await h.state()).records.handover.find(r=>r.id===freeFlow.collection.handoverId);assert.equal(freeReceipt.invoice.totals.totalCents,0);assert.equal(freeReceipt.settlement.receipts.length,0);assert.match(freeReceipt.settlement.label,/No payment due/);assert.doesNotMatch(freeReceipt.settlement.label,/Stripe confirmed/)

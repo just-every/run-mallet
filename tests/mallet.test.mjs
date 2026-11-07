@@ -1,4 +1,8 @@
+import {agentRetryConflictsJourney} from './support/agent-retry-conflicts-journey.mjs'
+import {agentPauseBrowser} from './agent-pause-browser.mjs'
+import {resourceAuthorityJourney} from './agent-door/resource-authority.mjs'
 import {preparationKeyBrowser} from './browser-journey.mjs'
+import {agentAttributionBrowser} from './agent-attribution-browser.mjs'
 import {blockerJourney} from './support/blocker-journey.mjs'
 import {blockerBrowser} from './blocker-browser.mjs'
 import {enterpriseBrowser} from './enterprise-browser.mjs'
@@ -43,6 +47,14 @@ import {linkProtectionJourney} from './support/link-protection-journey.mjs'
 import {secondFactorJourney,policyRecoveryJourney,stepUpJourney} from './support/strong-auth-journey.mjs'
 import {run,installation,assetInput,booking,estimate,authorise,archive,restore,snapshots} from './harness.mjs'
 import {csvRecords} from './support/report-csv.mjs'
+import {preparationParityBrowser} from './agent-preparation-parity-browser.mjs'
+import {sponsorAdmissionBrowser} from './agent-sponsor-admission-browser.mjs'
+
+test('BASE-AGENT-002: native forms and MCP preparation parity under both policies at 1440 and 390',preparationParityBrowser)
+test('BASE-AGENT-005: native admin sponsor changes revoke preparation and cached reads at 1440 and 390',sponsorAdmissionBrowser)
+
+test('BASE-AGENT-008: exact agent preparation and distinct native owner approval at 1440',agentAttributionBrowser)
+test('BASE-AGENT-011: native Pause fences all six tools and legacy routes, owner work and bearer resume at 1440 and 390',agentPauseBrowser)
 
 test('ADV-003: source-cited blockers require actual evidence, exact consent and physical receipt, preserve handlers and recover privately',()=>run(blockerJourney))
 test('ADV-003: native blocker packet, handlers and proposal review at 1440 and 390',blockerBrowser)
@@ -245,6 +257,8 @@ test('exact revision, partial authorisation and quantity ceilings protect custom
  const {estimateDecisionBrowser}=await import('./browser-journey.mjs');await estimateDecisionBrowser()
 })
 
+test('BASE-AGENT-012: native estimate retries retain one outcome and refuse changed arguments or stale revisions',agentRetryConflictsJourney)
+
 test('agent prepares, person approves, immutable actual-work invoice exports once',async()=>{
  let entered,release
  const waiting=new Promise(resolve=>{entered=resolve}),resumed=new Promise(resolve=>{release=resolve})
@@ -404,6 +418,71 @@ test('INVOICE-001: exact actual-work lines, approval and both saved export retri
  await h.command('agent.revoke',{id:key.id})
  await h.state({...agent,status:401})
 }))
+
+test('INVOICE-001: exact approval history, actual-work rows and saved export retrieval',()=>run(async h=>{
+ const {job}=await booking(h),key=await h.command('agent.create',{label:'Workshop assistant'}),agent={as:'',headers:{authorization:`Bearer ${key.token}`}}
+ const decidingPerson=(await h.state()).actor,preparer={id:key.id,name:'Workshop assistant',role:'agent'}
+ let q=await estimate(h,job,agent)
+ await h.command('estimate.approve',{estimateId:q.id,version:q.version,revision:1},{...agent,status:403})
+ q=await h.command('estimate.revise',{estimateId:q.id,version:q.version,revision:1,lines:q.revisions[0].lines.map(({id,kind,description,quantity,unitCents})=>({id,kind,description,quantity:kind==='part'?3:quantity,unitCents}))},agent)
+ q=await h.command('estimate.approve',{estimateId:q.id,version:q.version,revision:2})
+ q=await h.command('estimate.markSent',{estimateId:q.id,version:q.version,revision:2,method:'printed'})
+ q=await h.command('estimate.authorise',{estimateId:q.id,version:q.version,revision:2,lineIds:[q.revisions[1].lines[0].id],customerName:'Cedar Bikes',method:'signed',evidence:'Signed parts-only decision synthetic-mallet-1'})
+ let j=(await h.state()).records.job[0]
+ j=await h.command('work.record',{jobId:j.id,version:j.version,lineId:q.revisions[0].lines[0].id,quantity:2})
+ await qualityReady(h,j)
+ j=await h.command('job.complete',{jobId:j.id,version:j.version})
+ let invoice=await h.command('invoice.prepare',{jobId:j.id,version:j.version},agent)
+ assert.equal(invoice.totals.totalCents,5500);assert.equal(invoice.lines.length,1)
+ const expectedLines=[{id:q.revisions[0].lines[0].id,kind:'part',description:'Brake pads',quantity:2,quantityMilli:2000,unitCents:2500,taxable:true,taxRatePercent:10,taxRateMillionths:100000,pierItemId:null,subtotalCents:5000,salesTaxCents:500,totalCents:5500,sourceEstimateId:q.id,sourceRevision:2}]
+ assert.deepEqual(invoice.lines,expectedLines,'Freeze actual quantity two, not authorized quantity three or the declined labor')
+ assert.deepEqual(invoice.totals,{currency:'USD',subtotalCents:5000,salesTaxCents:500,totalCents:5500})
+ assert.equal(invoice.estimateId,q.id);assert.equal(invoice.estimateRevision,2)
+ assert.deepEqual(invoice.actuals,j.actuals);assert.deepEqual(invoice.preparedBy,preparer)
+ const beforeRefusal=(await h.state()).records
+ await h.command('invoice.export',{invoiceId:invoice.id,version:invoice.version},{status:409})
+ await h.command('invoice.approve',{invoiceId:invoice.id,version:invoice.version,revision:2},{status:409})
+ await h.command('invoice.approve',{invoiceId:invoice.id,version:invoice.version,revision:1},{...agent,status:403})
+ assert.deepEqual((await h.state()).records,beforeRefusal,'Unapproved, wrong-revision and agent decisions leave all records unchanged')
+ invoice=await h.command('invoice.approve',{invoiceId:invoice.id,version:invoice.version,revision:1})
+ assert.deepEqual(invoice.approval,{by:decidingPerson,at:invoice.approval.at,revision:1,totals:{currency:'USD',subtotalCents:5000,salesTaxCents:500,totalCents:5500}})
+ const approvalHistory=(await h.state()).records.approval
+ assert.deepEqual(approvalHistory.filter(a=>a.subjectKind==='invoice'),[{id:approvalHistory.find(a=>a.subjectKind==='invoice').id,version:1,subjectKind:'invoice',subjectId:invoice.id,revision:1,subjectVersion:invoice.version,preparedBy:preparer,approvedBy:decidingPerson,decision:'approved',at:invoice.approval.at}])
+ const a=await h.command('invoice.export',{invoiceId:invoice.id,version:invoice.version})
+ invoice=(await h.state()).records.invoice.find(i=>i.id===invoice.id)
+ const b=await h.command('invoice.export',{invoiceId:invoice.id,version:invoice.version}),preceding=await h.command('invoice.export',{invoiceId:invoice.id,version:invoice.version-1})
+ assert.deepEqual(a,b);assert.equal((await h.state()).records.export.length,1)
+ assert.deepEqual(preceding,a);assert.deepEqual(a.lines,expectedLines)
+ assert.equal(a.invoiceId,invoice.id);assert.equal(a.invoiceRevision,1);assert.equal(a.invoiceVersion,invoice.version-1)
+ assert.deepEqual((await h.state()).records.approval,approvalHistory,'Both retrieval versions preserve exact approval history')
+ const response=await h.request(`/api/mallet/exports/${a.id}`);assert.equal(response.status,200);assert.match(await response.text(),/55.00/)
+ const expectedCsv='"InvoiceNumber","CustomerName","CustomerEmail","Vehicle","Identifier","JobId","EstimateRevision","Description","Kind","Quantity","UnitUSD","SubtotalUSD","SalesTaxUSD","TotalUSD","Currency","EstimateId"\r\n'+
+  [`"${invoice.number}"`,'"Cedar Bikes"',`"${invoice.customer.customerEmail}"`,'"Trek FX 3"','"BIKE-1"',`"${j.id}"`,'"2"','"Brake pads"','"part"','"2"','"25.00"','"50.00"','"5.00"','"55.00"','"USD"',`"${q.id}"`].join(',')+'\r\n'
+ assert.equal(a.csv,expectedCsv);assert.equal(await (await h.request(`/api/mallet/exports/${a.id}`)).text(),expectedCsv)
+ assert.equal((await h.state()).records.approval.length,2)
+ const frozen=(await h.state()).records
+ await h.command('invoice.export',{invoiceId:invoice.id,version:invoice.version-2},{status:409})
+ await h.command('invoice.export',{invoiceId:invoice.id,version:invoice.version},{...agent,status:403})
+ const deniedDownload=await h.request(`/api/mallet/exports/${a.id}`,agent)
+ assert.equal(deniedDownload.status,403);assert.ok(!(await deniedDownload.text()).includes(a.csv),'Preparation credentials cannot download saved financial bytes')
+ assert.deepEqual((await h.state()).records,frozen,'Stale and unauthorized retrieval cannot create exports or decisions')
+ await h.command('agent.revoke',{id:key.id})
+ const afterRevocation=(await h.state()).records
+ await h.state({...agent,status:401})
+ await h.command('invoice.export',{invoiceId:invoice.id,version:invoice.version},{...agent,status:401})
+ const revokedDownload=await h.request(`/api/mallet/exports/${a.id}`,agent)
+ assert.equal(revokedDownload.status,401);assert.ok(!(await revokedDownload.text()).includes(a.csv),'Revocation also closes the saved download door')
+ assert.deepEqual((await h.state()).records,afterRevocation,'Revoked preparation credentials cannot change saved invoice evidence')
+ console.log('PROBE INVOICE-001 approval: public invoice commands -> exact person and revision retained; unsafe decisions refused without writes')
+ console.log('PROBE INVOICE-001 actuals: public state and CSV -> two authorized parts at 2500 cents, source revision 2, tax 500 and total 5500; declined labor excluded')
+ console.log('PROBE INVOICE-001 replay: current and preceding version commands -> identical saved export bytes and identity, one export and unchanged approvals')
+}))
+
+test('INVOICE-001: native invoice and downloaded CSV readback at 1440 and 390',()=>run(async h=>{
+ const {browserJourney}=await import('./browser-journey.mjs')
+ await h.stepUp()
+ await browserJourney(h.origin+'/app',{cookie:h.owner,directory:process.env.MALLET_SCREENSHOTS??'.cache/invoice-browser'})
+},{entry:'tests/dev-worker.ts',network:true,assets:true,bindings:{AUTH_LOCAL:'true',RER_DEV_KEY:randomBytes(32).toString('base64url')}}))
 
 test('dispatch proposal is inert until a person approves current free resources',()=>run(async h=>{
  const {job}=await booking(h),key=await h.command('agent.create',{label:'Dispatcher'}),agent={as:'',headers:{authorization:`Bearer ${key.token}`}}
@@ -629,9 +708,9 @@ test('EST-003: emailed approval link, signed line decision, replay, stale and re
 
 test('EST-003: customer approves and declines lines on a phone with a signed receipt at 390/1440',approvalBrowser)
 
-test('EST-006 / EST-007: scheduled reminders chase only the current undecided revision; reply, decision and opt-out stop them; failures and silence open advisor tasks',chaseJourney)
+test('EST-006 / EST-007: scheduled reminders chase only the current undecided revision; reply, decision and opt-out stop them; rejected and interrupted sends and silence retain one attributable advisor task',chaseJourney)
 
-test('EST-006 / EST-007: native chase policy, reminder history, customer opt-out and advisor task at 1440/390',chaseBrowser)
+test('EST-006 / EST-007: native chase policy, reminder history, customer opt-out and uncertain-task resolution at 1440/390',chaseBrowser)
 
 
 test('FLOW-002: delayed required parts, resource/labor plan, advisor promise notices and archive recovery',()=>run(promiseJourney))
@@ -675,9 +754,9 @@ test('WARRANTY-001 / OPS-001: paid original, linked lot and no-charge comeback, 
 
 test('WARRANTY-001: original invoice, linked rework, no-charge costs and supplier claim at 1440/390',async()=>{const {warrantyBrowser}=await import('./warranty-browser.mjs');await warrantyBrowser()})
 
-test('RETURN-001 / PAY-004 / OPS-001: quality and unpaid gates, fresh processor split receipts, authorized delegate, keys, mileage, receipt and recovery',async()=>{const {returnJourney}=await import('./support/return-journey.mjs');await returnJourney()})
+test('RETURN-001 / PAY-004 / OPS-001: failed quality and unpaid gates, processor receipts, exact cash delegate and identity evidence, immutable receipt and recovery',async()=>{const {returnJourney}=await import('./support/return-journey.mjs');await returnJourney()})
 
-test('RETURN-001: unpaid refusal, processor confirmation, delegate handover and owner-exception receipt at 1440/390',async()=>{const {returnBrowser}=await import('./return-browser.mjs');await returnBrowser()})
+test('RETURN-001: failed quality and unpaid refusal, processor confirmation, exact cash delegate receipt, recovery and owner exception at 1440/390',async()=>{const {returnBrowser}=await import('./return-browser.mjs');await returnBrowser()})
 
 test('PORTAL-001: known and unknown requests answer before mail; address and client limits disclose nothing',async()=>{const {portalRequestJourney}=await import('./support/portal-journey.mjs');await portalRequestJourney()})
 
@@ -729,7 +808,7 @@ test('GOV-005: sealed provider secrets rotate and revoke behind a fresh proof, w
 
 test('GOV-006: owner reviews financial and media holds, erases eligible photos and releases a hold for manual retention at 1440/390',async()=>{const {retentionBrowser}=await import('./retention-browser.mjs');await retentionBrowser()})
 
-test('OPS-002 / OPS-003: durable reminder jobs survive restart, preserve one provider handoff and expose owner recovery',async()=>{const {jobsJourney}=await import('./support/jobs-journey.mjs');await jobsJourney()})
+test('OPS-002 / OPS-003: durable reminder jobs bound concurrent handoffs to four, survive restart and expose owner recovery',async()=>{const {jobsJourney}=await import('./support/jobs-journey.mjs');await jobsJourney()})
 
 test('OPS-002: account search is paged, indexed, exact across aliases and Unicode, and survives restore',async()=>{const {searchJourney}=await import('./support/search-journey.mjs');await searchJourney()})
 test('OPS-002 / OPS-003: approved provider GET jobs survive restart, require explicit replay and deduplicate payment evidence',async()=>{const {providerJobsJourney}=await import('./support/provider-jobs-journey.mjs');await providerJobsJourney()})
@@ -872,3 +951,4 @@ test('RETURN-002: reviewed CA and TX storage versions, notice clocks, disposal r
 test('RETURN-002: native storage rules, notices, legal refusal and released ledger at 1440 and 390',async()=>{const {storageBrowser}=await import('./storage-browser.mjs');await storageBrowser()})
 
 test('BASE-AGENT-009: native weekly audit counts reconcile through every cursor at 1440 and 390',async()=>{const {agentAuditBrowser}=await import('./agent-audit-browser.mjs');await agentAuditBrowser()})
+test('agent preparation resources retain exact outcomes and enforce current native authority with attributable browser readback',resourceAuthorityJourney)
