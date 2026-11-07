@@ -6,7 +6,8 @@ import {installation,assetInput} from './harness.mjs'
 import {shopSetup} from './support/diagnosis-journey.mjs'
 import {bookingPost,holdFields} from './support/booking-journey.mjs'
 export async function calendarBrowser(){
- const h=await installation({network:true,secureNetwork:true,assets:true});let browser
+ // Keep the fixed booking fixtures future-dated across the New York DST change.
+ const h=await installation({network:true,secureNetwork:true,assets:true,clock:'2026-10-24T12:00:00Z'});let browser
  try{
   await shopSetup(h);await h.command('asset.create',{...assetInput('synthetic-mallet-201'),customerName:'Dana Brooks',label:'2019 Honda Civic',identifier:'OH CIV 201'})
   browser=await chromium.launch({headless:true,args:['--use-mock-keychain','--password-store=basic']})

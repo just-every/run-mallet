@@ -1,4 +1,8 @@
+import {agentRetryConflictsJourney} from './support/agent-retry-conflicts-journey.mjs'
+import {agentPauseBrowser} from './agent-pause-browser.mjs'
+import {resourceAuthorityJourney} from './agent-door/resource-authority.mjs'
 import {preparationKeyBrowser} from './browser-journey.mjs'
+import {agentAttributionBrowser} from './agent-attribution-browser.mjs'
 import {blockerJourney} from './support/blocker-journey.mjs'
 import {blockerBrowser} from './blocker-browser.mjs'
 import {enterpriseBrowser} from './enterprise-browser.mjs'
@@ -44,8 +48,13 @@ import {secondFactorJourney,policyRecoveryJourney,stepUpJourney} from './support
 import {run,installation,assetInput,booking,estimate,authorise,archive,restore,snapshots} from './harness.mjs'
 import {csvRecords} from './support/report-csv.mjs'
 import {preparationParityBrowser} from './agent-preparation-parity-browser.mjs'
+import {sponsorAdmissionBrowser} from './agent-sponsor-admission-browser.mjs'
 
 test('BASE-AGENT-002: native forms and MCP preparation parity under both policies at 1440 and 390',preparationParityBrowser)
+test('BASE-AGENT-005: native admin sponsor changes revoke preparation and cached reads at 1440 and 390',sponsorAdmissionBrowser)
+
+test('BASE-AGENT-008: exact agent preparation and distinct native owner approval at 1440',agentAttributionBrowser)
+test('BASE-AGENT-011: native Pause fences all six tools and legacy routes, owner work and bearer resume at 1440 and 390',agentPauseBrowser)
 
 test('ADV-003: source-cited blockers require actual evidence, exact consent and physical receipt, preserve handlers and recover privately',()=>run(blockerJourney))
 test('ADV-003: native blocker packet, handlers and proposal review at 1440 and 390',blockerBrowser)
@@ -247,6 +256,8 @@ test('exact revision, partial authorisation and quantity ceilings protect custom
  })
  const {estimateDecisionBrowser}=await import('./browser-journey.mjs');await estimateDecisionBrowser()
 })
+
+test('BASE-AGENT-012: native estimate retries retain one outcome and refuse changed arguments or stale revisions',agentRetryConflictsJourney)
 
 test('agent prepares, person approves, immutable actual-work invoice exports once',async()=>{
  let entered,release
@@ -697,9 +708,9 @@ test('EST-003: emailed approval link, signed line decision, replay, stale and re
 
 test('EST-003: customer approves and declines lines on a phone with a signed receipt at 390/1440',approvalBrowser)
 
-test('EST-006 / EST-007: scheduled reminders chase only the current undecided revision; reply, decision and opt-out stop them; failures and silence open advisor tasks',chaseJourney)
+test('EST-006 / EST-007: scheduled reminders chase only the current undecided revision; reply, decision and opt-out stop them; rejected and interrupted sends and silence retain one attributable advisor task',chaseJourney)
 
-test('EST-006 / EST-007: native chase policy, reminder history, customer opt-out and advisor task at 1440/390',chaseBrowser)
+test('EST-006 / EST-007: native chase policy, reminder history, customer opt-out and uncertain-task resolution at 1440/390',chaseBrowser)
 
 
 test('FLOW-002: delayed required parts, resource/labor plan, advisor promise notices and archive recovery',()=>run(promiseJourney))
@@ -743,9 +754,9 @@ test('WARRANTY-001 / OPS-001: paid original, linked lot and no-charge comeback, 
 
 test('WARRANTY-001: original invoice, linked rework, no-charge costs and supplier claim at 1440/390',async()=>{const {warrantyBrowser}=await import('./warranty-browser.mjs');await warrantyBrowser()})
 
-test('RETURN-001 / PAY-004 / OPS-001: quality and unpaid gates, fresh processor split receipts, authorized delegate, keys, mileage, receipt and recovery',async()=>{const {returnJourney}=await import('./support/return-journey.mjs');await returnJourney()})
+test('RETURN-001 / PAY-004 / OPS-001: failed quality and unpaid gates, processor receipts, exact cash delegate and identity evidence, immutable receipt and recovery',async()=>{const {returnJourney}=await import('./support/return-journey.mjs');await returnJourney()})
 
-test('RETURN-001: unpaid refusal, processor confirmation, delegate handover and owner-exception receipt at 1440/390',async()=>{const {returnBrowser}=await import('./return-browser.mjs');await returnBrowser()})
+test('RETURN-001: failed quality and unpaid refusal, processor confirmation, exact cash delegate receipt, recovery and owner exception at 1440/390',async()=>{const {returnBrowser}=await import('./return-browser.mjs');await returnBrowser()})
 
 test('PORTAL-001: known and unknown requests answer before mail; address and client limits disclose nothing',async()=>{const {portalRequestJourney}=await import('./support/portal-journey.mjs');await portalRequestJourney()})
 
@@ -797,7 +808,7 @@ test('GOV-005: sealed provider secrets rotate and revoke behind a fresh proof, w
 
 test('GOV-006: owner reviews financial and media holds, erases eligible photos and releases a hold for manual retention at 1440/390',async()=>{const {retentionBrowser}=await import('./retention-browser.mjs');await retentionBrowser()})
 
-test('OPS-002 / OPS-003: durable reminder jobs survive restart, preserve one provider handoff and expose owner recovery',async()=>{const {jobsJourney}=await import('./support/jobs-journey.mjs');await jobsJourney()})
+test('OPS-002 / OPS-003: durable reminder jobs bound concurrent handoffs to four, survive restart and expose owner recovery',async()=>{const {jobsJourney}=await import('./support/jobs-journey.mjs');await jobsJourney()})
 
 test('OPS-002: account search is paged, indexed, exact across aliases and Unicode, and survives restore',async()=>{const {searchJourney}=await import('./support/search-journey.mjs');await searchJourney()})
 test('OPS-002 / OPS-003: approved provider GET jobs survive restart, require explicit replay and deduplicate payment evidence',async()=>{const {providerJobsJourney}=await import('./support/provider-jobs-journey.mjs');await providerJobsJourney()})
@@ -938,3 +949,5 @@ test('ADV-005: cited declined-work review preserves decisions, refuses stale or 
 test('ADV-005: owner reviews later mileage, replacement inspection and advisory history at 1440 and 390',async()=>{const {declinedReviewBrowser}=await import('./declined-work-review-browser.mjs');await declinedReviewBrowser()})
 test('RETURN-002: reviewed CA and TX storage versions, notice clocks, disposal refusal, payment release and private recovery',()=>run(async h=>{const {storageJourney}=await import('./support/storage-journey.mjs');await storageJourney(h)}))
 test('RETURN-002: native storage rules, notices, legal refusal and released ledger at 1440 and 390',async()=>{const {storageBrowser}=await import('./storage-browser.mjs');await storageBrowser()})
+
+test('agent preparation resources retain exact outcomes and enforce current native authority with attributable browser readback',resourceAuthorityJourney)

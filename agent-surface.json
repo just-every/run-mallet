@@ -115,7 +115,13 @@
       "reason": "connector"
     }
   ],
-  "resources": [],
+  "resources": [
+    "mallet://assets/{id}",
+    "mallet://repairs/{id}",
+    "mallet://jobs/{id}",
+    "mallet://estimates/{id}",
+    "mallet://invoices/{id}"
+  ],
   "witness": {
     "tool": "mallet.repairs.list",
     "args": {}
@@ -125,6 +131,7 @@
     "none": true
   },
   "verification": {
+    "journey": "tests/agent-door/preparation-journey.mjs",
     "owner": {
       "initializer": "tests/agent-door/owner.mjs"
     },
@@ -143,8 +150,7 @@
         "list",
         "prepare"
       ]
-    },
-    "journey": "tests/agent-door/preparation-parity.mjs"
+    }
   },
   "journey": [
     {
@@ -311,9 +317,11 @@
   ],
   "capabilities": [
     "tools",
+    "resources",
     "policy",
     "pause",
     "audit",
-    "idempotency"
+    "idempotency",
+    "prompts"
   ]
 }
