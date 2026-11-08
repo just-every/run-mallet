@@ -1,7 +1,8 @@
 import {bump,choice,event,expectVersion,fail,find,integer,put,rows,text,who,type Handler} from './model'
+import {warrantyPacket} from './warranty-patterns'
 import {instant,workshop} from './workshop'
 import {invoiceBalance,publicInvoiceSnapshot} from './payments'
-export const warrantyCommands=['warranty.terms','warranty.open','warranty.decide','warranty.cost','warranty.claim','warranty.claimOutcome'] as const
+export const warrantyCommands=['warranty.terms','warranty.open','warranty.decide','warranty.cost','warranty.claim','warranty.claimOutcome','warranty.patternReview','warranty.patternAction'] as const
 export const warranty:Handler=(c,command,p)=>{
  if(!(warrantyCommands as readonly string[]).includes(command))return
  if(!['owner','admin'].includes(c.actor.role))fail('FORBIDDEN','Only an owner or service advisor manages warranty work.',null,403)
@@ -36,6 +37,20 @@ export const warranty:Handler=(c,command,p)=>{
   const decision={outcome,responsibility,reason,noChargeLabor:outcome==='covered',by:who(c),at:c.now}
   return save({decision},decision)
  }
+ if(command==='warranty.patternAction'){
+  const packet=warrantyPacket(c.s,row.id)
+  if(!packet.repeat)fail('WARRANTY_PATTERN','A detected cluster is required for a pattern action approval.')
+  if(p.sourceKey!==packet.sourceKey)fail('VERSION','The cited evidence changed; review the current packet.')
+  const action={id:crypto.randomUUID(),kind:choice(p.kind,['customerClaim','correctiveAction'],'action kind'),reference:text(p.reference,'action reference',200),reason:text(p.reason,'approval evidence',2000),sources:packet.evidence.flatMap(w=>w.sources),members:packet.members,status:'approved',label:'Human approval record only; no execution, submission or posting by Mallet.',by:who(c),at:c.now}
+  return save({patternActions:[...(row.patternActions??[]),action]},action)
+ }
+ if(command==='warranty.patternReview'){
+  const packet=warrantyPacket(c.s,row.id),candidate=packet.evidence.find(w=>w.id===p.candidateId&&w.id!==row.id)
+  if(!candidate)fail('WARRANTY_PATTERN','Choose another case from this marked lot.')
+  if(p.sourceKey!==packet.sourceKey)fail('VERSION','The cited evidence changed; review the current packet.')
+  const review={id:crypto.randomUUID(),sources:packet.evidence.flatMap(w=>w.sources),candidateId:candidate.id,decision:choice(p.decision,['rejected','retained'],'association decision'),reason:text(p.reason,'association review evidence',2000),by:who(c),at:c.now}
+  return save({patternReviews:[...(row.patternReviews??[]),review]},review)
+ }
  if(row.decision?.outcome!=='covered')fail('WARRANTY_COVERAGE','Approve explicit coverage before no-charge cost or claim tracking.')
  if(command==='warranty.cost'){
   const job=find(c.s,'job',row.jobId),actual=job.actuals.find((x:any)=>x.id===p.actualId)
@@ -50,7 +65,9 @@ export const warranty:Handler=(c,command,p)=>{
   const reference=text(p.reference,'unique claim reference',200),claimant=text(p.claimant,'supplier or OEM',200),amountCents=integer(p.amountCents,'claim amount in USD cents',1),costCents=row.costs.reduce((n:number,x:any)=>n+x.amountCents,0)
   if(row.decision.responsibility==='shop'||amountCents>costCents-row.claims.reduce((n:number,x:any)=>n+x.amountCents,0))fail('WARRANTY_CLAIM','Supplier/OEM claims must fit recorded uncovered rework costs and approved responsibility.')
   if(rows(c.s,'warranty').some(w=>w.claims.some((x:any)=>x.reference===reference&&x.claimant===claimant)))fail('WARRANTY_CLAIM','That supplier claim reference already exists.')
-  const claim={id:crypto.randomUUID(),reference,claimant,amountCents,evidence:text(p.evidence,'claim evidence',2000),status:'prepared',history:[],by:who(c),at:c.now,label:'Approved claim record only; not submitted by Mallet.'}
+  const packet=warrantyPacket(c.s,row.id)
+  if((packet.repeat||p.sourceKey)&&p.sourceKey!==packet.sourceKey)fail('VERSION','The cited evidence changed; inspect the packet again before approval.')
+  const claim={patternSources:packet.evidence.flatMap(w=>w.sources),patternMembers:packet.members,id:crypto.randomUUID(),reference,claimant,amountCents,evidence:text(p.evidence,'claim evidence',2000),status:'prepared',history:[],by:who(c),at:c.now,label:'Approved claim record only; not submitted by Mallet.'}
   return save({claims:[...row.claims,claim]},claim)
  }
  const claim=row.claims.find((x:any)=>x.id===p.claimId)

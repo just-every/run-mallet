@@ -1,3 +1,4 @@
+import {currentDeclinedConsent,declinedCustomer} from './declined-outreach'
 import {resourceFields} from './calendar-capacity'
 import {recordAttendance} from './booking-attendance'
 import {offerCanceledAppointment} from './booking-waitlist'
@@ -49,7 +50,14 @@ export const bookings:Handler=(c,command,p)=>{
   if(held.filter(a=>a.sourceHash===sourceHash).length>=3)fail('BOOKING_SOURCE_LIMIT','Too many tentative appointments from this connection. Confirm or cancel an existing hold, or wait for it to expire.',null,429)
   const service=find(c.s,'bookingService',p.serviceId),plan=available(c.s,service,p,c.now)
   if(p.consent!==true)fail('BOOKING_CONSENT','Explicitly request this appointment and its confirmation email.',null,422)
-  const row=put(c.s,'appointment',{...plan,serviceId:service.id,serviceVersion:service.version,service:{name:service.name,location:service.location,timeZone:service.timeZone,skill:service.skill,durationMinutes:service.durationMinutes},name:text(p.name,'your name'),email,sourceHash,status:'held',expiresAt:new Date(Date.parse(c.now)+service.holdSeconds*1000).toISOString(),createdAt:c.now,consent:{text:'I request this appointment and its confirmation email. This does not authorize repair work or payment.',at:c.now},history:[],delivery:null})
+  let declinedSource={}
+  if(p.declinedSource){
+   const consent=find(c.s,'declinedConsent',p.declinedSource.consentId),item=find(c.s,'declinedWork',p.declinedSource.itemId),outreach=find(c.s,'outreach',p.declinedSource.outreachId)
+   currentDeclinedConsent(c.s,consent,item)
+   if(consent.to!==email||outreach.consentId!==consent.id||outreach.subjectId!==item.id)fail('BOOKING_CUSTOMER','Use the recipient of this declined-work invitation.',null,400)
+   declinedSource={declinedWorkId:item.id,declinedConsentId:consent.id,declinedOutreachId:outreach.id}
+  }
+  const row=put(c.s,'appointment',{...declinedSource,...plan,serviceId:service.id,serviceVersion:service.version,service:{name:service.name,location:service.location,timeZone:service.timeZone,skill:service.skill,durationMinutes:service.durationMinutes},name:text(p.name,'your name'),email,sourceHash,status:'held',expiresAt:new Date(Date.parse(c.now)+service.holdSeconds*1000).toISOString(),createdAt:c.now,consent:{text:'I request this appointment and its confirmation email. This does not authorize repair work or payment.',at:c.now},history:[],delivery:null})
   event(c,command,null,row.id,{status:'held',expiresAt:row.expiresAt});return row
  }
  const row=find(c.s,'appointment',p.appointmentId);expectVersion(row,p.version)
@@ -65,6 +73,12 @@ export const bookings:Handler=(c,command,p)=>{
  const history=[...row.history,{status:row.status,startAt:row.startAt,endAt:row.endAt,bayId:row.bayId,technicianId:row.technicianId,at:c.now}]
  if(command==='booking.cancel'){
   const next=bump(c.s,'appointment',row,{status:'canceled',canceledAt:c.now,history});event(c,command,null,row.id,{status:'canceled'});offerCanceledAppointment(c,next,false,p.verifiedActiveTechnicianIds);return next
+ }
+ if(row.declinedWorkId&&command!=='booking.cancel'){
+  const consent=find(c.s,'declinedConsent',row.declinedConsentId),item=find(c.s,'declinedWork',row.declinedWorkId)
+  const asset=find(c.s,'asset',item.assetId)
+  if(consent.erasureSuppressedAt||asset.privacyErasedAt||row.outreachSuppressedAt||JSON.stringify(declinedCustomer(asset,c.s))!==JSON.stringify(consent.customer))fail('BOOKING_CUSTOMER','The invitation recipient changed. Contact the shop.',null,404)
+  // Appointment management has its own consent; withdrawing declined-work email does not revoke it.
  }
  if(command==='booking.confirm'&&(row.status!=='held'||row.expiresAt<=c.now))fail('BOOKING_EXPIRED','This tentative appointment expired. Choose a time again.')
  if(command==='booking.reschedule'&&row.status!=='confirmed')fail('BOOKING_STATE','Confirm this appointment before rescheduling.')

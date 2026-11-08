@@ -1,5 +1,14 @@
 # Agent instructions
 
+## Contract-derived documents
+
+Lander-Regenerate: `node src/base/contract-docs.mjs write`
+
+Lander-Regenerate-Check: `node src/base/contract-docs.mjs check`
+
+The command regenerates contract-derived documents without clause arguments.
+CONTRACT.md remains the source; generated documents do not change acceptance points.
+
 ## Launch for review
 
 When asked to launch, run or review this app, run this from the checkout root
@@ -135,6 +144,12 @@ their maintenance.
 Pinned reference: https://github.com/runeditrun/base/blob/913926d5425ad95321fb22f95ee8f4c4cd7b552f/TANSTACK-START-MIGRATION.md
 Native-session/runtime evidence: https://github.com/runeditrun/base/tree/913926d5425ad95321fb22f95ee8f4c4cd7b552f/default-seed
 
-## Lander-Regenerate
+## Contract documents
 
-For the STORE-002 projection, run `node scripts/contract-docs.mjs write STORE-002`, then `node scripts/contract-docs.mjs check STORE-002`. CONTRACT.md owns the wording, status and Gap. This incremental command retains unrelated legacy acceptance entries and regenerates the status summary and the claims register. Run `node scripts/edition-authoring/cli.mjs lock` last, then its `check` command.
+CONTRACT.md owns acceptance text and status. Generate its indexes, check them,
+then refresh the edition source lock.
+
+Lander-Regenerate: node src/base/contract-docs.mjs write
+Lander-Regenerate: node scripts/edition-authoring/cli.mjs lock
+
+Validate with node src/base/contract-docs.mjs check.

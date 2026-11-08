@@ -34,12 +34,16 @@ export async function warrantyJourney(h){
  for(const [i,a]of rework.actuals.entries())w=await h.command('warranty.cost',{warrantyId:w.id,version:w.version,actualId:a.id,amountCents:i?2000:1500,evidence:i?'One hour technician cost':'Replacement pad cost'})
  await h.command('warranty.cost',{warrantyId:w.id,version:w.version,actualId:rework.actuals[0].id,amountCents:1500,evidence:'Duplicate'},{status:409})
  await h.command('warranty.claim',{warrantyId:w.id,version:w.version,claimant:'Cedar Parts',reference:'synthetic-mallet-83',amountCents:3501,evidence:'Over recorded cost'},{status:409})
- w=await h.command('warranty.claim',{warrantyId:w.id,version:w.version,claimant:'Cedar Parts',reference:'synthetic-mallet-83',amountCents:3500,evidence:'Approved supplier claim for failed pads and replacement labor'})
+ const claimInput={warrantyId:w.id,version:w.version,claimant:'Cedar Parts',reference:'synthetic-mallet-83',amountCents:3500,evidence:'Approved supplier claim for failed pads and replacement labor'},beforeClaim=(await h.state()).records
+ for(const options of [{as:'',status:401},{as:member.cookie,status:403},{...bearer,status:403},{headers:{origin:'https://elsewhere.test'},status:403}])await h.command('warranty.claim',claimInput,options)
+ assert.deepEqual((await h.state()).records,beforeClaim)
+ w=await h.command('warranty.claim',claimInput,{as:admin.cookie})
  const claimId=w.claims[0].id;assert.equal(w.claims[0].status,'prepared');assert.match(w.claims[0].label,/not submitted/)
  await h.command('warranty.claimOutcome',{warrantyId:w.id,version:w.version,claimId,status:'credited',creditCents:3000,evidence:'Cannot skip external steps'},{status:409})
  for(const status of ['submitted','accepted','credited'])w=await h.command('warranty.claimOutcome',{warrantyId:w.id,version:w.version,claimId,status,creditCents:3000,evidence:'Staff attached external supplier '+status+' reference synthetic-mallet-84'})
  assert.equal(w.costs.reduce((n,x)=>n+x.amountCents,0)-w.claims[0].history.reduce((n,x)=>n+x.creditCents,0),500)
  // Terms are immutable snapshots; later shop declarations do not change this comeback.
+ const {patternJourney}=await import('./warranty-pattern-journey.mjs');w=(await patternJourney(h,f,w)).w
  const laterTerms=await h.command('warranty.terms',{...termsInput(f.invoice),terms:'Different terms for later cases',mileageLimit:75000});assert.notEqual(laterTerms.id,w.terms.id)
  for(const [i,responsibility]of ['shop','OEM'].entries()){
   const source=await openInput(h,f,terms),edge=await h.command('warranty.open',{...source,failureAt:terms.startsAt,mileage:terms.mileageLimit,startAt:new Date(Date.now()+(3+i*2)*3600000).toISOString(),endAt:new Date(Date.now()+(4+i*2)*3600000).toISOString()})
@@ -52,9 +56,10 @@ export async function warrantyJourney(h){
  const final=await h.state();assert.deepEqual(final.records.invoice.find(i=>i.id===f.invoice.id),f.invoice);assert.deepEqual(final.records.export.find(i=>i.id===f.exported.id),f.exported);assert.equal(final.records.job.find(j=>j.id===w.jobId).assetId,f.job.assetId);assert.equal(final.records.estimate.find(q=>q.jobId===w.jobId).revisions[0].totals.totalCents,0)
  assert.equal((await h.state(bearer)).records.warranty?.length??0,0);assert.equal((await h.request('/app/jobs/'+f.job.id+'/warranty',bearer)).status,403)
  const fresh=await installation({bindings:{OWNER_EMAIL:'warranty-recovery@example.test'}})
- try{await restore(fresh,await archive(h));const s=await fresh.state();for(const kind of ['warranty','warrantyTerms','payment'])assert.deepEqual(s.records[kind],final.records[kind]);assert.deepEqual(s.records.invoice.find(i=>i.id===f.invoice.id),f.invoice);await fresh.state({as:h.owner,status:401})}finally{await fresh.close()}
- const report=await h.api('/api/mallet/reports/turnaround?from='+f.job.createdAt.slice(0,10)+'&to='+f.job.createdAt.slice(0,10))
- assert.equal(report.metrics.completedRepairs,1);assert.equal(report.metrics.repairsWithComebacks,1);assert.equal(report.metrics.comebackRateTenths,1000,'Multiple warranty cases count the original repair once')
+ try{await restore(fresh,await archive(h));const s=await fresh.state();assert.deepEqual(await fresh.api('/api/mallet/warranty-patterns/'+w.id),await h.api('/api/mallet/warranty-patterns/'+w.id));for(const kind of ['warranty','warrantyTerms','payment'])assert.deepEqual(s.records[kind],final.records[kind]);assert.deepEqual(s.records.invoice.find(i=>i.id===f.invoice.id),f.invoice);await fresh.state({as:h.owner,status:401})}finally{await fresh.close()}
+ const cohortDates=final.records.job.map(j=>j.createdAt.slice(0,10)).sort()
+ const report=await h.api('/api/mallet/reports/turnaround?'+new URLSearchParams({from:cohortDates[0],to:cohortDates.at(-1)}))
+ assert.equal(report.metrics.completedRepairs,5);assert.equal(report.metrics.repairsWithComebacks,5);assert.equal(report.metrics.comebackRateTenths,1000,'Multiple warranty cases count the original repair once')
  const original=report.repairs.find(r=>r.jobId===f.job.id);assert.ok(original.comebacks.some(c=>c.id===w.id&&c.jobId===w.jobId),'Comeback drill-through names exact retained repair')
  return {f,w}
 }

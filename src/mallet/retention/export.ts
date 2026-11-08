@@ -14,7 +14,7 @@ export async function customerExport(env:Bindings,actor:Actor,authority:Authorit
  // Follow explicit ownership references only. A price template used by this
  // customer is shop configuration, not an owned record.
  for(let pass=0;pass<3;pass++)for(const [kind,values]of Object.entries(snap.state.records))for(const row of values){
-  if(owned.has(row.id)||['customerId','accountId','assetId','jobId','invoiceId','estimateId','subjectId','reportId','intakeId','linkId','refundId','creditNoteId'].some(k=>owned.has(row[k]))){owned.add(row.id);(records[kind]??=[]);if(!records[kind].some(r=>r.id===row.id))records[kind].push(row)}
+  if(owned.has(row.id)||['customerId','accountId','assetId','jobId','invoiceId','estimateId','subjectId','declinedWorkId','declinedConsentId','reportId','intakeId','linkId','refundId','creditNoteId'].some(k=>owned.has(row[k]))){owned.add(row.id);(records[kind]??=[]);if(!records[kind].some(r=>r.id===row.id))records[kind].push(row)}
  }
  const uploadIds=JSON.stringify(media.uploads.map(u=>u.id)),chunks=(await env.DB.prepare('SELECT * FROM mallet_media_chunks WHERE upload_id IN (SELECT value FROM json_each(?)) ORDER BY upload_id,ordinal').bind(uploadIds).all()).results
  const background=await customerJobHistory(env.DB,scope.jobIds,new Set((records.invoice??[]).map(i=>i.id)))

@@ -2,16 +2,17 @@ import { createHash } from 'node:crypto'
 import { fail, integer } from '../model'
 import type { Actor, Authority, ChunkRow, FindingInput, FindingRow, Scope, Sql, UploadInput, UploadRow } from './types'
 import { CHUNK_BYTES, contentUrl, findingView, uploadView } from './types'
-import { assertion, scopeAssertion, findingScope, getUpload, guarded, jobScope, readRows, uploadScope } from './storage'
+import { assertion, scopeAssertion, findingScope, getUpload, guarded, mediaReceipt, jobScope, readRows, uploadScope } from './storage'
 import { decodeChunk, sniff } from './validation'
 
 export async function createFinding(db: D1Database, actor: Actor, authority: Authority, input: FindingInput, guardScopes: Scope[] = [], assertions: Sql[] = []) {
- const scope = await jobScope(db, actor, authority, input.jobId), request = JSON.stringify(input)
+ const scope = await jobScope(db, actor, authority, input.jobId), request = JSON.stringify(input), id = crypto.randomUUID()
  const existing = await readRows<FindingRow>(db, scope, 'SELECT * FROM mallet_media_findings WHERE job_id=? AND client_id=?', [input.jobId, input.clientId])
  if (existing[0] && existing[0].request_json !== request) fail('MEDIA_REPLAY', 'This finding clientId was already used for different data.')
  const result = await guarded(db, scope, [
   ...guardScopes.map(scopeAssertion), ...assertions,
-  { sql: 'INSERT OR IGNORE INTO mallet_media_findings(id,job_id,client_id,title,captured_at,created_at,actor_json,request_json) VALUES(?,?,?,?,?,?,?,?)', params: [crypto.randomUUID(), input.jobId, input.clientId, input.title, input.capturedAt, new Date().toISOString(), JSON.stringify(actor), request] },
+  { sql: 'INSERT OR IGNORE INTO mallet_media_findings(id,job_id,client_id,title,captured_at,created_at,actor_json,request_json) VALUES(?,?,?,?,?,?,?,?)', params: [id, input.jobId, input.clientId, input.title, input.capturedAt, new Date().toISOString(), JSON.stringify(actor), request] },
+  mediaReceipt(scope, input.carriedFrom ? 'media.finding.carried' : 'media.finding.created', [{ kind: 'mediaFinding', id, beforeRevision: null, afterRevision: 1 }], ['finding:' + id, ...(input.carriedFrom ? ['source-finding:' + input.carriedFrom.id, 'source-job:' + input.carriedFrom.jobId, ...(input.carriedFrom.declinedWorkId ? ['declinedWork:' + input.carriedFrom.declinedWorkId] : [])] : [])]),
   assertion('EXISTS(SELECT 1 FROM mallet_media_findings WHERE job_id=? AND client_id=? AND request_json=?)', [input.jobId, input.clientId, request]),
   { sql: 'SELECT * FROM mallet_media_findings WHERE job_id=? AND client_id=?', params: [input.jobId, input.clientId] }
  ])
@@ -41,10 +42,11 @@ export async function createUpload(db: D1Database, actor: Actor, authority: Auth
   const original = await readRows<UploadRow>(db, scope, "SELECT * FROM mallet_media_uploads WHERE id=? AND finding_id=? AND variant='original' AND complete=1", [input.originalId, input.findingId])
   if (!original.length) fail('MEDIA_ORIGINAL', 'A shared variant must reference a completed original in this finding.', null, 400)
  }
- const exact = [input.findingId, input.variant, input.sha256]
+ const exact = [input.findingId, input.variant, input.sha256], id = crypto.randomUUID()
  const queries = [
   ...(input.originalId ? [assertion("EXISTS(SELECT 1 FROM mallet_media_uploads WHERE id=? AND finding_id=? AND variant='original' AND complete=1)", [input.originalId, input.findingId])] : []),
-  { sql: 'INSERT OR IGNORE INTO mallet_media_uploads(id,finding_id,job_id,variant,original_id,filename,mime,size,sha256,captured_at,received_at,actor_json,annotations_json,request_json) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)', params: [crypto.randomUUID(), input.findingId, scope.jobId, input.variant, input.originalId, input.filename, input.mime, input.size, input.sha256, input.capturedAt, new Date().toISOString(), JSON.stringify(actor), input.annotations ? JSON.stringify(input.annotations) : null, request] },
+  { sql: 'INSERT OR IGNORE INTO mallet_media_uploads(id,finding_id,job_id,variant,original_id,filename,mime,size,sha256,captured_at,received_at,actor_json,annotations_json,request_json) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)', params: [id, input.findingId, scope.jobId, input.variant, input.originalId, input.filename, input.mime, input.size, input.sha256, input.capturedAt, new Date().toISOString(), JSON.stringify(actor), input.annotations ? JSON.stringify(input.annotations) : null, request] },
+  mediaReceipt(scope, 'media.upload.created', [{ kind: 'mediaUpload', id, beforeRevision: null, afterRevision: 1 }], ['finding:' + input.findingId, 'upload:' + id]),
   assertion('EXISTS(SELECT 1 FROM mallet_media_uploads WHERE finding_id=? AND variant=? AND sha256=? AND request_json=?)', [...exact, request]),
   { sql: 'INSERT OR IGNORE INTO mallet_media_upload_clients(finding_id,client_id,upload_id) SELECT ?,?,id FROM mallet_media_uploads WHERE finding_id=? AND variant=? AND sha256=?', params: [input.findingId, clientId, ...exact] },
   assertion('EXISTS(SELECT 1 FROM mallet_media_upload_clients c JOIN mallet_media_uploads u ON u.id=c.upload_id WHERE c.finding_id=? AND c.client_id=? AND u.request_json=?)', [input.findingId, clientId, request]),
@@ -66,6 +68,7 @@ export async function writeChunk(db: D1Database, actor: Actor, authority: Author
  if (row.complete && !prior.length) fail('MEDIA_IMMUTABLE', 'Completed media is immutable.')
  await guarded(db, scope, [
   { sql: 'INSERT OR IGNORE INTO mallet_media_chunks(upload_id,ordinal,sha256,byte_length,base64) SELECT ?,?,?,?,? WHERE EXISTS(SELECT 1 FROM mallet_media_uploads WHERE id=? AND complete=0)', params: [id, ordinal, chunk.sha256, expected, chunk.base64, id] },
+  mediaReceipt(scope, 'media.chunk.received', [{ kind: 'mediaChunk', id: id + ':' + ordinal, beforeRevision: null, afterRevision: 1 }], ['finding:' + row.finding_id, 'upload:' + id, 'chunk:' + ordinal]),
   assertion('EXISTS(SELECT 1 FROM mallet_media_chunks WHERE upload_id=? AND ordinal=? AND sha256=? AND byte_length=? AND base64=?)', [id, ordinal, chunk.sha256, expected, chunk.base64])
  ])
  return progress(db, scope, row)
@@ -93,7 +96,9 @@ export async function completeUpload(db: D1Database, actor: Actor, authority: Au
  if (total !== row.size || digest.digest('hex') !== row.sha256) fail('MEDIA_HASH', 'The complete media does not match its declared size and SHA-256.')
  await guarded(db, scope, [
   assertion('(SELECT COUNT(*) FROM mallet_media_chunks WHERE upload_id=?)=? AND (SELECT COALESCE(SUM(byte_length),0) FROM mallet_media_chunks WHERE upload_id=?)=?', [id, count, id, row.size]),
-  { sql: 'UPDATE mallet_media_uploads SET complete=1,completed_at=? WHERE id=? AND complete=0', params: [new Date().toISOString(), id] }
+  { sql: 'UPDATE mallet_media_uploads SET complete=1,completed_at=?,revision=revision+1 WHERE id=? AND complete=0 AND revision=?', params: [new Date().toISOString(), id, row.revision] },
+  mediaReceipt(scope, 'media.upload.completed', [{ kind: 'mediaUpload', id, beforeRevision: row.revision, afterRevision: row.revision + 1 }], ['finding:' + row.finding_id, 'upload:' + id]),
+  assertion('EXISTS(SELECT 1 FROM mallet_media_uploads WHERE id=? AND complete=1)', [id])
  ])
  return progress(db, scope, row)
 }

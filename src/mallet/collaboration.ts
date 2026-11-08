@@ -1,6 +1,6 @@
 import {bump,event,expectVersion,fail,find,put,rows,text,who,type Context,type Handler,type Row,type State} from './model'
 import {timeSeconds} from './time'
-// FLOW-004: a lead technician plus helpers on one repair, dependent subtasks, staff-private notes with
+// FLOW-004 / FLOW-005: a lead technician plus helpers on one repair, dependent subtasks, staff-private notes with
 // mentions and media references, and a handoff the recipient must acknowledge before it takes effect.
 export const collaborationCommands=['crew.add','crew.remove','subtask.create','subtask.complete','note.add','mention.acknowledge','handoff.propose','handoff.acknowledge','handoff.decline'] as const
 export const collaborationMemberCommands=['subtask.create','subtask.complete','note.add','mention.acknowledge','handoff.propose','handoff.acknowledge','handoff.decline']
@@ -40,7 +40,7 @@ export const collaboration:Handler=(c,command,p)=>{
  if(command==='subtask.complete') {
   const task=find(c.s,'subtask',p.subtaskId);expectVersion(task,p.version)
   if(task.kind==='pickup-followup')fail('PICKUP_RESOLUTION','Record contact resolution on the status and pickup screen.',null,403)
-  if(task.kind==='review-feedback'){if(c.actor.role!=='owner')fail('FORBIDDEN','Only the current owner handles private feedback.',null,403);find(c.s,'job',task.jobId)}else open(c,task.jobId)
+  if(task.kind==='review-feedback'){if(c.actor.role!=='owner')fail('FORBIDDEN','Only the current owner handles private feedback.',null,403);find(c.s,'job',task.jobId)}else member(c,open(c,task.jobId))
   if(!manager(c)&&c.actor.id!==task.assigneeId)fail('FORBIDDEN','Only the assignee, the owner or a service advisor completes this subtask.',null,403)
   if(task.completedAt)fail('SUBTASK_STATE','This subtask is already complete.')
   const waiting=task.dependsOn.map((d:string)=>find(c.s,'subtask',d)).filter((d:Row)=>!d.completedAt)

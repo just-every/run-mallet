@@ -1,3 +1,5 @@
+import {privateBlockerRecord} from '../repair-blocker-privacy'
+import {eraseCoverageContent} from './coverage'
 import {eraseReviewFeedback} from './reviews'
 import type {Row,State} from '../model'
 import {rows} from '../model'
@@ -17,14 +19,19 @@ export function personalCleanup(state:State,scope:CustomerScope,at:string){
   if(rows(state,'customerAccount').some(a=>!scope.accountIds.has(a.id)&&a.contactIds?.includes(contact.id))){counts.sharedContactsRetained++;continue}
   queries.push(write('contact',{id:contact.id,version:contact.version+1,name:'Erased customer',email:'',phone:'',communication:'none',notes:'',history:[],privacyErasedAt:at,at}));counts.contacts++
  }
+ for(const [kind,records] of Object.entries(state.records))for(const row of records)if(scope.jobIds.has(row.jobId)){
+  const next=privateBlockerRecord(kind,row,at)
+  if(next!==row)queries.push(write(kind,{...next,version:row.version+1}))
+ }
  // Exact customer-merge consent receipts are authorization history. Their
  // historical snapshots remain with other signed decisions, not mutable data.
  queries.push({sql:'DELETE FROM mallet_portal_tokens WHERE account_id IN (SELECT value FROM json_each(?))',params:[JSON.stringify([...scope.accountIds])]})
- queries.push(...eraseReviewFeedback(state,scope,at))
+ for(const r of rows(state,'declinedReview').filter(r=>scope.jobIds.has(r.jobId)))queries.push(write('declinedReview',{...r,version:r.version+1,revisions:[],offers:[],erasedAt:at}))
+ queries.push(...eraseCoverageContent(state,scope,at),...eraseReviewFeedback(state,scope,at))
  return {queries,counts}
 }
 
-const mutableMediaKinds=new Set(['inspection','inspectionReport','diagnosis','note'])
+const mutableMediaKinds=new Set(['inspection','inspectionReport','diagnosis','note','declinedReview'])
 /** Remove byte/metadata replicas from mutable diagnostics. Signed, financial
  * and authorization snapshots remain exact and are disclosed on the receipt. */
 function withoutMedia(value:any,ids:Set<string>):any{

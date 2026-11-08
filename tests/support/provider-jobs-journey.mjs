@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import {installation,archive,restore} from '../harness.mjs'
 import {readyInvoice} from './return-journey.mjs'
 
-/** OPS-002 durable GET-only finance job. The provider network edge is the only
+/** OPS-003 durable GET-only finance job. The provider network edge is the only
  * fake; enqueue, restart, scheduled work, recovery and restore use public doors. */
 export async function providerJobsJourney(){
  const calls=[],receipts=new Map();let unavailable=true

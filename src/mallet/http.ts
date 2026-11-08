@@ -1,11 +1,25 @@
 import {wooWebhook} from './woocommerce/webhook'
 import {wooCommand,wooView} from './woocommerce/service'
+import {balanceReminderReviews} from './balance-reminder-recovery'
+import {declinedReviewPage} from './ui/declined-work-review'
+import {coverageCommand,coverageState} from './coverage-door'
+import {coveragePage} from './ui/coverage-follow-up'
+import {webhookResponse} from './webhook-door'
+import {assistantsPage} from './ui/assistants'
+import {assistantCommand,scopedAssistantView} from './assistant-door'
+import {clientCommand} from './api/clients'
+import {resourceRead} from './api/resources'
+import {preparation} from './api/commands'
+import {readRepairBlockers,repairBlockerCommand} from './repair-blocker-door'
+import {repairBlockersPage} from './ui/repair-blockers'
 import {statusNoticeCommand,statusNoticeState} from './status-notice-door'
 import {internalStatusCommands} from './status-notices'
 import {statusNoticePage} from './ui/status-notices'
+import {storagePage,storageRulesPage,storageFormInput} from './ui/storage'
 import {profitabilityReport} from './reports/profitability'
 import {profitabilityPage,profitabilitySettings} from './ui/profitability'
 import {reviewCommand,reviewState} from './review-door'
+import {declinedCustomerResponse} from './declined-customer-door'
 import {reviewResponse} from './review-customer-door'
 import {internalReviewCommands} from './reviews'
 import {reviewPanel} from './ui/reviews'
@@ -14,7 +28,7 @@ import {outreachCommand} from './outreach-door'
 import {stripeResponse} from './stripe/door'
 import {staffCommand,grantStaff,staffSettings,staffState,staffPage} from './staff'
 import {auditReport,auditPage,auditCsv} from './audit'
-import {receivablesPage,receivablesInput,filingPage} from './ui/receivables'
+import {receivablesPage,receivablesInput,filingPage,balanceReviewSettings} from './ui/receivables'
 import {filingTax} from './filing-tax'
 import {accountStatement,utcDate} from './receivables'
 import {depositsPage,depositFormInput} from './ui/deposits'
@@ -75,6 +89,7 @@ import {intakeTemplatesPage,intakeTemplateInput,signedIntakeReceipt} from './ui/
 import {sendBalanceReminder} from './receivables-mail'
 import {returnPage,returnFormInput,handoverReceipt} from './ui/returns'
 import {collectionInput,verifyStripePayment} from './payment-door'
+import {warrantyPacket} from './warranty-patterns'
 import {warrantyPage,warrantyFormInput} from './ui/warranty'
 import {intakePage,intakeFormInput} from './ui/intake'
 import {intakeSecret,expireIntakeSecrets,purgeIntakeSecrets} from './intake-secrets'
@@ -173,21 +188,25 @@ function withoutFleetApproval(value:any):any {
  if(value&&typeof value==='object')return Object.fromEntries(Object.entries(value).filter(([key])=>key!=='fleet').map(([key,v])=>[key,withoutFleetApproval(v)]))
  return value
 }
-function visible(s:State,actor:Actor):State {
+export function visible(s:State,actor:Actor):State {
+ if(!human(actor))s={...s,records:Object.fromEntries(Object.entries(s.records).filter(([kind])=>kind!=='declinedReview').map(([kind,values])=>[kind,kind==='event'?values.filter(r=>!r.kind.startsWith('declineReview.')):values]))}
+ if(actor.role!=='owner')s={...s,records:Object.fromEntries(Object.entries(s.records).filter(([kind])=>!kind.startsWith('coverage')).map(([kind,values])=>[kind,kind==='event'?values.filter(x=>!x.kind.startsWith('coverage.')):values]))}
+ if(actor.role!=='owner')s={...s,records:Object.fromEntries(Object.entries(s.records).filter(([kind])=>!kind.startsWith('webhook')&&!kind.startsWith('assistant')).map(([kind,values])=>[kind,kind==='event'?values.filter(x=>!x.kind.startsWith('assistant.')):values]))}
+ if(!human(actor)){const {repairBlockerPacket:_packet,repairBlockerTask:_task,...records}=s.records;s={...s,records:{...records,event:rows(s,'event').filter(e=>!e.kind.startsWith('blocker.'))}}}
  s={...s,records:{...s.records,reportDelivery:rows(s,'reportDelivery').filter(r=>r.ownerId===actor.id),reportFilter:rows(s,'reportFilter').filter(r=>r.ownerId===actor.id)}}
  if(actor.role!=='owner'){s={...s,records:{...Object.fromEntries(Object.entries(s.records).filter(([kind])=>!kind.startsWith('stripe'))),event:rows(s,'event').filter(r=>!r.kind.startsWith('stripe.'))}};s=withoutFleetApproval(s)}
  if(actor.role==='owner')s={...s,records:{...s.records,deposit:rows(s,'deposit').map(d=>({...d,balance:depositBalance(s,d)}))}}
- if(actor.role!=='owner')s={...s,records:{...s.records,handover:rows(s,'handover').map(r=>{const {accountTerms,...settlement}=r.settlement;return {...r,settlement}})}}
+ if(actor.role!=='owner')s={...s,records:{...s.records,storageCase:[],storageRule:[],event:rows(s,'event').filter(r=>!r.kind.startsWith('storage.')),handover:rows(s,'handover').map(r=>{const {accountTerms,...settlement}=r.settlement;return {...r,settlement}})}}
  if(actor.role!=='owner')s={...s,records:{...Object.fromEntries(Object.entries(s.records).filter(([kind])=>!kind.startsWith('woo'))),event:rows(s,'event').filter(x=>!x.kind.startsWith('woo.'))}}
  if(actor.role!=='owner'){const {audit:_audit,...records}=s.records;s={...s,records}}
- if(actor.role!=='owner')s={...s,records:Object.fromEntries(Object.entries(s.records).filter(([kind])=>!['taxCreditBasis','tenderClearance','arTerms','arInvoice','arDispute','arPromise','arReminder','deposit','retentionPolicy','retentionHold','retentionReceipt','diagnosticResult'].includes(kind)))}
+ if(actor.role!=='owner')s={...s,records:Object.fromEntries(Object.entries(s.records).filter(([kind])=>!['taxCreditBasis','tenderClearance','arTerms','arInvoice','arDispute','arPromise','arReminder','balanceReminderResolution','balanceReminderTask','balanceReminderStep','balanceReviewPolicy','balanceReviewPlan','deposit','retentionPolicy','retentionHold','retentionReceipt','diagnosticResult'].includes(kind)))}
  if(actor.role!=='owner')s={...s,records:{...s.records,event:rows(s,'event').filter(row=>!row.kind.startsWith('tax.creditBasis')&&!row.kind.startsWith('tender.')&&!row.kind.startsWith('ar.')&&!row.kind.startsWith('deposit.')&&!row.kind.startsWith('diagnosticResult.'))}}
  if(!human(actor))s={...s,records:Object.fromEntries(Object.entries(s.records).map(([k,v])=>[k,(k.startsWith('calendar')||k==='bookingWaitlist'||k==='waitlistOffer'||k==='appointment'||k==='bookingService'||k==='counterIntake'||k.startsWith('intake')||['warranty','warrantyTerms','payment','handover','returnDelegate','returnOverride'].includes(k))?[]:k==='event'?v.filter(x=>!x.kind.startsWith('calendar.')&&!x.kind.startsWith('waitlist.')&&!x.kind.startsWith('booking.')&&!x.kind.startsWith('checkin.')&&!x.kind.startsWith('intake.')&&!x.kind.startsWith('warranty.')&&!x.kind.startsWith('payment.')&&!x.kind.startsWith('return.')):v]))}
  s=scopedCollaboration(scopedPromises(s,actor),actor)
  s=scopedTime(s,actor)
  if(actor.role!=='owner'){const {reviewConsent:_reviewConsent,reviewRequest:_reviewRequest,...privateReviewRecords}=s.records;s={...s,records:{...privateReviewRecords,...(s.records.subtask?{subtask:s.records.subtask.filter(t=>t.kind!=='review-feedback')}:{}),event:rows(s,'event').filter(x=>!x.kind.startsWith('review.'))}}}
  if(actor.role!=='owner'){const {statusConsent:_statusConsent,statusNotice:_statusNotice,...statusRecords}=s.records;s={...s,records:{...statusRecords,...(s.records.subtask?{subtask:s.records.subtask.filter(t=>t.kind!=='pickup-followup')}:{}),event:rows(s,'event').filter(x=>!x.kind.startsWith('statusNotice.'))}}}
- if(actor.role!=='owner'){const {outreach:_outreach,...privateRecords}=s.records;s={...s,records:{...privateRecords,event:rows(s,'event').filter(x=>!x.kind.startsWith('outreach.'))}}}
+ if(actor.role!=='owner'){const {outreach:_outreach,declinedConsent:_declinedConsent,declinedAvailability:_declinedAvailability,...privateRecords}=s.records;s={...s,records:{...privateRecords,event:rows(s,'event').filter(x=>!x.kind.startsWith('outreach.'))}}}
  if(actor.role!=='owner'){const {taxCertificate:_certificates,taxFeeRule:_feeRules,taxDiscountRule:_discountRules,taxJurisdiction:_jurisdiction,invoiceDocument:_docs,invoiceDelivery:_delivery,...records}=s.records;s={...s,records:{...records,event:rows(s,'event').filter(x=>!x.kind.startsWith('invoice.delivery')&&x.kind!=='invoice.issue'&&!x.kind.startsWith('tax.certificate')&&!x.kind.startsWith('tax.assignJurisdiction'))}}}
  if(!human(actor)){s={...s,records:Object.fromEntries(Object.entries(s.records).filter(([k])=>!['contact','customerAccount','customerMerge','customerBilling'].includes(k)))};s={...s,records:{...s.records,event:rows(s,'event').filter(x=>!x.kind.startsWith('contact.')&&!x.kind.startsWith('customer.')),invoice:rows(s,'invoice').map(i=>{const {billing,...rest}=i;return rest})}}}
  if(!human(actor)){const records=Object.fromEntries(Object.entries(s.records).filter(([k])=>!k.startsWith('stock')&&!k.startsWith('purchase')));s={...s,records:{...records,event:(records.event??[]).filter(x=>!x.kind.startsWith('stock.')&&!x.kind.startsWith('purchase.'))}}}
@@ -202,23 +221,27 @@ function visible(s:State,actor:Actor):State {
  return {version:s.version,records:{reportDelivery:rows(s,'reportDelivery'),reportFilter:rows(s,'reportFilter'),jobNote:rows(s,'jobNote'),subtask:rows(s,'subtask'),handoff:rows(s,'handoff'),promiseSettings:rows(s,'promiseSettings'),promise:rows(s,'promise'),promisePlan:rows(s,'promisePlan'),timeEntry:rows(s,'timeEntry'),timeCorrection:rows(s,'timeCorrection'),job:jobs,asset:rows(s,'asset').filter(a=>assets.has(a.id)).map(a=>({...a,visits:a.visits.filter((id:string)=>ids.has(id))})),estimate:rows(s,'estimate').filter(x=>ids.has(x.jobId)),declinedWork:rows(s,'declinedWork').filter(x=>ids.has(x.jobId)),reading:rows(s,'reading').filter(x=>ids.has(x.jobId)),serviceInterval:rows(s,'serviceInterval').filter(x=>ids.has(x.jobId)),quality:rows(s,'quality').filter(x=>ids.has(x.jobId)),diagnosis:rows(s,'diagnosis').filter(x=>ids.has(x.jobId)),flow:scopedFlow(s,ids),inspection:rows(s,'inspection').filter(x=>ids.has(x.jobId)),stageEvent:rows(s,'stageEvent').filter(x=>ids.has(x.jobId)),event:rows(s,'event').filter(x=>!x.kind.startsWith('sublet.')&&(ids.has(x.jobId)||x.kind.startsWith('time.')&&x.data.ownerId===actor.id))}}
 }
 async function operators(db:D1Database) {
- const people=(await db.prepare("SELECT id,display_name AS name,role,status FROM oa_operators WHERE status IN ('active','invited') ORDER BY created_at,id").all<{id:string,name:string,role:string,status:string}>()).results
+ const people=(await db.prepare("SELECT id,version,display_name AS name,role,status FROM oa_operators WHERE status IN ('active','invited') ORDER BY created_at,id").all<{id:string,version:number,name:string,role:string,status:string}>()).results
  return {list:people,names:Object.fromEntries(people.map(o=>[o.id,o.name])) as Names}
 }
 const bookingFields=['title','bayId','technicianId','startAt','endAt']
 function formInput(data:FormData) {
  const input:any=Object.fromEntries(data)
+ if(input.command?.startsWith('assistant.')){input.confirm=data.has('confirm');if(input.version!==undefined)input.version=Number(input.version);if(input.assistantSubject){const subject=JSON.parse(input.assistantSubject);input.kind=subject.kind;input.subjectId=subject.subjectId;input.channel=subject.kind==='send'?'email':'none';input.spendCents=0}}
+
  if(input.command==='statusNotice.consent')input.consent=data.has('consent')
  if(input.command==='statusNotice.approve'){input.confirm=data.has('confirm');for(const key of ['allowedStart','allowedEnd','jobVersion'])input[key]=Number(input[key])}
  if(input.command==='review.consent')input.consent=data.has('consent')
  if(input.command==='review.send')input.confirm=data.has('confirm')
- if(input.command==='outreach.schedule'){input.consent=data.has('consent');input.availabilityConfirmed=data.has('availabilityConfirmed');for(const key of ['allowedStart','allowedEnd','quoteVersion','outstandingCents'])if(input[key]!==undefined)input[key]=Number(input[key])}
+ if(['outreach.consent','outreach.schedule'].includes(input.command))input.consent=data.has('consent')
+ if(input.command==='outreach.availability'){input.quoteVersion=Number(input.quoteVersion);input.mappings=Object.keys(input).filter(k=>k.startsWith('stockItem:')).map(k=>({lineId:k.slice(10),itemId:input[k],binId:input['stockBin:'+k.slice(10)]}))}
+ if(input.command==='outreach.schedule'){input.approved=data.has('approved');for(const key of ['consentVersion','availabilityVersion'])if(input[key]!==undefined)input[key]=Number(input[key]);input.consent=data.has('consent');input.availabilityConfirmed=data.has('availabilityConfirmed');for(const key of ['allowedStart','allowedEnd','quoteVersion','outstandingCents','reviewPlanVersion','reviewStep'])if(input[key]!==undefined)input[key]=Number(input[key])}
  if(input.command==='reportFilter.schedule'){input.active=data.has('active');input.consent=data.has('consent');input.everyDays=Number(input.everyDays);input.nextAt=String(input.nextAt).endsWith('Z')?input.nextAt:String(input.nextAt)+':00Z'}
  if(input.staffJob!==undefined&&input.command==='estimate.prepare'||input.staffInvoice!==undefined&&input.command==='payment.record'){let source:any;try{source=JSON.parse(input.staffJob??input.staffInvoice)}catch{throw new HttpError(400,'invalid_staff_source')};if(input.command==='estimate.prepare')input.jobId=source.jobId;else input.invoiceId=source.invoiceId;input.version=source.version}
  assetNativeInput(input)
  if(['staff.grant','staff.revoke'].includes(input.command)){for(const key of ['discountBps','spendCents','refundCents','version'])input[key]=Number(input[key]??0);if(input.discountPercent!==undefined)input.discountBps=Math.round(Number(input.discountPercent)*100);if(input.spendUsd!==undefined)input.spendCents=Math.round(Number(input.spendUsd)*100);if(input.refundUsd!==undefined)input.refundCents=Math.round(Number(input.refundUsd)*100)}
  if(retentionCommands.includes(input.command)){input.consent=input.consent==='yes';if(['retention.preview','customer.erase','retention.run'].includes(input.command))input.categories=data.getAll('categories');for(const key of ['mediaDays','personalDays','auditMinimumDays'])if(key in input)input[key]=input[key]===''?null:Number(input[key])}
- for(const name of ['accountVersion','flowVersion','version','itemVersion','revision','quantity','value','dueValue'])if(input[name]!==undefined&&input[name]!=='')input[name]=Number(input[name])
+ for(const name of ['packetVersion','taskVersion','accountVersion','flowVersion','version','itemVersion','revision','quantity','value','dueValue'])if(input[name]!==undefined&&input[name]!=='')input[name]=Number(input[name])
  if(data.has('lineIds') || input.command==='estimate.authorise')input.lineIds=data.getAll('lineIds')
  if(['estimate.prepare','estimate.revise'].includes(input.command)) {
   input.lines=['part','labor'].map(kind=>({kind,description:input[`${kind}Description`],quantity:Number(input[`${kind}Quantity`]),unitCents:Math.round(Number(input[`${kind}Price`])*100),...(input[`${kind}Discount`]?{unitDiscountCents:Math.round(Number(input[`${kind}Discount`])*100)}:{}),...(kind==='part'&&input.partCost?{costCents:Math.round(Number(input.partCost)*100)}:{})}))
@@ -251,6 +274,7 @@ function formInput(data:FormData) {
  checkInFormInput(data,input)
  intakeTemplateInput(data,input)
  if(input.command==='intakeForm.create'&&input.templateSource){let t:any;try{t=JSON.parse(input.templateSource)}catch{throw new HttpError(400,'invalid_template')};input.templateId=t.id;input.templateVersion=t.version}
+ storageFormInput(input)
  returnFormInput(data,input)
  warrantyFormInput(input)
  receivablesInput(input)
@@ -278,6 +302,7 @@ async function workshopResponse(request:Request,original:Bindings,execution:Pick
  const stripe=await stripeResponse(request,original);if(stripe)return stripe
  const deliveryEvent=await inspectionReportEventResponse(request,original);if(deliveryEvent)return deliveryEvent
  const customerDoor=await guardLinks(request,original,async()=>{
+  const declined=await declinedCustomerResponse(request,original);if(declined)return declined
   const review=await reviewResponse(request,original);if(review)return review
   const booking=await bookingResponse(request,original);if(booking)return booking
   const checkIn=await checkInResponse(request,original);if(checkIn)return checkIn
@@ -286,6 +311,7 @@ async function workshopResponse(request:Request,original:Bindings,execution:Pick
   const customer=await customerLinkResponse(request,original);if(customer)return customer
   return approvalResponse(request,original)
  });if(customerDoor)return customerDoor
+ const webhook=await webhookResponse(request,original);if(webhook)return webhook
  const jobs=await jobsResponse(request,original);if(jobs)return jobs
  const security=await securityResponse(request,original);if(security)return security
  const connectors=await connectorsResponse(request,original);if(connectors)return connectors
@@ -294,8 +320,22 @@ async function workshopResponse(request:Request,original:Bindings,execution:Pick
  let actor:Actor|undefined,submitted:any
  try {
   const auth=await identity(request,env);actor=auth.actor;originGuard(request,env,auth.bearer)
+  if(actor.assistantGrantId){
+   if(path==='/api/mallet/assistant'&&['GET','HEAD'].includes(request.method))return json(await scopedAssistantView(env,auth))
+   if(path!=='/api/mallet/commands'||request.method!=='POST')throw new HttpError(403,'assistant_scope_required')
+  }
+  if(path.startsWith('/api/mallet/v1/')){
+   if(path==='/api/mallet/v1/preparations'&&request.method==='POST')return json(await preparation(env.DB,auth,request,await body(request)))
+   if(!['GET','HEAD'].includes(request.method))throw new HttpError(405,'method_not_allowed')
+   return json(await resourceRead(env.DB,auth,url))
+  }
+  if(auth.apiClient){
+   if(path==='/api/mallet/commands'&&request.method==='POST')return json(await preparation(env.DB,auth,request,await body(request)))
+   throw new HttpError(403,'api_transport_scope')
+  }
   if(path==='/app'&&actor.staff)return redirect('/app/staff')
   if(['/app/staff','/api/mallet/staff/state'].includes(path)){if(!actor.staff)throw new HttpError(403,'staff_grant_required');const view=staffState(await load(env.DB),actor);if(!await env.DB.prepare(`SELECT 1 AS ok WHERE (${auth.authority.sql})`).bind(...auth.authority.params).first())throw new HttpError(403,'staff_grant_required');return path==='/app/staff'?page('Staff workspace',staffPage(view),actor,200,{section:'data'}):url.searchParams.has('download')?new Response(JSON.stringify(view,null,2),{headers:{...headers,'content-type':'application/json','content-disposition':'attachment; filename="mallet-staff.json"'}}):json(view)}
+  if(path==='/app/settings/assistants'){if(actor.role!=='owner')throw new HttpError(403,'owner_required');return page('Assistant settings',assistantsPage(await load(env.DB),new Set((await env.DB.prepare('SELECT grant_id FROM mallet_assistant_keys').all<{grant_id:string}>()).results.map(k=>k.grant_id))),actor,200,{section:'data'})}
   if(path==='/app/staff-access'){if(actor.role!=='owner')throw new HttpError(403,'owner_required');return page('Staff roles & limits',await staffSettings(env.DB),actor,200,{section:'data'})}
   if(path==='/api/mallet/woocommerce'){if(actor.role!=='owner')throw new HttpError(403,'owner_required');if(request.method!=='GET')throw new HttpError(405,'method_not_allowed');return json(await wooView(env))}
   if(['/app/audit','/api/mallet/audit'].includes(path)){
@@ -308,6 +348,12 @@ async function workshopResponse(request:Request,original:Bindings,execution:Pick
    return json(report)
   }
   if(path==='/api/mallet/board-revision'&&request.method==='GET'){if(actor.role==='agent')throw new HttpError(403,'staff_required');const row=await env.DB.prepare(`SELECT version FROM mallet_meta WHERE id=1 AND (${auth.authority.sql})`).bind(...auth.authority.params).first();if(!row)throw new HttpError(403,'staff_required');return json(row)}
+  const blockersPath=path.match(/^\/(api\/mallet\/repairs|app\/jobs)\/([^/]+)\/blockers$/)
+  if(blockersPath){
+   if(!['GET','HEAD'].includes(request.method))throw new HttpError(405,'method_not_allowed')
+   const {view,people}=await readRepairBlockers(env.DB,actor,auth.authority,blockersPath[2])
+   return isApi?json(view):page('Repair blockers',repairBlockersPage(view,people,actor),actor,200,{section:'jobs',subtitle:e(view.job.title)+' · '+e(view.job.asset.label)})
+  }
   const coreRepair=path.match(/^\/api\/mallet\/repairs\/([^/]+)$/)
   if(coreRepair&&['GET','HEAD'].includes(request.method))return json({actor,...visible(await loadRepairState(env.DB,actor,auth.authority,coreRepair[1]),actor)})
   if(path==='/api/mallet/accounts'&&['GET','HEAD'].includes(request.method))return json(await searchAccounts(env.DB,actor,auth.authority,url.searchParams.get('q')??'',url.searchParams.get('cursor')??undefined))
@@ -340,19 +386,24 @@ async function workshopResponse(request:Request,original:Bindings,execution:Pick
   }
   if((path==='/api/mallet/commands'||path==='/app/actions') && request.method==='POST') {
    const data=path==='/app/actions'?formInput(await nativeForm(request)):await body(request),command=String(data.command),input=data.input??data
+   if(command.startsWith('webhook.'))throw new HttpError(403,'webhook_door_required')
    submitted={command,input}
+   if(actor.assistantGrantId&&!command.startsWith('assistant.'))throw new HttpError(403,'assistant_scope_required')
    let result:any
    if(['connector.save','connector.revoke'].includes(command)&&actor.role==='owner'&&!auth.gate?.enrolled)throw new HttpError(403,'step_up_required','Enrol your own second factor before opening the credential door.')
+   if(command.startsWith('apiClient.')&&actor.role==='owner')auth.authority=requireStepUp(auth)
    if(needsStepUp(command,actor.role))auth.authority=requireStepUp(auth,command.startsWith('deposit.'))
    if(command.startsWith('woo.'))throw new HttpError(404,'unknown_command')
    if(command.startsWith('woocommerce.'))auth.authority=requireStepUp(auth,true)
+   if(command==='coverage.sweep')throw new HttpError(404,'unknown_command')
    if(internalStatusCommands.includes(command))throw new HttpError(404,'unknown_command')
    if(internalReviewCommands.includes(command))throw new HttpError(404,'unknown_command')
    if(internalOutreachCommands.includes(command))throw new HttpError(404,'unknown_command')
    if(command.startsWith('stripe.'))throw new HttpError(404,'unknown_command')
    if(command.startsWith('reportDelivery.'))throw new HttpError(404,'unknown_command')
-   if(['ar.reminderClaim','ar.reminderOutcome'].includes(command)||internalSupplierCommands.includes(command)||internalDocumentCommands.includes(command)||internalWaitlistCommands.includes(command)||internalReportCommands.includes(command)||internalBookingCommands.includes(command)||internalCheckInCommands.includes(command)||internalRefundCommands.includes(command)||internalIntakeFormCommands.includes(command)||command==='payment.verified'||command==='routing.sweep'||internalPromiseCommands.includes(command)||internalApprovalCommands.includes(command)||internalChaseCommands.includes(command))throw new HttpError(404,'unknown_command')
-   if(actor.staff){if(command==='job.book')auth.authority=await calendarAuthority(env,command,input,auth.authority);if(['payment.record','credit.issue','refund.record'].includes(command))auth.authority=requireStepUp(auth);result=await staffCommand(env.DB,actor,auth.authority,command,input)}
+   if(['ar.reminderClaim','ar.reminderOutcome'].includes(command)||internalSupplierCommands.includes(command)||internalDocumentCommands.includes(command)||internalWaitlistCommands.includes(command)||internalReportCommands.includes(command)||internalBookingCommands.includes(command)||internalCheckInCommands.includes(command)||internalRefundCommands.includes(command)||internalIntakeFormCommands.includes(command)||command==='payment.verified'||['routing.sweep','blocker.sweep'].includes(command)||internalPromiseCommands.includes(command)||internalApprovalCommands.includes(command)||internalChaseCommands.includes(command))throw new HttpError(404,'unknown_command')
+   if(command.startsWith('assistant.')){if(['assistant.grant','assistant.revoke','assistant.review'].includes(command)&&actor.role==='owner')auth.authority=requireStepUp(auth);result=await assistantCommand(env,auth,command,input)}
+   else if(actor.staff){if(command==='job.book')auth.authority=await calendarAuthority(env,command,input,auth.authority);if(['payment.record','credit.issue','refund.record'].includes(command))auth.authority=requireStepUp(auth);result=await staffCommand(env.DB,actor,auth.authority,command,input)}
    else if(['staff.grant','staff.revoke'].includes(command)){auth.authority=requireStepUp(auth);result=await grantStaff(env.DB,actor,auth.authority,command,input)}
    else if(command==='reportFilter.schedule')result=await configureReportSchedule(env,actor,auth.authority,input)
    else if(command==='ar.remind')result=await sendBalanceReminder(env,actor,auth.authority,input)
@@ -376,10 +427,13 @@ async function workshopResponse(request:Request,original:Bindings,execution:Pick
    else if(['intake.secretStore','intake.secretReveal','intake.secretEnd','intake.secretEraseCustomer'].includes(command))result=await intakeSecret(env,actor,auth.authority,command,input)
    else if(command.startsWith('statusNotice.'))result=await statusNoticeCommand(env,actor,auth.authority,command,input)
    else if(command.startsWith('review.'))result=await reviewCommand(env,actor,auth.authority,command,input)
+   else if(command.startsWith('coverage.'))result=await coverageCommand(env,actor,auth.authority,command,input)
    else if(command.startsWith('outreach.'))result=await outreachCommand(env,actor,auth.authority,command,input)
+   else if(command.startsWith('blocker.'))result=await repairBlockerCommand(env.DB,actor,auth.authority,command,input)
    else if(command.startsWith('routing.'))result=await routingCommand(env.DB,actor as any,auth.authority,command,input)
    else if(command==='promise.approveAndNotify')result=await sendPromiseNotice(env,actor,auth.authority,input)
    else if(command==='approvalLink.create'){if(!human(actor))throw new HttpError(403,'manager_required');result=await sendApprovalLink(env,actor,auth.authority,input)}
+   else if(command.startsWith('apiClient.'))result=await clientCommand(env.DB,actor,auth.authority,command,input)
    else if(command.startsWith('agent.')) result=await agentKey(env.DB,actor,auth.authority,command,input)
    else if(command==='asset.erase') {
     if(actor.role!=='owner')throw new HttpError(403,'owner_required')
@@ -403,7 +457,8 @@ async function workshopResponse(request:Request,original:Bindings,execution:Pick
    if(isApi){if(!human(actor)&&result&&typeof result==='object'&&'billing' in result){const {billing,...rest}=result;result=rest}return json(actor.role==='agent'?withoutSubletCosts(withoutInspectionSource(result)):result)}
    if(retentionCommands.includes(command)){if(command==='customer.export')return new Response(JSON.stringify(result,null,2),{headers:{...headers,'content-type':'application/json','content-disposition':'attachment; filename="customer-data.json"'}});return page('Retention & erasure',retentionPage(await load(env.DB),input.customerId??'',command==='retention.preview'?result:undefined,input,['customer.erase','retention.run'].includes(command)?result:undefined),actor,200,{section:'data'})}
    if(['invoice.issue','invoice.send'].includes(command)){const invoiceId=command==='invoice.issue'?input.invoiceId:result.invoiceId;return redirect('/app/invoices/'+encodeURIComponent(invoiceId))}
-   if(command.startsWith('ar.'))return redirect('/app/receivables?'+new URLSearchParams({accountId:String(input.accountId??'')}))
+   if(command==='ar.saveBalanceReviewPolicy')return redirect('/app/settings/balance-reviews')
+   if(command.startsWith('ar.'))return redirect('/app/receivables?'+new URLSearchParams({accountId:String(result.accountId??input.accountId??''),...(command==='ar.resolveBalanceReminder'?{recovery:'balance'}:{})}))
    if(command==='tender.clearance'||command==='tax.creditBasis')return redirect('/app/tax/filing')
    if(command.startsWith('deposit.'))return redirect('/app/deposits?'+new URLSearchParams({accountId:String(input.accountId??'')}))
    if(command==='customer.mergePreview')return page('Review duplicate merge',mergePreviewPage(result,input),actor,200,{section:'customers'})
@@ -412,6 +467,7 @@ async function workshopResponse(request:Request,original:Bindings,execution:Pick
    if(command==='promise.timeZone'&&input.calendarReturn)return redirect('/app/calendar')
    if(command==='booking.attendance')return redirect('/app/reports/turnaround?'+new URLSearchParams({from:String(input.from??''),to:String(input.to??'')}))
    if(command==='decline.inapplicable')return redirect('/app/jobs/'+encodeURIComponent(String(input.jobId)))
+   if(command.startsWith('blocker.'))return redirect('/app/jobs/'+encodeURIComponent(String(input.jobId))+'/blockers')
    if(command.startsWith('statusNotice.'))return redirect('/app/jobs/'+encodeURIComponent(String(result.jobId??input.jobId))+'/notifications')
    if(command.startsWith('review.'))return redirect('/app/jobs/'+encodeURIComponent(String(result.jobId??input.jobId))+'/reviews')
    if(command.startsWith('outreach.'))return redirect(input.returnTo==='receivables'?'/app/receivables?accountId='+encodeURIComponent(String(input.accountId)):input.returnTo==='declined'?'/app/jobs/'+encodeURIComponent(String(input.jobId)):'/app/bookings')
@@ -424,9 +480,14 @@ async function workshopResponse(request:Request,original:Bindings,execution:Pick
    if(command==='intakeForm.revoke')return redirect(`/app/jobs/${e(input.jobId)}/intake`)
    if(command==='intake.secretReveal')return page('Temporary unlock secret',`<section class="card"><p>Use only for the recorded purpose. Close this page after use, then end the purpose.</p><pre>${e(result.secret)}</pre><a href="/app/jobs/${e(input.jobId)}/intake">Return to custody</a></section>`,actor,200,{section:'jobs'})
    if(command.startsWith('intake.'))return redirect(`/app/jobs/${e(input.jobId)}/intake`)
+   if(command.startsWith('storage.'))return redirect(command==='storage.rule'?'/app/settings/storage':'/app/jobs/'+encodeURIComponent(String(input.jobId))+'/storage')
    if(command.startsWith('return.')||command==='payment.verifyStripe'||command==='flow.collect')return redirect(`/app/jobs/${e(input.jobId)}/return`)
    if(command==='payment.record'&&input.returnTo==='return')return redirect(`/app/jobs/${e(input.jobId)}/return`)
+   if(command.startsWith('declineReview.'))return redirect('/app/jobs/'+encodeURIComponent(String(input.jobId))+'/declined-review')
+   if(command.startsWith('coverage.'))return redirect('/app/jobs/'+encodeURIComponent(String(input.jobId))+'/coverage')
    if(command.startsWith('warranty.')||command==='payment.record')return redirect(`/app/jobs/${e(command==='warranty.open'?result.jobId:input.jobId)}/warranty`)
+   if(command==='assistant.grant')return page('Scoped assistant key',`<section class="card"><p>Copy this separate key once into the assistant’s private environment.</p><pre>${e(result.token)}</pre><p>Allowed action: ${e(result.kind)}. Zero spend. Expires ${when(result.expiresAt)}.</p><a href="/app/settings/assistants">Return to assistant settings</a></section>`,actor,200,{section:'data'})
+   if(command.startsWith('assistant.'))return redirect('/app/settings/assistants')
    if(command==='agent.create'||command==='agent.rotate')return page('Agent key created',`<section class="card"><p>Copy this key once into your agent’s private environment. It will not be shown again.</p><pre>${e(result.token)}</pre><p>Expires ${when(new Date(result.expiresAt).toISOString(),undefined,'date-year')}</p><p class="card-foot"><a href="/app/data">Return to access</a></p></section>`,actor,200,{section:'data'})
    if(command==='asset.erase')return redirect('/app/customers')
    if(command==='approvalLink.create')return page('Approval link sent',`<section class="card"><p>${e(result.delivery?.status==='accepted'?'Handed to the mail provider for '+result.to+'; delivery is not confirmed.':result.delivery?.status==='development'?'Written to the development mail outbox for '+result.to+'; not sent.':'The mail provider did not accept the message for '+result.to+'.')}</p><p>If the customer cannot find the email, share this link yourself. It will not be shown again.</p><pre>${e(result.url)}</pre><p class="card-foot"><a href="/app/jobs/${e(result.jobId)}#approval-links">Return to the repair</a></p></section>`,actor,200,{section:'jobs'})
@@ -467,11 +528,20 @@ async function workshopResponse(request:Request,original:Bindings,execution:Pick
    return new Response(await service.exports.download(id),{headers:{...headers,'content-type':'application/x-ndjson','content-disposition':'attachment; filename="workshop.rer"'}})
   }
   if(request.method!=='GET' && request.method!=='HEAD')throw new HttpError(405,'method_not_allowed')
+  const declinedReviewMatch=path.match(/^\/app\/jobs\/([^/]+)\/declined-review$/)
+  if(declinedReviewMatch){
+   if(!human(actor)||actor.staff)throw new HttpError(403,'manager_required')
+   const raw=await load(env.DB),job=rows(raw,'job').find(j=>j.id===declinedReviewMatch[1])
+   if(!job)throw new HttpError(404,'not_found')
+   return page('Declined-work review',declinedReviewPage(raw,job),actor,200,{section:'jobs'})
+  }
   const state=visible(await load(env.DB),actor)
   if(path==='/app/retention'){if(actor.role!=='owner')throw new HttpError(403,'owner_required');return page('Retention & erasure',retentionPage(state,url.searchParams.get('customerId')??''),actor,200,{section:'data'})}
   if(path==='/api/mallet/catalogue'){if(actor.role==='member')throw new HttpError(403,'manager_required');return json(await catalogue(env,await connectorSecret(env,'pier','PIER_SESSION')))}
   if(path==='/app/calendar'){if(!human(actor))throw new HttpError(403,'manager_required');return page('Resource calendar',calendarPage(state,(await operators(env.DB)).names,url.searchParams),actor,200,{section:'jobs'})}
   if(path==='/app/bookings'){if(!human(actor))throw new HttpError(403,'manager_required');return page('Online appointments',bookingStaff(state,(await operators(env.DB)).names,actor.role==='owner'),actor,200,{section:'jobs'})}
+  const patternMatch=path.match(/^\/api\/mallet\/warranty-patterns\/([^/]+)$/)
+  if(patternMatch){if(!human(actor))throw new HttpError(403,'manager_required');return json(warrantyPacket(state,patternMatch[1]))}
   if(path==='/api/mallet/state')return json({actor,...state})
   if(path==='/api/mallet/board')return json(repairBoard(state,new Date().toISOString(),boardFilter(url.searchParams)))
   const invoicePage=path.match(/^\/app\/invoices\/([^/]+)$/)
@@ -517,7 +587,9 @@ async function workshopResponse(request:Request,original:Bindings,execution:Pick
    const ids=new Set([id,...rows(state,'customerAccount').filter(a=>a.mergedInto===id).map(a=>a.id)])
    return json(rows(state,'invoice').filter(i=>ids.has(i.billing?.accountId)))
   }
-  if(path==='/app/receivables'){if(actor.role!=='owner')throw new HttpError(403,'owner_required');return page('Commercial receivables',receivablesPage(state,url.searchParams.get('accountId')??'',utcDate(url.searchParams.get('asOf')??new Date().toISOString().slice(0,10))),actor,200,frame('customers'))}
+  if(path==='/app/settings/balance-reviews'){if(actor.role!=='owner')throw new HttpError(403,'owner_required');return page('Balance review settings',balanceReviewSettings(state),actor,200,frame('data'))}
+  if(path==='/api/mallet/receivables/recovery'){if(actor.role!=='owner')throw new HttpError(403,'owner_required');const reviews=balanceReminderReviews(state,url.searchParams.get('accountId')??'');if(!await env.DB.prepare(`SELECT 1 AS ok WHERE (${auth.authority.sql})`).bind(...auth.authority.params).first())throw new HttpError(403,'owner_required');return json(reviews)}
+  if(path==='/app/receivables'){if(actor.role!=='owner')throw new HttpError(403,'owner_required');const content=receivablesPage(state,url.searchParams.get('accountId')??'',utcDate(url.searchParams.get('asOf')??new Date().toISOString().slice(0,10)),url.searchParams.get('recovery')==='balance');if(!await env.DB.prepare(`SELECT 1 AS ok WHERE (${auth.authority.sql})`).bind(...auth.authority.params).first())throw new HttpError(403,'owner_required');return page('Commercial receivables',content,actor,200,frame('customers'))}
   if(path==='/app/tax/filing'){if(actor.role!=='owner')throw new HttpError(403,'owner_required');const today=new Date().toISOString().slice(0,10);return page('Filing-period tax preview',filingPage(state,url.searchParams.get('from')??today.slice(0,8)+'01',url.searchParams.get('to')??today),actor,200,frame('tax'))}
   if(path==='/api/mallet/tax/filing'){if(actor.role!=='owner')throw new HttpError(403,'owner_required');return json(filingTax(state,url.searchParams.get('from'),url.searchParams.get('to')))}
   if(path==='/api/mallet/receivables'){if(actor.role!=='owner')throw new HttpError(403,'owner_required');return json(accountStatement(state,url.searchParams.get('accountId')??'',utcDate(url.searchParams.get('asOf')??new Date().toISOString().slice(0,10))))}
@@ -557,10 +629,15 @@ async function workshopResponse(request:Request,original:Bindings,execution:Pick
   if(noticesMatch){if(actor.role!=='owner')throw new HttpError(403,'owner_required');const job=rows(state,'job').find(j=>j.id===noticesMatch[1]);if(!job)throw new HttpError(404,'not_found');return page('Status & pickup',statusNoticePage(await statusNoticeState(env,state,actor),job),actor,200,frame('jobs'))}
   const reviewMatch=path.match(/^\/app\/jobs\/([^/]+)\/reviews$/)
   if(reviewMatch){if(actor.role!=='owner')throw new HttpError(403,'owner_required');const job=rows(state,'job').find(j=>j.id===reviewMatch[1]);if(!job)throw new HttpError(404,'not_found');return page('Review & satisfaction',`<div class="narrow"><p><a href="/app/jobs/${e(job.id)}/return">Back to documented handover</a></p>${reviewPanel(await reviewState(env,state,actor),job,actor)}</div>`,actor,200,frame('jobs'))}
+  if(path==='/app/settings/storage'){if(actor.role!=='owner')throw new HttpError(403,'owner_required');return page('Storage settings',storageRulesPage(state),actor,200,frame('data'))}
+  const storageMatch=path.match(/^\/app\/jobs\/([^/]+)\/storage$/)
+  if(storageMatch){if(actor.role!=='owner')throw new HttpError(403,'owner_required');const job=rows(state,'job').find(j=>j.id===storageMatch[1]);if(!job)throw new HttpError(404,'not_found');return page('Storage & notices',storagePage(state,job),actor,200,frame('jobs'))}
   const returnMatch=path.match(/^\/app\/jobs\/([^/]+)\/return$/)
   if(returnMatch){if(!human(actor))throw new HttpError(403,'manager_required');const job=rows(state,'job').find(j=>j.id===returnMatch[1]);if(!job)throw new HttpError(404,'not_found');return page('Documented handover',returnPage(await reviewState(env,state,actor),job,actor),actor,200,frame('jobs'))}
+  const coverageMatch=path.match(/^\/app\/jobs\/([^/]+)\/coverage$/)
+  if(coverageMatch){if(actor.role!=='owner')throw new HttpError(403,'owner_required');const job=rows(state,'job').find(j=>j.id===coverageMatch[1]);if(!job)throw new HttpError(404,'not_found');return page('Coverage review register',coveragePage(await coverageState(env,state),job),actor,200,frame('jobs'))}
   const warrantyMatch=path.match(/^\/app\/jobs\/([^/]+)\/warranty$/)
-  if(warrantyMatch){if(!human(actor))throw new HttpError(403,'manager_required');const job=rows(state,'job').find(j=>j.id===warrantyMatch[1]);if(!job)throw new HttpError(404,'not_found');return page('Warranty & comeback work',warrantyPage(state,job,(await operators(env.DB)).list),actor,200,frame('jobs'))}
+  if(warrantyMatch){if(!human(actor))throw new HttpError(403,'manager_required');const job=rows(state,'job').find(j=>j.id===warrantyMatch[1]);if(!job)throw new HttpError(404,'not_found');return page('Warranty & comeback work',warrantyPage(state,job,(await operators(env.DB)).list,actor.role==='owner'),actor,200,frame('jobs'))}
   const intakeMatch=path.match(/^\/app\/jobs\/([^/]+)\/intake$/)
   if(intakeMatch){if(!human(actor))throw new HttpError(403,'manager_required');const job=rows(state,'job').find(j=>j.id===intakeMatch[1]);if(!job)throw new HttpError(404,'not_found');await expireIntakeSecrets(env);const secrets=actor.role==='owner'?(await env.DB.prepare('SELECT id,purpose,expires_at FROM mallet_intake_secrets WHERE job_id=? ORDER BY expires_at').bind(job.id).all()).results:[];return page('Condition & custody',intakePage(state,job,actor,await diagnosisMedia(env.DB,actor,auth.authority,job.id),secrets),actor,200,frame('jobs'))}
   const previewMatch=path.match(/^\/app\/jobs\/([^/]+)\/media\/view\/([^/]+)$/)

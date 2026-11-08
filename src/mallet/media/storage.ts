@@ -1,4 +1,5 @@
 import { fail } from '../model'
+import type { AuditEntry } from '../audit'
 import type { Actor, Authority, FindingRow, Scope, Sql, UploadRow } from './types'
 
 const statement = (db: D1Database, query: Sql) => db.prepare(query.sql).bind(...(query.params ?? []))
@@ -23,11 +24,15 @@ export function scopeAssertion(scope: Scope): Sql {
  return assertion(`EXISTS(SELECT 1 FROM mallet_records j WHERE j.kind='job' AND j.id=? AND j.revision=? AND ${grant.sql})`, [scope.jobId, scope.revision, ...grant.params])
 }
 export async function guarded(db: D1Database, scope: Scope, queries: Sql[]): Promise<D1Result[]> {
- const writes=queries.some(q=>/^\s*(INSERT|UPDATE|DELETE)/i.test(q.sql))
- const id=crypto.randomUUID(),audit={id,version:1,action:'media.write',at:new Date().toISOString(),actor:{id:scope.actor.id,name:scope.actor.name,role:scope.actor.role},policy:'private-media-references-v1',changes:[],evidence:['job:'+scope.jobId,'job-revision:'+scope.revision]}
- const receipt:Sql={sql:"INSERT INTO mallet_records(kind,id,revision,value) VALUES('audit',?,1,?)",params:[id,JSON.stringify(audit)]}
- const results = await batch(db, [nativeGuard(scope.authority), scopeAssertion(scope), ...queries,...(writes?[receipt]:[]), { sql: 'DELETE FROM mallet_assert' }])
- return results.slice(2, writes?-2:-1)
+ const results = await batch(db, [nativeGuard(scope.authority), scopeAssertion(scope), ...queries, { sql: 'DELETE FROM mallet_assert' }])
+ return results.slice(2, -1)
+}
+// Place immediately after the transition: SQLite changes() ignores a replayed
+// insert or update. The receipt and transition share the native authority guards
+// and transaction, so denial or a later failed assertion rolls both back.
+export function mediaReceipt(scope: Scope, action: string, changes: AuditEntry['changes'], evidence: string[]): Sql {
+ const id = crypto.randomUUID(), audit: AuditEntry = { id, version: 1, action, at: new Date().toISOString(), actor: { id: scope.actor.id, name: scope.actor.name, role: scope.actor.role }, policy: 'private-media-revisions-v1', changes, evidence: ['job:' + scope.jobId, 'job-revision:' + scope.revision, ...evidence] }
+ return { sql: "INSERT INTO mallet_records(kind,id,revision,value) SELECT 'audit',?,1,? WHERE changes()=1", params: [id, JSON.stringify(audit)] }
 }
 async function locate<T>(db: D1Database, actor: Actor, authority: Authority, table: 'job' | 'finding' | 'upload', id: string): Promise<{ scope: Scope; row: T }> {
  const grant = assignment(actor)

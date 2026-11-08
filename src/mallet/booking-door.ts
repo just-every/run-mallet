@@ -1,3 +1,4 @@
+import {currentDeclinedConsent} from './declined-outreach'
 import {shopTime} from './promise-zone'
 import {bookingSlots,bookingSlotId} from './bookings'
 import {e} from './ui/common'
@@ -26,7 +27,7 @@ export async function bookingResponse(request:Request,original:Bindings):Promise
  const env=runtimeBindings(original),manage=match[1]
  if(url.origin!==env.AUTH_ORIGIN||(request.headers.has('host')&&request.headers.get('host')?.toLowerCase()!==url.host.toLowerCase()))return view('<p>Not available.</p>',404)
  if(!['GET','HEAD','POST'].includes(request.method))return view('<p>Not available.</p>',405)
- let row:any,authority:any
+ let row:any,authority:any,declinedToken=url.searchParams.get('declined')??''
  if(manage){
   if(!/^[A-Za-z0-9_-]{43}$/.test(manage))return view('<p>Not available.</p>',404)
   const hash=await digest(manage),found=await env.DB.prepare('SELECT appointment_id FROM mallet_booking_tokens WHERE revoked_at IS NULL AND (token_hash=? OR appointment_id IN (SELECT appointment_id FROM mallet_booking_reminder_tokens WHERE token_hash=?))').bind(hash,hash).first<{appointment_id:string}>()
@@ -43,7 +44,18 @@ export async function bookingResponse(request:Request,original:Bindings):Promise
    const data=Object.fromEntries(new URLSearchParams(raw)),action=data.action
    if(!manage){
     if(action!=='hold')return view('<p>Unknown action.</p>',400)
-    const guard=await staffGuard(env,data.serviceId,data.slotId),secret=token(),saved=await execute(env.DB,actor,'booking.hold',{...data,consent:data.consent==='yes',sourceHash:await digest(env.AUTH_ORIGIN+'|'+(request.headers.get('cf-connecting-ip')??'unknown'))},guard)
+    let guard=await staffGuard(env,data.serviceId,data.slotId),declinedSource:any=null
+    declinedToken=data.declinedToken??''
+    if(declinedToken){
+     if(!/^[A-Za-z0-9_-]{43}$/.test(declinedToken))return view('<p>Not available.</p>',404)
+     const hash=await digest(declinedToken),source=await env.DB.prepare('SELECT consent_id,outreach_id FROM mallet_declined_withdrawal_tokens WHERE token_hash=?').bind(hash).first<{consent_id:string,outreach_id:string}>()
+     const state=await load(env.DB),consent=source&&rows(state,'declinedConsent').find(r=>r.id===source.consent_id),item=consent&&rows(state,'declinedWork').find(r=>r.id===consent.subjectId)
+     if(!source||!consent||!item)return view('<p>Not available.</p>',404)
+     currentDeclinedConsent(state,consent,item)
+     declinedSource={consentId:consent.id,outreachId:source.outreach_id,itemId:item.id}
+     guard={sql:'('+guard.sql+') AND EXISTS(SELECT 1 FROM mallet_declined_withdrawal_tokens WHERE token_hash=? AND consent_id=? AND outreach_id=?)',params:[...guard.params,hash,consent.id,source.outreach_id]}
+    }
+    const secret=token(),saved=await execute(env.DB,actor,'booking.hold',{...data,declinedSource,consent:data.consent==='yes',sourceHash:await digest(env.AUTH_ORIGIN+'|'+(request.headers.get('cf-connecting-ip')??'unknown'))},guard)
     await env.DB.prepare('INSERT INTO mallet_booking_tokens(appointment_id,token_hash) VALUES(?,?)').bind(saved.id,await digest(secret)).run()
     return new Response(null,{status:303,headers:{location:'/book/'+secret,'cache-control':'no-store','referrer-policy':'no-referrer'}})
    }
@@ -58,8 +70,8 @@ export async function bookingResponse(request:Request,original:Bindings):Promise
     row=await execute(env.DB,actor,'booking.outcome',{appointmentId:row.id,version:row.version,deliveryId:row.delivery.id,status:['rejected','rate_limited'].includes(outcome.status)?'failed':outcome.status,provider:outcome.provider??'mail'},authority)
    }
   }
-  const s=await bookingState(env);return view(manage?manageBooking(s,row,url.pathname):publicBooking(s,url.pathname,url.searchParams.get('serviceId')??''),200,!manage)
- }catch(error){if(!(error instanceof MalletError))throw error;const s=await bookingState(env);return view(manage?manageBooking(s,rows(s,'appointment').find(x=>x.id===row.id),url.pathname,error.message):publicBooking(s,url.pathname,url.searchParams.get('serviceId')??'',error.message),error.status,!manage)}
+  const s=await bookingState(env);return view(manage?manageBooking(s,row,url.pathname):publicBooking(s,url.pathname,url.searchParams.get('serviceId')??'','',declinedToken),200,!manage)
+ }catch(error){if(!(error instanceof MalletError))throw error;const s=await bookingState(env);return view(manage?manageBooking(s,rows(s,'appointment').find(x=>x.id===row.id),url.pathname,error.message):publicBooking(s,url.pathname,url.searchParams.get('serviceId')??'',error.message,declinedToken),error.status,!manage)}
 }
 
 /** Staff withdraw a customer's manage link; its holder then sees the same page as for an unknown link. */

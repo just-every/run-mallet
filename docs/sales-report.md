@@ -62,6 +62,6 @@ Booking recorders are compared as accountable advisors until GOV-001 ships
 finer attribution. Their sales and funnel use the same definitions and expose
 their source repairs. This report does not disclose private refund instructions.
 
-REPORT-001 remains **partial** for SHOP-001 multiple-location reporting. There
+REPORT-001 and REPORT-007 remain **partial** for SHOP-001 multiple-location reporting. There
 is no destructive invoice void operation: issue a full credit using PAY-005.
 This is not a settlement report or a completed tax return.

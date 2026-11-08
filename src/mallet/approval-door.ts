@@ -24,7 +24,7 @@ export async function sendApprovalLink(env:any,actor:Actor,authority:Authority,i
  const recorded=await execute(env.DB,actor as any,'approvalLink.delivery',{linkId:link.id,version:link.version,status:outcome.status,provider:outcome.provider,providerMessageId:outcome.providerMessageId},authority)
  return {...recorded,url}
 }
-/** Durable intents, bounded leases and outcome recovery are owned by OPS-002. */
+/** Durable intents, bounded leases and outcome recovery are owned by OPS-003. */
 export const runApprovalChase=runReminderJobs
 const stopped=()=>page('Reminders stopped','<section class="card"><p>Your repair shop will not send you automatic estimate reminders. You can still use any open approval link, and the shop may still contact you about your repair.</p></section>',undefined,200,{heading:false})
 const unavailable=(status=404)=>page('Link not available','<section class="card"><p>This approval link is not available. Ask your repair shop for a new link.</p></section>',undefined,status,{heading:false})

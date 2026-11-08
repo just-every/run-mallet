@@ -6,6 +6,11 @@ import {instant} from './workshop'
 export const purchasingCommands=['purchase.create','purchase.approve','purchase.receive','purchase.bill','purchase.shortClose','purchase.close']
 const cents=(v:unknown,label:string)=>integer(v,label,0,100_000_000)
 const lineCost=(line:any)=>Math.round(line.quantityMilli*line.unitCents/1000)
+// A native PO inherits its stock destination and repair demand scopes.
+export function purchaseInShop(s:State,po:any){
+ const local=(kind:string,id:string)=>rows(s,kind).some(r=>r.id===id&&(r.location??r.locationId??'shop')==='shop')
+ return (po.location??po.locationId??'shop')==='shop'&&(!po.binId||local('stockBin',po.binId))&&Array.isArray(po.lines)&&po.lines.every((l:any)=>local('stockItem',l.itemId)&&(!l.jobId||local('job',l.jobId)))
+}
 export function purchaseStatus(s:State,po:Row){
  const receipts=rows(s,'purchaseReceipt').filter(r=>r.purchaseId===po.id),bills=rows(s,'purchaseBill').filter(b=>b.purchaseId===po.id).sort((a,b)=>a.sequence-b.sequence)
  const lines=po.lines.map((line:any)=>{

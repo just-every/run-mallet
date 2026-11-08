@@ -34,7 +34,6 @@
     "MAIL_ACCOUNT_ID": "",
     "IDENTITY_PROVIDER": "",
     "PIER_ORIGIN": "",
-    "MALLET_SUPPLIER_ORIGIN": "",
-    "OWNER_EMAIL": ""
+    "MALLET_SUPPLIER_ORIGIN": ""
   }
 }
