@@ -131,7 +131,7 @@
     "none": true
   },
   "verification": {
-    "journey": "tests/agent-door/refused-classification.mjs",
+    "journey": "tests/agent-door/preparation-journey.mjs",
     "owner": {
       "initializer": "tests/agent-door/owner.mjs"
     },
@@ -150,8 +150,7 @@
         "list",
         "prepare"
       ]
-    },
-    "journey": "tests/agent-door/preparation-journey.mjs"
+    }
   },
   "journey": [
     {
@@ -202,7 +201,21 @@
             "measure": 1
           }
         }
-      ]
+      ],
+      "resource": {
+        "uriTemplate": "mallet://estimates/{id}",
+        "state": {
+          "id": {
+            "$from": "prepare",
+            "pointer": "/id"
+          },
+          "jobId": {
+            "$from": "list",
+            "pointer": "/records/job/0/id"
+          },
+          "status": "draft"
+        }
+      }
     },
     {
       "id": "revise",

@@ -1,6 +1,6 @@
 {
   "version": "0.1.0",
-  "publicReleaseNotes": "Prepares Mallet for hosted installation with an explicit deployment policy, digest-bound setup, Managed mail configuration and a committed deployment specification. Preserves the existing project identity, brand marks and applied migration history. This metadata does not publish a release.",
+  "publicReleaseNotes": "First release of Mallet, with a hosted demo and setup for a Business with or without a mail provider.",
   "migrations": [
     "migrations/core/0001_owner.sql",
     "migrations/core/0002_outbox.sql",
@@ -38,8 +38,27 @@
     "migrations/core/0092_mallet_search.sql",
     "migrations/core/0094_mallet_record_indexes.sql",
     "migrations/core/0095_last_signin.sql",
-    "migrations/core/0096_dependency_keys_sealed.sql"
+    "migrations/core/0096_dependency_keys_sealed.sql",
+    "migrations/core/0097_mallet_audit.sql",
+    "migrations/core/0098_mallet_staff_grants.sql",
+    "migrations/core/0099_mallet_report_schedules.sql",
+    "migrations/core/0110_mallet_outreach.sql",
+    "migrations/core/0111_mallet_enterprise.sql",
+    "migrations/core/0112_mallet_saml.sql",
+    "migrations/core/0113_mallet_audit_coverage.sql",
+    "migrations/core/0114_mallet_reviews.sql",
+    "migrations/core/0117_mallet_status_authority.sql",
+    "migrations/core/0118_mallet_assistant_keys.sql",
+    "migrations/core/0118_mallet_media_revisions.sql",
+    "migrations/core/0118_mallet_shop_api.sql",
+    "migrations/core/0118_mallet_webhooks.sql",
+    "migrations/core/0119_mallet_coverage_authority.sql",
+    "migrations/core/0120_mallet_agent_door.sql",
+    "migrations/core/0120_mallet_declined_withdrawal.sql",
+    "migrations/core/0121_mallet_business_settings.sql",
+    "migrations/core/0122_mallet_business_people.sql",
+    "migrations/core/0123_woocommerce.sql"
   ],
   "breaking": false,
-  "agentUpdateInstructions": "Use the declared setup and recovery commands. Existing installations retain their owner, private configuration and applied migration history. No native release is published by this change."
+  "agentUpdateInstructions": "Install with the pinned toolchain and apply all declared migrations on a fresh database. Preserve existing resource identities and migration bytes. For deployments with MAIL_PROVIDER=none, use rer signin."
 }

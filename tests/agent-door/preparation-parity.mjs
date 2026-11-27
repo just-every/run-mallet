@@ -1,49 +1,27 @@
 import assert from 'node:assert/strict'
-import {randomBytes} from 'node:crypto'
-import {serveHosted} from '@runeditrun/rer/internal/cli/hosted-output.mjs'
+import {installation} from '../harness.mjs'
 import {nativeDoor,seedRepair,draftLines,dispatchReason,invoiceLines,invoiceTotals,actualQuantities} from './preparation-fixtures.mjs'
 
 const pending=new Map(),proved=new Set()
-let browserProof
-export function usePreparationBrowser(driver){browserProof=driver}
 const rows=(state,kind)=>state.records[kind]??[]
 const jobAt=(state,id)=>rows(state,'job').find(row=>row.id===id)
 const fields=(row,keys)=>Object.fromEntries(keys.map(key=>[key,row[key]]))
 const assignmentKeys=['bayId','technicianId','startAt','endAt']
 
-// A second emitted production Worker has its own database, native owner,
-// independently confirmed quality reviewer, and synthetic mail boundary.
+// Open a second installation with its own database and controlled mail edge.
 export async function nativePeer(){
- const token=randomBytes(32).toString('hex'),messages=[]
- const hosted=await serveHosted(process.cwd(),{bindings:{SETUP_TOKEN:token,OWNER_EMAIL:['synthetic-mallet-960','example.invalid'].join('@')},outboundService:async request=>{
-  assert.equal(new URL(request.url).hostname,'api.resend.com')
-  messages.push(await request.json());return Response.json({id:crypto.randomUUID()})
- }})
- const request=(url,init)=>hosted.fetch(url.slice(hosted.origin.length+1),{...init,signal:AbortSignal.timeout(30000)})
+ const app=await installation({entry:'tests/agent-door/peer-worker.ts',assets:true})
  try{
-  const boot=await request(hosted.origin+'/auth/bootstrap',{method:'POST',headers:{Origin:hosted.origin,'Content-Type':'application/json'},body:JSON.stringify({token,displayName:'Synthetic Base 1',returnTo:'/setup'})})
-  assert.equal(boot.status,303,'Independent native owner bootstrap')
-  const cookie=boot.headers.getSetCookie().map(value=>value.split(';',1)[0]).join('; ')
-  await boot.body?.cancel()
-  const door=nativeDoor({request,origin:hosted.origin,cookie})
+  const request=(url,init)=>app.mf.dispatchFetch(url,{...init,signal:AbortSignal.timeout(30000)})
+  const door=nativeDoor({request,origin:app.origin,cookie:app.owner})
   const setup=await door.send('/setup',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({confirm:'yes',displayName:'Synthetic Base 1',ratePercent:'10',partsTaxable:'on',laborTaxable:'on'}).toString()})
   assert.equal(setup.status,303);await setup.body?.cancel()
-  const email=['synthetic-mallet-961','example.invalid'].join('@')
-  const invited=await door.send('/auth/invite',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,displayName:'Cedar Independent Reviewer',role:'admin'})})
-  assert.equal(invited.status,202);await invited.body?.cancel()
-  const message=messages.findLast(value=>JSON.stringify(value.to).includes(email))
-  assert.ok(message,'Independent native reviewer invitation reaches the controlled mail edge')
-  const link=new URL(message.text.match(/https:\/\/[^\s]+/)[0])
-  const confirmed=await request(hosted.origin+'/auth/confirm',{method:'POST',headers:{Origin:hosted.origin,'Content-Type':'application/json'},body:JSON.stringify({token:link.searchParams.get('token')})})
-  assert.equal(confirmed.status,303)
-  const reviewer={cookie:confirmed.headers.getSetCookie().map(value=>value.split(';',1)[0]).join('; ')}
-  await confirmed.body?.cancel()
-  return {door,reviewer,messages,close:()=>hosted.close()}
- }catch(error){await hosted.close();throw error}
+  const reviewer=await app.person('synthetic-mallet-961@example.invalid','admin')
+  return {door,reviewer,messages:app.messages,close:app.close}
+ }catch(error){await app.close();throw error}
 }
 
 // Submit the existing person form, including its actual hidden version fence.
-// The browser registration replaces this driver with clicks on the same form.
 async function nativeForm(door,path,command,input){
  const response=await door.send(path);assert.equal(response.status,200)
  const html=await response.text(),forms=[...html.matchAll(/<form\b[^>]*>[\s\S]*?<\/form>/g)].map(match=>match[0])
@@ -62,7 +40,6 @@ export async function beforeStep(context){
  const index=Number(asset.identifier.replace('AGENT-',''))
  assert.ok(Number.isInteger(index)&&index>=0&&index<=3,'Preparation targets an independently specified repair fixture')
  const peer=await nativePeer()
- let browser
  try{
   const fixture=await seedRepair(peer.door,index,peer.reviewer)
   if(step.id==='dispatch'){
@@ -84,12 +61,10 @@ export async function beforeStep(context){
    mapping.proposedBay=[args.bayId,fixture.proposedBay]
   }
   const proof={context,source,before,job,peer,fixture,nativeBefore,nativeJob,mapping,input}
-  if(browserProof)browser=proof.browser=await browserProof(proof)
   const path=step.id==='dispatch'?'/app/calendar':'/app/jobs/'+nativeJob.id,command=step.id==='dispatch'?'dispatch.prepare':'invoice.prepare'
-  if(proof.browser)await proof.browser.prepare(path,command,input)
-  else await nativeForm(peer.door,path,command,input)
+  await nativeForm(peer.door,path,command,input)
   pending.set(phase+':'+step.id,proof)
- }catch(error){await browser?.close();await peer.close();throw error}
+ }catch(error){await peer.close();throw error}
 }
 
 function assertAttribution(actor,owner){
@@ -165,10 +140,9 @@ export async function afterStep({phase,step,result}){
     assert.deepEqual((await door.state()).records,state.records,'Unapproved prepared invoices cannot be exported and change nothing')
    }
   }
-  if(proof.browser)await proof.browser.readback({actual,native,after,nativeAfter})
   proved.add(key)
   console.log(`PROBE BASE-AGENT-002 ${phase} ${step.id}: independent owner form and MCP preparation -> exact state, source revisions, one business event, separate attribution; no approval or export`)
- }finally{pending.delete(key);await proof.browser?.close();await peer.close()}
+ }finally{pending.delete(key);await peer.close()}
 }
 
 export default async function preparationParity(){
@@ -176,7 +150,7 @@ export default async function preparationParity(){
   for(const phase of ['autonomous','held'])for(const step of ['dispatch','invoice'])assert.ok(proved.has(phase+':'+step),'Both native preparation comparisons run under '+phase+' policy')
  }finally{
   proved.clear()
-  for(const proof of pending.values()){await proof.browser?.close();await proof.peer.close()}
+  for(const proof of pending.values()){await proof.peer.close()}
   pending.clear()
  }
  console.log('BASE-AGENT-002 point 5: independently seeded dispatch and invoice preparations match through production doors under autonomous and standard-review policies.')

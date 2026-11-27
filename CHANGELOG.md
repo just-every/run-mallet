@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.1.0 — 2026-11-27
+
+First release of Mallet, with a hosted demo and setup for a Business with or without a mail provider.
+
+- Run a repair workshop with customer assets, bay bookings, estimates, work authorization and invoice exports.
+- Deploy with a configured mail provider or set `MAIL_PROVIDER=none` and use `rer signin` for the owner.
+- The hosted demo deploys from the published release tag.
+
+This is the first tagged release. Apply all migrations on new installations and preserve any migration bytes already applied.
+
 ## 2026-10-29 — Current-main contract reconciliation
 
 Judged from the code and tests at commit `0c4b8e0be86462c713e63dc7875074220be9e636` (28 October 2026). ADV-003 retains that completed judgment. ADV-005 now has the named native advisory-review journeys in this revision and remains PARTIAL; other clauses retain their existing judgments.

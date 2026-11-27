@@ -92,7 +92,7 @@
     {
       "name": "MAIL_PROVIDER",
       "label": "Mail provider",
-      "help": "Local development suppresses email. Hosted installations require a configured sender.",
+      "help": "Use a mail provider, or turn outbound mail off and sign in with rer signin.",
       "kind": "select",
       "required": true,
       "default": "development",
@@ -117,6 +117,10 @@
         {
           "value": "cloudflare",
           "label": "Cloudflare Email Sending"
+        },
+        {
+          "value": "none",
+          "label": "Off (owner signs in with rer signin)"
         }
       ]
     },

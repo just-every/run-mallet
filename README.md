@@ -86,7 +86,7 @@ The owner can open an **unused** asset and type `ERASE` to erase it and affected
 
 Local use requires no Cloudflare account. Hosted use requires your own Cloudflare account with a registered workers.dev subdomain and an account-scoped API token with **Workers Scripts: Edit** and **D1: Edit**. This edition declares one D1 database. Provider resources belong to your account.
 
-Follow the pinned [Base owner-account deploy kit](https://github.com/runeditrun/base/blob/913926d5425ad95321fb22f95ee8f4c4cd7b552f/modules/deploy-kit/README.md) after local setup. Supply `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_API_TOKEN`, `OWNER_EMAIL`, `SESSION_SECRET`, `SETUP_TOKEN` and `MAIL_API_KEY` privately through the environment or supported private `--env-file`. Configure a real verified sender in `deploy.json` in place of its invalid example `MAIL_FROM`; the declared mail provider is Resend. Never put keys in source or command arguments. Hosted auth mail is separate from manually sharing repair estimates.
+Follow the pinned [Base owner-account deploy kit](https://github.com/runeditrun/base/blob/913926d5425ad95321fb22f95ee8f4c4cd7b552f/modules/deploy-kit/README.md) after local setup. Supply `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_API_TOKEN`, `OWNER_EMAIL`, `SESSION_SECRET`, and `SETUP_TOKEN` privately through the environment or supported private `--env-file`. Set `MAIL_PROVIDER=none` to deploy without a sender or key and use `rer signin` to sign in. To enable outbound mail, supply your provider, verified sender and credentials. Never put keys in source or command arguments. Hosted auth mail is separate from manually sharing repair estimates.
 
 ```sh
 rer deploy --dry-run

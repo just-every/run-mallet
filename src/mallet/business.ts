@@ -2,7 +2,7 @@ import { createBusinessSettings } from '../modules/business-settings/index.ts'
 import type { BusinessManifest } from '../modules/business-settings/types.ts'
 import { createOperatorAuth } from '../modules/operator-auth/index.mjs'
 import { authConfig, type Bindings } from '../auth.server'
-import { operatorMail } from '../mail.server.mjs'
+import { operatorAuthMail } from '../mail.server.mjs'
 import { enterpriseHooks } from './enterprise/session'
 import { enterpriseProviders } from './enterprise/config'
 
@@ -14,7 +14,7 @@ export const business: BusinessManifest = {
 export async function businessSettings(env: Bindings) {
   const auth = createOperatorAuth({
     db: env.DB, config: { ...authConfig(env), providers: await enterpriseProviders(env), OIDC_TRANSACTION_SECRET: env.OIDC_TRANSACTION_SECRET },
-    hooks: enterpriseHooks(env), mailSender: operatorMail(env),
+    hooks: enterpriseHooks(env), mailSender: operatorAuthMail(env),
     clientIp: request => request.headers.get('CF-Connecting-IP') ?? '',
   })
   return createBusinessSettings({ db: env.DB, trust: env.RER_BUSINESS_TRUST, business, team: auth.businessTeam })

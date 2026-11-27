@@ -4,3 +4,4 @@ type MailMessage = Parameters<MailSender['send']>[0] & {
  attachments?: Array<{filename:string;contentType:string;content:Uint8Array}>
 }
 export function operatorMail(env: Bindings): {send(message:MailMessage):ReturnType<MailSender['send']>} | undefined
+export function operatorAuthMail(env: Bindings): MailSender | undefined
