@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import {createHash,randomUUID} from 'node:crypto'
 import {readFile} from 'node:fs/promises'
-import {archive,restore,installation,booking,estimate,authorise} from '../harness.mjs'
+import {archive,beginRestore,restore,installation,booking,estimate,authorise} from '../harness.mjs'
 import {custodyMedia} from './intake-journey.mjs'
 import {qualityReady} from './quality-ready.mjs'
 
@@ -89,6 +89,6 @@ export async function retentionJourney(h){
  const final=await archive(h),finalDb=await h.mf.getD1Database('DB')
  assert.equal((await finalDb.prepare('SELECT count(*) AS n FROM mallet_media_chunks').first()).n,0)
  const recovered=await installation({bindings:{OWNER_EMAIL:'synthetic-mallet-33@example.test'}})
- try{await restore(recovered,final);assert.equal((await recovered.request(photo.contentUrl)).status,404);assert.equal((await recovered.state()).records.contact.find(c=>c.id===contact.id).email,'');assert.deepEqual((await recovered.state()).records.invoice,(await h.state()).records.invoice);assert.equal((await restore(recovered,old,{status:400})).error,'erasure_epoch')}finally{await recovered.close()}
+ try{await restore(recovered,final);assert.equal((await recovered.request(photo.contentUrl)).status,404);assert.equal((await recovered.state()).records.contact.find(c=>c.id===contact.id).email,'');assert.deepEqual((await recovered.state()).records.invoice,(await h.state()).records.invoice);assert.equal((await beginRestore(recovered,old[0],400)).error,'erasure_epoch')}finally{await recovered.close()}
  return {account,first,second,financial,mediaHold,receipt,retentionReceipt:retained.receipt,personalReceipt:personal.receipt}
 }

@@ -1756,7 +1756,7 @@
       "executable": false
     },
     "src/mallet/booking-door.ts": {
-      "sha256": "89e547983a98e5410f66cd867b8aacd0ee1bd165b1da0307d0921469bf7f7bb4",
+      "sha256": "48a84ab0b9eac8ab1d850df5e560577e1b1762879a4405412c430d1e4c15b3d3",
       "executable": false
     },
     "src/mallet/booking-waitlist.ts": {
@@ -5440,7 +5440,7 @@
       "executable": false
     },
     "tests/harness.mjs": {
-      "sha256": "4e73ed576e5d11143a601f542fb47dc3ea7c8df572e917ff7032d614e1276080",
+      "sha256": "3de0e20c5eaf6437fedc638195bbf79e72845ae96a26eaf622e0e04397e0bf7f",
       "executable": false
     },
     "tests/inspection-browser.mjs": {
@@ -5716,7 +5716,7 @@
       "executable": false
     },
     "tests/support/declined-work-review-journey.mjs": {
-      "sha256": "875f41db1002ec5e6cfdcc5d7e6cbf647ebcfcf9dbdc1f5060a4c05b7f5c0870",
+      "sha256": "385fff38de6c3d2252703941fd9b6aaabb84a153ff5b72d462b0491f40e9b6be",
       "executable": false
     },
     "tests/support/deposits-journey.mjs": {
@@ -5772,7 +5772,7 @@
       "executable": false
     },
     "tests/support/inspection-report-journey.mjs": {
-      "sha256": "1274dacace65be140e377b462b1ddc2e787cbd05098bccdddaf7d8a8cd8f1a6e",
+      "sha256": "b10789cd85ca1a2acfc3cd14a424c98926b7869de02c63162cb2e3ca5f33d921",
       "executable": false
     },
     "tests/support/intake-forms-journey.mjs": {
@@ -5896,7 +5896,7 @@
       "executable": false
     },
     "tests/support/retention-journey.mjs": {
-      "sha256": "2b8145396407c872d5cc3086d58bc5dc4074f77440bcf4dfae265bf3bc484bb5",
+      "sha256": "8e7ef6ee70c34508e6f72864b9362db2daf13dbf68406c1d8303e9f77ceb3a15",
       "executable": false
     },
     "tests/support/return-journey.mjs": {

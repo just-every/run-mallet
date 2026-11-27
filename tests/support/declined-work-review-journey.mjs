@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import {archive,restore,installation} from '../harness.mjs'
+import {archive,beginRestore,restore,installation} from '../harness.mjs'
 import {declinedFixture} from './outreach-journey.mjs'
 import {inspectionPhoto} from './inspection-photo.mjs'
 const address=n=>['synthetic-mallet-'+n,'example.test'].join('@')
@@ -160,7 +160,7 @@ export async function declinedReviewJourney(){
    await restore(mediaFresh,mediaBackup)
    assert.deepEqual((await mediaFresh.state()).records.declinedReview.find(p=>p.id===r.id),r)
    assert.equal((await mediaFresh.request('/api/mallet/media/uploads/'+photo.id+'/content')).status,404)
-   assert.equal((await restore(mediaFresh,backup,{status:400})).error,'erasure_epoch','An old packet archive cannot replay erased media')
+   assert.equal((await beginRestore(mediaFresh,backup[0],400)).error,'erasure_epoch','An old packet archive cannot replay erased media')
   }finally{await mediaFresh.close()}
   await h.command('agent.revoke',{id:key.id});await h.command('declineReview.refresh',input,{...agent,status:401})
   assert.equal((await h.state({as:member.cookie})).records.declinedReview,undefined)

@@ -11,15 +11,20 @@ import {page} from './ui/shell'
 // A manage link lapses a day after its appointment ends; staff can also withdraw it sooner.
 const LINK_GRACE_MS=86400000
 const actor={id:'customer-booking',name:'Customer booking link',role:'customer' as const}
+const unavailable='That appointment is no longer available. Choose another time.'
 const token=()=>btoa(String.fromCharCode(...crypto.getRandomValues(new Uint8Array(32)))).replaceAll('+','-').replaceAll('/','_').replaceAll('=','')
 async function view(body:string,status=200,embed=false){const response=await page('Book with Mallet',body,undefined,status);response.headers.set('cache-control','private, no-store');response.headers.set('referrer-policy','same-origin');response.headers.set('x-robots-tag','noindex, nofollow');if(embed){response.headers.delete('x-frame-options');response.headers.set('content-security-policy',(response.headers.get('content-security-policy')??'').replace(/frame-ancestors[^;]*/g,'frame-ancestors *'))}return response}
 async function bookingState(env:Bindings){
  const s=await load(env.DB),active=new Set((await env.DB.prepare("SELECT id FROM oa_operators WHERE status='active'").all<{id:string}>()).results.map(x=>x.id))
  return {...s,records:{...s.records,bookingService:rows(s,'bookingService').map(service=>({...service,windows:service.windows.filter((w:any)=>active.has(w.technicianId))}))}}
 }
+function publishedSlot(s:Awaited<ReturnType<typeof bookingState>>,serviceId:string,slotId:string,exceptId?:string){
+ const service=rows(s,'bookingService').find(x=>x.id===serviceId)
+ return service&&bookingSlots(s,service,new Date().toISOString(),exceptId).find(x=>bookingSlotId(service,x)===slotId)
+}
 async function staffGuard(env:Bindings,serviceId:string,slotId:string,exceptId?:string,authority?:any){
- const s=await bookingState(env),service=rows(s,'bookingService').find(x=>x.id===serviceId),slot=service&&bookingSlots(s,service,new Date().toISOString(),exceptId).find(x=>bookingSlotId(service,x)===slotId)
- if(!slot)fail('BOOKING_CAPACITY','That appointment is no longer available. Choose another time.')
+ const slot=publishedSlot(await bookingState(env),serviceId,slotId,exceptId)
+ if(!slot)fail('BOOKING_CAPACITY',unavailable)
  return {sql:(authority?'('+authority.sql+') AND ':'')+"EXISTS(SELECT 1 FROM oa_operators WHERE id=? AND status='active')",params:[...(authority?.params??[]),slot.technicianId]}
 }
 export async function bookingResponse(request:Request,original:Bindings):Promise<Response|null>{
@@ -28,6 +33,7 @@ export async function bookingResponse(request:Request,original:Bindings):Promise
  if(url.origin!==env.AUTH_ORIGIN||(request.headers.has('host')&&request.headers.get('host')?.toLowerCase()!==url.host.toLowerCase()))return view('<p>Not available.</p>',404)
  if(!['GET','HEAD','POST'].includes(request.method))return view('<p>Not available.</p>',405)
  let row:any,authority:any,declinedToken=url.searchParams.get('declined')??''
+ let requestedHold:{serviceId:string;slotId:string}|undefined
  if(manage){
   if(!/^[A-Za-z0-9_-]{43}$/.test(manage))return view('<p>Not available.</p>',404)
   const hash=await digest(manage),found=await env.DB.prepare('SELECT appointment_id FROM mallet_booking_tokens WHERE revoked_at IS NULL AND (token_hash=? OR appointment_id IN (SELECT appointment_id FROM mallet_booking_reminder_tokens WHERE token_hash=?))').bind(hash,hash).first<{appointment_id:string}>()
@@ -44,6 +50,7 @@ export async function bookingResponse(request:Request,original:Bindings):Promise
    const data=Object.fromEntries(new URLSearchParams(raw)),action=data.action
    if(!manage){
     if(action!=='hold')return view('<p>Unknown action.</p>',400)
+    requestedHold={serviceId:data.serviceId,slotId:data.slotId}
     let guard=await staffGuard(env,data.serviceId,data.slotId),declinedSource:any=null
     declinedToken=data.declinedToken??''
     if(declinedToken){
@@ -71,7 +78,13 @@ export async function bookingResponse(request:Request,original:Bindings):Promise
    }
   }
   const s=await bookingState(env);return view(manage?manageBooking(s,row,url.pathname):publicBooking(s,url.pathname,url.searchParams.get('serviceId')??'','',declinedToken),200,!manage)
- }catch(error){if(!(error instanceof MalletError))throw error;const s=await bookingState(env);return view(manage?manageBooking(s,rows(s,'appointment').find(x=>x.id===row.id),url.pathname,error.message):publicBooking(s,url.pathname,url.searchParams.get('serviceId')??'',error.message,declinedToken),error.status,!manage)}
+ }catch(error){
+  if(!(error instanceof MalletError))throw error
+  const s=await bookingState(env)
+  // The write fence also catches unrelated changes. Check the requested slot against the state shown on the refreshed form.
+  const message=error.code==='CONCURRENT_CHANGE'&&requestedHold&&!publishedSlot(s,requestedHold.serviceId,requestedHold.slotId)?unavailable:error.message
+  return view(manage?manageBooking(s,rows(s,'appointment').find(x=>x.id===row.id),url.pathname,message):publicBooking(s,url.pathname,requestedHold?.serviceId??url.searchParams.get('serviceId')??'',message,declinedToken),error.status,!manage)
+ }
 }
 
 /** Staff withdraw a customer's manage link; its holder then sees the same page as for an unknown link. */

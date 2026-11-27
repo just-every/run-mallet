@@ -92,8 +92,11 @@ export async function archive(h) {
  const response=await h.request(`/api/portability/exports/${id}/download`);assert.equal(response.status,200)
  return (await response.text()).trim().split('\n').map(x=>JSON.parse(x))
 }
+export function beginRestore(h, manifest, status = 201) {
+ return h.api('/api/portability/imports', { manifest, confirmed: true }, { status })
+}
 export async function restore(h,lines,{status=200,laterJournal}={}) {
- const {id}=await h.api('/api/portability/imports',{manifest:lines[0],confirmed:true},{status:201})
+ const {id}=await beginRestore(h,lines[0])
  for(const part of lines.filter(x=>x.kind==='part'))await h.api(`/api/portability/imports/${id}/parts/${part.index}`,part,{method:'PUT'})
  return h.api(`/api/portability/imports/${id}/finalize`,{archiveHash:lines.at(-1).archiveHash,contentHash:lines.at(-1).contentHash,...(laterJournal?{laterJournal}:{})},{status})
 }

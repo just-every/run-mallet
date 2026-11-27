@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import {createHash,createHmac,randomBytes,randomUUID} from 'node:crypto'
 import {readFile} from 'node:fs/promises'
-import {archive,assetInput,booking,installation,restore} from '../harness.mjs'
+import {archive,beginRestore,assetInput,booking,installation,restore} from '../harness.mjs'
 import {shopSetup,coilDiagnosis} from './diagnosis-journey.mjs'
 export async function reportUpload(h,finding,bytes,mime,variant='original',originalId=null){
  const sha256=createHash('sha256').update(bytes).digest('hex')
@@ -159,7 +159,7 @@ async function eraseReviewedReportMedia(h,ready,bytePath,backup,fixtures,private
  const expectedInspections=before.records.inspection.map(prior=>({...prior,version:prior.version+1,mediaErasureReceiptId:receipt.id,results:prior.results.map(result=>({...result,photo:null}))}))
  assert.deepEqual(erased.records.inspection,expectedInspections,'Erasure removes the selected photo snapshot and preserves every measured finding and its provenance')
  for(const kind of ['estimate','approval'])assert.deepEqual(erased.records[kind],before.records[kind],'Authorized media erasure changes no '+kind)
- assert.equal((await restore(h,backup,{status:400})).error,'erasure_epoch','Replaying the older archive cannot resurrect erased media')
+ assert.equal((await beginRestore(h,backup[0],400)).error,'erasure_epoch','Replaying the older archive cannot resurrect erased media')
  await refuseReportBytes(h,bytePath,fixtures,privateValues,'erased media after denied archive replay')
  const after=await h.state();for(const kind of ['estimate','approval','job','inspection'])assert.deepEqual(after.records[kind],erased.records[kind],'Denied stale replay changes no '+kind)
 }
