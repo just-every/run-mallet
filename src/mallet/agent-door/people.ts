@@ -25,13 +25,14 @@ export function nativePeople(env: Bindings) {
   const ownerBinding = async () => env.DB.prepare('SELECT b.claim_id AS id FROM oa_bootstrap b WHERE b.singleton=1').first<{ id: string }>()
   const member = async (person: Person) => {
     const settings = await env.DB.prepare('SELECT owner_id FROM bs_settings WHERE singleton=1 AND stopped=0').first<{ owner_id: string | null }>()
-    if (settings?.owner_id && (await ownerBinding())?.id === person.id) return person.role === 'owner' ? { id: settings.owner_id, role: 'owner' as const } : null
+    if (!settings) return null
+    if (settings.owner_id && (await ownerBinding())?.id === person.id) return person.role === 'owner' ? { id: settings.owner_id, role: 'owner' as const } : null
     const row = await env.DB.prepare("SELECT business_id,business_role FROM bs_team WHERE operator_id=? AND state<>'conflict' AND business_id IS NOT NULL").bind(person.id).first<{ business_id: string; business_role: string }>()
     return row ? { id: row.business_id, role: row.business_role === 'admin' ? 'editor' as const : null } : null
   }
   return { ...native, person: async (id: string) => admissible(await native.person(id)),
     async sponsor({ sub }: { sub: string }) {
-      const settings = await env.DB.prepare('SELECT owner_id FROM bs_settings WHERE singleton=1 AND stopped=0').first<{ owner_id: string | null }>()
+      const settings = await env.DB.prepare('SELECT owner_id FROM bs_settings WHERE singleton=1').first<{ owner_id: string | null }>()
       if (settings?.owner_id === sub) {
         const owner = await ownerBinding(), person = owner ? await native.person(owner.id) : null
         return person?.role === 'owner' ? admissible(person) : null

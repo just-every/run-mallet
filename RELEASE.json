@@ -57,7 +57,8 @@
     "migrations/core/0120_mallet_declined_withdrawal.sql",
     "migrations/core/0121_mallet_business_settings.sql",
     "migrations/core/0122_mallet_business_people.sql",
-    "migrations/core/0123_woocommerce.sql"
+    "migrations/core/0123_woocommerce.sql",
+    "migrations/core/0124_mallet_agent_door_relay.sql"
   ],
   "breaking": false,
   "agentUpdateInstructions": "Install with the pinned toolchain and apply all declared migrations on a fresh database. Preserve existing resource identities and migration bytes. For deployments with MAIL_PROVIDER=none, use rer signin."

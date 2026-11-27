@@ -1,4 +1,4 @@
-Mallet's shared agent door is `/mcp`, using MCP 2026-07-28 or 2025-11-25.
+Mallet’s shared agent door at `/mcp` requires a bearer credential, including for discovery and initialization. It supports MCP 2026-07-28, 2025-11-25 and 2025-06-18. Initialize can request the version in the body. Later calls without a version header use 2025-06-18.
 `/agents` shows company policy, Pause, activity, approvals and reviews.
 The declared capabilities are tools, resources, policy, pause, audit, idempotency and prompts.
 Events and subscriptions are undeclared and return
@@ -36,6 +36,8 @@ exclude credentials, private diagnostic notes and original media. Imported and
 customer text is untrusted data. Members retain assigned-repair restrictions.
 Service-specific staff grants and enterprise-provider identities are refused
 until their additional native admission is supported.
+
+The paired Business can pull its decisions from `POST /api/rer/agent-decisions` with a signed request. Detachment closes that feed, ends Business token access and refuses outstanding Business-sponsored approvals when a person tries to execute them.
 
 Signed Business settings bind `owner_id` to the original native setup owner
 and teammate IDs to managed native operator IDs. Owner maps to owner, Business
